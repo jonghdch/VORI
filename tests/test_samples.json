@@ -1,0 +1,62 @@
+[
+  {
+    "name": "1. 학생 친구 결혼식 축의금",
+    "expense": {"description": "친구 결혼식 축의금", "amount": 100000, "category": "문화여가", "time_of_day": "점심"},
+    "user_context": {"job": "대학생", "monthly_income": 500000, "total_assets": 3000000, "category_avg": {"식비": 200000, "쇼핑뷰티": 100000, "문화여가": 50000, "생활고정": 400000}},
+    "reason": "친한 친구 결혼식 축의금"
+  },
+  {
+    "name": "2. 신입 팀장 팀원 커피",
+    "expense": {"description": "팀원들 커피", "amount": 30000, "category": "식비", "time_of_day": "점심"},
+    "user_context": {"job": "신입 팀장", "monthly_income": 3500000, "total_assets": 5000000, "category_avg": {"식비": 400000, "쇼핑뷰티": 200000, "문화여가": 150000, "생활고정": 1000000}},
+    "reason": "팀 신임 구축용 커피 쏘기"
+  },
+  {
+    "name": "3. 가족 응급실 택시비",
+    "expense": {"description": "응급실 택시비", "amount": 50000, "category": "생활고정", "time_of_day": "새벽"},
+    "user_context": {"job": "직장인", "monthly_income": 3000000, "total_assets": 10000000, "category_avg": {"식비": 400000, "쇼핑뷰티": 100000, "문화여가": 150000, "생활고정": 1200000}},
+    "reason": "어머니 갑자기 쓰러지셔서 응급실 이송"
+  },
+  {
+    "name": "4. 자기계발 학원비",
+    "expense": {"description": "영어 학원비", "amount": 150000, "category": "문화여가", "time_of_day": "저녁"},
+    "user_context": {"job": "직장인", "monthly_income": 3000000, "total_assets": 8000000, "category_avg": {"식비": 400000, "쇼핑뷰티": 100000, "문화여가": 50000, "생활고정": 1200000}},
+    "reason": "취업 대비 토익 학원 등록"
+  },
+  {
+    "name": "5. 매일 마시는 커피",
+    "expense": {"description": "스타벅스 아메리카노", "amount": 5000, "category": "식비", "time_of_day": "아침"},
+    "user_context": {"job": "대학생", "monthly_income": 500000, "total_assets": 3000000, "category_avg": {"식비": 200000, "쇼핑뷰티": 100000, "문화여가": 50000, "생활고정": 400000}},
+    "reason": null
+  },
+  {
+    "name": "6. 편의점 김밥 점심",
+    "expense": {"description": "편의점 삼각김밥", "amount": 2500, "category": "식비", "time_of_day": "점심"},
+    "user_context": {"job": "대학생", "monthly_income": 500000, "total_assets": 3000000, "category_avg": {"식비": 200000, "쇼핑뷰티": 100000, "문화여가": 50000, "생활고정": 400000}},
+    "reason": null
+  },
+  {
+    "name": "7. 월세 납부",
+    "expense": {"description": "월세", "amount": 500000, "category": "생활고정", "time_of_day": "아침"},
+    "user_context": {"job": "대학생", "monthly_income": 500000, "total_assets": 3000000, "category_avg": {"식비": 200000, "쇼핑뷰티": 100000, "문화여가": 50000, "생활고정": 500000}},
+    "reason": null
+  },
+  {
+    "name": "8. 명품 지갑 충동구매",
+    "expense": {"description": "명품 지갑", "amount": 800000, "category": "쇼핑뷰티", "time_of_day": "밤"},
+    "user_context": {"job": "대학생", "monthly_income": 500000, "total_assets": 3000000, "category_avg": {"식비": 200000, "쇼핑뷰티": 100000, "문화여가": 50000, "생활고정": 400000}},
+    "reason": null
+  },
+  {
+    "name": "9. 영화 관람",
+    "expense": {"description": "영화 티켓", "amount": 13000, "category": "문화여가", "time_of_day": "저녁"},
+    "user_context": {"job": "대학생", "monthly_income": 500000, "total_assets": 3000000, "category_avg": {"식비": 200000, "쇼핑뷰티": 100000, "문화여가": 50000, "생활고정": 400000}},
+    "reason": null
+  },
+  {
+    "name": "10. 새벽 야식 치킨",
+    "expense": {"description": "배달 치킨", "amount": 25000, "category": "식비", "time_of_day": "새벽"},
+    "user_context": {"job": "대학생", "monthly_income": 500000, "total_assets": 3000000, "category_avg": {"식비": 200000, "쇼핑뷰티": 100000, "문화여가": 50000, "생활고정": 400000}},
+    "reason": null
+  }
+]
