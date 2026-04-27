@@ -267,7 +267,7 @@ users → stats
 | 비밀번호 | bcrypt 해싱 (cost 12), 평문 저장 금지 |
 | 세션 토큰 | JWT 또는 secure httpOnly 쿠키 |
 | 통신 | HTTPS 필수 (배포 환경) |
-| 입력 검증 | Pydantic (서버) + zod (클라이언트) |
+| 입력 검증 | Jakarta Bean Validation (서버) + 클라이언트 form 검증 |
 | 무차별 대입 방어 | 로그인 5회 실패 시 5분 잠금 |
 | 타이밍 공격 방어 | 로그인 실패 시에도 bcrypt verify 실행 (이메일 존재 유출 방지) |
 | CORS | 운영 도메인 명시 (`*` 금지) |
