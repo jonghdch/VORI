@@ -1,67 +1,83 @@
-# Vori 판정 프로토타입
+# Vori
 
-Vori 프로젝트의 "합리성 판정" 백엔드 방식 3개를 같은 API로 나란히 비교하기 위한 로컬 프로토타입.
+> **합리성 판정 자기관리 앱** — 지출 + 맥락 + 사유를 받아 4 방식 알고리즘으로 합리성 시그널(🟢/⚪/🔴) + 스탯 가감을 반환. 졸업작품.
 
-## 방식
+## 스택 (회의 확정)
 
-| 키 | 방식 | 설명 |
-|---|---|---|
-| A | Gemini 직접 판정 | 스텁. API 키 발급 후 활성화 |
-| B | 임베딩 + k-NN | `jhgan/ko-sroberta-multitask` 로컬 모델 + 라벨 DB 22건 최근접 이웃 다수결 |
-| C | 규칙 엔진 | 명시적 룰 8개 (시간대·카테고리·금액비·사유) |
-| D | 하이브리드 | C 확정 룰 우선 → 애매하면 B로, 심각 불일치 시 보수 선택 |
+| 영역 | 기술 |
+|------|------|
+| 백엔드 | Java 17 + Spring Boot 3.x |
+| 프론트엔드 | React.js (JavaScript) + HTML5 + CSS3 |
+| DBMS | MySQL + MySQL Workbench |
+| AI | OpenAI GPT-4o-mini API (REST/JSON) |
+| IDE | IntelliJ IDEA · VS Code |
+| 형상 관리 | GitHub |
 
-## 실행
+## 구조
 
+```
+~/Projects/vori/
+├── README.md
+├── docs/                    팀 공유 문서
+│   ├── system-design.md     IV. 시스템 설계
+│   ├── ui-ux-design.md      UI/UX 설계
+│   └── feature-member.md    회원 기능 모듈 설계
+├── backend/                 (회의 후 셋업) Spring Boot
+├── frontend/                (회의 후 셋업) React
+└── prototype-python/        Python 프로토타입 (Java 재작성용 참조)
+    └── README.md
+```
+
+## 첫 빌드 셋업 (회의 후)
+
+### 백엔드 (Spring Boot)
+1. https://start.spring.io 에서 프로젝트 생성:
+   - Project: Gradle - Groovy 또는 Kotlin
+   - Language: Java
+   - Spring Boot: 3.x (최신 안정)
+   - Group: `com.vori`, Artifact: `backend`
+   - Dependencies: Spring Web, Spring Data JPA, MySQL Driver, Spring Security, Validation, Lombok, SpringDoc OpenAPI
+2. 압축 풀어서 `~/Projects/vori/backend/` 로 이동
+3. `./gradlew bootRun` 으로 실행 (port 8080)
+
+### 프론트엔드 (React)
 ```bash
-cd ~/Projects/vori-backend-prototype
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+cd ~/Projects/vori
+npm create vite@latest frontend -- --template react
+cd frontend
+npm install
+npm run dev   # port 5173
 ```
 
-첫 실행 시 `sentence-transformers` 모델이 다운로드됩니다 (~400MB).
-
-- 테스트 UI: http://localhost:8000
-- API 문서: http://localhost:8000/docs
-
-## API
-
-- `POST /judge` — 단일 방식 판정 (body: `approach` + 지출 + 맥락 + 사유)
-- `POST /judge-all` — B/C/D 세 방식 동시 실행
-- `GET /samples` — 미리 준비된 테스트 케이스 10건
-- `GET /` — 테스트 UI
-
-## 결과 포맷
-
-```json
-{
-  "approach": "D",
-  "signal": "gray",
-  "stat_delta": 1,
-  "needs_reason": false,
-  "reasoning": "...",
-  "similar_cases": [{"description": "...", "label": "gray", "similarity": 0.72}],
-  "applied_rules": ["amount_within_avg"]
-}
+### MySQL
+```bash
+brew install mysql              # macOS
+brew services start mysql
+mysql -u root -e "CREATE DATABASE vori;"
 ```
 
-## 스탯 가감 값 (초안)
+## 4 방식 알고리즘 (회의 결정 사항)
 
-- 🟢 green: +3
-- ⚪ gray : +1
-- 🔴 red : -2
-- 사유 기반 1단계 상향 성공 시 +1 보정
+| 키 | 방식 | 상태 |
+|---|------|------|
+| A | OpenAI GPT-4o-mini 직접 판정 | 본 빌드 |
+| B | 한국어 임베딩 + k-NN | **회의 결정 필요** (DJL / Python 마이크로서비스 / OpenAI Embedding / 폐기) |
+| C | 규칙 엔진 8개 | 본 빌드 (Python prototype 참조) |
+| D | 하이브리드 (C 우선 → B 폴백) | 본 빌드 |
 
-## 라벨 DB (B용)
+## 팀 작업 흐름
 
-`data/labeled_examples.json` — 22건. 카테고리·시간대·금액비(평균 대비)·레이블 포함.
-부족하면 여기를 늘려서 k-NN 품질 개선 가능.
+1. 본인 브랜치 생성: `git checkout -b feature/<기능명>`
+2. 작업 + 커밋 + push: `git push origin feature/<기능명>`
+3. GitHub 에서 Pull Request 열기
+4. 리뷰어가 검수 후 main 으로 머지
 
-## 다음 단계
+## 프로토타입 보존
 
-- Gemini API 키 발급 → `approaches/a_gemini.py` 실제 구현
-- 라벨 DB 100건 이상으로 확장
-- 규칙 개수·임계값 튜닝 (`approaches/c_rules.py`)
-- 하이브리드 가중치 조정 (`AMBIGUITY_THRESHOLD`, `DECISIVE_C_RULES`)
+`prototype-python/` 에 Python 프로토타입 보존 (운영 X). 4 방식 알고리즘 로직과 라벨 DB 22건이 Java 재작성 시 참조 자산.
+
+## 졸작 정보
+
+- **시연 대상**: 20명 (졸작 시연)
+- **확장 대상**: 친구·지인 100명 (졸작 후)
+- **출시 일정**: 졸작 일정 (학기 단위, 3~4개월)
