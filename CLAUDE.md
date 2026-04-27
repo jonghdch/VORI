@@ -91,6 +91,32 @@
 - **B 방식 임베딩 모델** 다운로드 필요 (~400MB) — `pip install -r requirements.txt` 시점
 - **state/** 안의 JSON 은 적응형 방식이 학습 누적 — 프로덕션엔 DB 로 교체 예정
 
+## PR 검수·머지 워크플로
+
+팀원이 브랜치로 작업 후 PR 열면, 메인 세션이 자동 실행:
+
+1. `git fetch && git checkout <branch>` — 최신 가져오기
+2. **빌드** — Java: `./gradlew build` / React: `npm install && npm run build`
+3. **테스트** — `./gradlew test` / `npm test`
+4. **Lint·Type** — `./gradlew check` / `npm run lint`
+5. **머지 시뮬레이션** — `git merge --no-commit --no-ff <branch>` 후 abort (충돌 검사)
+6. **critic 스킬** 적용 — 5축 검토 (correctness / readability / architecture / security / performance)
+
+**결과 형식**:
+```
+🟢 PASS — <branch> (PR #N)
+✅ 빌드 / ✅ 테스트 N/N / ✅ Lint / ✅ 충돌 없음
+✅ Critic: <Blocker N · Warning N>
+
+머지 진행할까요? [Y/n]
+```
+
+사용자 승인 후 `git checkout main && git merge --no-ff <branch> && git push origin main`.
+
+실패 시 팀원에게 PR 코멘트로 피드백 (gh CLI 또는 GitHub UI).
+
+호출 트리거: **"PR #N 검토" 또는 "<branch> 검토해서 main 에 올려줘"**
+
 ## 관련
 
 - `~/.claude/CLAUDE.md` 글로벌 시스템 원칙
