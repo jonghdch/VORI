@@ -18,10 +18,8 @@
 ```
 ~/Projects/vori/
 ├── README.md
-├── docs/                    팀 공유 문서
-│   └── feature-member.md    회원 기능 모듈 설계
-├── backend/                 (셋업 예정) Spring Boot
-└── frontend/                (셋업 예정) React
+├── backend/    Spring Boot 3.5 + Java 17
+└── frontend/   React 19 (Create React App)
 ```
 
 ## 첫 빌드 셋업
