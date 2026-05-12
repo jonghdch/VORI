@@ -1,0 +1,266 @@
+/* ============================================================
+   SignupPage.css
+   회원가입 페이지. LoginPage 와 동일한 디자인 토큰 사용.
+   ============================================================ */
+
+.signup {
+  --bg: #f5f3ee;
+  --surface: #fffdf9;
+  --border: #e8e3d8;
+
+  --green: #7c9e6b;
+  --green-dark: #27500a;
+  --green-50: #eaf3de;
+
+  --orange: #d85a30;
+
+  --text: #3d3830;
+  --text-2: #6b6560;
+  --text-3: #9c9488;
+
+  min-height: 100vh;
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 헤더 ─────────────────────────────────────────────────── */
+.signup-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.signup-logo-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: "Nunito", "Pretendard", sans-serif;
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+/* ── 본문 ─────────────────────────────────────────────────── */
+.signup-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+}
+.signup-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 40px 36px;
+  box-shadow: 0 8px 28px rgba(61, 56, 48, 0.04);
+}
+.signup-card-head {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.signup-title {
+  font-size: 24px;
+  font-weight: 900;
+  margin: 0 0 8px;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.signup-subtitle {
+  font-size: 14px;
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── 폼 ───────────────────────────────────────────────────── */
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.signup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.signup-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.signup-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.signup-input::placeholder {
+  color: var(--text-3);
+}
+.signup-input:focus {
+  background: var(--surface);
+  border-color: var(--green);
+}
+
+.signup-password-wrap {
+  position: relative;
+}
+.signup-eye {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-3);
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.signup-eye:hover {
+  color: var(--green-dark);
+  background: var(--green-50);
+}
+
+.signup-hint {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.signup-hint-error {
+  color: var(--orange);
+  font-weight: 600;
+}
+
+/* ── 약관 동의 ────────────────────────────────────────────── */
+.signup-agree {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.signup-agree-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.signup-agree-row input {
+  accent-color: var(--green);
+  width: 16px;
+  height: 16px;
+}
+.signup-agree-all {
+  font-weight: 700;
+  color: var(--text);
+}
+.signup-agree-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+}
+.signup-required {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--orange);
+  margin-right: 4px;
+}
+.signup-optional {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--text-3);
+  margin-right: 4px;
+}
+
+/* ── 가입 버튼 ────────────────────────────────────────────── */
+.signup-submit {
+  margin-top: 8px;
+  background: var(--green);
+  color: #fffdf9;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+.signup-submit:hover {
+  background: var(--green-dark);
+}
+.signup-submit:active {
+  transform: translateY(1px);
+}
+.signup-submit:disabled {
+  background: #b9c8ad;
+  cursor: not-allowed;
+}
+
+/* ── 로그인 안내 ──────────────────────────────────────────── */
+.signup-login {
+  text-align: center;
+  margin: 24px 0 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.signup-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.signup-link:hover {
+  color: var(--green-dark);
+  text-decoration: underline;
+}
+.signup-link-strong {
+  color: var(--green-dark);
+  font-weight: 700;
+}
+
+/* ── 푸터 ─────────────────────────────────────────────────── */
+.signup-footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* ── 반응형 ───────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .signup-card {
+    padding: 28px 22px;
+  }
+  .signup-header {
+    padding: 12px 18px;
+  }
+}

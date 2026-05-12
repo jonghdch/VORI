@@ -1,0 +1,317 @@
+/* ============================================================
+   StoryPage.css
+   흐름: 우주(가장 어두움) → 별로 다가감 → 도착(베이지)
+   각 구간(.story-cover, .story-section--dark/twilight/light)이
+   서로 색을 물려받도록 그라데이션을 이어 둡니다.
+   ============================================================ */
+
+.story {
+  --bg: #f5f3ee;
+  --surface: #fffdf9;
+  --border: #e8e3d8;
+
+  --green: #7c9e6b;
+  --green-dark: #27500a;
+
+  --text: #3d3830;
+  --text-2: #6b6560;
+  --text-3: #9c9488;
+
+  /* 우주 톤 */
+  --space-0: #01030c;   /* 가장 깊은 우주 (거의 검정) */
+  --space-1: #07091f;   /* 짙은 남청 (Chapter 01 시작) */
+  --space-2: #1d2245;   /* 남보라 (Chapter 01 끝 / 02 시작) */
+  --space-3: #5a5475;   /* 트와일라잇 중간 */
+  --space-4: #ad9f87;   /* 새벽 따뜻한 톤 */
+  --space-5: #d3c5ac;   /* 도착 직전 */
+
+  min-height: 100vh;
+  width: 100%;
+  background: var(--space-0);
+  color: var(--text);
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+/* ── ① 표지 (우주) ────────────────────────────────────────── */
+.story-cover {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 헤더가 absolute 로 위에 떠 있으므로, 표지 본문이 헤더 글자와 겹치지
+     않도록 상단에 여유 padding 을 둡니다. */
+  padding-top: 80px;
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    #0a1232 0%,
+    #050a22 35%,
+    #020414 70%,
+    #000004 100%
+  );
+  overflow: hidden;
+}
+.story-cover::after {
+  /* 표지 하단을 다음 구간의 시작 색으로 페이드 */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 220px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--space-1) 100%
+  );
+  pointer-events: none;
+}
+
+/* 별 — 작은 흰 점들을 box-shadow 로 흩뿌립니다.
+   화면 폭에 비례하지 않고 고정 좌표라 viewport 가 클수록 밀도가 옅어 보입니다. */
+.story-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.story-stars::before,
+.story-stars::after {
+  content: "";
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: transparent;
+}
+.story-stars::before {
+  box-shadow:
+     80px  120px 0 0.5px rgba(255, 255, 255, 0.95),
+    220px   60px 0 0px rgba(255, 255, 255, 0.7),
+    340px  200px 0 0.5px rgba(255, 255, 255, 0.85),
+    480px  100px 0 0px rgba(255, 255, 255, 0.6),
+    600px  260px 0 0.5px rgba(255, 255, 255, 0.9),
+    760px  150px 0 0px rgba(255, 255, 255, 0.65),
+    900px   90px 0 0.5px rgba(255, 255, 255, 0.95),
+   1040px  220px 0 0px rgba(255, 255, 255, 0.7),
+   1180px  130px 0 0.5px rgba(255, 255, 255, 0.85),
+   1320px  280px 0 0px rgba(255, 255, 255, 0.6),
+   1460px   80px 0 0.5px rgba(255, 255, 255, 0.95),
+    160px  340px 0 0px rgba(255, 255, 255, 0.7),
+    300px  420px 0 0.5px rgba(255, 255, 255, 0.85),
+    520px  380px 0 0px rgba(255, 255, 255, 0.6),
+    680px  460px 0 0.5px rgba(255, 255, 255, 0.9),
+    860px  380px 0 0px rgba(255, 255, 255, 0.65),
+   1020px  440px 0 0.5px rgba(255, 255, 255, 0.95),
+   1200px  360px 0 0px rgba(255, 255, 255, 0.7),
+   1380px  500px 0 0.5px rgba(255, 255, 255, 0.85),
+    120px  560px 0 0px rgba(255, 255, 255, 0.6),
+    420px  600px 0 0.5px rgba(255, 255, 255, 0.9),
+    740px  640px 0 0px rgba(255, 255, 255, 0.65),
+   1080px  600px 0 0.5px rgba(255, 255, 255, 0.95),
+   1400px  680px 0 0px rgba(255, 255, 255, 0.7);
+}
+.story-stars::after {
+  /* 큰 별 몇 개 더, 살짝 다른 위치로 */
+  top: 18%;
+  left: 22%;
+  width: 3px;
+  height: 3px;
+  background: #fffdf9;
+  box-shadow:
+    520px  120px 0 0 rgba(255, 253, 249, 0.9),
+    980px  340px 0 0 rgba(255, 253, 249, 0.8),
+    260px  500px 0 0 rgba(255, 253, 249, 0.85),
+   1240px  220px 0 0 rgba(255, 253, 249, 0.9);
+}
+
+.story-cover-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  text-align: center;
+  padding: 0 24px;
+  color: #f5f3ee;
+}
+.story-eyebrow {
+  display: inline-block;
+  font-family: "Nunito", "Pretendard", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #c2cdde;
+  margin-bottom: 22px;
+}
+.story-cover-title {
+  font-size: 52px;
+  font-weight: 900;
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+  color: #fffdf9;
+  margin: 0 0 20px;
+}
+.story-cover-sub {
+  font-size: 16px;
+  line-height: 1.7;
+  color: rgba(255, 253, 249, 0.78);
+  margin: 0;
+}
+.story-cover-hint {
+  margin-top: 56px;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: rgba(255, 253, 249, 0.55);
+  animation: story-hint-bounce 1.8s ease-in-out infinite;
+}
+@keyframes story-hint-bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50%      { transform: translateY(6px); opacity: 0.85; }
+}
+
+/* ── 공통 구간 (챕터를 감싸는 큰 영역) ────────────────────── */
+.story-section {
+  position: relative;
+  padding: 110px 24px;
+}
+.story-chapter {
+  max-width: 640px;
+  margin: 0 auto;
+}
+.story-chapter-mark {
+  font-family: "Nunito", "Pretendard", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+.story-chapter-title {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0 0 28px;
+  line-height: 1.35;
+}
+.story-paragraph {
+  font-size: 17px;
+  line-height: 1.95;
+  margin: 0 0 22px;
+  word-break: keep-all;
+}
+.story-paragraph:last-child {
+  margin-bottom: 0;
+}
+.story-paragraph em {
+  font-style: normal;
+  font-weight: 700;
+}
+.story-paragraph strong {
+  font-weight: 800;
+}
+.story-signature {
+  margin-top: 36px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+/* ── ② Chapter 01 (짙은 남청) ─────────────────────────────── */
+.story-section--dark {
+  background: linear-gradient(
+    to bottom,
+    var(--space-1) 0%,
+    var(--space-1) 30%,
+    var(--space-2) 100%
+  );
+  color: #e9e8f1;
+}
+.story-section--dark .story-chapter-mark { color: #9aa3c8; }
+.story-section--dark .story-chapter-title { color: #fffdf9; }
+.story-section--dark .story-paragraph { color: rgba(245, 243, 238, 0.86); }
+.story-section--dark .story-paragraph em { color: #c8d4f0; }
+.story-section--dark .story-paragraph strong { color: #fffdf9; }
+
+/* ── ③ Chapter 02 (트와일라잇, 점점 밝아짐) ──────────────── */
+.story-section--twilight {
+  background: linear-gradient(
+    to bottom,
+    var(--space-2) 0%,
+    var(--space-3) 38%,
+    var(--space-4) 75%,
+    var(--space-5) 100%
+  );
+  color: #f5f3ee;
+}
+.story-section--twilight .story-chapter-mark { color: rgba(255, 253, 249, 0.7); }
+.story-section--twilight .story-chapter-title { color: #fffdf9; }
+.story-section--twilight .story-paragraph { color: rgba(255, 253, 249, 0.92); }
+.story-section--twilight .story-paragraph em { color: #ffe7b5; }
+.story-section--twilight .story-paragraph strong { color: #fffdf9; }
+
+/* ── ④ Chapter 03 (도착, 베이지) ──────────────────────────── */
+.story-section--light {
+  background: linear-gradient(
+    to bottom,
+    var(--space-5) 0%,
+    var(--bg) 18%,
+    var(--bg) 100%
+  );
+  color: var(--text);
+  padding-bottom: 140px;
+}
+.story-section--light .story-chapter-mark { color: var(--text-3); }
+.story-section--light .story-chapter-title { color: var(--text); }
+.story-section--light .story-paragraph { color: var(--text); }
+.story-section--light .story-paragraph em { color: var(--green-dark); }
+.story-section--light .story-paragraph strong { color: var(--text); }
+.story-section--light .story-signature { color: var(--text-3); }
+
+/* ── 마지막 "메인으로 돌아가기" ───────────────────────────── */
+.story-back {
+  margin-top: 60px;
+  display: flex;
+  justify-content: center;
+}
+.story-back-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 22px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.story-back-btn:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--text-3);
+}
+
+/* ── 반응형 ───────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .story-header {
+    padding: 12px 20px;
+  }
+  .story-cover-title {
+    font-size: 36px;
+  }
+  .story-cover-sub {
+    font-size: 15px;
+  }
+  .story-section {
+    padding: 72px 20px;
+  }
+  .story-chapter-title {
+    font-size: 25px;
+  }
+  .story-paragraph {
+    font-size: 16px;
+  }
+}
