@@ -102,6 +102,39 @@ function LandingPage({ onNavigate }) {
         </div>
       </section>
 
+      {/* ───────── AI 질문 예시 ───────── */}
+      <section className="landing-ai-prompts">
+        <div className="landing-section-head">
+          <h2 className="landing-section-title">기록을 돌아보게 하는 질문</h2>
+          <p className="landing-section-sub">
+            VORI 는 혼내기보다, 소비 뒤에 있던 이유를 다시 꺼내볼 수 있게 물어봐요.
+          </p>
+        </div>
+        <div className="landing-ai-prompt-grid">
+          <article className="landing-ai-prompt">
+            <div className="landing-ai-prompt-meta">평소보다 많은 카페 지출</div>
+            <p className="landing-ai-prompt-text">
+              “이번 주 카페 지출이 평소보다 조금 늘었어요. 작업이나 약속처럼
+              꼭 필요했던 이유가 있었나요?”
+            </p>
+          </article>
+          <article className="landing-ai-prompt landing-ai-prompt--accent">
+            <div className="landing-ai-prompt-meta">배달비가 줄어든 날</div>
+            <p className="landing-ai-prompt-text">
+              “오늘은 배달 대신 직접 챙겨 먹은 기록이 보여요. 이런 선택을
+              도와준 상황이 있었나요?”
+            </p>
+          </article>
+          <article className="landing-ai-prompt">
+            <div className="landing-ai-prompt-meta">갑작스러운 쇼핑</div>
+            <p className="landing-ai-prompt-text">
+              “예산보다 큰 쇼핑이 있었어요. 오래 고민했던 물건인지,
+              순간적인 기분 전환이었는지 알려줄래요?”
+            </p>
+          </article>
+        </div>
+      </section>
+
       {/* ───────── 핵심 기능 카드 ───────── */}
       <section id="features" className="landing-features">
         <div className="landing-section-head">

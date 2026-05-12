@@ -1,5 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import SiteHeader from "../../components/SiteHeader";
 // SiteHeader 가 .landing-header 등 랜딩 페이지의 헤더 클래스를 그대로 쓰기
 // 때문에, 이 페이지에서도 LandingPage.css 를 함께 import 합니다.
@@ -8,45 +10,24 @@ import "./StoryPage.css";
 
 // 캐릭터 데이터 (placeholder).
 // 확정되면 emoji 자리에 <img src="/images/pets/xxx.png" /> 로 교체하고,
-// name·tag·desc 만 수정하면 됩니다. 새 캐릭터를 추가할 땐 같은 형식으로
-// 배열에 한 줄 추가하세요.
+// name·desc 만 수정하면 됩니다.
 const CHARACTERS = [
-  {
-    id: "energy-1",
-    stat: "energy",
-    emoji: "🐮",
-    name: "캐릭터 #1",
-    tag: "🍖 에너지 · 식비",
-    desc: "한 줄 소개가 들어갈 자리예요. 펫의 성격·말투를 짧게.",
-    thumb: "energy",
-  },
-  {
-    id: "charm-1",
-    stat: "charm",
-    emoji: "🐱",
-    name: "캐릭터 #2",
-    tag: "✨ 매력 · 쇼핑·뷰티",
-    desc: "한 줄 소개가 들어갈 자리예요. 어떤 스타일을 좋아하는지.",
-    thumb: "charm",
-  },
-  {
-    id: "smart-1",
-    stat: "smart",
-    emoji: "🦉",
-    name: "캐릭터 #3",
-    tag: "🧠 지능 · 문화·여가",
-    desc: "한 줄 소개가 들어갈 자리예요. 무엇을 가장 좋아하는지.",
-    thumb: "smart",
-  },
-  {
-    id: "endure-1",
-    stat: "endure",
-    emoji: "🐶",
-    name: "캐릭터 #4",
-    tag: "💪 지구력 · 생활·고정비",
-    desc: "한 줄 소개가 들어갈 자리예요. 어떻게 곁에 머무는지.",
-    thumb: "endure",
-  },
+  { id: "dragon", emoji: "🐲", name: "용",     desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "lion",   emoji: "🦁", name: "사자",   desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "snake",  emoji: "🐍", name: "뱀",     desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "fox",    emoji: "🦊", name: "여우",   desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "deer",   emoji: "🦌", name: "사슴",   desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "penguin",emoji: "🐧", name: "펭귄",   desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "wolf",   emoji: "🐺", name: "늑대",   desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "turtle", emoji: "🐢", name: "거북이", desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "dog",    emoji: "🐶", name: "강아지", desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "cat",    emoji: "🐱", name: "고양이", desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "rabbit", emoji: "🐰", name: "토끼",   desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "sheep",  emoji: "🐑", name: "양",     desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "frog",   emoji: "🐸", name: "개구리", desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "squirrel",emoji: "🐿️", name: "다람쥐", desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "monkey", emoji: "🐵", name: "원숭이", desc: "한 줄 소개가 들어갈 자리예요." },
+  { id: "panda",  emoji: "🐼", name: "팬더",   desc: "한 줄 소개가 들어갈 자리예요." },
 ];
 
 // 아이템 데이터 (placeholder). 마이룸 가구·소품 같은 항목이 들어갑니다.
@@ -91,27 +72,243 @@ const STORY_TABS = [
   { id: "items", label: "아이템" },
 ];
 
-// 애플 AirPods Pro 페이지 스타일 — 단락의 등장 기준이 viewport 세로 중앙.
-//   - element top 이 viewport 정중앙(center)에 도달했을 때 또렷해짐
-//   - element 가 viewport 위로 흘러나가는 동안 다시 흐려짐
+const EVOLUTION_STAGES = ["유년기", "청소년기", "성체"];
+
+const MOON_TOP_INPUT = [0, 0.58, 1];
+const MOON_TOP_OUTPUT = ["50vh", "50vh", "-20vh"];
+const MOON_MODEL_PATH = `${process.env.PUBLIC_URL}/models/moon.glb`;
+
+const STORY_CHAPTERS = [
+  {
+    id: "chapter-1",
+    sectionClass: "story-section--dark",
+    mark: "Chapter 01",
+    title: "태양계의 오래된 질서",
+    paragraphs: [
+      <>
+        태양계의 중심에는 <em>태양</em>이 있습니다. 태양은 누구의 편도
+        들지 않는 중립의 축. 모든 별은 그 빛 아래에서 각자의 궤도를 돌고,
+        오래된 질서는 그렇게 유지되어 왔습니다.
+      </>,
+      <>
+        하지만 화성은 달랐습니다. 태양의 곁을 맴도는 작은 권력자처럼
+        사사건건 목소리를 높였고, 지구에게는 감히 맞서지 못한 채
+        <strong> 달을 향해 방해 파장</strong>을 쏘아 보내기 시작했어요.
+      </>,
+    ],
+  },
+  {
+    id: "chapter-2",
+    sectionClass: "story-section--twilight",
+    mark: "Chapter 02",
+    title: "루미나의 잠든 국민들",
+    paragraphs: [
+      <>
+        달나라에는 <em>루미나</em>라는 작은 나라가 있습니다. 루미나의
+        국민들은 지구 사람들이 달을 보며 비는 소원을 모아 살아가요.
+        누군가의 소원이 이루어질수록, 루미나의 행복도 함께 차오릅니다.
+      </>,
+      <>
+        그러나 화성의 파장이 달을 흔들기 시작하면서, 소원은 길을 잃고
+        국민들은 지쳐갔습니다. 과도한 스트레스를 버티지 못한 이들은 하나둘
+        <strong> 단단한 알</strong>이 되어 잠들었고, 루미나의 국방력은
+        눈에 띄게 약해졌습니다.
+      </>,
+      <>
+        남은 국민들은 알을 지키기에도 벅찼고, 결국 루미나는 피난을
+        결정합니다. 목적지는 목성 주변을 도는 위성, <em>가니메데</em>.
+        그곳이라면 화성의 파장에서 잠시 벗어날 수 있을 거라 믿었어요.
+      </>,
+    ],
+  },
+  {
+    id: "chapter-3",
+    sectionClass: "story-section--light",
+    mark: "Chapter 03",
+    title: "토끼가 들은 가장 강한 소원",
+    trackMoonExit: true,
+    paragraphs: [
+      <>
+        튜토리얼 토끼는 잠든 알들을 품에 안고 가니메데를 향해 떠났습니다.
+        달의 궤도를 벗어나던 바로 그때, 토끼는 지구 쪽에서 밀려오는
+        이상할 만큼 또렷한 소원을 들었어요.
+      </>,
+      <>
+        그 소원은 단순히 무언가를 갖고 싶다는 말이 아니었습니다. 더 나은
+        하루를 만들고 싶다는 마음, 스스로의 선택을 이해하고 싶다는 마음.
+        토끼는 방향을 돌려 당신에게 다가옵니다. 이제 당신의 기록은
+        <strong> 잠든 루미나 국민들을 깨우는 힘</strong>이 됩니다.
+      </>,
+    ],
+  },
+];
+
 function StoryParagraph({ children }) {
-  const ref = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start 80%", "end start"],
-  });
-  // 등장 구간을 더 길게(0 → 0.35) 잡아서 opacity 가 점진적으로 올라오면서
-  // y 도 같은 속도로 부드럽게 움직이게 합니다.
-  const opacity = useTransform(
-    scrollYProgress,
-    [0, 0.15, 0.35, 0.7, 1],
-    [0, 0.4, 1, 1, 0]
-  );
-  const y = useTransform(scrollYProgress, [0, 0.35], [60, 0]);
+  return <p className="story-paragraph">{children}</p>;
+}
+
+function createCrateredMoonGeometry() {
+  const geometry = new THREE.SphereGeometry(1.25, 160, 96);
+  const position = geometry.attributes.position;
+  const normal = new THREE.Vector3();
+  const craters = [
+    { direction: new THREE.Vector3(-0.42, 0.28, 0.86).normalize(), radius: 0.24, depth: 0.09 },
+    { direction: new THREE.Vector3(0.15, 0.52, 0.84).normalize(), radius: 0.16, depth: 0.065 },
+    { direction: new THREE.Vector3(0.46, -0.12, 0.88).normalize(), radius: 0.19, depth: 0.075 },
+    { direction: new THREE.Vector3(-0.18, -0.48, 0.86).normalize(), radius: 0.18, depth: 0.07 },
+    { direction: new THREE.Vector3(0.64, 0.38, 0.67).normalize(), radius: 0.13, depth: 0.05 },
+    { direction: new THREE.Vector3(-0.62, -0.2, 0.76).normalize(), radius: 0.14, depth: 0.05 },
+    { direction: new THREE.Vector3(0.08, -0.72, 0.69).normalize(), radius: 0.11, depth: 0.04 },
+  ];
+
+  for (let i = 0; i < position.count; i += 1) {
+    normal.fromBufferAttribute(position, i).normalize();
+    let displacement =
+      Math.sin(normal.x * 22.1 + normal.y * 7.7) * 0.008 +
+      Math.sin(normal.y * 18.4 - normal.z * 12.3) * 0.007 +
+      Math.sin((normal.x + normal.z) * 31) * 0.004;
+
+    craters.forEach(({ direction, radius, depth }) => {
+      const distance = Math.acos(THREE.MathUtils.clamp(normal.dot(direction), -1, 1));
+      if (distance < radius) {
+        const t = distance / radius;
+        const bowl = Math.cos(t * Math.PI * 0.5);
+        const rim = Math.exp(-Math.pow((t - 0.86) / 0.13, 2));
+        displacement -= depth * bowl * bowl;
+        displacement += depth * 0.34 * rim;
+      }
+    });
+
+    normal.multiplyScalar(1.25 + displacement);
+    position.setXYZ(i, normal.x, normal.y, normal.z);
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function Moon3D({ scrollProgress }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+    });
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+    camera.position.set(0, 0, 4);
+
+    const moonRoot = new THREE.Group();
+    scene.add(moonRoot);
+
+    const ambientLight = new THREE.AmbientLight(0x9fa5b4, 0.16);
+    scene.add(ambientLight);
+    const keyLight = new THREE.DirectionalLight(0xf4f0df, 5.4);
+    keyLight.position.set(-8.6, 0.38, 1.05);
+    scene.add(keyLight);
+    const rimLight = new THREE.DirectionalLight(0x7480b6, 0.22);
+    rimLight.position.set(0, -1.6, -2.4);
+    scene.add(rimLight);
+
+    const fallbackMoon = new THREE.Mesh(
+      createCrateredMoonGeometry(),
+      new THREE.MeshStandardMaterial({
+        color: 0xbdb6a5,
+        roughness: 0.96,
+        metalness: 0,
+      })
+    );
+    moonRoot.add(fallbackMoon);
+
+    const normalizeModel = (object) => {
+      const box = new THREE.Box3().setFromObject(object);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxAxis = Math.max(size.x, size.y, size.z) || 1;
+      object.position.sub(center);
+      object.scale.setScalar(2.5 / maxAxis);
+    };
+
+    const loader = new GLTFLoader();
+    loader.load(
+      MOON_MODEL_PATH,
+      (gltf) => {
+        moonRoot.clear();
+        normalizeModel(gltf.scene);
+        moonRoot.add(gltf.scene);
+      },
+      undefined,
+      () => {
+        // public/models/moon.glb 가 아직 없으면 fallback 달을 그대로 보여줍니다.
+      }
+    );
+
+    let frameId;
+    const render = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.max(1, canvas.clientWidth);
+      const height = Math.max(1, canvas.clientHeight);
+      renderer.setPixelRatio(dpr);
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+
+      const phase = scrollProgress?.get?.() || 0;
+      const angle =
+        phase < 0.5
+          ? THREE.MathUtils.lerp(-1.42, 0, phase / 0.5)
+          : THREE.MathUtils.lerp(0, 1.54, (phase - 0.5) / 0.5);
+      const shadowWeight = THREE.MathUtils.smoothstep(phase, 0.42, 1);
+      ambientLight.intensity = THREE.MathUtils.lerp(0.17, 0.045, shadowWeight);
+      keyLight.intensity = THREE.MathUtils.lerp(5.2, 6.2, shadowWeight);
+      keyLight.position.set(
+        Math.sin(angle) * 10.5,
+        0.38,
+        Math.cos(angle) * 5.8
+      );
+      moonRoot.rotation.x = -0.08;
+      renderer.render(scene, camera);
+      frameId = requestAnimationFrame(render);
+    };
+
+    render();
+    return () => {
+      cancelAnimationFrame(frameId);
+      fallbackMoon.geometry.dispose();
+      fallbackMoon.material.dispose();
+      renderer.dispose();
+    };
+  }, [scrollProgress]);
+
+  return <canvas ref={canvasRef} className="story-moon-canvas" aria-hidden />;
+}
+
+function StoryChapter({ chapter, articleRef }) {
   return (
-    <motion.p ref={ref} className="story-paragraph" style={{ opacity, y }}>
-      {children}
-    </motion.p>
+    <section
+      className={`story-section story-section--chapter ${chapter.sectionClass}`}
+    >
+      <article ref={articleRef} className="story-chapter">
+        <div className="story-chapter-head">
+          <div className="story-chapter-mark">{chapter.mark}</div>
+          <h2 className="story-chapter-title">{chapter.title}</h2>
+        </div>
+        {chapter.paragraphs.map((paragraph, index) => (
+          <StoryParagraph key={`${chapter.id}-paragraph-${index}`}>
+            {paragraph}
+          </StoryParagraph>
+        ))}
+      </article>
+    </section>
   );
 }
 
@@ -130,11 +327,14 @@ function StoryParagraph({ children }) {
 // <article> 또는 .story-pets-block 안의 텍스트만 수정하세요.
 function StoryPage({ onNavigate }) {
   const [activeTab, setActiveTab] = useState("characters");
+  const [selectedCharacterId, setSelectedCharacterId] = useState(null);
   const ch3ArticleRef = useRef(null);
+  const selectedCharacter = CHARACTERS.find(
+    (character) => character.id === selectedCharacterId
+  );
 
-  // 페이지 전체 스크롤 진행도(0~1)에 비례해 달이 자전합니다.
+  // 페이지 전체 스크롤 진행도(0~1)를 WebGL 달 회전에 사용합니다.
   const { scrollYProgress } = useScroll();
-  const moonRotate = useTransform(scrollYProgress, [0, 1], [0, 720]);
 
   // chapter 3 의 article(본문 영역) 자체를 ref 로 추적해서,
   // 본문이 viewport 가운데에 있을 때 달도 가운데, 본문이 위로 흐르는 만큼
@@ -145,22 +345,28 @@ function StoryPage({ onNavigate }) {
   });
   const moonTop = useTransform(
     ch3Progress,
-    [0, 0.58, 1],
-    ["42vh", "42vh", "-20vh"]
+    MOON_TOP_INPUT,
+    MOON_TOP_OUTPUT
   );
 
   const goLanding = () => {
     if (typeof onNavigate === "function") onNavigate("landing");
   };
 
+  const handleTabClick = (tabId) => {
+    setActiveTab(tabId);
+    setSelectedCharacterId(null);
+  };
+
   return (
     <div className="story">
+      <div className="story-starfield" aria-hidden />
+
       {/* ───────── 헤더 (랜딩과 같은 디자인이되 배경 투명 + 메뉴 숨김) ───────── */}
       <SiteHeader onNavigate={onNavigate} transparent minimal />
 
       {/* ───────── ① 표지 (우주, 가장 어두움) ───────── */}
       <section className="story-cover">
-        <div className="story-stars" aria-hidden />
         <div className="story-cover-inner">
           <span className="story-eyebrow">VORI 의 작은 세계</span>
           <h1 className="story-cover-title">
@@ -183,82 +389,16 @@ function StoryPage({ onNavigate }) {
           style={{ top: moonTop }}
           aria-hidden
         >
-          <motion.div
-            className="story-moon-body"
-            style={{ rotate: moonRotate }}
-          />
+          <Moon3D scrollProgress={scrollYProgress} />
         </motion.div>
 
-      {/* ───────── ② Chapter 01 (짙은 남청) ───────── */}
-      <section className="story-section story-section--dark">
-        <article className="story-chapter">
-          <div className="story-chapter-head">
-            <div className="story-chapter-mark">Chapter 01</div>
-            <h2 className="story-chapter-title">달나라에서 온 부탁</h2>
-          </div>
-          <StoryParagraph>
-            어느 밤, 작은 <em>외계 토끼</em>가 달에서 내려와 당신의 화면을
-            두드립니다. 토끼는 조심스럽게 부탁을 건네요 —
-            “우리 친구들을 구해 주세요. 그 아이들은 <strong>떡</strong>이
-            부족해서 좀처럼 깨어나지 못해요.”
-          </StoryParagraph>
-          <StoryParagraph>
-            달나라엔 떡이 자라지 않습니다. 떡은 오직 누군가의
-            <em> 합리적인 마음</em>에서 빚어지기 때문이에요. 당신이 매일의
-            작은 선택을 기록하면, 그 마음이 떡이 되어 멀리 달나라로 보내집니다.
-            펫들이 깨어날 시간이 다가오는 거예요.
-          </StoryParagraph>
-        </article>
-      </section>
-
-      {/* ───────── ③ Chapter 02 (트와일라잇, 점점 밝아짐) ───────── */}
-      <section className="story-section story-section--twilight">
-        <article className="story-chapter">
-          <div className="story-chapter-head">
-            <div className="story-chapter-mark">Chapter 02</div>
-            <h2 className="story-chapter-title">떡이 자라는 시간</h2>
-          </div>
-          <StoryParagraph>
-            당신이 합리적인 소비를 할 때마다, 멀리 달나라의 펫들 곁에 작은
-            떡이 하나 놓입니다. 떡을 먹은 펫들은 잠에서 깨어나 스탯을 한 칸씩
-            채워가요 —
-            <strong> 🍖 에너지 · ✨ 매력 · 🧠 지능 · 💪 지구력</strong>.
-          </StoryParagraph>
-          <StoryParagraph>
-            너무 많이 쓴 날엔 펫이 가만히 다가와 귀띔합니다. “오늘은 떡이
-            조금 부족했어요.” 매일 밤 외계 토끼가 그날의 지출을 함께
-            훑어보고, 이례적인 한 가지에 대해서는 부드럽게 사유를 묻습니다.
-          </StoryParagraph>
-          <StoryParagraph>
-            그렇게 떡을 나누며 보낸 시간이 쌓이면, 어린 펫이 청소년기를 지나
-            성체로, 그리고 그 너머의 모습으로 자랍니다. 펫의 진화는 결국,
-            <em> 당신이 지난 시간을 어떻게 살아왔는지의 기록</em> 이에요.
-          </StoryParagraph>
-        </article>
-      </section>
-
-      {/* ───────── ④ Chapter 03 (도착, 베이지) ───────── */}
-      <section className="story-section story-section--light">
-        {/* article 자체를 ref 로 추적 → 본문 영역과 정확히 동기화 */}
-        <article ref={ch3ArticleRef} className="story-chapter">
-          <div className="story-chapter-head">
-            <div className="story-chapter-mark">Chapter 03</div>
-            <h2 className="story-chapter-title">깨어난 친구들</h2>
-          </div>
-          <StoryParagraph>
-            당신의 떡을 받은 친구들이 하나둘 눈을 뜨기 시작했어요. 외계
-            토끼는 그 곁에서 살며시 미소 짓고, 깨어난 친구는 가만히 당신을
-            바라보다 작은 머리를 끄덕입니다. <em>부탁은 그렇게 조금씩
-            이루어져요.</em>
-          </StoryParagraph>
-          <StoryParagraph>
-            성체가 된 친구는 다시 자기의 별을 찾아 떠나고, 그 자리엔 또
-            다른 잠든 친구가 도착합니다. 마이룸엔 그 동안의 흔적이 차곡차곡
-            쌓이고요. 그렇게 당신의 별은
-            <strong> 깨어나는 친구들의 정거장</strong>이 됩니다.
-          </StoryParagraph>
-        </article>
-      </section>
+        {STORY_CHAPTERS.map((chapter) => (
+          <StoryChapter
+            key={chapter.id}
+            chapter={chapter}
+            articleRef={chapter.trackMoonExit ? ch3ArticleRef : undefined}
+          />
+        ))}
 
       </div>{/* /.story-chapters */}
 
@@ -269,11 +409,11 @@ function StoryPage({ onNavigate }) {
       <section className="story-section story-section--light story-section--pets">
         <div className="story-pets">
           <div className="story-pets-head">
-            <span className="story-eyebrow story-eyebrow--dark">달나라 안내서</span>
-            <h2 className="story-pets-title">달나라의 친구들</h2>
+            <span className="story-eyebrow story-eyebrow--dark">루미나 안내서</span>
+            <h2 className="story-pets-title">루미나의 친구들</h2>
             <p className="story-pets-sub">
-              잠든 친구들이 어떤 모습으로 깨어나는지. 곧 당신의 떡이 그들의
-              하루를 시작하게 할 거예요.
+              알이 된 국민들이 어떤 모습으로 깨어나는지. 곧 당신의 기록이
+              그들의 하루를 다시 시작하게 할 거예요.
             </p>
           </div>
 
@@ -288,7 +428,7 @@ function StoryPage({ onNavigate }) {
                 className={`story-tab ${
                   activeTab === tab.id ? "story-tab--active" : ""
                 }`}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabClick(tab.id)}
               >
                 {tab.label}
               </button>
@@ -296,52 +436,100 @@ function StoryPage({ onNavigate }) {
           </div>
 
           {/* 활성 탭에 따라 카드 그리드 분기 */}
-          <div className="story-character-grid" key={activeTab}>
-            {(activeTab === "characters" ? CHARACTERS : ITEMS).map((c) => (
-              <article key={c.id} className="story-character">
-                <div
-                  className={`story-character-thumb story-character-thumb--${c.thumb}`}
-                >
-                  <span className="story-character-emoji" aria-hidden>
-                    {c.emoji}
-                  </span>
-                </div>
-                <div className="story-character-info">
-                  <div className="story-character-tag">{c.tag}</div>
-                  <h3 className="story-character-name">{c.name}</h3>
-                  <p className="story-character-desc">{c.desc}</p>
-                </div>
-              </article>
-            ))}
-          </div>
+          {activeTab === "characters" && selectedCharacter ? (
+            <div className="story-character-detail">
+              <div className="story-evolution">
+                {EVOLUTION_STAGES.map((stage, index) => (
+                  <div
+                    key={`${selectedCharacter.id}-${stage}`}
+                    className="story-evolution-step"
+                  >
+                    <div className="story-evolution-thumb">
+                      <span className="story-evolution-emoji" aria-hidden>
+                        {selectedCharacter.emoji}
+                      </span>
+                    </div>
+                    <div className="story-evolution-label">{stage}</div>
+                    <div className="story-evolution-note">
+                      {index === 0 && "작은 떡을 기다리는 첫 모습"}
+                      {index === 1 && "습관이 쌓이며 성격이 드러나는 시기"}
+                      {index === 2 && "스탯의 흔적을 품고 완성된 모습"}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-          {/* 보조 정보 — 성장·업적·분양 (짧게) */}
-          <div className="story-info-row">
-            <div className="story-info">
-              <div className="story-info-icon" aria-hidden>🌱</div>
-              <div className="story-info-title">성장 단계</div>
-              <div className="story-info-desc">
-                유년기 → 청소년기 → 성체. 스탯의 비율에 따라 같은 펫도
-                다른 모습으로 자라요.
+              <div className="story-character-detail-info">
+                <h3 className="story-character-detail-name">
+                  {selectedCharacter.name}
+                </h3>
+                <p className="story-character-detail-desc">
+                  {selectedCharacter.desc}
+                </p>
+                <dl className="story-character-detail-list">
+                  <div>
+                    <dt>성장 방식</dt>
+                    <dd>합리적인 소비 기록이 쌓일수록 진화 단계가 열립니다.</dd>
+                  </div>
+                  <div>
+                    <dt>마이룸 흔적</dt>
+                    <dd>성체가 된 뒤에도 방 안에 작은 기념품과 보너스를 남깁니다.</dd>
+                  </div>
+                  <div>
+                    <dt>성격 메모</dt>
+                    <dd>같은 종이라도 스탯 비율에 따라 말투와 분위기가 달라집니다.</dd>
+                  </div>
+                </dl>
+                <button
+                  type="button"
+                  className="story-detail-back"
+                  onClick={() => setSelectedCharacterId(null)}
+                >
+                  캐릭터 목록으로
+                </button>
               </div>
             </div>
-            <div className="story-info">
-              <div className="story-info-icon" aria-hidden>🏆</div>
-              <div className="story-info-title">업적과 칭호</div>
-              <div className="story-info-desc">
-                조건을 채우면 새로운 칭호가 열려요. 키우는 공간의 배경도
-                함께 바뀝니다.
-              </div>
+          ) : (
+            <div className="story-character-grid" key={activeTab}>
+              {(activeTab === "characters" ? CHARACTERS : ITEMS).map((c) => {
+                const isCharacter = activeTab === "characters";
+                return (
+                  <article
+                    key={c.id}
+                    className={`story-character ${
+                      isCharacter ? "story-character--clickable" : ""
+                    }`}
+                    role={isCharacter ? "button" : undefined}
+                    tabIndex={isCharacter ? 0 : undefined}
+                    onClick={
+                      isCharacter ? () => setSelectedCharacterId(c.id) : undefined
+                    }
+                    onKeyDown={
+                      isCharacter
+                        ? (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedCharacterId(c.id);
+                            }
+                          }
+                        : undefined
+                    }
+                  >
+                    <div className="story-character-thumb">
+                      <span className="story-character-emoji" aria-hidden>
+                        {c.emoji}
+                      </span>
+                    </div>
+                    <div className="story-character-info">
+                      {c.tag && <div className="story-character-tag">{c.tag}</div>}
+                      <h3 className="story-character-name">{c.name}</h3>
+                      <p className="story-character-desc">{c.desc}</p>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
-            <div className="story-info">
-              <div className="story-info-icon" aria-hidden>🎁</div>
-              <div className="story-info-title">분양과 마이룸</div>
-              <div className="story-info-desc">
-                성체가 된 펫은 다른 곳으로 분양 가능. 모인 게임 머니로
-                마이룸을 꾸미면 다음 펫에게 보너스가 돌아와요.
-              </div>
-            </div>
-          </div>
+          )}
 
           <div className="story-back">
             <button

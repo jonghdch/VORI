@@ -471,6 +471,42 @@
   letter-spacing: 0.04em;
 }
 
+/* ── AI 질문 예시 ─────────────────────────────────────────── */
+.landing-ai-prompts {
+  padding: 112px 32px;
+  background: var(--bg);
+}
+.landing-ai-prompt-grid {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.landing-ai-prompt {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 26px 24px;
+}
+.landing-ai-prompt--accent {
+  background: var(--green-50);
+  border-color: var(--green-100);
+}
+.landing-ai-prompt-meta {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--green);
+  margin-bottom: 14px;
+}
+.landing-ai-prompt-text {
+  font-size: 16px;
+  line-height: 1.72;
+  color: var(--text);
+  margin: 0;
+  word-break: keep-all;
+}
+
 /* ── FAQ ─────────────────────────────────────────────────── */
 .landing-faq {
   padding: 112px 32px;
@@ -613,6 +649,10 @@
   .landing-title {
     font-size: 42px;
   }
+  .landing-ai-prompt-grid {
+    grid-template-columns: 1fr;
+    max-width: 760px;
+  }
   .landing-step {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -630,11 +670,15 @@
     padding: 56px 20px 80px;
   }
   .landing-story,
+  .landing-ai-prompts,
   .landing-features,
   .landing-how,
   .landing-bottom-cta,
   .landing-faq {
     padding: 80px 20px;
+  }
+  .landing-ai-prompt-grid {
+    grid-template-columns: 1fr;
   }
   .landing-footer-inner {
     flex-direction: column;
