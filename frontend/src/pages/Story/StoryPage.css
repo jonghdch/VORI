@@ -187,11 +187,11 @@
   );
 }
 
-/* sticky — 달이 화면 정중앙(50vh)에 머무릅니다. wrapper 끝나면 자동으로
-   sticky 해제되어 챕터 흐름과 함께 위로 흘러갑니다. */
+/* sticky — 달이 화면 가운데(살짝 위쪽, 42vh)에 머무릅니다. wrapper 끝나면
+   자동으로 sticky 해제되어 챕터 흐름과 함께 위로 흘러갑니다. */
 .story-moon {
   position: sticky;
-  top: 50vh;
+  top: 42vh;
   width: 0;
   height: 0;
   margin: 0 auto;
@@ -336,10 +336,14 @@
   color: var(--text);
   padding-bottom: 140px;
 }
-/* 챕터 3 — 본문 끝나면 즉시 wrapper 끝나도록 padding-bottom 제거.
-   framer-motion 의 useScroll 이 이 섹션을 ref 로 추적합니다. */
+/* 챕터 3 — section 의 전체 영역을 본문 크기만큼으로 줄여서, 본문이 끝나는
+   순간 wrapper 끝 = sticky 해제가 되도록.
+   (기본 .story-section 의 min-height: 100vh 가 남아 있으면 본문이 짧아도
+   chapter 3 가 100vh 를 차지해 sticky 가 너무 늦게 풀립니다.) */
 .story-section--light:not(.story-section--pets) {
   padding-bottom: 0;
+  padding-top: 8vh;
+  min-height: auto;
 }
 /* 펫 안내 섹션은 wrapper 밖이라 자기 베이지 배경 유지 */
 .story-section--pets {
@@ -357,7 +361,7 @@
   background: var(--bg);
   min-height: auto; /* 풀스크린 X — 안내 섹션은 자기 콘텐츠만큼 */
   display: block;
-  padding: 80px 24px 140px;
+  padding: 360px 24px 140px;
 }
 .story-pets {
   max-width: 1100px;

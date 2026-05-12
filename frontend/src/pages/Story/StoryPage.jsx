@@ -130,11 +130,24 @@ function StoryParagraph({ children }) {
 // <article> 또는 .story-pets-block 안의 텍스트만 수정하세요.
 function StoryPage({ onNavigate }) {
   const [activeTab, setActiveTab] = useState("characters");
+  const ch3ArticleRef = useRef(null);
 
   // 페이지 전체 스크롤 진행도(0~1)에 비례해 달이 자전합니다.
-  // 페이지 끝까지 스크롤하면 720도 회전(두 바퀴).
   const { scrollYProgress } = useScroll();
   const moonRotate = useTransform(scrollYProgress, [0, 1], [0, 720]);
+
+  // chapter 3 의 article(본문 영역) 자체를 ref 로 추적해서,
+  // 본문이 viewport 가운데에 있을 때 달도 가운데, 본문이 위로 흐르는 만큼
+  // 달도 함께 위로 흘러가도록 합니다.
+  const { scrollYProgress: ch3Progress } = useScroll({
+    target: ch3ArticleRef,
+    offset: ["start end", "end start"],
+  });
+  const moonTop = useTransform(
+    ch3Progress,
+    [0, 0.58, 1],
+    ["42vh", "42vh", "-20vh"]
+  );
 
   const goLanding = () => {
     if (typeof onNavigate === "function") onNavigate("landing");
@@ -163,14 +176,18 @@ function StoryPage({ onNavigate }) {
         </div>
       </section>
 
-      {/* ───────── 챕터 영역 (달은 화면 가운데 sticky, 스크롤 비례 자전) ───────── */}
+      {/* ───────── 챕터 영역 (달은 sticky + chapter 3 진행에 맞춰 위로 흐름) ───────── */}
       <div className="story-chapters">
-        <div className="story-moon" aria-hidden>
+        <motion.div
+          className="story-moon"
+          style={{ top: moonTop }}
+          aria-hidden
+        >
           <motion.div
             className="story-moon-body"
             style={{ rotate: moonRotate }}
           />
-        </div>
+        </motion.div>
 
       {/* ───────── ② Chapter 01 (짙은 남청) ───────── */}
       <section className="story-section story-section--dark">
@@ -222,7 +239,8 @@ function StoryPage({ onNavigate }) {
 
       {/* ───────── ④ Chapter 03 (도착, 베이지) ───────── */}
       <section className="story-section story-section--light">
-        <article className="story-chapter">
+        {/* article 자체를 ref 로 추적 → 본문 영역과 정확히 동기화 */}
+        <article ref={ch3ArticleRef} className="story-chapter">
           <div className="story-chapter-head">
             <div className="story-chapter-mark">Chapter 03</div>
             <h2 className="story-chapter-title">깨어난 친구들</h2>
