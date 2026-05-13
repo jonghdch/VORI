@@ -101,21 +101,21 @@ const STORY_CHAPTERS = [
     id: "chapter-2",
     sectionClass: "story-section--twilight",
     mark: "Chapter 02",
-    title: "루미나의 잠든 국민들",
+    title: "루미나의 잠든 친구들",
     paragraphs: [
       <>
         달나라에는 <em>루미나</em>라는 작은 나라가 있습니다. 루미나의
-        국민들은 지구 사람들이 달을 보며 비는 소원을 모아 살아가요.
+        친구들은 지구 사람들이 달을 보며 비는 소원을 모아 살아가요.
         누군가의 소원이 이루어질수록, 루미나의 행복도 함께 차오릅니다.
       </>,
       <>
         그러나 화성의 파장이 달을 흔들기 시작하면서, 소원은 길을 잃고
-        국민들은 지쳐갔습니다. 과도한 스트레스를 버티지 못한 이들은 하나둘
-        <strong> 단단한 알</strong>이 되어 잠들었고, 루미나의 국방력은
+        친구들은 지쳐갔습니다. 과도한 스트레스를 버티지 못한 이들은 하나둘
+        <strong> 단단한 알</strong>이 되어 잠들었고, 루미나를 지킬 힘은
         눈에 띄게 약해졌습니다.
       </>,
       <>
-        남은 국민들은 알을 지키기에도 벅찼고, 결국 루미나는 피난을
+        남은 친구들은 알을 지키기에도 벅찼고, 결국 루미나는 피난을
         결정합니다. 목적지는 목성 주변을 도는 위성, <em>가니메데</em>.
         그곳이라면 화성의 파장에서 잠시 벗어날 수 있을 거라 믿었어요.
       </>,
@@ -137,7 +137,7 @@ const STORY_CHAPTERS = [
         그 소원은 단순히 무언가를 갖고 싶다는 말이 아니었습니다. 더 나은
         하루를 만들고 싶다는 마음, 스스로의 선택을 이해하고 싶다는 마음.
         토끼는 방향을 돌려 당신에게 다가옵니다. 이제 당신의 기록은
-        <strong> 잠든 루미나 국민들을 깨우는 힘</strong>이 됩니다.
+        <strong> 잠든 루미나 친구들을 깨우는 힘</strong>이 됩니다.
       </>,
     ],
   },
@@ -205,7 +205,7 @@ function Moon3D({ scrollProgress }) {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
-    camera.position.set(0, 0, 4);
+    camera.position.set(0, 0, 5.15);
 
     const moonRoot = new THREE.Group();
     scene.add(moonRoot);
@@ -412,7 +412,7 @@ function StoryPage({ onNavigate }) {
             <span className="story-eyebrow story-eyebrow--dark">루미나 안내서</span>
             <h2 className="story-pets-title">루미나의 친구들</h2>
             <p className="story-pets-sub">
-              알이 된 국민들이 어떤 모습으로 깨어나는지. 곧 당신의 기록이
+              알이 된 친구들이 어떤 모습으로 깨어나는지. 곧 당신의 기록이
               그들의 하루를 다시 시작하게 할 거예요.
             </p>
           </div>

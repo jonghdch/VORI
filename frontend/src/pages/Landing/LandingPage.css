@@ -129,6 +129,12 @@
   align-items: center;
   justify-content: space-between;
 }
+/* 로고 + 스토리 메뉴를 묶은 왼쪽 그룹 */
+.landing-header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
 .landing-logo {
   font-family: "Nunito", "Pretendard", sans-serif;
   font-weight: 900;

@@ -19,14 +19,23 @@ function SiteHeader({ onNavigate, transparent = false, minimal = false }) {
   return (
     <header className={headerCls}>
       <div className="landing-header-inner">
-        <button
-          type="button"
-          className="landing-logo landing-logo-btn"
-          onClick={() => go("landing")}
-          aria-label="VORI 메인으로"
-        >
-          VORI
-        </button>
+        <div className="landing-header-left">
+          <button
+            type="button"
+            className="landing-logo landing-logo-btn"
+            onClick={() => go("landing")}
+            aria-label="VORI 메인으로"
+          >
+            VORI
+          </button>
+          <button
+            type="button"
+            className="landing-nav-link landing-nav-link-btn"
+            onClick={() => go("story")}
+          >
+            스토리
+          </button>
+        </div>
         <nav className="landing-nav">
           {!minimal && (
             <>
