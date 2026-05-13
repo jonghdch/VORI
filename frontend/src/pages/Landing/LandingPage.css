@@ -355,7 +355,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 42px;
 }
 .landing-step {
   display: grid;
@@ -366,6 +366,8 @@
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 36px 40px;
+  transform-origin: center center;
+  will-change: transform, opacity;
 }
 .landing-step-text {
   display: flex;

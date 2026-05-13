@@ -4,7 +4,13 @@
 //   onNavigate(page, sectionId?)  — 페이지 전환
 //   transparent (boolean)         — 배경/보더를 투명하게. 어두운 표지 위에 띄울 때 사용
 //   minimal (boolean)             — 홈/서비스 소개/이용 방법 메뉴를 숨김. 로고 + 로그인/회원가입만 노출
-function SiteHeader({ onNavigate, transparent = false, minimal = false }) {
+//   extraNavItems                 — 특정 페이지에서만 추가로 보여줄 우측 메뉴
+function SiteHeader({
+  onNavigate,
+  transparent = false,
+  minimal = false,
+  extraNavItems = [],
+}) {
   const go = (page, section) => {
     if (typeof onNavigate === "function") onNavigate(page, section);
   };
@@ -62,6 +68,16 @@ function SiteHeader({ onNavigate, transparent = false, minimal = false }) {
               </button>
             </>
           )}
+          {extraNavItems.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className="landing-nav-link landing-nav-link-btn"
+              onClick={item.onClick}
+            >
+              {item.label}
+            </button>
+          ))}
           <button
             type="button"
             className="landing-btn landing-btn-ghost"

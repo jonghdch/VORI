@@ -353,6 +353,12 @@ function StoryPage({ onNavigate }) {
     if (typeof onNavigate === "function") onNavigate("landing");
   };
 
+  const goLuminaGuide = () => {
+    document
+      .getElementById("lumina-guide")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);
     setSelectedCharacterId(null);
@@ -363,7 +369,14 @@ function StoryPage({ onNavigate }) {
       <div className="story-starfield" aria-hidden />
 
       {/* ───────── 헤더 (랜딩과 같은 디자인이되 배경 투명 + 메뉴 숨김) ───────── */}
-      <SiteHeader onNavigate={onNavigate} transparent minimal />
+      <SiteHeader
+        onNavigate={onNavigate}
+        transparent
+        minimal
+        extraNavItems={[
+          { label: "루미나 안내서", onClick: goLuminaGuide },
+        ]}
+      />
 
       {/* ───────── ① 표지 (우주, 가장 어두움) ───────── */}
       <section className="story-cover">
@@ -406,7 +419,10 @@ function StoryPage({ onNavigate }) {
       {/* 캐릭터는 placeholder 4종(스탯 4종 대응). 캐릭터 확정 시 emoji /
           이름 / tag / desc 만 수정하면 됩니다. 이미지가 준비되면 thumb 의
           이모지를 <img src=... /> 로 교체. */}
-      <section className="story-section story-section--light story-section--pets">
+      <section
+        id="lumina-guide"
+        className="story-section story-section--light story-section--pets"
+      >
         <div className="story-pets">
           <div className="story-pets-head">
             <span className="story-eyebrow story-eyebrow--dark">루미나 안내서</span>

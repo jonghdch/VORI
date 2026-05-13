@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import SiteHeader from "../../components/SiteHeader";
 import "./LandingPage.css";
 
@@ -23,6 +24,41 @@ function FaqItem({ question, children }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function LandingStepCard({ number, title, desc, videoSrc }) {
+  return (
+    <motion.div
+      className="landing-step"
+      initial={{ opacity: 0.08, y: 56 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.016 }}
+      viewport={{ once: true, amount: 0.36 }}
+      transition={{
+        opacity: { duration: 0.72, ease: [0.22, 1, 0.36, 1] },
+        y: { duration: 0.72, ease: [0.22, 1, 0.36, 1] },
+        scale: { duration: 0.16, ease: "easeOut" },
+      }}
+    >
+      <div className="landing-step-text">
+        <div className="landing-step-head">
+          <div className="landing-step-num">{number}</div>
+          <h3 className="landing-step-title">{title}</h3>
+        </div>
+        <p className="landing-step-desc">{desc}</p>
+      </div>
+      <div className="landing-step-media">
+        <video
+          className="landing-step-video"
+          src={videoSrc}
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+      </div>
+    </motion.div>
   );
 }
 
@@ -206,77 +242,39 @@ function LandingPage({ onNavigate }) {
           </p>
         </div>
         <div className="landing-step-row">
-          <div className="landing-step">
-            <div className="landing-step-text">
-              <div className="landing-step-head">
-                <div className="landing-step-num">01</div>
-                <h3 className="landing-step-title">지출 + 사유 입력</h3>
-              </div>
-              <p className="landing-step-desc">
+          <LandingStepCard
+            number="01"
+            title="지출 + 사유 입력"
+            desc={
+              <>
                 오늘 쓴 돈과 이유를 한 줄로 적어요.<br />
                 "점심에 친구랑 파스타" 처럼 자유롭게.
-              </p>
-            </div>
-            <div className="landing-step-media">
-              {/* public/videos/step1.mp4 파일을 넣으면 자동 재생됩니다. */}
-              <video
-                className="landing-step-video"
-                src={`${process.env.PUBLIC_URL}/videos/step1.mp4`}
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
-            </div>
-          </div>
-
-          <div className="landing-step">
-            <div className="landing-step-text">
-              <div className="landing-step-head">
-                <div className="landing-step-num">02</div>
-                <h3 className="landing-step-title">AI가 시그널 판정</h3>
-              </div>
-              <p className="landing-step-desc">
+              </>
+            }
+            videoSrc={`${process.env.PUBLIC_URL}/videos/step1.mp4`}
+          />
+          <LandingStepCard
+            number="02"
+            title="AI가 시그널 판정"
+            desc={
+              <>
                 과거 소비, 예산, 패턴을 함께 보고
                 합리성을 판단해 알려드려요.
-              </p>
-            </div>
-            <div className="landing-step-media">
-              {/* public/videos/step2.mp4 파일을 넣으면 자동 재생됩니다. */}
-              <video
-                className="landing-step-video"
-                src={`${process.env.PUBLIC_URL}/videos/step2.mp4`}
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
-            </div>
-          </div>
-
-          <div className="landing-step">
-            <div className="landing-step-text">
-              <div className="landing-step-head">
-                <div className="landing-step-num">03</div>
-                <h3 className="landing-step-title">펫이 성장</h3>
-              </div>
-              <p className="landing-step-desc">
+              </>
+            }
+            videoSrc={`${process.env.PUBLIC_URL}/videos/step2.mp4`}
+          />
+          <LandingStepCard
+            number="03"
+            title="펫이 성장"
+            desc={
+              <>
                 에너지·매력·지능·지구력 스탯이 오르고,
                 마이룸에서 결과를 확인해요.
-              </p>
-            </div>
-            <div className="landing-step-media">
-              {/* public/videos/step3.mp4 파일을 넣으면 자동 재생됩니다. */}
-              <video
-                className="landing-step-video"
-                src={`${process.env.PUBLIC_URL}/videos/step3.mp4`}
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
-            </div>
-          </div>
+              </>
+            }
+            videoSrc={`${process.env.PUBLIC_URL}/videos/step3.mp4`}
+          />
         </div>
       </section>
 
