@@ -4,6 +4,7 @@ import LandingPage from "./pages/Landing/LandingPage";
 import LoginPage from "./pages/Login/LoginPage";
 import SignupPage from "./pages/Signup/SignupPage";
 import StoryPage from "./pages/Story/StoryPage";
+import { me, logout } from "./api/auth";
 
 // 앱의 진입점.
 // page 값에 따라 보여줄 페이지를 바꿉니다.
@@ -16,10 +17,27 @@ import StoryPage from "./pages/Story/StoryPage";
 function App() {
   const [page, setPage] = useState("landing");
   const [scrollTo, setScrollTo] = useState(null);
+  const [user, setUser] = useState(null);
+
+  // 새로고침 등으로 진입했을 때 세션 쿠키가 살아있으면 자동 복원.
+  useEffect(() => {
+    me().then((u) => setUser(u)).catch(() => setUser(null));
+  }, []);
 
   const navigate = (nextPage, sectionId) => {
     setPage(nextPage);
     setScrollTo(sectionId || null);
+  };
+
+  const handleLogin = (u) => setUser(u);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      setUser(null);
+      navigate("landing");
+    }
   };
 
   // 페이지가 바뀌면 항상 맨 위로 스크롤하고,
@@ -37,10 +55,12 @@ function App() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [page, scrollTo]);
 
-  if (page === "login") return <LoginPage onNavigate={navigate} />;
+  if (page === "login")
+    return <LoginPage onNavigate={navigate} onLogin={handleLogin} />;
   if (page === "signup") return <SignupPage onNavigate={navigate} />;
-  if (page === "story") return <StoryPage onNavigate={navigate} />;
-  return <LandingPage onNavigate={navigate} />;
+  if (page === "story")
+    return <StoryPage onNavigate={navigate} user={user} onLogout={handleLogout} />;
+  return <LandingPage onNavigate={navigate} user={user} onLogout={handleLogout} />;
 }
 
 export default App;

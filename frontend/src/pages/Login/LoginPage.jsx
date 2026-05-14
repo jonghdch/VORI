@@ -1,27 +1,34 @@
 import { useState } from "react";
 import "./LoginPage.css";
+import { login } from "../../api/auth";
 
-// 로그인 페이지 (프론트엔드만).
-// - 백엔드 연동은 아직 X. 폼 submit 하면 잠깐 로딩 표시만 됩니다.
-// - 다른 페이지로 이동할 때는 onNavigate("landing") 처럼 호출하세요.
-function LoginPage({ onNavigate }) {
+// 로그인 페이지.
+// - POST /api/auth/login 호출, 세션 쿠키(JSESSIONID)로 인증 유지.
+// - 성공 시 onNavigate("landing") 으로 이동.
+function LoginPage({ onNavigate, onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const go = (page) => {
     if (typeof onNavigate === "function") onNavigate(page);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // 백엔드 붙기 전 임시 동작: 0.6초 로딩 표시 후 안내.
+    setError("");
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const user = await login(email, password);
+      if (typeof onLogin === "function") onLogin(user);
+      go("landing");
+    } catch (err) {
+      setError(err.message || "로그인 중 오류가 발생했어요");
+    } finally {
       setLoading(false);
-      alert("로그인 API는 아직 연결 전이에요. (프론트만 구현 상태)");
-    }, 600);
+    }
   };
 
   return (
@@ -97,6 +104,16 @@ function LoginPage({ onNavigate }) {
                 비밀번호를 잊으셨나요?
               </button>
             </div>
+
+            {error && (
+              <p
+                className="login-error"
+                role="alert"
+                style={{ color: "#c0392b", margin: "4px 0 0", fontSize: "0.9rem" }}
+              >
+                {error}
+              </p>
+            )}
 
             <button
               type="submit"

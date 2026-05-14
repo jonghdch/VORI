@@ -172,6 +172,102 @@
   cursor: pointer;
 }
 
+/* ───────── 로그인 후 사용자 메뉴 (아바타 + 팝오버) ───────── */
+.user-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: #3a5a40;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+}
+.landing-header--transparent .user-avatar {
+  background: rgba(255, 255, 255, 0.9);
+  color: #2a3b2e;
+}
+
+.user-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 260px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  padding: 14px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.user-popover-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.user-popover-photo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #3a5a40;
+  color: #fff;
+  font-weight: 700;
+  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.user-popover-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.user-popover-nickname {
+  font-weight: 700;
+  font-size: 15px;
+  color: #1f2a23;
+  line-height: 1.2;
+}
+.user-popover-email {
+  font-size: 13px;
+  color: #6b7a72;
+  margin-top: 2px;
+  word-break: break-all;
+}
+.user-popover-logout {
+  width: 100%;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2a23;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.user-popover-logout:hover {
+  background: #1f2a23;
+  color: #fff;
+  border-color: #1f2a23;
+}
+
 /* ── 히어로 ───────────────────────────────────────────────── */
 .landing-hero {
   position: relative;

@@ -69,7 +69,7 @@ function LandingStepCard({ number, title, desc, videoSrc }) {
 // onNavigate(pageName) 을 호출하면 다른 페이지로 이동합니다.
 // 예) onNavigate("login") → 로그인 페이지로 이동
 
-function LandingPage({ onNavigate }) {
+function LandingPage({ onNavigate, user, onLogout }) {
   const goSignup = () => {
     if (typeof onNavigate === "function") onNavigate("signup");
   };
@@ -78,7 +78,7 @@ function LandingPage({ onNavigate }) {
   };
   return (
     <div className="landing">
-      <SiteHeader onNavigate={onNavigate} />
+      <SiteHeader onNavigate={onNavigate} user={user} onLogout={onLogout} />
 
       {/* ───────── 히어로 (큰 타이틀 영역) ───────── */}
       <section className="landing-hero">

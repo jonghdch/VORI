@@ -325,7 +325,7 @@ function StoryChapter({ chapter, articleRef }) {
 //
 // 스토리 챕터 이후엔 "펫 안내" 섹션이 이어집니다. 콘텐츠를 손볼 땐 각
 // <article> 또는 .story-pets-block 안의 텍스트만 수정하세요.
-function StoryPage({ onNavigate }) {
+function StoryPage({ onNavigate, user, onLogout }) {
   const [activeTab, setActiveTab] = useState("characters");
   const [selectedCharacterId, setSelectedCharacterId] = useState(null);
   const ch3ArticleRef = useRef(null);
@@ -371,8 +371,9 @@ function StoryPage({ onNavigate }) {
       {/* ───────── 헤더 (랜딩과 같은 디자인이되 배경 투명 + 메뉴 숨김) ───────── */}
       <SiteHeader
         onNavigate={onNavigate}
+        user={user}
+        onLogout={onLogout}
         transparent
-        minimal
         extraNavItems={[
           { label: "루미나 안내서", onClick: goLuminaGuide },
         ]}
