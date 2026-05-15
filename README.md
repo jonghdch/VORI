@@ -1,6 +1,6 @@
 # Vori
 
-> **합리성 판정 자기관리 앱** — 지출 + 맥락 + 사유를 받아 4 방식 알고리즘으로 합리성 시그널(🟢/⚪/🔴) + 스탯 가감을 반환. 졸업작품.
+> **합리성 판정 자기관리 앱** — 지출 + 맥락 + 사유를 받아 합리성 시그널(🟢/⚪/🔴) + 스탯 가감을 반환. 졸업작품.
 
 ## 스택
 
@@ -95,7 +95,7 @@ gemini.api.key=${GEMINI_API_KEY}
 | 폴더 | 역할 | 예시 |
 |------|------|------|
 | `controller/` | REST API 엔드포인트 | `@RestController` 클래스 |
-| `service/` | 비즈 로직 | 4 방식 알고리즘 A/B/C/D |
+| `service/` | 비즈 로직 | 합리성 판정·스탯 가감·펫 성장 로직 |
 | `repository/` | DB 접근 | `extends JpaRepository` |
 | `entity/` | JPA 엔티티 | `@Entity` (User·Expense·Stat 등) |
 | `dto/` | 요청/응답 객체 | `LoginRequest`, `SignalResponse` 등 |
