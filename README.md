@@ -49,15 +49,6 @@ brew services start mysql
 mysql -u root -e "CREATE DATABASE vori;"
 ```
 
-## 4 방식 알고리즘
-
-| 키 | 방식 | 비고 |
-|---|------|------|
-| A | Google Gemini 직접 판정 | 본 빌드 |
-| B | 한국어 임베딩 + k-NN | **회의 결정 필요** |
-| C | 규칙 엔진 8개 | 본 빌드 |
-| D | 하이브리드 (C 우선 → B 폴백) | 본 빌드 |
-
 ## 팀 작업 흐름
 
 1. 본인 브랜치 생성: `git checkout -b feature/<기능명>`
