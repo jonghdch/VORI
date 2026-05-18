@@ -57,7 +57,8 @@ function App() {
 
   if (page === "login")
     return <LoginPage onNavigate={navigate} onLogin={handleLogin} />;
-  if (page === "signup") return <SignupPage onNavigate={navigate} />;
+  if (page === "signup")
+    return <SignupPage onNavigate={navigate} onLogin={handleLogin} />;
   if (page === "story")
     return <StoryPage onNavigate={navigate} user={user} onLogout={handleLogout} />;
   return <LandingPage onNavigate={navigate} user={user} onLogout={handleLogout} />;

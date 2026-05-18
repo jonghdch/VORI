@@ -20,6 +20,9 @@ public record SignupRequest(
     @NotBlank @Size(max = 30)
     String nickname,
 
+    @NotBlank @Size(max = 30)
+    String name,
+
     @AssertTrue(message = "이용약관 동의가 필요합니다")
     Boolean termsAgreed,
 

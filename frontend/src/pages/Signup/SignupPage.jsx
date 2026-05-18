@@ -1,15 +1,21 @@
 import { useState } from "react";
 import "./SignupPage.css";
+import { signup, login } from "../../api/auth";
 
-// 회원가입 페이지 (프론트엔드만).
-// - 백엔드 연동은 아직 X. 제출하면 잠깐 로딩 표시 후 안내됩니다.
-// - 다른 페이지로 이동하려면 onNavigate("login") 등을 호출하세요.
-function SignupPage({ onNavigate }) {
+// 회원가입 페이지.
+// - POST /api/auth/signup 호출 → 성공 시 자동으로 /api/auth/login 까지 호출해
+//   세션 쿠키를 받고 랜딩으로 이동.
+// - onLogin(user) 으로 App 의 user 상태를 갱신.
+// eslint-disable-next-line no-useless-escape
+const SPECIAL_CHAR_RE = /[!@#$%^&*()_+\-=\[\]{};:'",.<>/?]/;
+
+function SignupPage({ onNavigate, onLogin }) {
   const [form, setForm] = useState({
     email: "",
     password: "",
     passwordConfirm: "",
     nickname: "",
+    name: "",
     agreeAll: false,
     agreeTerms: false,
     agreePrivacy: false,
@@ -17,6 +23,7 @@ function SignupPage({ onNavigate }) {
   });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const go = (page) => {
     if (typeof onNavigate === "function") onNavigate(page);
@@ -45,8 +52,10 @@ function SignupPage({ onNavigate }) {
     });
   };
 
-  // 비밀번호 매칭/길이 간단 검증
+  // 비밀번호 매칭/길이/특수문자 검증 (백엔드 정책과 동일)
   const pwTooShort = form.password.length > 0 && form.password.length < 8;
+  const pwNoSpecial =
+    form.password.length > 0 && !SPECIAL_CHAR_RE.test(form.password);
   const pwMismatch =
     form.passwordConfirm.length > 0 && form.password !== form.passwordConfirm;
   const requiredOk = form.agreeTerms && form.agreePrivacy;
@@ -54,19 +63,37 @@ function SignupPage({ onNavigate }) {
   const canSubmit =
     form.email &&
     form.password.length >= 8 &&
+    SPECIAL_CHAR_RE.test(form.password) &&
     form.password === form.passwordConfirm &&
     form.nickname &&
+    form.name &&
     requiredOk &&
     !loading;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!canSubmit) return;
+    setError("");
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await signup({
+        email: form.email,
+        password: form.password,
+        nickname: form.nickname,
+        name: form.name,
+        termsAgreed: form.agreeTerms,
+        privacyAgreed: form.agreePrivacy,
+        marketingAgreed: form.agreeMarketing,
+      });
+      // 가입 성공 → 곧바로 로그인까지 처리해서 세션 쿠키 발급
+      const user = await login(form.email, form.password);
+      if (typeof onLogin === "function") onLogin(user);
+      go("landing");
+    } catch (err) {
+      setError(err.message || "회원가입 중 오류가 발생했어요");
+    } finally {
       setLoading(false);
-      alert("회원가입 API는 아직 연결 전이에요. (프론트만 구현 상태)");
-    }, 600);
+    }
   };
 
   return (
@@ -96,10 +123,23 @@ function SignupPage({ onNavigate }) {
               <input
                 type="text"
                 className="signup-input"
-                placeholder="이름 (2~12자)"
+                placeholder="화면에 표시될 이름 (2~12자)"
                 value={form.nickname}
                 onChange={(e) => set("nickname", e.target.value)}
                 maxLength={12}
+                required
+              />
+            </label>
+
+            <label className="signup-field">
+              <span className="signup-label">이름</span>
+              <input
+                type="text"
+                className="signup-input"
+                placeholder="실명 (한글 또는 영문)"
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                maxLength={30}
                 required
               />
             </label>
@@ -141,6 +181,11 @@ function SignupPage({ onNavigate }) {
               {pwTooShort && (
                 <span className="signup-hint signup-hint-error">
                   비밀번호는 8자 이상이어야 해요.
+                </span>
+              )}
+              {!pwTooShort && pwNoSpecial && (
+                <span className="signup-hint signup-hint-error">
+                  특수문자를 1개 이상 포함해 주세요.
                 </span>
               )}
             </label>
@@ -209,6 +254,16 @@ function SignupPage({ onNavigate }) {
                 </span>
               </label>
             </div>
+
+            {error && (
+              <p
+                className="signup-hint signup-hint-error"
+                role="alert"
+                style={{ marginTop: 4 }}
+              >
+                {error}
+              </p>
+            )}
 
             <button
               type="submit"
