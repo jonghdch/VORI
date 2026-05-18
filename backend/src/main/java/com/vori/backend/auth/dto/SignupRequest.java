@@ -17,10 +17,10 @@ public record SignupRequest(
     )
     String password,
 
-    @NotBlank @Size(max = 30)
+    @NotBlank @Size(min = 2, max = 12)
     String nickname,
 
-    @NotBlank @Size(max = 30)
+    @NotBlank @Size(min = 2, max = 30)
     String name,
 
     @AssertTrue(message = "이용약관 동의가 필요합니다")

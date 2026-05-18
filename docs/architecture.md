@@ -41,7 +41,7 @@
 | 컴포넌트 | 책임 | 상태 |
 |---|---|---|
 | Frontend (React) | 화면·폼·라우팅·세션 쿠키 전송 | 진행 중 (랜딩/로그인/회원가입/스토리 페이지) |
-| Backend (Spring Boot) | REST API·인증·비즈 로직·DB 접근 | 진행 중 (auth 모듈만 구현. 나머지 도메인은 Entity·Repository 만) |
+| Backend (Spring Boot) | REST API·인증·비즈 로직·DB 접근 | 진행 중 (auth 모듈은 Controller/Service 까지 완성. 나머지 도메인은 Entity·Repository 만 있고 Controller/Service 미작성) |
 | MySQL | 영속 데이터 저장 | 18개 테이블, V1__init.sql 자동 적용 |
 | Google Gemini | AI 사유 질문 생성·답변 분류 | **미연결** (Phase 2) |
 | Google Vision | 영수증 OCR | **미연결** (Phase 2) |
