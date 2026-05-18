@@ -9,6 +9,11 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 사용자가 키우는 펫 1마리. 절약하면 stat_<type> 이 증가하고 stage 가 진전.
+ * stage 전이 조건(INFANT→JUVENILE→ADULT), 분양(released_at·release_value) 룰은 TBD (docs/domain.md).
+ * egg_id NULL = 시작 펫 (가챠 없이 받은 것), 값 있음 = 가챠로 부화한 펫.
+ */
 @Entity
 @Table(name = "pets")
 @Getter
@@ -62,9 +67,11 @@ public class Pet {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    // NULL = 현재 키우는 활성 펫. 값 있음 = 분양됨 (다 키워서 처분)
     @Column(name = "released_at")
     private LocalDateTime releasedAt;
 
+    // 분양 시 받은 게임머니 보상. 분양가 산출식은 TBD (스탯·가구 보너스 반영 예정)
     @Column(name = "release_value", columnDefinition = "INT UNSIGNED")
     private Integer releaseValue;
 }

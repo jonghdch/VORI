@@ -10,6 +10,11 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * 일일 리포트. 매일 1회 생성 (UNIQUE(user_id, report_date)).
+ * 당일 수입·지출·절약·펫 성장 합계와 AI 코멘트, 펫 상태 스냅샷 보관.
+ * 리포트는 캐릭터가 사용자에게 말 거는 톤으로 생성 — 단순 통계 X (VORI 스토리텔링 본질).
+ */
 @Entity
 @Table(name = "daily_reports")
 @Getter
@@ -40,6 +45,7 @@ public class DailyReport {
     @Column(name = "stat_delta_total")
     private Integer statDeltaTotal;
 
+    // 리포트 생성 시점의 펫 상태 JSON 스냅샷. 나중에 펫 분양해도 리포트엔 그 시점 상태 보존
     @Column(name = "pet_snapshot", columnDefinition = "JSON")
     private String petSnapshot;
 

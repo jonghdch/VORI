@@ -9,6 +9,11 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 사용자가 획득한 칭호. UNIQUE(user_id, name) — 같은 칭호 중복 획득 X.
+ * 일부 칭호는 unlocks_theme_id 로 특정 테마를 해제. users.active_title_id 가 현재 장착 칭호.
+ * 획득 조건은 unlock_condition JSON 에 기록 (감사·표시용).
+ */
 @Entity
 @Table(name = "user_titles")
 @Getter

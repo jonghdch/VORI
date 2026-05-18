@@ -11,6 +11,10 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * 지출 1건. VORI 의 핵심 테이블 — 입력되면 신호등·EMA·펫 성장이 트리거됨.
+ * 계산식 (saved_amount / z_score / signal_initial / signal_final / stat_delta) 은 docs/domain.md 참조.
+ */
 @Entity
 @Table(name = "expenses")
 @Getter
@@ -26,9 +30,11 @@ public class Expense {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    // 지출 시각. 사용자가 시각 미입력 시 YYYY-MM-DD 00:00:00 으로 저장 (time_provided=false 로 표시)
     @Column(name = "spent_at", nullable = false)
     private LocalDateTime spentAt;
 
+    // TRUE = 사용자가 시각까지 입력, FALSE = 날짜만 (화면에서 00:00 숨김 처리용)
     @Column(name = "time_provided", nullable = false)
     @Builder.Default
     private Boolean timeProvided = false;
@@ -42,28 +48,34 @@ public class Expense {
     @Column(name = "category_id", nullable = false)
     private Long categoryId;
 
+    // categories.stat_type 캐시 — INSERT 시 부모 카테고리에서 복사. JOIN 없이 펫 성장·EMA 매칭용
     @Enumerated(EnumType.STRING)
     @Column(name = "stat_type", nullable = false,
         columnDefinition = "ENUM('ENERGY','CHARM','IQ','ENDURANCE')")
     private StatType statType;
 
+    // 평소 분포 대비 이례도 (표준편차 단위). user_stat_stats 기준 산출
     @Column(name = "z_score", precision = 6, scale = 3)
     private BigDecimal zScore;
 
+    // z-score 기반 1차 판정. 임계값은 SignalConfig (TBD)
     @Enumerated(EnumType.STRING)
     @Column(name = "signal_initial",
         columnDefinition = "ENUM('RED','GRAY','GREEN')")
     private Signal signalInitial;
 
+    // AI 사유 받아서 보정된 최종 판정. AI 질문 안 했으면 signal_initial 과 동일
     @Enumerated(EnumType.STRING)
     @Column(name = "signal_final",
         columnDefinition = "ENUM('RED','GRAY','GREEN')")
     private Signal signalFinal;
 
+    // 펫 성장량. floor(max(saved_amount, 0) / 1000). 절약 시에만 양수
     @Column(name = "stat_delta", columnDefinition = "INT UNSIGNED")
     @Builder.Default
     private Integer statDelta = 0;
 
+    // mean_ema - amount. 양수면 절약, 음수면 과지출
     @Column(name = "saved_amount")
     private Integer savedAmount;
 

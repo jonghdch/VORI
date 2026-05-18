@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
+/** user_stat_stats 의 복합 PK (user_id, stat_type). @IdClass 로 UserStatStats 가 참조. */
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
