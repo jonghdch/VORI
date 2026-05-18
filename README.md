@@ -55,23 +55,28 @@ mysql -u root -e "CREATE DATABASE vori;"
 
 ### 🟦 backend/ (Spring Boot)
 
+**패키징 컨벤션**: 기능 단위 (feature-based) — 한 도메인 폴더 안에 controller·service·entity·repository·dto·enum 을 함께 둔다. 한 기능 고치려면 한 폴더만 보면 됨.
+
 #### 작업해야 하는 파일
 
 | 파일 | 역할 | 할 일 |
 |------|------|-------|
-| `build.gradle` | 빌드·의존성 정의 | 새 라이브러리 추가 시 `dependencies { ... }`에 한 줄 (예: Gemini client, jwt) |
-| `src/main/resources/application.properties` | Spring 설정 | DB 연결·API 키 등 추가 (아래 예시) |
-| `src/test/.../BackendApplicationTests.java` | 컨텍스트 로드 테스트 | `controller/`·`service/` 미러링해서 비즈 로직 테스트 추가 |
+| `build.gradle` | 빌드·의존성 정의 | 새 라이브러리 추가 시 `dependencies { ... }`에 한 줄 |
+| `src/main/resources/application.properties` | Spring 설정 | DB 연결·API 키 등 추가 |
+| `src/main/resources/db/migration/V<N>__<설명>.sql` | Flyway 마이그레이션 | 스키마 변경 시 새 V 파일 추가 (V1 절대 수정 X) |
+| `src/test/.../BackendApplicationTests.java` | 컨텍스트 로드 테스트 | 도메인 패키지 미러링해서 비즈 로직 테스트 추가 |
 
-`application.properties` 추가 예시:
+`application.properties` 주요 설정:
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/vori
-spring.datasource.username=root
-spring.datasource.password=...
-spring.jpa.hibernate.ddl-auto=update
+spring.datasource.url=jdbc:mysql://localhost:3306/vori?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD:}
+spring.jpa.hibernate.ddl-auto=validate
+spring.flyway.enabled=true
+server.servlet.session.timeout=1h
 gemini.api.key=${GEMINI_API_KEY}
 ```
-> API 키는 `.env` 또는 환경변수로. 평문 커밋 금지.
+> API 키·비밀번호는 `.env` 또는 환경변수로. 평문 커밋 금지.
 
 #### 손 안 대는 파일
 
@@ -83,16 +88,48 @@ gemini.api.key=${GEMINI_API_KEY}
 | `.gitignore` | `build/`·`.gradle/` 등 빌드 산출물 제외 |
 | `.gitattributes` | 줄바꿈 (CRLF/LF) 통일 |
 
-#### 새로 만들 폴더 (`src/main/java/com/vori/backend/` 아래)
+#### 도메인 패키지 (`src/main/java/com/vori/backend/`)
 
-| 폴더 | 역할 | 예시 |
-|------|------|------|
-| `controller/` | REST API 엔드포인트 | `@RestController` 클래스 |
-| `service/` | 비즈 로직 | 합리성 판정·스탯 가감·펫 성장 로직 |
-| `repository/` | DB 접근 | `extends JpaRepository` |
-| `entity/` | JPA 엔티티 | `@Entity` (User·Expense·Stat 등) |
-| `dto/` | 요청/응답 객체 | `LoginRequest`, `SignalResponse` 등 |
-| `config/` | 환경 설정 | Spring Security·CORS |
+| 패키지 | 책임 | 포함되는 파일 |
+|---|---|---|
+| `auth/` | 인증·세션 | AuthController, UserPrincipal, CustomUserDetailsService, dto/ |
+| `user/` | 사용자 도메인 | User(Entity), Role(enum), UserRepository, UserService |
+| `common/` | 도메인 공용 | StatType 등 여러 도메인이 공유하는 enum |
+| `budget/` | 월 예산 | MonthlyBudget + Repository |
+| `category/` | 지출 카테고리 | Category + Repository |
+| `expense/` | 지출 | Expense, Signal(enum), Repository |
+| `income/` | 수입 | Income, IncomeSource(enum), Repository |
+| `goal/` | 절약 목표 | Goal, GoalStatus(enum), Repository |
+| `stats/` | EMA 통계 | UserStatStats, UserStatStatsId(composite PK), Repository |
+| `inquiry/` | AI 사유 질문 | AiInquiry, ReasonCategory(enum), Repository |
+| `receipt/` | 영수증 OCR | ReceiptOcrJob, OcrProvider/OcrStatus(enum), Repository |
+| `report/` | 일일 리포트 | DailyReport + Repository |
+| `pet/` | 펫·알·가챠·성장 | Pet, PetSpecies, Egg, GachaPull, PetGrowthLog + 4 enum + 5 Repository |
+| `theme/` | 테마 마스터 | ThemeMaster + Repository |
+| `furniture/` | 사용자 가구 | UserFurniture, FurnitureCategory(enum), Repository |
+| `title/` | 사용자 칭호 | UserTitle + Repository |
+| `config/` | 환경 설정 | SecurityConfig (FilterChain, CORS, PasswordEncoder) |
+| `seeder/` | 초기 데이터 시더 | AdminSeeder, CategorySeeder, PetSpeciesSeeder |
+
+#### 각 도메인 안 파일 패턴
+
+```
+<도메인>/
+├── <Entity>.java            JPA @Entity (테이블 매핑)
+├── <Entity>Repository.java  DAO (extends JpaRepository<T, ID>)
+├── <Entity>Service.java     비즈 로직 (필요한 경우)
+├── <Entity>Controller.java  REST API (필요한 경우)
+├── <Enum>.java              해당 도메인 전용 enum (있는 경우)
+└── dto/                     요청/응답 DTO (외부 노출 도메인만)
+```
+
+#### 새 기능 추가 시 예시
+
+지출 등록 기능을 만든다면 `expense/` 폴더에 다음을 추가:
+- `ExpenseController.java` — `POST /api/expenses` 등 REST 엔드포인트
+- `ExpenseService.java` — 비즈 로직 (z-score 산출·신호등 판정 등)
+- `dto/ExpenseCreateRequest.java`, `dto/ExpenseResponse.java`
+- `Expense.java` 와 `ExpenseRepository.java` 는 이미 있음 (재사용)
 
 ---
 
@@ -133,3 +170,15 @@ gemini.api.key=${GEMINI_API_KEY}
 | `api/` | 백엔드 호출 함수 | axios wrapper |
 | `hooks/` | 커스텀 훅 | `useAuth`, `useExpense` |
 | `styles/` | 공통 CSS | 변수·믹스인 |
+
+---
+
+## 관련 문서
+
+| 문서 | 내용 |
+|---|---|
+| [`DATABASE.md`](DATABASE.md) | DB 셋업·Flyway·application.properties·트러블슈팅 |
+| [`docs/architecture.md`](docs/architecture.md) | 시스템 경계·외부 의존·통신 규약·큰 그림 데이터 흐름 |
+| [`docs/backend-flow.md`](docs/backend-flow.md) | 요청·응답 흐름·레이어 책임·신규 기능 추가 체크리스트 |
+| [`docs/domain.md`](docs/domain.md) | 비즈 룰·계산식·상태머신·용어집 (Service 짤 때 SSOT) |
+| [`docs/db-spec.md`](docs/db-spec.md) | 테이블 18종 명세 + 변경 이력 |
