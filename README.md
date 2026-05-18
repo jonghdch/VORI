@@ -49,13 +49,6 @@ brew services start mysql
 mysql -u root -e "CREATE DATABASE vori;"
 ```
 
-## 팀 작업 흐름
-
-1. 본인 브랜치 생성: `git checkout -b feature/<기능명>`
-2. 작업 + 커밋 + push: `git push origin feature/<기능명>`
-3. GitHub 에서 Pull Request 열기
-4. 리뷰어가 검수 후 main 으로 머지
-
 ## 파일별 역할 가이드
 
 ---
