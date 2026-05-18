@@ -75,6 +75,7 @@ function SignupPage({ onNavigate, onLogin }) {
     if (!canSubmit) return;
     setError("");
     setLoading(true);
+    let signedUp = false;
     try {
       await signup({
         email: form.email,
@@ -85,12 +86,20 @@ function SignupPage({ onNavigate, onLogin }) {
         privacyAgreed: form.agreePrivacy,
         marketingAgreed: form.agreeMarketing,
       });
+      signedUp = true;
       // 가입 성공 → 곧바로 로그인까지 처리해서 세션 쿠키 발급
       const user = await login(form.email, form.password);
       if (typeof onLogin === "function") onLogin(user);
       go("landing");
     } catch (err) {
-      setError(err.message || "회원가입 중 오류가 발생했어요");
+      if (signedUp) {
+        // 가입은 됐는데 자동 로그인이 실패한 경우. 재가입 시도하면 409 로 막히므로
+        // 로그인 페이지로 우회시켜 사용자가 정상적으로 들어올 수 있게 한다.
+        alert("가입은 완료됐어요. 로그인 페이지에서 다시 로그인해 주세요.");
+        go("login");
+      } else {
+        setError(err.message || "회원가입 중 오류가 발생했어요");
+      }
     } finally {
       setLoading(false);
     }
@@ -119,11 +128,11 @@ function SignupPage({ onNavigate, onLogin }) {
 
           <form className="signup-form" onSubmit={handleSubmit} noValidate>
             <label className="signup-field">
-              <span className="signup-label">닉네임</span>
+              <span className="signup-label">닉네임 (화면 표시용)</span>
               <input
                 type="text"
                 className="signup-input"
-                placeholder="화면에 표시될 이름 (2~12자)"
+                placeholder="다른 사용자에게 보일 별명 (2~12자)"
                 value={form.nickname}
                 onChange={(e) => set("nickname", e.target.value)}
                 maxLength={12}
@@ -132,11 +141,11 @@ function SignupPage({ onNavigate, onLogin }) {
             </label>
 
             <label className="signup-field">
-              <span className="signup-label">이름</span>
+              <span className="signup-label">이름 (실명)</span>
               <input
                 type="text"
                 className="signup-input"
-                placeholder="실명 (한글 또는 영문)"
+                placeholder="실명 (한글 또는 영문, 30자 이내)"
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
                 maxLength={30}
