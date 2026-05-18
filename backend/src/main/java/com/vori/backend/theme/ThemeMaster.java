@@ -9,6 +9,10 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+/**
+ * 마이룸 가구 테마 (마스터 데이터). 같은 테마 가구를 required_count 이상 모으면 세트 보너스 발동.
+ * unlock_title_name 가 박힌 테마는 그 칭호 보유 사용자만 해제 가능.
+ */
 @Entity
 @Table(name = "theme_master")
 @Getter

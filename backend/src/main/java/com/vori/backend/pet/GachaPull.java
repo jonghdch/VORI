@@ -9,6 +9,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 가챠 추첨 결과. 알 개봉 시 INSERT (egg_id UQ — 알 1개당 추첨 1번).
+ * 추첨 알고리즘은 eggs.probability_distribution 기반 weighted random.
+ */
 @Entity
 @Table(name = "gacha_pulls")
 @Getter

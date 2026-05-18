@@ -7,6 +7,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 월별 지출 예산. 사용자가 "이번 달 50만원 예산" 식으로 설정.
+ * UNIQUE(user_id, year_month) — 사용자당 월별 1행.
+ */
 @Entity
 @Table(name = "monthly_budgets")
 @Getter

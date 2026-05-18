@@ -10,6 +10,10 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * 수입 1건. expenses 와 달리 신호등·스탯·EMA 같은 룰 없음, 단순 기록 + 통계용.
+ * source ENUM 은 한국 대학생 맥락 (ALLOWANCE/PART_TIME/SCHOLARSHIP/...).
+ */
 @Entity
 @Table(name = "incomes")
 @Getter

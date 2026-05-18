@@ -10,6 +10,11 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 펫 성장 이력. 절약·목표 달성·보너스로 stat 가 변할 때마다 1행 추가.
+ * reason 으로 출처 구분 (EXPENSE_SAVING / GOAL_ACHIEVED / BONUS).
+ * expense_id 또는 goal_id 중 하나가 채워짐 (reason 에 따라).
+ */
 @Entity
 @Table(name = "pet_growth_logs")
 @Getter

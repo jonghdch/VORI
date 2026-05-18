@@ -11,6 +11,11 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * 사용자가 마이룸에 보유·배치한 가구. theme_id 가 같은 가구를 모으면 세트 보너스.
+ * position_x/y NULL = 인벤토리에 있고 아직 배치 안 함. 값 있음 = 마이룸에 배치됨.
+ * stat_target 의 stat 점수 환산에 release_bonus_pct 가 분양 시 가산됨.
+ */
 @Entity
 @Table(name = "user_furniture")
 @Getter

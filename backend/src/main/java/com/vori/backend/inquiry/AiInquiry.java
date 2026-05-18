@@ -9,6 +9,11 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * AI 가 사용자에게 지출 사유를 물어본 기록. expense_id UQ — 지출 1건당 질문 1개.
+ * signal_initial ∈ {RED, GRAY} 일 때 트리거. 답변 받아 reason_category 분류 → signal_final 보정.
+ * 보정 매핑 표는 docs/domain.md 참조 (TBD).
+ */
 @Entity
 @Table(name = "ai_inquiries")
 @Getter
@@ -38,6 +43,7 @@ public class AiInquiry {
         columnDefinition = "ENUM('CEREMONY','EMERGENCY','SOCIAL','SELF_INVEST','IMPULSE','ETC')")
     private ReasonCategory reasonCategory;
 
+    // 보정이 실제 일어났는지 (signal_initial != signal_final 인 경우 TRUE)
     @Column(name = "signal_adjusted")
     @Builder.Default
     private Boolean signalAdjusted = false;

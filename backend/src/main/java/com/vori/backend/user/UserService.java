@@ -30,6 +30,7 @@ public class UserService {
             .email(req.email())
             .passwordHash(passwordEncoder.encode(req.password()))
             .nickname(req.nickname())
+            .name(req.name())
             .role(Role.USER)
             .termsAgreedAt(now)
             .privacyAgreedAt(now)
