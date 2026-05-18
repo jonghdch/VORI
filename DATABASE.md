@@ -145,16 +145,12 @@ public class CategorySeeder implements CommandLineRunner {
 
 ## 명세 위치
 
-테이블 명세 (컬럼·타입·인덱스·FK·변경 이력) 는 Obsidian 볼트에 있음:
-
-```
-~/Documents/Obsidian Vault/Projects/vori/notes/db-table-spec.md
-```
+테이블 명세 (컬럼·타입·인덱스·FK·변경 이력) 는 `docs/db-spec.md` 참조.
 
 - 본문 = 현재 진실 (최신 컬럼 명세)
-- 변경 이력 (#1 ~ #11) = 각 결정의 사유·날짜·DDL 스냅샷
+- 변경 이력 (#1 ~ #11) = 각 결정의 사유·DDL 스냅샷
 
-코드 작성 전에 본문 + 관련 변경 이력 확인.
+실제 DB 에 적용된 스키마는 `backend/src/main/resources/db/migration/V1__init.sql`. 코드 작성 전에 명세 + 관련 변경 이력 확인.
 
 ---
 
