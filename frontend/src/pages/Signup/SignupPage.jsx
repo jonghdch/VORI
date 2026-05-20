@@ -1,15 +1,17 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./SignupPage.css";
 import { signup, login } from "../../api/auth";
 
 // 회원가입 페이지.
 // - POST /api/auth/signup 호출 → 성공 시 자동으로 /api/auth/login 까지 호출해
-//   세션 쿠키를 받고 랜딩으로 이동.
+//   세션 쿠키를 받고 홈 대시보드로 이동.
 // - onLogin(user) 으로 App 의 user 상태를 갱신.
 // eslint-disable-next-line no-useless-escape
 const SPECIAL_CHAR_RE = /[!@#$%^&*()_+\-=\[\]{};:'",.<>/?]/;
 
-function SignupPage({ onNavigate, onLogin }) {
+function SignupPage({ onLogin }) {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -24,10 +26,6 @@ function SignupPage({ onNavigate, onLogin }) {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const go = (page) => {
-    if (typeof onNavigate === "function") onNavigate(page);
-  };
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -90,13 +88,13 @@ function SignupPage({ onNavigate, onLogin }) {
       // 가입 성공 → 곧바로 로그인까지 처리해서 세션 쿠키 발급
       const user = await login(form.email, form.password);
       if (typeof onLogin === "function") onLogin(user);
-      go("landing");
+      navigate("/home");
     } catch (err) {
       if (signedUp) {
         // 가입은 됐는데 자동 로그인이 실패한 경우. 재가입 시도하면 409 로 막히므로
         // 로그인 페이지로 우회시켜 사용자가 정상적으로 들어올 수 있게 한다.
         alert("가입은 완료됐어요. 로그인 페이지에서 다시 로그인해 주세요.");
-        go("login");
+        navigate("/login");
       } else {
         setError(err.message || "회원가입 중 오류가 발생했어요");
       }
@@ -112,7 +110,7 @@ function SignupPage({ onNavigate, onLogin }) {
         <button
           type="button"
           className="signup-logo-btn"
-          onClick={() => go("landing")}
+          onClick={() => navigate("/")}
           aria-label="VORI 홈으로"
         >
           VORI
@@ -289,7 +287,7 @@ function SignupPage({ onNavigate, onLogin }) {
             <button
               type="button"
               className="signup-link signup-link-strong"
-              onClick={() => go("login")}
+              onClick={() => navigate("/login")}
             >
               로그인
             </button>

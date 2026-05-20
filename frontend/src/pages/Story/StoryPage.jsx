@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import SiteHeader from "../../components/SiteHeader";
@@ -325,7 +326,8 @@ function StoryChapter({ chapter, articleRef }) {
 //
 // 스토리 챕터 이후엔 "펫 안내" 섹션이 이어집니다. 콘텐츠를 손볼 땐 각
 // <article> 또는 .story-pets-block 안의 텍스트만 수정하세요.
-function StoryPage({ onNavigate, user, onLogout }) {
+function StoryPage({ user, onLogout }) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("characters");
   const [selectedCharacterId, setSelectedCharacterId] = useState(null);
   const ch3ArticleRef = useRef(null);
@@ -349,9 +351,7 @@ function StoryPage({ onNavigate, user, onLogout }) {
     MOON_TOP_OUTPUT
   );
 
-  const goLanding = () => {
-    if (typeof onNavigate === "function") onNavigate("landing");
-  };
+  const goLanding = () => navigate("/");
 
   const goLuminaGuide = () => {
     document
@@ -370,7 +370,6 @@ function StoryPage({ onNavigate, user, onLogout }) {
 
       {/* ───────── 헤더 (랜딩과 같은 디자인이되 배경 투명 + 메뉴 숨김) ───────── */}
       <SiteHeader
-        onNavigate={onNavigate}
         user={user}
         onLogout={onLogout}
         transparent

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import SiteHeader from "../../components/SiteHeader";
 import "./LandingPage.css";
 
@@ -65,20 +66,14 @@ function LandingStepCard({ number, title, desc, videoSrc }) {
 // 로그인 전 메인(랜딩) 페이지.
 // 페이지 단위로 폴더를 잡아뒀어요: src/pages/<페이지이름>/<페이지이름>.jsx
 // 이 파일 하나만 수정하면 이 페이지의 내용이 바뀝니다.
-//
-// onNavigate(pageName) 을 호출하면 다른 페이지로 이동합니다.
-// 예) onNavigate("login") → 로그인 페이지로 이동
 
-function LandingPage({ onNavigate, user, onLogout }) {
-  const goSignup = () => {
-    if (typeof onNavigate === "function") onNavigate("signup");
-  };
-  const goStory = () => {
-    if (typeof onNavigate === "function") onNavigate("story");
-  };
+function LandingPage({ user, onLogout }) {
+  const navigate = useNavigate();
+  const goSignup = () => navigate("/signup");
+  const goStory = () => navigate("/story");
   return (
     <div className="landing">
-      <SiteHeader onNavigate={onNavigate} user={user} onLogout={onLogout} />
+      <SiteHeader user={user} onLogout={onLogout} />
 
       {/* ───────── 히어로 (큰 타이틀 영역) ───────── */}
       <section className="landing-hero">

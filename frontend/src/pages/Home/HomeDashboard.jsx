@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import "./HomeDashboard.css";
 
 const STATS = [
@@ -27,10 +28,13 @@ const CATEGORY_BARS = [
   { label: "고정비", pct: 18, amount: "62,600원", color: "var(--home-bar-blue)" },
 ];
 
-function HomeDashboard({ user, onNavigate, onLogout }) {
+function HomeDashboard({ user, onLogout }) {
+  const navigate = useNavigate();
   const nickname = user?.nickname || "사용자";
-  const go = (page) => {
-    if (typeof onNavigate === "function") onNavigate(page);
+
+  const handleLogout = async () => {
+    if (typeof onLogout === "function") await onLogout();
+    navigate("/");
   };
 
   const today = new Date();
@@ -56,7 +60,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           <button
             type="button"
             className="home-logo"
-            onClick={() => go("home")}
+            onClick={() => navigate("/home")}
             aria-label="VORI 홈"
           >
             <span className="home-logo-vo">VO</span>
@@ -75,7 +79,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 type="button"
                 className={`home-topnav-item ${item.id === "home" ? "is-active" : ""}`}
                 onClick={() => {
-                  if (item.id === "home") go("home");
+                  if (item.id === "home") navigate("/home");
                 }}
               >
                 {item.label}
@@ -86,7 +90,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             type="button"
             className="home-logout-link"
             onClick={() => {
-              if (typeof onLogout === "function") onLogout();
+              handleLogout();
             }}
           >
             로그아웃
@@ -157,7 +161,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   type="button"
                   className="home-side-link"
                   onClick={() => {
-                    if (typeof onLogout === "function") onLogout();
+                    handleLogout();
                   }}
                 >
                   로그아웃

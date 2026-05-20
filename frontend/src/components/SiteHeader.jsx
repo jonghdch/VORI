@@ -1,23 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 // 공통 상단 헤더.
 //
 // props:
-//   onNavigate(page, sectionId?)  — 페이지 전환
 //   transparent (boolean)         — 배경/보더를 투명하게. 어두운 표지 위에 띄울 때 사용
 //   extraNavItems                 — 특정 페이지에서만 추가로 보여줄 우측 메뉴
 //   user                          — 로그인된 사용자 { id, email, nickname, role } 또는 null
-//   onLogout()                    — 로그아웃 핸들러 (App 에서 주입)
+//   onLogout()                    — 로그아웃 핸들러 (App 에서 주입). user state 만 정리하고,
+//                                   네비게이션은 헤더가 navigate("/") 로 직접 처리
 function SiteHeader({
-  onNavigate,
   transparent = false,
   extraNavItems = [],
   user = null,
   onLogout,
 }) {
-  const go = (page, section) => {
-    if (typeof onNavigate === "function") onNavigate(page, section);
-  };
+  const navigate = useNavigate();
 
   const headerCls = [
     "landing-header",
@@ -33,7 +31,7 @@ function SiteHeader({
           <button
             type="button"
             className="landing-logo landing-logo-btn"
-            onClick={() => go("landing")}
+            onClick={() => navigate("/")}
             aria-label="VORI 메인으로"
           >
             VORI
@@ -41,7 +39,7 @@ function SiteHeader({
           <button
             type="button"
             className="landing-nav-link landing-nav-link-btn"
-            onClick={() => go("story")}
+            onClick={() => navigate("/story")}
           >
             스토리
           </button>
@@ -59,20 +57,20 @@ function SiteHeader({
           ))}
 
           {user ? (
-            <UserMenu user={user} onNavigate={onNavigate} onLogout={onLogout} />
+            <UserMenu user={user} onLogout={onLogout} />
           ) : (
             <>
               <button
                 type="button"
                 className="landing-btn landing-btn-ghost"
-                onClick={() => go("login")}
+                onClick={() => navigate("/login")}
               >
                 로그인
               </button>
               <button
                 type="button"
                 className="landing-btn landing-btn-primary"
-                onClick={() => go("signup")}
+                onClick={() => navigate("/signup")}
               >
                 회원가입
               </button>
@@ -87,7 +85,8 @@ function SiteHeader({
 // 로그인된 사용자 영역.
 // - "VORI 시작하기" 버튼 + 원형 아바타.
 // - 아바타 클릭 시 드롭다운 팝업: 프로필 사진, 닉네임, 이메일, 로그아웃.
-function UserMenu({ user, onNavigate, onLogout }) {
+function UserMenu({ user, onLogout }) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -106,14 +105,18 @@ function UserMenu({ user, onNavigate, onLogout }) {
   const initial =
     (user?.nickname || user?.email || "?").trim().charAt(0).toUpperCase();
 
+  const handleLogout = async () => {
+    setOpen(false);
+    if (typeof onLogout === "function") await onLogout();
+    navigate("/");
+  };
+
   return (
     <>
       <button
         type="button"
         className="landing-btn landing-btn-primary"
-        onClick={() => {
-          if (typeof onNavigate === "function") onNavigate("home");
-        }}
+        onClick={() => navigate("/home")}
       >
         VORI 시작하기
       </button>
@@ -143,10 +146,7 @@ function UserMenu({ user, onNavigate, onLogout }) {
             <button
               type="button"
               className="user-popover-logout"
-              onClick={() => {
-                setOpen(false);
-                if (typeof onLogout === "function") onLogout();
-              }}
+              onClick={handleLogout}
             >
               로그아웃
             </button>
