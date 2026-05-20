@@ -23,7 +23,7 @@ function LoginPage({ onNavigate, onLogin }) {
     try {
       const user = await login(email, password);
       if (typeof onLogin === "function") onLogin(user);
-      go("landing");
+      go("home");
     } catch (err) {
       setError(err.message || "로그인 중 오류가 발생했어요");
     } finally {
