@@ -1,5 +1,6 @@
 package com.vori.backend.expense;
 
+import com.vori.backend.common.PaymentMethod;
 import com.vori.backend.common.StatType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -42,8 +43,23 @@ public class Expense {
     @Column(nullable = false, columnDefinition = "INT UNSIGNED")
     private Integer amount;
 
+    // 결제 수단. 미입력 가능 (NULL).
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method",
+        columnDefinition = "ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY')")
+    private PaymentMethod paymentMethod;
+
     @Column(nullable = false, length = 100)
     private String item;
+
+    // 사용자 자발적 메모. 입력해두면 AI 가 사유 안 물음 (이례 케이스라도)
+    @Column(length = 200)
+    private String memo;
+
+    // 반복 결제 플래그 (통신비·구독 등). TRUE 면 신호등 산정 시 RED 자동 제외
+    @Column(name = "is_recurring", nullable = false)
+    @Builder.Default
+    private Boolean isRecurring = false;
 
     @Column(name = "category_id", nullable = false)
     private Long categoryId;
@@ -83,6 +99,12 @@ public class Expense {
             columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP",
             insertable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    // 행 수정 시 MySQL 이 자동 갱신. JPA 는 읽기 전용.
+    @Column(name = "updated_at",
+        columnDefinition = "DATETIME NULL ON UPDATE CURRENT_TIMESTAMP",
+        insertable = false, updatable = false)
+    private LocalDateTime updatedAt;
 
     public void updateCalculations(BigDecimal zScore, Signal signal, Integer savedAmount, Integer statDelta) {
         this.zScore = zScore;
