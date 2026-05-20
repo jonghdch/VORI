@@ -79,4 +79,8 @@ public class User {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public void addTotalSaved(int amount) {
+        this.totalSaved = (this.totalSaved == null ? 0 : this.totalSaved) + amount;
+    }
 }

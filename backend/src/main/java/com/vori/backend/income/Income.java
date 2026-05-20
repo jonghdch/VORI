@@ -1,5 +1,6 @@
 package com.vori.backend.income;
 
+import com.vori.backend.common.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -35,10 +36,21 @@ public class Income {
     @Column(nullable = false, columnDefinition = "INT UNSIGNED")
     private Integer amount;
 
+    // 수금 수단. 미입력 가능. expenses 와 같은 ENUM 공유.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method",
+        columnDefinition = "ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY')")
+    private PaymentMethod paymentMethod;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false,
         columnDefinition = "ENUM('ALLOWANCE','PART_TIME','SCHOLARSHIP','SIDE_JOB','GIFT','INTEREST','OTHER')")
     private IncomeSource source;
+
+    // 반복 수입 플래그 (월급·정기 알바 등)
+    @Column(name = "is_recurring", nullable = false)
+    @Builder.Default
+    private Boolean isRecurring = false;
 
     @Column(length = 200)
     private String note;
@@ -47,4 +59,10 @@ public class Income {
         columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP",
         insertable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    // 행 수정 시 MySQL 이 자동 갱신. JPA 는 읽기 전용.
+    @Column(name = "updated_at",
+        columnDefinition = "DATETIME NULL ON UPDATE CURRENT_TIMESTAMP",
+        insertable = false, updatable = false)
+    private LocalDateTime updatedAt;
 }
