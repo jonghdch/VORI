@@ -59,7 +59,7 @@ function SiteHeader({
           ))}
 
           {user ? (
-            <UserMenu user={user} onLogout={onLogout} />
+            <UserMenu user={user} onNavigate={onNavigate} onLogout={onLogout} />
           ) : (
             <>
               <button
@@ -87,7 +87,7 @@ function SiteHeader({
 // 로그인된 사용자 영역.
 // - "VORI 시작하기" 버튼 + 원형 아바타.
 // - 아바타 클릭 시 드롭다운 팝업: 프로필 사진, 닉네임, 이메일, 로그아웃.
-function UserMenu({ user, onLogout }) {
+function UserMenu({ user, onNavigate, onLogout }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -111,7 +111,9 @@ function UserMenu({ user, onLogout }) {
       <button
         type="button"
         className="landing-btn landing-btn-primary"
-        onClick={() => alert("VORI 시작하기 — 메인 앱은 아직 준비 중이에요.")}
+        onClick={() => {
+          if (typeof onNavigate === "function") onNavigate("home");
+        }}
       >
         VORI 시작하기
       </button>

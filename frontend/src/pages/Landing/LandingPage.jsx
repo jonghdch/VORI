@@ -115,6 +115,7 @@ function LandingPage({ onNavigate, user, onLogout }) {
                 스토리 보기
               </button>
             </div>
+
           </div>
         </div>
       </section>
