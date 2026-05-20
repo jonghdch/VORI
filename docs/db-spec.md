@@ -128,7 +128,10 @@ UNIQUE(parent_id, name)
 | 지출 일시 | `spent_at` | IDX | `DATETIME NOT NULL` | 지출 시각. 시각 미입력이면 `YYYY-MM-DD 00:00:00` 으로 저장 |
 | 시각 입력 여부 | `time_provided` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | TRUE = 사용자가 시각까지 입력, FALSE = 날짜만 |
 | 지출 금액 | `amount` |  | `INT UNSIGNED NOT NULL` | 실제 지출액 |
+| 결제 수단 | `payment_method` |  | `ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY') NULL` | 현금/체크/신용/이체/모바일페이. 미입력은 NULL |
 | 품목 | `item` |  | `VARCHAR(100) NOT NULL` | 지출 항목 |
+| 메모 | `memo` |  | `VARCHAR(200) NULL` | 사용자 자발적 메모. 입력해두면 AI 사유 질문 안 함 |
+| 반복 결제 | `is_recurring` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | 통신비·구독 등 자동 결제. TRUE 면 신호등 산정 시 RED 자동 제외 |
 | 카테고리 식별자 | `category_id` | FK, IDX | `BIGINT NOT NULL` | → `categories(id)` `ON DELETE RESTRICT`. 상세 카테고리 ID 가 기본, AI 가 상세 분류 실패 시 대분류 ID |
 | 스탯 유형 (캐시) | `stat_type` | IDX | `ENUM('ENERGY','CHARM','IQ','ENDURANCE') NOT NULL` | `categories.stat_type` 을 INSERT 시 복사. JOIN 없이 펫 성장·EMA 갱신용 |
 | z-점수 | `z_score` |  | `DECIMAL(6,3)` | 평소 패턴 대비 이례 정도 |
@@ -137,6 +140,7 @@ UNIQUE(parent_id, name)
 | 스탯 변동값 | `stat_delta` |  | `INT UNSIGNED DEFAULT 0` | 펫 성장량. 절약 시에만 양수, 과지출 시 0 |
 | 절약액 | `saved_amount` |  | `INT` | `mean_ema - amount`, 음수 가능 |
 | 등록 일시 | `created_at` |  | `DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP` | 행 생성 시각 |
+| 수정 일시 | `updated_at` |  | `DATETIME NULL ON UPDATE CURRENT_TIMESTAMP` | 행 갱신 시각 (수정될 때마다 MySQL 자동) |
 
 인덱스:
 
@@ -155,7 +159,7 @@ CONSTRAINT fk_expenses_category
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
 ```
 
-(상세 사유는 변경 이력 #3 `expenses` 변경 — 카테고리 컬럼 교체 / #8 `expenses` 컬럼 정리 참조)
+(상세 사유는 변경 이력 #3 `expenses` 변경 — 카테고리 컬럼 교체 / #8 `expenses` 컬럼 정리 / #12 일반 가계부 표준 필드 보강 참조)
 
 ---
 
@@ -167,9 +171,12 @@ CONSTRAINT fk_expenses_category
 | 사용자 식별자 | `user_id` | FK, IDX | `BIGINT NOT NULL` | → `users(id)` `ON DELETE CASCADE` |
 | 수입 일자 | `received_at` | IDX | `DATE NOT NULL` | 수입 날짜 (시각은 받지 않음) |
 | 수입 금액 | `amount` |  | `INT UNSIGNED NOT NULL` | 수입액 |
+| 수금 수단 | `payment_method` |  | `ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY') NULL` | expenses 와 같은 ENUM 공유. 미입력은 NULL |
 | 출처 | `source` |  | `ENUM('ALLOWANCE','PART_TIME','SCHOLARSHIP','SIDE_JOB','GIFT','INTEREST','OTHER') NOT NULL` | 수입 출처 (대학생 맥락) |
-| 메모 | `note` |  | `VARCHAR(200) NULL` | 선택 메모 |
+| 반복 수입 | `is_recurring` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | 월급·정기 알바 등 |
+| 메모 | `note` |  | `VARCHAR(200) NULL` | 선택 메모 (expenses 의 memo 와 같은 역할, 컬럼명은 기존 유지) |
 | 등록 일시 | `created_at` |  | `DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP` | 행 생성 시각 |
+| 수정 일시 | `updated_at` |  | `DATETIME NULL ON UPDATE CURRENT_TIMESTAMP` | 행 갱신 시각 (MySQL 자동) |
 
 인덱스:
 
@@ -184,7 +191,7 @@ CONSTRAINT fk_incomes_user
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ```
 
-(상세 사유는 변경 이력 #9 `incomes` 컬럼 정리 참조)
+(상세 사유는 변경 이력 #9 `incomes` 컬럼 정리 / #12 일반 가계부 표준 필드 보강 참조)
 
 ---
 
@@ -834,3 +841,34 @@ CREATE TABLE user_stat_stats (
 어드민 지정 운영 방식 (Service 레이어 책임, 명세 범위 밖):
 - `CommandLineRunner` 가 `application.properties` 의 `vori.admin.email` 을 읽어 해당 사용자의 `role` 을 `'ADMIN'` 으로 UPDATE
 - 시드 시점에 이미 가입돼 있어야 하므로 `UserSeeder` 가 `CategorySeeder` 보다 뒤, 또는 별도 `AdminPromoteRunner` 로 분리
+
+### 12. `expenses` / `incomes` — 일반 가계부 표준 필드 보강 (V2)
+
+VORI 의 AI 사유 질문은 **이례적인 지출에만** 적용. 그 외 입력 흐름은 일반 가계부와 같아야 사용자가 어색하지 않게 쓸 수 있음. 그래서 표준 가계부 필드를 보강.
+
+**`expenses` 추가 컬럼**
+
+| 변경 | 컬럼 | 비고 |
+|---|---|---|
+| 추가 | `payment_method ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY') NULL` | 결제 수단. 미입력은 NULL (OTHER 옵션 안 둠) |
+| 추가 | `memo VARCHAR(200) NULL` | 사용자 자발적 메모. 미리 적어두면 AI 사유 질문 생략 → ai_inquiries 트래픽 감소 |
+| 추가 | `is_recurring BOOLEAN NOT NULL DEFAULT FALSE` | 통신비·구독 등 자동 결제. TRUE 면 신호등 산정 시 RED 자동 제외 |
+| 추가 | `updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP` | 행 수정 시각 (가계부는 수정 빈번 — 금액 오타·카테고리 변경 등) |
+
+**`incomes` 추가 컬럼** (memo 는 기존 `note` 컬럼이 같은 역할로 유지)
+
+| 변경 | 컬럼 | 비고 |
+|---|---|---|
+| 추가 | `payment_method ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY') NULL` | expenses 와 같은 ENUM 공유 |
+| 추가 | `is_recurring BOOLEAN NOT NULL DEFAULT FALSE` | 월급·정기 알바 등 |
+| 추가 | `updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP` | 행 수정 시각 |
+
+설계 근거:
+- `payment_method` 에 `OTHER` 안 둠 — 미입력 = NULL 로 처리. 굳이 "기타" 라는 카테고리를 강요하지 않음
+- `expenses.memo` vs `incomes.note` 컬럼명 불일치 — 의도된 것. incomes 기존 컬럼 그대로 유지 (기존 데이터·코드 영향 회피). 의미상 동일
+- `updated_at` 은 MySQL `ON UPDATE CURRENT_TIMESTAMP` 가 자동 갱신 — Service 레이어가 별도 set 안 해도 됨
+- 결제 수단의 `account_name` (계좌·지갑명) 은 보류 — 자유 텍스트화하면 UX 부담, 정규화하면 별도 테이블 필요. 졸작 스코프 외
+
+마이그레이션: `V2__add_payment_memo_recurring.sql`.
+
+V1 으로 만든 행은 `payment_method=NULL`, `memo=NULL`, `is_recurring=FALSE`, `updated_at=NULL` 로 자동 채워짐 (DEFAULT 또는 NULL).

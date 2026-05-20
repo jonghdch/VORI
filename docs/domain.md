@@ -46,14 +46,20 @@ z_score = (expenses.amount - user_stat_stats.mean_ema) / user_stat_stats.stddev_
 
 ### 3. 신호등 판정 (signal_initial)
 
-z-score 기반 임계치로 결정.
+z-score 기반 임계치로 결정. 단, **반복 결제는 RED 자동 제외**.
 
 ```
-signal_initial = 
-  RED   if z_score >=  Z_RED   (예: +1.5)
-  GRAY  if Z_GREEN < z_score < Z_RED
-  GREEN if z_score <= Z_GREEN  (예: -0.5)
+if expenses.is_recurring == TRUE:
+    signal_initial = GRAY  # 통신비·구독 등은 사용자의 의식적 결정이 아님 → RED 안 줌
+
+else (일반 지출):
+    signal_initial = 
+      RED   if z_score >=  Z_RED   (예: +1.5)
+      GRAY  if Z_GREEN < z_score < Z_RED
+      GREEN if z_score <= Z_GREEN  (예: -0.5)
 ```
+
+`expenses.memo` 가 채워져 있으면 AI 질문도 스킵 (사용자가 이미 사유 입력) — `signal_final` 보정만 메모 내용 기반으로.
 
 ⚠️ TBD: `Z_RED`, `Z_GREEN` 의 정확한 임계값 — 시뮬레이션 데이터로 튜닝 필요. 일단 코드 상수 (`SignalConfig.Z_RED`, `Z_GREEN`) 로 분리해 두기.
 
@@ -115,9 +121,10 @@ new_sample_count = old_sample_count + 1
 3. z_score 계산 (가드 통과 시)
 4. signal_initial 산정
 5. saved_amount 계산
-6. AI 질문 필요? (signal_initial ∈ {RED, GRAY})
+6. AI 질문 필요?
+   - 조건: signal_initial ∈ {RED, GRAY} AND is_recurring == FALSE AND memo IS NULL
    - YES → ai_inquiries INSERT (status: 대기), signal_final NULL 로 둠
-   - NO  → signal_final = signal_initial
+   - NO  → signal_final = signal_initial (반복 결제·메모 입력 시 질문 생략)
 7. expenses UPDATE (계산된 값들 set)
 8. user_stat_stats UPDATE (EMA 갱신, sample_count++)
 9. saved = max(saved_amount, 0)
