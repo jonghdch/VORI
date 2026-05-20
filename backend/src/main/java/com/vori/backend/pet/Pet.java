@@ -67,6 +67,15 @@ public class Pet {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    public void addStat(com.vori.backend.common.StatType statType, int delta) {
+        switch (statType) {
+            case ENERGY     -> this.statEnergy     += delta;
+            case CHARM      -> this.statCharm      += delta;
+            case IQ         -> this.statIq         += delta;
+            case ENDURANCE  -> this.statEndurance  += delta;
+        }
+    }
+
     // NULL = 현재 키우는 활성 펫. 값 있음 = 분양됨 (다 키워서 처분)
     @Column(name = "released_at")
     private LocalDateTime releasedAt;

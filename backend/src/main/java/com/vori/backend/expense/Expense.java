@@ -51,7 +51,7 @@ public class Expense {
     // categories.stat_type 캐시 — INSERT 시 부모 카테고리에서 복사. JOIN 없이 펫 성장·EMA 매칭용
     @Enumerated(EnumType.STRING)
     @Column(name = "stat_type", nullable = false,
-        columnDefinition = "ENUM('ENERGY','CHARM','IQ','ENDURANCE')")
+            columnDefinition = "ENUM('ENERGY','CHARM','IQ','ENDURANCE')")
     private StatType statType;
 
     // 평소 분포 대비 이례도 (표준편차 단위). user_stat_stats 기준 산출
@@ -61,13 +61,13 @@ public class Expense {
     // z-score 기반 1차 판정. 임계값은 SignalConfig (TBD)
     @Enumerated(EnumType.STRING)
     @Column(name = "signal_initial",
-        columnDefinition = "ENUM('RED','GRAY','GREEN')")
+            columnDefinition = "ENUM('RED','GRAY','GREEN')")
     private Signal signalInitial;
 
     // AI 사유 받아서 보정된 최종 판정. AI 질문 안 했으면 signal_initial 과 동일
     @Enumerated(EnumType.STRING)
     @Column(name = "signal_final",
-        columnDefinition = "ENUM('RED','GRAY','GREEN')")
+            columnDefinition = "ENUM('RED','GRAY','GREEN')")
     private Signal signalFinal;
 
     // 펫 성장량. floor(max(saved_amount, 0) / 1000). 절약 시에만 양수
@@ -80,7 +80,19 @@ public class Expense {
     private Integer savedAmount;
 
     @Column(name = "created_at", nullable = false,
-        columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP",
-        insertable = false, updatable = false)
+            columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP",
+            insertable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public void updateCalculations(BigDecimal zScore, Signal signal, Integer savedAmount, Integer statDelta) {
+        this.zScore = zScore;
+        this.signalInitial = signal;
+        this.signalFinal = signal;
+        this.savedAmount = savedAmount;
+        this.statDelta = statDelta;
+    }
+
+    public void updateSignalFinal(Signal signalFinal) {
+        this.signalFinal = signalFinal;
+    }
 }
