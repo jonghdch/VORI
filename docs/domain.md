@@ -59,8 +59,6 @@ else (일반 지출):
       GREEN if z_score <= Z_GREEN  (예: -0.5)
 ```
 
-`expenses.memo` 가 채워져 있으면 AI 질문도 스킵 (사용자가 이미 사유 입력) — `signal_final` 보정만 메모 내용 기반으로.
-
 ⚠️ TBD: `Z_RED`, `Z_GREEN` 의 정확한 임계값 — 시뮬레이션 데이터로 튜닝 필요. 일단 코드 상수 (`SignalConfig.Z_RED`, `Z_GREEN`) 로 분리해 두기.
 
 ### 4. signal_final 보정 (AI 사유 반영)
@@ -122,9 +120,9 @@ new_sample_count = old_sample_count + 1
 4. signal_initial 산정
 5. saved_amount 계산
 6. AI 질문 필요?
-   - 조건: signal_initial ∈ {RED, GRAY} AND is_recurring == FALSE AND memo IS NULL
+   - 조건: signal_initial ∈ {RED, GRAY} AND is_recurring == FALSE
    - YES → ai_inquiries INSERT (status: 대기), signal_final NULL 로 둠
-   - NO  → signal_final = signal_initial (반복 결제·메모 입력 시 질문 생략)
+   - NO  → signal_final = signal_initial (반복 결제 시 질문 생략)
 7. expenses UPDATE (계산된 값들 set)
 8. user_stat_stats UPDATE (EMA 갱신, sample_count++)
 9. saved = max(saved_amount, 0)

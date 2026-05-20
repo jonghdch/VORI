@@ -40,7 +40,7 @@ public class AiInquiry {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "reason_category",
-        columnDefinition = "ENUM('CEREMONY','EMERGENCY','SOCIAL','SELF_INVEST','IMPULSE','ETC')")
+            columnDefinition = "ENUM('CEREMONY','EMERGENCY','SOCIAL','SELF_INVEST','IMPULSE','ETC')")
     private ReasonCategory reasonCategory;
 
     // 보정이 실제 일어났는지 (signal_initial != signal_final 인 경우 TRUE)
@@ -53,4 +53,11 @@ public class AiInquiry {
 
     @Column(name = "answered_at")
     private LocalDateTime answeredAt;
+
+    public void recordAnswer(String answerText, ReasonCategory reasonCategory, boolean signalAdjusted) {
+        this.answerText = answerText;
+        this.reasonCategory = reasonCategory;
+        this.signalAdjusted = signalAdjusted;
+        this.answeredAt = LocalDateTime.now();
+    }
 }

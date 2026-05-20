@@ -32,7 +32,7 @@ public class UserStatStats {
     @Id
     @Enumerated(EnumType.STRING)
     @Column(name = "stat_type",
-        columnDefinition = "ENUM('ENERGY','CHARM','IQ','ENDURANCE')")
+            columnDefinition = "ENUM('ENERGY','CHARM','IQ','ENDURANCE')")
     private StatType statType;
 
     // 건당 평균 지출액 (Exponential Moving Average). EMA 갱신은 Service 책임
@@ -49,7 +49,13 @@ public class UserStatStats {
     private Integer sampleCount = 0;
 
     @Column(name = "updated_at", nullable = false,
-        columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
-        insertable = false, updatable = false)
+            columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+            insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+
+    public void updateEma(BigDecimal newMeanEma, BigDecimal newStddevEma, int newSampleCount) {
+        this.meanEma = newMeanEma;
+        this.stddevEma = newStddevEma;
+        this.sampleCount = newSampleCount;
+    }
 }

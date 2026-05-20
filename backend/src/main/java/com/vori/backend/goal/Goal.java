@@ -43,7 +43,11 @@ public class Goal {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false,
-        columnDefinition = "ENUM('ACTIVE','DONE','ABANDONED')")
+            columnDefinition = "ENUM('ACTIVE','DONE','ABANDONED')")
     @Builder.Default
     private GoalStatus status = GoalStatus.ACTIVE;
+
+    public void addCurrentAmount(int amount) {
+        this.currentAmount = (this.currentAmount == null ? 0 : this.currentAmount) + amount;
+    }
 }
