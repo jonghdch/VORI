@@ -325,8 +325,8 @@
    자리를 넘기는" 긴 스크롤 무대입니다.
    min-height / padding-bottom 이 클수록 중앙에 붙어 있는 시간이 길어집니다. */
 .story-section--chapter {
-  min-height: 238vh;
-  padding: 34vh 24px 96vh;
+  min-height: 278vh;
+  padding: 34vh 24px 124vh;
 }
 
 .story-chapter {
@@ -442,7 +442,7 @@
    조금 더 길게 잡아 달과 본문이 함께 빠져나갈 시간을 확보합니다. */
 .story-section--light:not(.story-section--pets) {
   padding-top: 50vh;
-  padding-bottom: 132vh;
+  padding-bottom: 158vh;
 }
 /* 펫 안내 섹션은 wrapper 밖이라 자기 베이지 배경 유지 */
 .story-section--pets {
@@ -772,15 +772,15 @@
     padding: 72px 20px;
   }
   .story-section--chapter {
-    min-height: 226vh;
-    padding: 32vh 20px 88vh;
+    min-height: 262vh;
+    padding: 32vh 20px 112vh;
   }
   .story-section--dark {
     padding-top: 74vh;
   }
   .story-section--light:not(.story-section--pets) {
     padding-top: 46vh;
-    padding-bottom: 118vh;
+    padding-bottom: 142vh;
   }
   .story-chapter {
     top: 50vh;
