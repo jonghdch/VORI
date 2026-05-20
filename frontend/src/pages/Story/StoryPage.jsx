@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import SiteHeader from "../../components/SiteHeader";
 // SiteHeader 가 .landing-header 등 랜딩 페이지의 헤더 클래스를 그대로 쓰기
 // 때문에, 이 페이지에서도 LandingPage.css 를 함께 import 합니다.
@@ -189,7 +187,7 @@ function StoryParagraph({ children }) {
   );
 }
 
-function createCrateredMoonGeometry() {
+function createCrateredMoonGeometry(THREE) {
   // placeholder fallback. 실제 moon.glb 로드되면 이 mesh 는 교체됨.
   // segments 64×40 ≈ 2,560 vertex (이전 160×96 의 17%).
   const geometry = new THREE.SphereGeometry(1.25, 64, 40);
@@ -239,119 +237,162 @@ function Moon3D({ scrollProgress }) {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
 
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      alpha: true,
-    });
-    renderer.setClearColor(0x000000, 0);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    let cancelled = false;
+    let initialized = false;
+    let cleanupMoon = () => {};
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
-    camera.position.set(0, 0, 5.15);
+    const initMoon = async () => {
+      if (initialized) return;
+      initialized = true;
 
-    const moonRoot = new THREE.Group();
-    scene.add(moonRoot);
+      const [THREE, { GLTFLoader }] = await Promise.all([
+        import("three"),
+        import("three/examples/jsm/loaders/GLTFLoader.js"),
+      ]);
+      if (cancelled) return;
 
-    const ambientLight = new THREE.AmbientLight(0x9fa5b4, 0.16);
-    scene.add(ambientLight);
-    const keyLight = new THREE.DirectionalLight(0xf4f0df, 5.4);
-    keyLight.position.set(-8.6, 0.38, 1.05);
-    scene.add(keyLight);
-    const rimLight = new THREE.DirectionalLight(0x7480b6, 0.22);
-    rimLight.position.set(0, -1.6, -2.4);
-    scene.add(rimLight);
+      // powerPreference: "low-power" — MacBook 의 integrated GPU 사용을 요청.
+      // 기본값 "high-performance" 는 dedicated GPU 를 깨워서 macOS 데스크탑 전환·페이지 닫기 시 GPU 전환(200~500ms) 끊김 유발.
+      // 달 회전 정도면 integrated 로 충분.
+      const renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: true,
+        powerPreference: "low-power",
+      });
+      renderer.setClearColor(0x000000, 0);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    const fallbackMoon = new THREE.Mesh(
-      createCrateredMoonGeometry(),
-      new THREE.MeshStandardMaterial({
-        color: 0xbdb6a5,
-        roughness: 0.96,
-        metalness: 0,
-      })
-    );
-    moonRoot.add(fallbackMoon);
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+      camera.position.set(0, 0, 5.15);
 
-    const normalizeModel = (object) => {
-      const box = new THREE.Box3().setFromObject(object);
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-      const maxAxis = Math.max(size.x, size.y, size.z) || 1;
-      object.position.sub(center);
-      object.scale.setScalar(2.5 / maxAxis);
-    };
+      const moonRoot = new THREE.Group();
+      scene.add(moonRoot);
 
-    // 이벤트 기반 렌더 — 스크롤 / 리사이즈 / GLB 로드 같이 "달 모습이 바뀌는 순간" 에만 한 번씩 그림.
-    // requestAnimationFrame 자가 재호출 (tick 루프) 안 함 → idle 상태 CPU 거의 0.
-    let frameId = null;
+      const ambientLight = new THREE.AmbientLight(0x9fa5b4, 0.16);
+      scene.add(ambientLight);
+      const keyLight = new THREE.DirectionalLight(0xf4f0df, 5.4);
+      keyLight.position.set(-8.6, 0.38, 1.05);
+      scene.add(keyLight);
+      const rimLight = new THREE.DirectionalLight(0x7480b6, 0.22);
+      rimLight.position.set(0, -1.6, -2.4);
+      scene.add(rimLight);
 
-    const renderOnce = () => {
-      frameId = null;
-      const phase = scrollProgress?.get?.() || 0;
-      const angle =
-        phase < 0.5
-          ? THREE.MathUtils.lerp(-1.42, 0, phase / 0.5)
-          : THREE.MathUtils.lerp(0, 1.54, (phase - 0.5) / 0.5);
-      const shadowWeight = THREE.MathUtils.smoothstep(phase, 0.42, 1);
-      ambientLight.intensity = THREE.MathUtils.lerp(0.17, 0.045, shadowWeight);
-      keyLight.intensity = THREE.MathUtils.lerp(5.2, 6.2, shadowWeight);
-      keyLight.position.set(
-        Math.sin(angle) * 10.5,
-        0.38,
-        Math.cos(angle) * 5.8
+      const fallbackMoon = new THREE.Mesh(
+        createCrateredMoonGeometry(THREE),
+        new THREE.MeshStandardMaterial({
+          color: 0xbdb6a5,
+          roughness: 0.96,
+          metalness: 0,
+        })
       );
-      moonRoot.rotation.x = -0.08;
-      renderer.render(scene, camera);
-    };
+      moonRoot.add(fallbackMoon);
 
-    // 다음 화면 refresh 에 한 번 그리도록 예약. 이미 예약돼 있으면 중복 안 함.
-    const schedule = () => {
-      if (frameId == null) frameId = requestAnimationFrame(renderOnce);
-    };
+      const normalizeModel = (object) => {
+        const box = new THREE.Box3().setFromObject(object);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxAxis = Math.max(size.x, size.y, size.z) || 1;
+        object.position.sub(center);
+        object.scale.setScalar(2.5 / maxAxis);
+      };
 
-    // canvas 크기·DPR 갱신은 resize 때만. 매 프레임 호출하지 않음.
-    const applySize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const width = Math.max(1, canvas.clientWidth);
-      const height = Math.max(1, canvas.clientHeight);
-      renderer.setPixelRatio(dpr);
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      schedule();
-    };
-    window.addEventListener("resize", applySize);
+      // 이벤트 기반 렌더 — 스크롤 / 리사이즈 / GLB 로드 같이 "달 모습이 바뀌는 순간" 에만 한 번씩 그림.
+      // requestAnimationFrame 자가 재호출 (tick 루프) 안 함 → idle 상태 CPU 거의 0.
+      let frameId = null;
 
-    // 스크롤 progress 가 변할 때만 다시 그림.
-    const unsubScroll = scrollProgress?.on?.("change", schedule) || (() => {});
+      const renderOnce = () => {
+        frameId = null;
+        const phase = scrollProgress?.get?.() || 0;
+        const angle =
+          phase < 0.5
+            ? THREE.MathUtils.lerp(-1.42, 0, phase / 0.5)
+            : THREE.MathUtils.lerp(0, 1.54, (phase - 0.5) / 0.5);
+        const shadowWeight = THREE.MathUtils.smoothstep(phase, 0.42, 1);
+        ambientLight.intensity = THREE.MathUtils.lerp(0.17, 0.045, shadowWeight);
+        keyLight.intensity = THREE.MathUtils.lerp(5.2, 6.2, shadowWeight);
+        keyLight.position.set(
+          Math.sin(angle) * 10.5,
+          0.38,
+          Math.cos(angle) * 5.8
+        );
+        moonRoot.rotation.x = -0.08;
+        renderer.render(scene, camera);
+      };
 
-    // GLB 가 늦게 도착하면 fallback 에서 실제 모델로 교체 후 한 번 더 그려야 함.
-    const loader = new GLTFLoader();
-    loader.load(
-      MOON_MODEL_PATH,
-      (gltf) => {
-        moonRoot.clear();
-        normalizeModel(gltf.scene);
-        moonRoot.add(gltf.scene);
+      // Page Visibility — 다른 탭/Mission Control 데스크탑 가 있을 땐 render 일시 정지.
+      // macOS 데스크탑 전환 시 Chrome 의 rAF throttle catch-up 으로 인한 끊김을 방지.
+      let pageHidden = document.hidden;
+
+      const schedule = () => {
+        if (pageHidden) return;
+        if (frameId == null) frameId = requestAnimationFrame(renderOnce);
+      };
+
+      const onVisibility = () => {
+        pageHidden = document.hidden;
+        if (!pageHidden) schedule(); // 돌아오면 한 번만 다시 그림
+      };
+      document.addEventListener("visibilitychange", onVisibility);
+
+      const applySize = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const width = Math.max(1, canvas.clientWidth);
+        const height = Math.max(1, canvas.clientHeight);
+        renderer.setPixelRatio(dpr);
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
         schedule();
-      },
-      undefined,
-      () => {
-        // public/models/moon.glb 가 아직 없으면 fallback 달을 그대로 보여줍니다.
-      }
-    );
+      };
+      window.addEventListener("resize", applySize);
 
-    // 첫 렌더 — 사이즈 잡고 한 번 그림.
-    applySize();
+      const unsubScroll = scrollProgress?.on?.("change", schedule) || (() => {});
+
+      const loader = new GLTFLoader();
+      loader.load(
+        MOON_MODEL_PATH,
+        (gltf) => {
+          moonRoot.clear();
+          normalizeModel(gltf.scene);
+          moonRoot.add(gltf.scene);
+          schedule();
+        },
+        undefined,
+        () => {
+          // public/models/moon.glb 가 아직 없으면 fallback 달을 그대로 보여줍니다.
+        }
+      );
+
+      applySize();
+
+      cleanupMoon = () => {
+        if (frameId != null) cancelAnimationFrame(frameId);
+        window.removeEventListener("resize", applySize);
+        document.removeEventListener("visibilitychange", onVisibility);
+        unsubScroll();
+        fallbackMoon.geometry.dispose();
+        fallbackMoon.material.dispose();
+        renderer.dispose();
+      };
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          observer.disconnect();
+          initMoon();
+        }
+      },
+      { rootMargin: "700px 0px" }
+    );
+    observer.observe(canvas);
 
     return () => {
-      if (frameId != null) cancelAnimationFrame(frameId);
-      window.removeEventListener("resize", applySize);
-      unsubScroll();
-      fallbackMoon.geometry.dispose();
-      fallbackMoon.material.dispose();
-      renderer.dispose();
+      cancelled = true;
+      observer.disconnect();
+      cleanupMoon();
     };
   }, [scrollProgress]);
 

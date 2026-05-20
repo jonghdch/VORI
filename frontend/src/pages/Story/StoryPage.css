@@ -307,6 +307,11 @@
   filter:
     drop-shadow(0 0 48px rgba(255, 245, 200, 0.2))
     drop-shadow(0 0 120px rgba(255, 245, 200, 0.12));
+  /* 별도 GPU layer 로 분리. macOS Mission Control 데스크탑 전환 같은
+     page-wide repaint 가 canvas 합성에 영향 주지 않게. */
+  will-change: transform;
+  transform: translateZ(0);
+  contain: strict;
 }
 
 /* ── 공통 구간 (챕터를 감싸는 큰 영역) ────────────────────── */
