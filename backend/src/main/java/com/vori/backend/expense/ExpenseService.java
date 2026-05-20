@@ -104,10 +104,9 @@ public class ExpenseService {
         }
 
         // AI 질문 트리거 조건 (docs/domain.md §6):
-        //   signal != GREEN AND is_recurring == FALSE AND memo IS NULL
-        // 반복 결제이거나 사용자가 메모를 적어둔 경우엔 AI 질문 생략 → signal_final = signal_initial (이미 set 됨)
-        boolean userExplainedAlready = req.memo() != null && !req.memo().isBlank();
-        boolean skipAiQuestion = Boolean.TRUE.equals(req.isRecurring()) || userExplainedAlready;
+        //   signal != GREEN AND is_recurring == FALSE
+        // 반복 결제는 사용자의 의식적 결정이 아니므로 AI 질문 스킵 → signal_final = signal_initial (이미 set 됨)
+        boolean skipAiQuestion = Boolean.TRUE.equals(req.isRecurring());
         if (signal != Signal.GREEN && !skipAiQuestion) {
             eventPublisher.publishEvent(new ExpenseAnomalyEvent(
                     expense.getId(), userId, req.item(), req.amount(),

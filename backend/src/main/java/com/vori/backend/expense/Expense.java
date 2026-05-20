@@ -52,7 +52,7 @@ public class Expense {
     @Column(nullable = false, length = 100)
     private String item;
 
-    // 사용자 자발적 메모. 입력해두면 AI 가 사유 안 물음 (이례 케이스라도)
+    // 사용자 자발적 메모. AI 질문·신호등 산정과는 무관 — 사용자 본인 기록용
     @Column(length = 200)
     private String memo;
 
