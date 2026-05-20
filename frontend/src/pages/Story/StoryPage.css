@@ -333,6 +333,9 @@
   max-width: var(--chapter-width);
   margin: 0 auto;
 }
+.story-chapter-reveal {
+  will-change: opacity, transform;
+}
 
 /* 챕터별 좌/우 지그재그 정렬 (넓은 화면에서만 적용,
    좁은 화면에서는 가운데 정렬 유지).

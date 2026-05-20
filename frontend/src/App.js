@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -10,9 +10,12 @@ import "./App.css";
 import LandingPage from "./pages/Landing/LandingPage";
 import LoginPage from "./pages/Login/LoginPage";
 import SignupPage from "./pages/Signup/SignupPage";
-import StoryPage from "./pages/Story/StoryPage";
 import HomeDashboard from "./pages/Home/HomeDashboard";
 import { me, logout } from "./api/auth";
+
+// Story 페이지는 three.js + GLTFLoader 를 포함해서 무거움 (~100+ KB).
+// 랜딩만 보는 사용자가 다운로드 안 하도록 별도 chunk 로 분리.
+const StoryPage = lazy(() => import("./pages/Story/StoryPage"));
 
 // 라우터 경로
 //   /        랜딩
@@ -62,32 +65,34 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <Routes>
-        <Route
-          path="/"
-          element={<LandingPage user={user} onLogout={handleLogout} />}
-        />
-        <Route
-          path="/login"
-          element={<LoginPage onLogin={handleLogin} />}
-        />
-        <Route
-          path="/signup"
-          element={<SignupPage onLogin={handleLogin} />}
-        />
-        <Route
-          path="/story"
-          element={<StoryPage user={user} onLogout={handleLogout} />}
-        />
-        <Route
-          path="/home"
-          element={
-            <ProtectedRoute user={user} authLoading={authLoading}>
-              <HomeDashboard user={user} onLogout={handleLogout} />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+      <Suspense fallback={null}>
+        <Routes>
+          <Route
+            path="/"
+            element={<LandingPage user={user} onLogout={handleLogout} />}
+          />
+          <Route
+            path="/login"
+            element={<LoginPage onLogin={handleLogin} />}
+          />
+          <Route
+            path="/signup"
+            element={<SignupPage onLogin={handleLogin} />}
+          />
+          <Route
+            path="/story"
+            element={<StoryPage user={user} onLogout={handleLogout} />}
+          />
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <HomeDashboard user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

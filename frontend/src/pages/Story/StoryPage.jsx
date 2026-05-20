@@ -144,12 +144,55 @@ const STORY_CHAPTERS = [
   },
 ];
 
+const chapterReveal = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.14,
+      delayChildren: 0,
+    },
+  },
+};
+
+const chapterLineReveal = {
+  hidden: {
+    opacity: 0,
+    y: 46,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.64,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+};
+
+function StoryRevealItem({ as: Component = motion.div, children, className }) {
+  return (
+    <Component className={className} variants={chapterLineReveal}>
+      {children}
+    </Component>
+  );
+}
+
 function StoryParagraph({ children }) {
-  return <p className="story-paragraph">{children}</p>;
+  return (
+    <StoryRevealItem
+      as={motion.p}
+      className="story-paragraph"
+    >
+      {children}
+    </StoryRevealItem>
+  );
 }
 
 function createCrateredMoonGeometry() {
-  const geometry = new THREE.SphereGeometry(1.25, 160, 96);
+  // placeholder fallback. 실제 moon.glb 로드되면 이 mesh 는 교체됨.
+  // segments 64×40 ≈ 2,560 vertex (이전 160×96 의 17%).
+  const geometry = new THREE.SphereGeometry(1.25, 64, 40);
   const position = geometry.attributes.position;
   const normal = new THREE.Vector3();
   const craters = [
@@ -239,30 +282,12 @@ function Moon3D({ scrollProgress }) {
       object.scale.setScalar(2.5 / maxAxis);
     };
 
-    const loader = new GLTFLoader();
-    loader.load(
-      MOON_MODEL_PATH,
-      (gltf) => {
-        moonRoot.clear();
-        normalizeModel(gltf.scene);
-        moonRoot.add(gltf.scene);
-      },
-      undefined,
-      () => {
-        // public/models/moon.glb 가 아직 없으면 fallback 달을 그대로 보여줍니다.
-      }
-    );
+    // 이벤트 기반 렌더 — 스크롤 / 리사이즈 / GLB 로드 같이 "달 모습이 바뀌는 순간" 에만 한 번씩 그림.
+    // requestAnimationFrame 자가 재호출 (tick 루프) 안 함 → idle 상태 CPU 거의 0.
+    let frameId = null;
 
-    let frameId;
-    const render = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const width = Math.max(1, canvas.clientWidth);
-      const height = Math.max(1, canvas.clientHeight);
-      renderer.setPixelRatio(dpr);
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-
+    const renderOnce = () => {
+      frameId = null;
       const phase = scrollProgress?.get?.() || 0;
       const angle =
         phase < 0.5
@@ -278,12 +303,52 @@ function Moon3D({ scrollProgress }) {
       );
       moonRoot.rotation.x = -0.08;
       renderer.render(scene, camera);
-      frameId = requestAnimationFrame(render);
     };
 
-    render();
+    // 다음 화면 refresh 에 한 번 그리도록 예약. 이미 예약돼 있으면 중복 안 함.
+    const schedule = () => {
+      if (frameId == null) frameId = requestAnimationFrame(renderOnce);
+    };
+
+    // canvas 크기·DPR 갱신은 resize 때만. 매 프레임 호출하지 않음.
+    const applySize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.max(1, canvas.clientWidth);
+      const height = Math.max(1, canvas.clientHeight);
+      renderer.setPixelRatio(dpr);
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      schedule();
+    };
+    window.addEventListener("resize", applySize);
+
+    // 스크롤 progress 가 변할 때만 다시 그림.
+    const unsubScroll = scrollProgress?.on?.("change", schedule) || (() => {});
+
+    // GLB 가 늦게 도착하면 fallback 에서 실제 모델로 교체 후 한 번 더 그려야 함.
+    const loader = new GLTFLoader();
+    loader.load(
+      MOON_MODEL_PATH,
+      (gltf) => {
+        moonRoot.clear();
+        normalizeModel(gltf.scene);
+        moonRoot.add(gltf.scene);
+        schedule();
+      },
+      undefined,
+      () => {
+        // public/models/moon.glb 가 아직 없으면 fallback 달을 그대로 보여줍니다.
+      }
+    );
+
+    // 첫 렌더 — 사이즈 잡고 한 번 그림.
+    applySize();
+
     return () => {
-      cancelAnimationFrame(frameId);
+      if (frameId != null) cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", applySize);
+      unsubScroll();
       fallbackMoon.geometry.dispose();
       fallbackMoon.material.dispose();
       renderer.dispose();
@@ -299,15 +364,27 @@ function StoryChapter({ chapter, articleRef }) {
       className={`story-section story-section--chapter ${chapter.sectionClass}`}
     >
       <article ref={articleRef} className="story-chapter">
-        <div className="story-chapter-head">
-          <div className="story-chapter-mark">{chapter.mark}</div>
-          <h2 className="story-chapter-title">{chapter.title}</h2>
-        </div>
+        <motion.div
+          className="story-chapter-reveal"
+          variants={chapterReveal}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: false, amount: 0.14, margin: "0px 0px -42% 0px" }}
+        >
+          <StoryRevealItem
+            className="story-chapter-head"
+          >
+            <div className="story-chapter-mark">{chapter.mark}</div>
+            <h2 className="story-chapter-title">{chapter.title}</h2>
+          </StoryRevealItem>
         {chapter.paragraphs.map((paragraph, index) => (
-          <StoryParagraph key={`${chapter.id}-paragraph-${index}`}>
+          <StoryParagraph
+            key={`${chapter.id}-paragraph-${index}`}
+          >
             {paragraph}
           </StoryParagraph>
         ))}
+        </motion.div>
       </article>
     </section>
   );
@@ -335,7 +412,8 @@ function StoryPage({ user, onLogout }) {
     (character) => character.id === selectedCharacterId
   );
 
-  // 페이지 전체 스크롤 진행도(0~1)를 WebGL 달 회전에 사용합니다.
+  // 페이지 전체 스크롤 진행도는 WebGL 달의 회전·조명에 사용합니다.
+  // 이벤트 기반 렌더라 값이 바뀔 때만 다시 그려 idle CPU 부담은 낮게 유지됩니다.
   const { scrollYProgress } = useScroll();
 
   // chapter 3 의 article(본문 영역) 자체를 ref 로 추적해서,
