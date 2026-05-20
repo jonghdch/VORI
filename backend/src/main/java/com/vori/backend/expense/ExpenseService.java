@@ -59,6 +59,9 @@ public class ExpenseService {
                 .item(req.item())
                 .categoryId(req.categoryId())
                 .statType(category.getStatType())
+                .paymentMethod(req.paymentMethod())
+                .memo(req.memo())
+                .isRecurring(req.isRecurring())
                 .build());
 
         UserStatStats stats = userStatStatsRepository
@@ -78,6 +81,11 @@ public class ExpenseService {
             signal = z <= Z_GREEN ? Signal.GREEN : (z <= Z_RED ? Signal.GRAY : Signal.RED);
         }
 
+        // docs/domain.md §3 — 반복 결제(통신비·구독 등)는 사용자의 의식적 결정이 아님 → RED 자동 제외
+        if (Boolean.TRUE.equals(req.isRecurring()) && signal == Signal.RED) {
+            signal = Signal.GRAY;
+        }
+
         int savedAmount = stats.getMeanEma().subtract(BigDecimal.valueOf(req.amount())).intValue();
         int statDelta = Math.max(savedAmount, 0) / 1000;
 
@@ -95,7 +103,12 @@ public class ExpenseService {
             updateActivePet(userId, category.getStatType(), statDelta, expense.getId(), savedAmount);
         }
 
-        if (signal != Signal.GREEN) {
+        // AI 질문 트리거 조건 (docs/domain.md §6):
+        //   signal != GREEN AND is_recurring == FALSE AND memo IS NULL
+        // 반복 결제이거나 사용자가 메모를 적어둔 경우엔 AI 질문 생략 → signal_final = signal_initial (이미 set 됨)
+        boolean userExplainedAlready = req.memo() != null && !req.memo().isBlank();
+        boolean skipAiQuestion = Boolean.TRUE.equals(req.isRecurring()) || userExplainedAlready;
+        if (signal != Signal.GREEN && !skipAiQuestion) {
             eventPublisher.publishEvent(new ExpenseAnomalyEvent(
                     expense.getId(), userId, req.item(), req.amount(),
                     category.getStatType(), stats.getMeanEma(), signal
