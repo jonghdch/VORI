@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import UserAvatarMenu from "./UserAvatarMenu";
 
 // 공통 상단 헤더.
 //
@@ -83,34 +83,9 @@ function SiteHeader({
 }
 
 // 로그인된 사용자 영역.
-// - "VORI 시작하기" 버튼 + 원형 아바타.
-// - 아바타 클릭 시 드롭다운 팝업: 프로필 사진, 닉네임, 이메일, 로그아웃.
+// - "VORI 시작하기" 버튼 + 공통 UserAvatarMenu (설정/로그아웃 드롭다운).
 function UserMenu({ user, onLogout }) {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
-
-  // 바깥 클릭 시 닫기
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const initial =
-    (user?.nickname || user?.email || "?").trim().charAt(0).toUpperCase();
-
-  const handleLogout = async () => {
-    setOpen(false);
-    if (typeof onLogout === "function") await onLogout();
-    navigate("/");
-  };
-
   return (
     <>
       <button
@@ -120,39 +95,7 @@ function UserMenu({ user, onLogout }) {
       >
         VORI 시작하기
       </button>
-
-      <div className="user-menu" ref={wrapRef}>
-        <button
-          type="button"
-          className="user-avatar"
-          aria-label="내 계정 메뉴"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {initial}
-        </button>
-
-        {open && (
-          <div className="user-popover" role="menu">
-            <div className="user-popover-row">
-              <div className="user-popover-photo" aria-hidden>
-                {initial}
-              </div>
-              <div className="user-popover-info">
-                <div className="user-popover-nickname">{user.nickname}</div>
-                <div className="user-popover-email">{user.email}</div>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="user-popover-logout"
-              onClick={handleLogout}
-            >
-              로그아웃
-            </button>
-          </div>
-        )}
-      </div>
+      <UserAvatarMenu user={user} onLogout={onLogout} />
     </>
   );
 }

@@ -1,11 +1,15 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import UserAvatarMenu from "../../components/UserAvatarMenu";
+import { getMyStats } from "../../api/stats";
 import "./HomeDashboard.css";
 
-const STATS = [
-  { key: "energy", label: "에너지", value: 68, color: "var(--home-bar-green)" },
-  { key: "charm", label: "매력", value: 68, color: "var(--home-bar-red)" },
-  { key: "int", label: "지능", value: 68, color: "var(--home-bar-orange)" },
-  { key: "sta", label: "지구력", value: 68, color: "var(--home-bar-blue)" },
+// 백엔드 enum → 위젯 메타 (label / 색). value 는 mount 시 fetch.
+const STAT_META = [
+  { key: "energy", label: "에너지", color: "var(--home-bar-green)" },
+  { key: "charm", label: "매력", color: "var(--home-bar-red)" },
+  { key: "iq", label: "지능", color: "var(--home-bar-orange)" },
+  { key: "endurance", label: "지구력", color: "var(--home-bar-blue)" },
 ];
 
 const TX_ROWS = [
@@ -29,6 +33,16 @@ const CATEGORY_BARS = [
 ];
 
 function HomeDashboard({ user, onLogout }) {
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    getMyStats().then(setStats);
+  }, []);
+  // 스탯값은 보통 소수 (0~10 범위). 바 시각화: value × 10 → 100% 캡.
+  const statRows = STAT_META.map((m) => {
+    const value = stats?.[m.key] ?? 0;
+    const pct = Math.min(100, Math.max(0, value * 10));
+    return { ...m, value, pct };
+  });
   const navigate = useNavigate();
   const nickname = user?.nickname || "사용자";
 
@@ -86,15 +100,7 @@ function HomeDashboard({ user, onLogout }) {
               </button>
             ))}
           </nav>
-          <button
-            type="button"
-            className="home-logout-link"
-            onClick={() => {
-              handleLogout();
-            }}
-          >
-            로그아웃
-          </button>
+          <UserAvatarMenu user={user} onLogout={handleLogout} />
         </div>
       </header>
 
@@ -148,11 +154,15 @@ function HomeDashboard({ user, onLogout }) {
               </li>
             </ul>
           </div>
-          <div className="home-side-block">
+          <div className="home-side-block home-side-block--bottom">
             <div className="home-side-title">설정</div>
             <ul className="home-side-list">
               <li>
-                <button type="button" className="home-side-link">
+                <button
+                  type="button"
+                  className="home-side-link"
+                  onClick={() => navigate("/settings")}
+                >
                   환경설정
                 </button>
               </li>
@@ -199,13 +209,13 @@ function HomeDashboard({ user, onLogout }) {
             <section className="home-card home-card-stats">
               <h2 className="home-card-title">스탯 현황</h2>
               <ul className="home-stat-list">
-                {STATS.map((s) => (
+                {statRows.map((s) => (
                   <li key={s.key} className="home-stat-row">
                     <span className="home-stat-label">{s.label}</span>
                     <div className="home-stat-track">
                       <div
                         className="home-stat-fill"
-                        style={{ width: `${s.value}%`, background: s.color }}
+                        style={{ width: `${s.pct}%`, background: s.color }}
                       />
                     </div>
                     <span className="home-stat-num">{s.value}</span>
@@ -259,7 +269,11 @@ function HomeDashboard({ user, onLogout }) {
                 <button type="button" className="home-link-btn">
                   ▶ 상세 내역 확인하기
                 </button>
-                <button type="button" className="home-btn home-btn-dark">
+                <button
+                  type="button"
+                  className="home-btn home-btn-dark"
+                  onClick={() => navigate("/ledger/new")}
+                >
                   + 지출 추가하기
                 </button>
               </div>

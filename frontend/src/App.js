@@ -16,13 +16,26 @@ import { me, logout } from "./api/auth";
 // Story 페이지는 three.js + GLTFLoader 를 포함해서 무거움 (~100+ KB).
 // 랜딩만 보는 사용자가 다운로드 안 하도록 별도 chunk 로 분리.
 const StoryPage = lazy(() => import("./pages/Story/StoryPage"));
+const LedgerEntryPage = lazy(() =>
+  import("./pages/LedgerEntry/LedgerEntryPage"),
+);
+const LedgerAnalysisPage = lazy(() =>
+  import("./pages/LedgerEntry/LedgerAnalysisPage"),
+);
+const LedgerConfirmPage = lazy(() =>
+  import("./pages/LedgerEntry/LedgerConfirmPage"),
+);
+const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
 
 // 라우터 경로
-//   /        랜딩
-//   /login   로그인
-//   /signup  회원가입
-//   /story   스토리 (서비스 소개)
-//   /home    홈 대시보드 (인증 필요 — 미인증 시 /login 으로 리다이렉트)
+//   /                       랜딩
+//   /login                  로그인
+//   /signup                 회원가입
+//   /story                  스토리 (서비스 소개)
+//   /home                   홈 대시보드 (인증 필요)
+//   /ledger/new             가계부 작성 Step 1 (입력)
+//   /ledger/new/analysis    Step 2 (AI 사유 질문)
+//   /ledger/new/confirm     Step 3 (확인)
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -88,6 +101,38 @@ function App() {
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <HomeDashboard user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ledger/new"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <LedgerEntryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ledger/new/analysis"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <LedgerAnalysisPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ledger/new/confirm"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <LedgerConfirmPage user={user} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <SettingsPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />

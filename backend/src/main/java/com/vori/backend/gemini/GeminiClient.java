@@ -22,8 +22,17 @@ public class GeminiClient {
     @Value("${gemini.api.key}")
     private String apiKey;
 
+    @jakarta.annotation.PostConstruct
+    void logKeyStatus() {
+        int n = apiKey == null ? 0 : apiKey.length();
+        log.info("[Gemini] api key loaded — length={} (값 자체는 로그 X)", n);
+    }
+
     private static final String BASE_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
+
+    private static final String EMBED_URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=";
 
     public String generateQuestion(String item, int amount, BigDecimal meanEma, StatType statType) {
         String prompt = String.format(
@@ -49,6 +58,29 @@ public class GeminiClient {
         } catch (IllegalArgumentException e) {
             log.warn("Gemini 분류 실패 — ETC 처리: raw={}", result);
             return ReasonCategory.ETC;
+        }
+    }
+
+    /**
+     * 텍스트 → 임베딩 벡터 (768차원, text-embedding-004).
+     * 카테고리 자동 분류용 — 카테고리 leaf 와 사용자 입력을 같은 벡터 공간에서 비교.
+     */
+    @SuppressWarnings("unchecked")
+    public double[] embed(String text) {
+        String url = EMBED_URL + apiKey;
+        Map<String, Object> body = Map.of(
+                "content", Map.of("parts", List.of(Map.of("text", text)))
+        );
+        try {
+            Map<?, ?> response = restTemplate.postForObject(url, body, Map.class);
+            Map<?, ?> embedding = (Map<?, ?>) response.get("embedding");
+            List<Number> values = (List<Number>) embedding.get("values");
+            double[] vec = new double[values.size()];
+            for (int i = 0; i < vec.length; i++) vec[i] = values.get(i).doubleValue();
+            return vec;
+        } catch (Exception e) {
+            log.error("Gemini embedding 호출 실패 — text={}", text, e);
+            throw new RuntimeException("AI 분류 서비스 호출에 실패했습니다.");
         }
     }
 

@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -45,6 +46,18 @@ public class ExpenseService {
     private static final double Z_RED = 2.0;
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
     private static final double EMA_ALPHA = 0.2;
+
+    /** 가계부 작성 화면 mount 시 그 날짜 기존 expense 들 불러오기. */
+    @Transactional(readOnly = true)
+    public List<ExpenseResponse> listByDate(Long userId, LocalDate date) {
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.plusDays(1).atStartOfDay();
+        return expenseRepository
+                .findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(userId, start, end)
+                .stream()
+                .map(ExpenseResponse::from)
+                .toList();
+    }
 
     @Transactional
     public ExpenseResponse createExpense(Long userId, ExpenseCreateRequest req) {
