@@ -101,6 +101,9 @@ public class AiInquiryService {
                 .filter(i -> i.getUserId().equals(userId))
                 .orElseThrow(() -> new IllegalArgumentException("질문을 찾을 수 없습니다."));
 
+        // 이미 답변된 inquiry 는 재처리 X — 클라이언트 retry·중복 호출 시 Gemini 재호출/signal 재보정 방지
+        if (inquiry.getAnsweredAt() != null) return;
+
         ReasonCategory reason = geminiClient.classifyAnswer(inquiry.getQuestion(), req.answerText());
 
         Expense expense = expenseRepository.findById(inquiry.getExpenseId()).orElseThrow();

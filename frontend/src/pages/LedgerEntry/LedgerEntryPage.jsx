@@ -169,13 +169,16 @@ function LedgerEntryPage() {
   const isRowComplete = (r) =>
     r.name && r.name.trim().length > 0 && r.amount && r.amount.length > 0;
   const allRows = [...income, ...expense, ...savings];
-  const canProceed = allRows.length === 0 || allRows.every(isRowComplete);
+  // expense 자동 분류가 진행 중인 행이 있으면 잠시 대기 — categoryId=null 인 채로 저장 시도하면 throw.
+  const isCategorizing = expense.some((r) => r.categorizing);
+  const canProceed =
+    (allRows.length === 0 || allRows.every(isRowComplete)) && !isCategorizing;
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
   // 백엔드에 모든 행 저장. 한 건이라도 실패하면 전체 중단하고 에러 표시.
-  // 부분 실패 처리는 추후 — 지금은 단순 best-effort sequential.
+  // 성공한 행에는 즉시 dbId 를 박아 retry 시 중복 저장 방지.
   const goNext = async () => {
     if (!canProceed || submitting) return;
     setSubmitting(true);
@@ -186,32 +189,41 @@ function LedgerEntryPage() {
         if (!r.categoryId) {
           throw new Error(`"${r.name}" 카테고리를 분류하지 못했어요. 잠시 후 다시 시도해주세요.`);
         }
-        await createExpense({
+        const saved = await createExpense({
           item: r.name.trim(),
           amount: r.amount,
           categoryId: r.categoryId,
           paymentMethod: r.paymentMethod,
           spentAt: `${dateStr}T00:00:00`,
         });
+        setExpense((rows) =>
+          rows.map((rr) => (rr.id === r.id ? { ...rr, dbId: saved.id } : rr)),
+        );
       }
       for (const r of income) {
         if (r.dbId) continue;
-        await createIncome({
+        const saved = await createIncome({
           item: r.name.trim(),
           amount: r.amount,
           source: r.categoryEnum || "OTHER",
           paymentMethod: r.paymentMethod,
           receivedAt: dateStr,
         });
+        setIncome((rows) =>
+          rows.map((rr) => (rr.id === r.id ? { ...rr, dbId: saved.id } : rr)),
+        );
       }
       for (const r of savings) {
         if (r.dbId) continue;
-        await createSaving({
+        const saved = await createSaving({
           item: r.name.trim(),
           amount: r.amount,
           savingType: r.categoryEnum || "DEPOSIT",
           savedAt: dateStr,
         });
+        setSavings((rows) =>
+          rows.map((rr) => (rr.id === r.id ? { ...rr, dbId: saved.id } : rr)),
+        );
       }
       // 성공 — draft 비움. 다음 mount 에서는 DB fetch 로 폼 채움 (정확한 dbId 포함).
       clearDraft();
@@ -332,7 +344,11 @@ function LedgerEntryPage() {
 
         <div className="ledger-actions">
           {!canProceed && (
-            <p className="ledger-hint">모든 항목의 내역과 금액을 입력해주세요</p>
+            <p className="ledger-hint">
+              {isCategorizing
+                ? "지출 카테고리를 자동 분류하는 중이에요…"
+                : "모든 항목의 내역과 금액을 입력해주세요"}
+            </p>
           )}
           {submitError && <p className="ledger-hint">{submitError}</p>}
           <div className="ledger-actions-row">
@@ -368,27 +384,28 @@ function EntryRow({ num, row, type, onChange, onDelete }) {
     const name = (row.name || "").trim();
     if (!name) {
       setAutoLabel(null);
-      onChange({ categoryId: null, categoryEnum: null });
+      onChange({ categoryId: null, categoryEnum: null, categorizing: false });
       return;
     }
     if (type !== "expense") {
       const v = categorize(name, type);
       setAutoLabel(getCategoryDisplayPath(v, type));
       // income/savings 는 ENUM 값을 그대로 row 에 보관 (제출 시 source/savingType 로 사용)
-      onChange({ categoryEnum: v, categoryId: null });
+      onChange({ categoryEnum: v, categoryId: null, categorizing: false });
       return;
     }
-    // expense — debounce 400ms 후 백엔드 호출
+    // expense — debounce 400ms 후 백엔드 호출. 진행 중엔 categorizing=true 로 부모의 next 버튼 막음.
+    onChange({ categorizing: true });
     let cancelled = false;
     const handle = setTimeout(async () => {
       const r = await categorizeRemote(name);
       if (cancelled) return;
       if (r == null) {
         setAutoLabel("기타");
-        onChange({ categoryId: null, categoryEnum: null });
+        onChange({ categoryId: null, categoryEnum: null, categorizing: false });
       } else {
         setAutoLabel(`${r.parentName} · ${r.leafName}`);
-        onChange({ categoryId: r.leafId, categoryEnum: null });
+        onChange({ categoryId: r.leafId, categoryEnum: null, categorizing: false });
       }
     }, 400);
     return () => {

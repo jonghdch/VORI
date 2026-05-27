@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import StepIndicator from "./StepIndicator";
 import { isPastDate, toIsoDate } from "./utils";
@@ -21,6 +21,9 @@ function LedgerAnalysisPage() {
   const [answers, setAnswers] = useState({}); // inquiryId → text
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  // 부분 실패 후 retry 시 이미 POST 된 inquiry 재호출 방지. 백엔드도 answeredAt 가드가 있지만
+  // 클라이언트도 skip 해 불필요한 round-trip 차단.
+  const submittedRef = useRef(new Set());
 
   // 과거 날짜는 Step 2 자체를 우회
   const past = isPastDate(dateStr);
@@ -67,9 +70,11 @@ function LedgerAnalysisPage() {
     setSubmitError(null);
     try {
       for (const inq of inquiries) {
+        if (submittedRef.current.has(inq.inquiryId)) continue;
         const text = (answers[inq.inquiryId] || "").trim();
         if (!text) continue;
         await answerInquiry(inq.inquiryId, text);
+        submittedRef.current.add(inq.inquiryId);
       }
       goConfirm();
     } catch (e) {
