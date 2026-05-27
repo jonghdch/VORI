@@ -1,20 +1,18 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 import { login } from "../../api/auth";
 
 // 로그인 페이지.
 // - POST /api/auth/login 호출, 세션 쿠키(JSESSIONID)로 인증 유지.
-// - 성공 시 onNavigate("landing") 으로 이동.
-function LoginPage({ onNavigate, onLogin }) {
+// - 성공 시 /home 으로 이동.
+function LoginPage({ onLogin }) {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const go = (page) => {
-    if (typeof onNavigate === "function") onNavigate(page);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +21,7 @@ function LoginPage({ onNavigate, onLogin }) {
     try {
       const user = await login(email, password);
       if (typeof onLogin === "function") onLogin(user);
-      go("home");
+      navigate("/home");
     } catch (err) {
       setError(err.message || "로그인 중 오류가 발생했어요");
     } finally {
@@ -38,7 +36,7 @@ function LoginPage({ onNavigate, onLogin }) {
         <button
           type="button"
           className="login-logo-btn"
-          onClick={() => go("landing")}
+          onClick={() => navigate("/")}
           aria-label="VORI 홈으로"
         >
           VORI
@@ -143,7 +141,7 @@ function LoginPage({ onNavigate, onLogin }) {
             <button
               type="button"
               className="login-link login-link-strong"
-              onClick={() => go("signup")}
+              onClick={() => navigate("/signup")}
             >
               회원가입
             </button>

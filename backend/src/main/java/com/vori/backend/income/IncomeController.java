@@ -1,8 +1,8 @@
-package com.vori.backend.expense;
+package com.vori.backend.income;
 
 import com.vori.backend.auth.UserPrincipal;
-import com.vori.backend.expense.dto.ExpenseCreateRequest;
-import com.vori.backend.expense.dto.ExpenseResponse;
+import com.vori.backend.income.dto.IncomeCreateRequest;
+import com.vori.backend.income.dto.IncomeResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -19,27 +19,26 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/expenses")
+@RequestMapping("/api/incomes")
 @RequiredArgsConstructor
-public class ExpenseController {
+public class IncomeController {
 
-    private final ExpenseService expenseService;
+    private final IncomeService incomeService;
 
     @PostMapping
-    public ResponseEntity<ExpenseResponse> createExpense(
+    public ResponseEntity<IncomeResponse> createIncome(
             @AuthenticationPrincipal UserPrincipal principal,
-            @Valid @RequestBody ExpenseCreateRequest req
+            @Valid @RequestBody IncomeCreateRequest req
     ) {
-        ExpenseResponse response = expenseService.createExpense(principal.getUser().getId(), req);
+        IncomeResponse response = incomeService.createIncome(principal.getUser().getId(), req);
         return ResponseEntity.ok(response);
     }
 
-    /** ?date=YYYY-MM-DD 의 해당 날짜 지출 목록. 가계부 작성 화면 mount 용. */
     @GetMapping
-    public ResponseEntity<List<ExpenseResponse>> listByDate(
+    public ResponseEntity<List<IncomeResponse>> listByDate(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        return ResponseEntity.ok(expenseService.listByDate(principal.getUser().getId(), date));
+        return ResponseEntity.ok(incomeService.listByDate(principal.getUser().getId(), date));
     }
 }

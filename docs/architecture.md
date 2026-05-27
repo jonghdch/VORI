@@ -54,6 +54,25 @@
 | 백엔드 API | http://localhost:8080/api |
 | MySQL | localhost:3306 (DB 이름 `vori`) |
 
+## 프론트엔드 라우팅
+
+React Router v7 (`BrowserRouter`) 사용. SPA 이지만 URL 이 페이지마다 바뀌어 브라우저 뒤로가기·새로고침·링크 공유 모두 정상 동작.
+
+| 경로 | 페이지 | 인증 |
+|---|---|---|
+| `/` | LandingPage | 공개 |
+| `/login` | LoginPage | 공개 |
+| `/signup` | SignupPage | 공개 |
+| `/story` | StoryPage | 공개 |
+| `/home` | HomeDashboard | **인증 필요** (미인증 시 `/login` 으로 리다이렉트) |
+
+핵심 컴포넌트:
+- `App.js` — `BrowserRouter` 안에 `<Routes>` 정의 + 사용자 state (`user`) 보유 + 첫 진입 시 `me()` 호출로 세션 자동 복원
+- `ScrollToTop` — pathname 변경 시 스크롤 맨 위로 리셋
+- `ProtectedRoute` — `/home` 가드. `authLoading` 동안 빈 화면 (깜빡임 방지), 미인증이면 `<Navigate to="/login" replace />`
+
+페이지 내부에서 다른 경로로 이동: `useNavigate()` 훅. `onNavigate` prop 패턴은 사용 안 함.
+
 ## 통신 규약
 
 ### 프론트 ↔ 백엔드

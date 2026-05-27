@@ -135,15 +135,35 @@ gemini.api.key=${GEMINI_API_KEY}
 
 ### 🟩 frontend/ (React)
 
+**라우팅**: React Router v7 의 `BrowserRouter` 사용. 페이지 전환마다 URL 이 바뀌며 브라우저 뒤로가기·새로고침·링크 공유 모두 동작.
+
+| 경로 | 페이지 | 인증 |
+|---|---|---|
+| `/` | LandingPage | 공개 |
+| `/login` | LoginPage | 공개 |
+| `/signup` | SignupPage | 공개 |
+| `/story` | StoryPage | 공개 |
+| `/home` | HomeDashboard | **인증 필요** (미인증 시 `/login` 으로 리다이렉트) |
+
+`App.js` 가 `BrowserRouter` 안에 `<Routes>` 정의 + 사용자 인증 state(`user`) 보유 + 첫 진입 시 `me()` 호출로 세션 복원. `ProtectedRoute` 컴포넌트가 `/home` 가드.
+
+페이지 안에서 다른 페이지로 이동할 땐 `useNavigate()` 훅 사용:
+
+```jsx
+import { useNavigate } from "react-router-dom";
+const navigate = useNavigate();
+navigate("/login");
+```
+
 #### 작업해야 하는 파일
 
 | 파일 | 역할 | 할 일 |
 |------|------|-------|
-| `package.json` | npm 의존성·스크립트 | 라이브러리 추가 시 `npm install <name>` (예: `axios`, `react-router-dom`) |
+| `package.json` | npm 의존성·스크립트 | 라이브러리 추가 시 `npm install <name>` (예: `axios`) |
 | `public/index.html` | HTML 템플릿 | `<title>VORI</title>`로 변경 정도 |
-| `src/index.js` | React 진입점 (`<App />` mount) | 라우터 도입 시 `<BrowserRouter>` 감싸기 |
+| `src/index.js` | React 진입점 (`<App />` mount) | 거의 손댈 일 없음 |
 | `src/index.css` | 전역 스타일 | 디자인 시스템(색·폰트) 정의 |
-| `src/App.js` | 최상위 컴포넌트 (현재 CRA 기본 화면) | **통째로 갈아엎기** — 페이지 라우팅·레이아웃 |
+| `src/App.js` | 최상위 컴포넌트 | `BrowserRouter` + `<Routes>` 정의. 새 페이지 추가 시 `<Route>` 한 줄 추가 |
 | `src/App.css` | App 컴포넌트 스타일 | 갈아엎기 |
 | `src/App.test.js` | App 테스트 1개 (현재 깨짐) | 의미 있는 테스트로 교체 또는 삭제 |
 

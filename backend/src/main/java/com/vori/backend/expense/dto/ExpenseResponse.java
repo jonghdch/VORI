@@ -1,5 +1,6 @@
 package com.vori.backend.expense.dto;
 
+import com.vori.backend.common.PaymentMethod;
 import com.vori.backend.common.StatType;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.Signal;
@@ -14,6 +15,7 @@ public record ExpenseResponse(
         Integer amount,
         String item,
         Long categoryId,
+        PaymentMethod paymentMethod,
         StatType statType,
         BigDecimal zScore,
         Signal signalInitial,
@@ -29,6 +31,7 @@ public record ExpenseResponse(
                 e.getAmount(),
                 e.getItem(),
                 e.getCategoryId(),
+                e.getPaymentMethod(),
                 e.getStatType(),
                 e.getZScore(),
                 e.getSignalInitial(),

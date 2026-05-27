@@ -307,6 +307,11 @@
   filter:
     drop-shadow(0 0 48px rgba(255, 245, 200, 0.2))
     drop-shadow(0 0 120px rgba(255, 245, 200, 0.12));
+  /* 별도 GPU layer 로 분리. macOS Mission Control 데스크탑 전환 같은
+     page-wide repaint 가 canvas 합성에 영향 주지 않게. */
+  will-change: transform;
+  transform: translateZ(0);
+  contain: strict;
 }
 
 /* ── 공통 구간 (챕터를 감싸는 큰 영역) ────────────────────── */
@@ -320,8 +325,8 @@
    자리를 넘기는" 긴 스크롤 무대입니다.
    min-height / padding-bottom 이 클수록 중앙에 붙어 있는 시간이 길어집니다. */
 .story-section--chapter {
-  min-height: 238vh;
-  padding: 34vh 24px 96vh;
+  min-height: 278vh;
+  padding: 34vh 24px 124vh;
 }
 
 .story-chapter {
@@ -332,6 +337,9 @@
   width: 100%;
   max-width: var(--chapter-width);
   margin: 0 auto;
+}
+.story-chapter-reveal {
+  will-change: opacity, transform;
 }
 
 /* 챕터별 좌/우 지그재그 정렬 (넓은 화면에서만 적용,
@@ -434,7 +442,7 @@
    조금 더 길게 잡아 달과 본문이 함께 빠져나갈 시간을 확보합니다. */
 .story-section--light:not(.story-section--pets) {
   padding-top: 50vh;
-  padding-bottom: 132vh;
+  padding-bottom: 158vh;
 }
 /* 펫 안내 섹션은 wrapper 밖이라 자기 베이지 배경 유지 */
 .story-section--pets {
@@ -764,15 +772,15 @@
     padding: 72px 20px;
   }
   .story-section--chapter {
-    min-height: 226vh;
-    padding: 32vh 20px 88vh;
+    min-height: 262vh;
+    padding: 32vh 20px 112vh;
   }
   .story-section--dark {
     padding-top: 74vh;
   }
   .story-section--light:not(.story-section--pets) {
     padding-top: 46vh;
-    padding-bottom: 118vh;
+    padding-bottom: 142vh;
   }
   .story-chapter {
     top: 50vh;

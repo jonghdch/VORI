@@ -25,10 +25,14 @@
   --home-radius: 14px;
   --home-radius-sm: 12px;
 
-  min-height: 100vh;
+  /* 전체화면, 페이지 스크롤 없음 (스크롤은 내부 main 안에서만 발생 시) */
+  height: 100vh;
+  overflow: hidden;
   background: var(--home-bg);
   color: var(--home-text);
   font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
 }
 
 .home-topbar {
@@ -80,6 +84,10 @@
   flex-wrap: wrap;
   justify-content: center;
 }
+/* 우측 셀의 UserAvatarMenu 를 끝쪽으로 정렬 */
+.home-topbar-inner > .user-menu {
+  justify-self: end;
+}
 
 .home-topnav-item {
   border: none;
@@ -124,18 +132,26 @@
   width: 100%;
   max-width: none;
   margin: 0;
-  min-height: calc(100vh - 57px);
   align-items: stretch;
+  /* 헤더 아래 남은 공간 전부 차지 + 자식이 overflow 처리하도록 */
+  flex: 1;
+  min-height: 0;
 }
 
 .home-sidebar {
   width: 240px;
-  min-height: 1140px;
   flex-shrink: 0;
-  align-self: stretch;
+  height: 100%;
   box-sizing: border-box;
   padding: 24px 16px 32px 24px;
   background: var(--home-bar-surface);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+/* 사이드바 마지막 블록 (보통 "설정") 을 하단으로 밀어내기 */
+.home-sidebar > .home-side-block--bottom {
+  margin-top: auto;
 }
 
 .home-sidebar--left {
@@ -156,7 +172,7 @@
   line-height: 1.4;
 }
 
-.home-side-block + .home-side-block {
+.home-side-block + .home-side-block:not(.home-side-block--bottom) {
   margin-top: 22px;
 }
 
@@ -204,6 +220,9 @@
   flex: 1;
   padding: 28px 28px 40px;
   min-width: 0;
+  /* 헤더·사이드 고정. 본문이 길면 여기서만 스크롤 */
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .home-main-header {
@@ -321,17 +340,6 @@
   color: var(--home-text);
   border: 1px solid var(--home-border);
   position: relative;
-}
-
-.home-pet-bubble::before {
-  content: "";
-  position: absolute;
-  top: -8px;
-  left: 540px;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-bottom: 8px solid var(--home-white);
-  filter: drop-shadow(0 -1px 0 var(--home-border));
 }
 
 .home-stat-list {
