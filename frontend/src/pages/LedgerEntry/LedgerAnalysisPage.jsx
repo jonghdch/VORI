@@ -28,19 +28,21 @@ function LedgerAnalysisPage() {
   // 과거 날짜는 Step 2 자체를 우회
   const past = isPastDate(dateStr);
 
-  // mount 시 fetch. Gemini 비동기라 즉시 응답엔 비어있을 수 있어서
-  // 빈 결과면 1.5초 후 한 번 더 시도 (최대 3회).
+  // mount 시 fetch. Gemini 비동기 (질문 생성에 보통 5~10s) 라 즉시 응답엔 비어있음.
+  // 2s 간격으로 최대 6번 polling — 첫 호출 + 5회 retry = 최대 10s 대기.
   useEffect(() => {
     if (past) return;
     let cancelled = false;
     let attempts = 0;
+    const MAX_RETRIES = 5;
+    const RETRY_INTERVAL_MS = 2000;
     const tryFetch = async () => {
       if (cancelled) return;
       const data = await listInquiriesByDate(dateStr);
       if (cancelled) return;
-      if (data.length === 0 && attempts < 2) {
+      if (data.length === 0 && attempts < MAX_RETRIES) {
         attempts++;
-        setTimeout(tryFetch, 1500);
+        setTimeout(tryFetch, RETRY_INTERVAL_MS);
         return;
       }
       setInquiries(data);

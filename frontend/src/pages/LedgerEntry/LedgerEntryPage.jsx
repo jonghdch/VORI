@@ -43,16 +43,13 @@ function LedgerEntryPage() {
   };
   const draft = loadDraft();
 
-  // 행 id 시퀀스 — 복원된 데이터가 있으면 그 다음부터 발급
-  const nextId = useRef(
-    1 +
-      Math.max(
-        0,
-        ...((draft?.income || []).concat(draft?.expense || [], draft?.savings || []))
-          .map((r) => r.id || 0),
-        3,
-      ),
+  // 행 id 시퀀스 — 복원된 데이터가 있으면 그 max id 다음, 없으면 기본 행 3개(id 1·2·3) 다음.
+  const draftRows = (draft?.income || []).concat(
+    draft?.expense || [],
+    draft?.savings || [],
   );
+  const maxDraftId = draftRows.reduce((m, r) => Math.max(m, r.id || 0), 0);
+  const nextId = useRef(1 + Math.max(3, maxDraftId));
   // 사용자 설정의 기본 결제수단 — 없으면 CREDIT
   const defaultPayment =
     loadUserSettings().defaultPaymentMethod || "CREDIT";
@@ -96,16 +93,19 @@ function LedgerEntryPage() {
   // mount (또는 dateStr 변경) 시 DB 에서 그 날짜 기존 데이터 fetch.
   // draft 에 실제 입력값이 있으면 draft 우선. 빈 draft (기본 빈 행만) 은 fetch.
   useEffect(() => {
+    // mount 시점의 closure draft 가 아니라 fresh 한 sessionStorage 를 다시 읽음.
+    // (직전 setState 가 즉시 sessionStorage 에 write 되므로 closure 는 stale)
+    const fresh = loadDraft();
     const hasContent = (rows) =>
       Array.isArray(rows) &&
       rows.some(
         (r) => (r.name && r.name.trim()) || (r.amount && String(r.amount).trim()),
       );
     const draftHasContent =
-      draft &&
-      (hasContent(draft.income) ||
-        hasContent(draft.expense) ||
-        hasContent(draft.savings));
+      fresh &&
+      (hasContent(fresh.income) ||
+        hasContent(fresh.expense) ||
+        hasContent(fresh.savings));
     if (draftHasContent) return;
     let cancelled = false;
     (async () => {
