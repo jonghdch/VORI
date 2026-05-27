@@ -27,7 +27,7 @@ const PREVIEW_USER = {
 // onNavigate(pageName, sectionId?) — 페이지 이동과 동시에 그 페이지 안의
 // 특정 섹션으로 스크롤하고 싶을 때 두 번째 인자에 섹션 id 를 넘기세요.
 function App() {
-  const [page, setPage] = useState("ledger");
+  const [page, setPage] = useState("landing");
   const [scrollTo, setScrollTo] = useState(null);
   const [user, setUser] = useState(null);
 

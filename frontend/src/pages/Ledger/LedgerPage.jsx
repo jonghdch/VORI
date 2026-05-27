@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import AppShell from "../../components/AppShell";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import "../Home/HomeDashboard.css";
@@ -89,7 +90,14 @@ const AI_PENDING_COUNT = 3;
 
 function LedgerPage({ user, onNavigate, onLogout }) {
   const nickname = user?.nickname || "사용자";
-  const isAiActive = new Date().getHours() >= 20;
+  // 매 분 8시 경계를 체크해 별도 새로고침 없이 버튼이 활성화되도록 한다.
+  const [isAiActive, setIsAiActive] = useState(() => new Date().getHours() >= 20);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setIsAiActive(new Date().getHours() >= 20);
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <AppShell
