@@ -7,5 +7,6 @@ public enum IncomeSource {
     SIDE_JOB,
     GIFT,
     INTEREST,
+    SALARY,
     OTHER
 }

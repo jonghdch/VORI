@@ -32,6 +32,7 @@ const INCOME_SOURCE_LABELS = {
   SIDE_JOB: "부수입",
   GIFT: "선물",
   INTEREST: "이자",
+  SALARY: "급여",
   OTHER: "기타",
 };
 

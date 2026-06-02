@@ -119,6 +119,7 @@ export const CATEGORIES_BY_TYPE = {
     { value: "SIDE_JOB", label: "부수입" },
     { value: "GIFT", label: "선물" },
     { value: "INTEREST", label: "이자" },
+    { value: "SALARY", label: "급여" },
     { value: "OTHER", label: "기타" },
   ],
   // 백엔드 SavingType ENUM 과 1:1
@@ -303,8 +304,7 @@ const INCOME_RULES = [
   },
   { value: "GIFT", keywords: ["선물", "축의금", "부조금"] },
   { value: "INTEREST", keywords: ["이자", "배당"] },
-  // 월급/급여는 학생 가계부 enum 에 별도 카테고리 없음 → OTHER
-  { value: "OTHER", keywords: ["월급", "급여", "봉급", "페이"] },
+  { value: "SALARY", keywords: ["월급", "급여", "봉급", "페이", "월급날"] },
 ];
 
 const SAVINGS_RULES = [
