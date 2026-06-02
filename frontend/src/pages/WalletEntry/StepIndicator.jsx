@@ -1,4 +1,4 @@
-import "./LedgerEntry.css";
+import "./WalletEntry.css";
 
 // 3-step indicator (가계부 작성 / 소비 분석 / 확인).
 // current: 1 | 2 | 3 — 현재 단계 (호출자가 사용자 화면 기준 번호로 전달)

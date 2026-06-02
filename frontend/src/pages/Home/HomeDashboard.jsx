@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import "./HomeDashboard.css";
@@ -30,6 +31,7 @@ const CATEGORY_BARS = [
 ];
 
 function HomeDashboard({ user, onNavigate, onLogout }) {
+  const navigate = useNavigate();
   const nickname = user?.nickname || "사용자";
 
   const today = new Date();
@@ -143,7 +145,11 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               <button type="button" className="home-link-btn">
                 ▶ 상세 내역 확인하기
               </button>
-              <button type="button" className="home-btn home-btn-dark">
+              <button
+                type="button"
+                className="home-btn home-btn-dark"
+                onClick={() => navigate("/wallet/new")}
+              >
                 + 지출 추가하기
               </button>
             </div>

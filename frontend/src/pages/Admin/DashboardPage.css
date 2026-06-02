@@ -1,0 +1,164 @@
+/* 종합 대시보드. 색 토큰은 .admin 스코프(AdminLayout.css)에서 상속. */
+.admin-dash {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.admin-dash-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.admin-dash-sub {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: var(--admin-muted);
+}
+
+/* 로딩/에러 공통 상태 */
+.admin-dash-state {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--admin-faint);
+}
+.admin-dash-state--error {
+  flex-direction: column;
+  color: #b4524a;
+}
+.admin-dash-state--error button {
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--admin-text);
+}
+
+/* ───── KPI 카드 그리드 ───── */
+.admin-dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.admin-dash-kpi {
+  background: var(--admin-card);
+  border: 1px solid var(--admin-card-border);
+  border-radius: 14px;
+  padding: 20px 22px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+.admin-dash-kpi--accent {
+  border-color: var(--admin-green);
+  background: rgba(127, 176, 105, 0.07);
+}
+.admin-dash-kpi-label {
+  font-size: 13px;
+  color: var(--admin-muted);
+  margin-bottom: 10px;
+}
+.admin-dash-kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--admin-text);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.admin-dash-kpi--accent .admin-dash-kpi-value {
+  color: var(--admin-green);
+}
+.admin-dash-kpi-suffix {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--admin-faint);
+}
+
+/* ───── 차트 카드 ───── */
+.admin-dash-card {
+  background: var(--admin-card);
+  border: 1px solid var(--admin-card-border);
+  border-radius: 14px;
+  padding: 22px 24px 16px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+.admin-dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.admin-dash-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.admin-dash-refresh {
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--admin-muted);
+}
+.admin-dash-refresh:hover {
+  color: var(--admin-green);
+  border-color: var(--admin-green);
+}
+
+/* ───── 막대 차트 (순수 CSS) ───── */
+.admin-dash-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 200px;
+  padding-top: 8px;
+}
+.admin-dash-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+.admin-dash-bar-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-muted);
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.admin-dash-bar-track {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.admin-dash-bar-fill {
+  width: 60%;
+  max-width: 44px;
+  min-height: 3px;
+  background: var(--admin-green);
+  border-radius: 6px 6px 0 0;
+  transition: height 0.3s ease;
+}
+.admin-dash-bar-label {
+  font-size: 12px;
+  color: var(--admin-faint);
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 좁은 화면 */
+@media (max-width: 720px) {
+  .admin-dash-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

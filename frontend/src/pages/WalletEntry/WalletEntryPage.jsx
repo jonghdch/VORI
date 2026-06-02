@@ -20,10 +20,10 @@ import {
   listSavingsByDate,
 } from "../../api/ledger";
 import { loadUserSettings } from "../Settings/SettingsPage";
-import "./LedgerEntry.css";
+import "./WalletEntry.css";
 
 // Step 1 — 가계부 작성. 날짜는 다른 페이지에서 정해 ?date= 쿼리로 진입.
-function LedgerEntryPage() {
+function WalletEntryPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
@@ -228,8 +228,8 @@ function LedgerEntryPage() {
       // 성공 — draft 비움. 다음 mount 에서는 DB fetch 로 폼 채움 (정확한 dbId 포함).
       clearDraft();
       const qs = `?date=${dateStr}`;
-      if (past) navigate(`/ledger/new/confirm${qs}`);
-      else navigate(`/ledger/new/analysis${qs}`);
+      if (past) navigate(`/wallet/new/confirm${qs}`);
+      else navigate(`/wallet/new/analysis${qs}`);
     } catch (e) {
       setSubmitError(e.message || "저장 중 오류가 발생했어요");
     } finally {
@@ -546,4 +546,4 @@ function Dropdown({ value, options, onChange, placeholder, align = "left" }) {
   );
 }
 
-export default LedgerEntryPage;
+export default WalletEntryPage;

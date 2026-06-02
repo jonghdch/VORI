@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import "../Home/HomeDashboard.css";
-import "./LedgerPage.css";
+import "./WalletPage.css";
 
 const SUMMARY_CARDS = [
   { title: "이번 달 지출", value: "348,000원", sub: "예산 내 유지 중" },
@@ -149,7 +150,8 @@ function getCalendarEvents(day) {
 
 const CALENDAR_CELLS = buildApril2026Cells();
 
-function LedgerPage({ user, onLogout }) {
+function WalletPage({ user, onLogout }) {
+  const navigate = useNavigate();
   const nickname = user?.nickname || "사용자";
   const [selectedDay, setSelectedDay] = useState(12);
   const [selectedExpense, setSelectedExpense] = useState(() => getExpensesByDay(12)[0]);
@@ -183,8 +185,8 @@ function LedgerPage({ user, onLogout }) {
 
   return (
     <AppShell
-      activeTop="ledger"
-      activeSide="ledger"
+      activeTop="wallet"
+      activeSide="wallet"
       user={user}
       onLogout={onLogout}
     >
@@ -213,7 +215,11 @@ function LedgerPage({ user, onLogout }) {
             >
               지출 내역
             </button>
-            <button type="button" className="home-btn home-btn-primary ledger-add-btn">
+            <button
+              type="button"
+              className="home-btn home-btn-primary ledger-add-btn"
+              onClick={() => navigate("/wallet/new")}
+            >
               + 지출 추가
             </button>
           </div>
@@ -523,4 +529,4 @@ function LedgerPage({ user, onLogout }) {
   );
 }
 
-export default LedgerPage;
+export default WalletPage;
