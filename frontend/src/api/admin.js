@@ -59,3 +59,56 @@ export async function getDashboardSummary() {
   }
   return res.json();
 }
+
+// 공통 GET — 401/403/기타 에러 분기 후 JSON 반환.
+async function adminGet(path, label) {
+  const res = await fetch(`${API_BASE}${path}`, { credentials: "include" });
+  if (res.status === 401) throw new AdminApiError("로그인이 필요합니다", 401);
+  if (res.status === 403) throw new AdminApiError("관리자 권한이 필요합니다", 403);
+  if (!res.ok) throw new AdminApiError(`${label} 실패 (${res.status})`, res.status);
+  return res.json();
+}
+
+/**
+ * 지출 카테고리 통계 (총액 내림차순).
+ * @returns {Promise<{ categoryId, categoryName, count, totalAmount, avgAmount, redCount, grayCount, greenCount }[]>}
+ */
+export function getCategoryStats() {
+  return adminGet("/admin/category-stats", "카테고리 통계 조회");
+}
+
+/**
+ * AI 대사 로그 (페이지네이션 + reason 필터).
+ * @param {{ page?: number, size?: number, reason?: string|null }} opts
+ */
+export function getAiLogs({ page = 0, size = 20, reason = null } = {}) {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (reason) params.set("reason", reason);
+  return adminGet(`/admin/ai-logs?${params.toString()}`, "AI 로그 조회");
+}
+
+/** 합리성 신호 판정 룰 조회. @returns {Promise<{ zRed, zGreen, updatedAt }>} */
+export function getRationalityRules() {
+  return adminGet("/admin/rationality-rules", "합리성 룰 조회");
+}
+
+/** 합리성 룰 수정 (zGreen < zRed 필수, 위반 시 400). */
+export async function updateRationalityRules({ zRed, zGreen }) {
+  const res = await fetch(`${API_BASE}/admin/rationality-rules`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ zRed, zGreen }),
+  });
+  if (res.status === 401) throw new AdminApiError("로그인이 필요합니다", 401);
+  if (res.status === 403) throw new AdminApiError("관리자 권한이 필요합니다", 403);
+  if (res.status === 400) {
+    const msg = await res
+      .json()
+      .then((b) => b.message)
+      .catch(() => null);
+    throw new AdminApiError(msg || "입력값을 확인해 주세요 (z_green < z_red)", 400);
+  }
+  if (!res.ok) throw new AdminApiError(`룰 저장 실패 (${res.status})`, res.status);
+  return res.json();
+}

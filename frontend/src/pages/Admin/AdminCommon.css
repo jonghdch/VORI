@@ -1,0 +1,230 @@
+/* 어드민 페이지 공용 스타일. 색 토큰은 .admin 스코프(AdminLayout.css)에서 상속. */
+.adm-page {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.adm-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.adm-sub {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: var(--admin-muted);
+}
+.adm-accent {
+  color: var(--admin-green);
+  font-weight: 600;
+}
+
+/* 툴바 (필터 탭 + 버튼) */
+.adm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.adm-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+.adm-tab {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--admin-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.adm-tab:hover {
+  color: var(--admin-text);
+}
+.adm-tab--active {
+  background: var(--admin-card);
+  color: var(--admin-green);
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.adm-btn {
+  border: 1px solid var(--admin-border);
+  background: var(--admin-card);
+  cursor: pointer;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--admin-muted);
+}
+.adm-btn:hover:not(:disabled) {
+  color: var(--admin-green);
+  border-color: var(--admin-green);
+}
+.adm-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 카드 + 상태 */
+.adm-card {
+  background: var(--admin-card);
+  border: 1px solid var(--admin-card-border);
+  border-radius: 14px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+.adm-state {
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--admin-faint);
+}
+.adm-state--error {
+  flex-direction: column;
+  color: #b4524a;
+}
+.adm-state--error button {
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--admin-text);
+}
+
+/* 테이블 */
+.adm-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.adm-table th,
+.adm-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--admin-border);
+  vertical-align: top;
+}
+.adm-table th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-faint);
+  background: var(--admin-surface);
+  white-space: nowrap;
+}
+.adm-table th.num,
+.adm-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.adm-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.adm-table tbody tr:hover {
+  background: rgba(127, 176, 105, 0.05);
+}
+
+/* 뱃지 (신호·분류) */
+.adm-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(110, 107, 101, 0.1);
+  color: var(--admin-muted);
+  white-space: nowrap;
+}
+.adm-badge--red {
+  background: rgba(180, 82, 74, 0.14);
+  color: #b4524a;
+}
+.adm-badge--gray {
+  background: rgba(110, 107, 101, 0.12);
+  color: var(--admin-muted);
+}
+.adm-badge--green {
+  background: rgba(127, 176, 105, 0.16);
+  color: var(--admin-green);
+}
+
+/* 신호 분포 미니 막대 */
+.adm-signal-bar {
+  display: flex;
+  height: 8px;
+  width: 120px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--admin-border);
+}
+.adm-signal-seg--red {
+  background: #c96a61;
+}
+.adm-signal-seg--gray {
+  background: #b8b2a6;
+}
+.adm-signal-seg--green {
+  background: var(--admin-green);
+}
+
+/* 페이지네이션 */
+.adm-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+.adm-pager button {
+  border: 1px solid var(--admin-border);
+  background: var(--admin-card);
+  cursor: pointer;
+  padding: 7px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--admin-text);
+}
+.adm-pager button:hover:not(:disabled) {
+  border-color: var(--admin-green);
+  color: var(--admin-green);
+}
+.adm-pager button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.adm-pager-info {
+  font-size: 13px;
+  color: var(--admin-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 본문 셀 보조 텍스트 */
+.adm-cell-main {
+  display: block;
+  color: var(--admin-text);
+}
+.adm-cell-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--admin-faint);
+  margin-top: 2px;
+  max-width: 360px;
+  white-space: normal;
+}

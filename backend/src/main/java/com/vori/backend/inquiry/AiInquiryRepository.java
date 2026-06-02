@@ -1,5 +1,7 @@
 package com.vori.backend.inquiry;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,6 +13,9 @@ import java.util.Optional;
 public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
 
     Optional<AiInquiry> findByExpenseId(Long expenseId);
+
+    // 어드민 AI 대사 로그 — 최근 질문순 페이지네이션 (+ reason 필터)
+    Page<AiInquiry> findByReasonCategory(ReasonCategory reasonCategory, Pageable pageable);
 
     long countByUserIdAndReasonCategoryAndAnsweredAtBetween(
         Long userId, ReasonCategory reasonCategory, LocalDateTime start, LocalDateTime end);

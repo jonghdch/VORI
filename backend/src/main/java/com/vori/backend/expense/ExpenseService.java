@@ -40,10 +40,10 @@ public class ExpenseService {
     private final PetRepository petRepository;
     private final PetGrowthLogRepository petGrowthLogRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final SignalConfigService signalConfigService;
 
     private static final int N_MIN = 5;
-    private static final double Z_GREEN = 1.0;
-    private static final double Z_RED = 2.0;
+    // Z_GREEN / Z_RED 임계값은 signal_config 테이블(관리자 조정) 에서 읽는다. SignalConfigService 참조.
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
     private static final double EMA_ALPHA = 0.2;
 
@@ -91,7 +91,10 @@ public class ExpenseService {
                     .subtract(stats.getMeanEma())
                     .divide(stats.getStddevEma(), 3, RoundingMode.HALF_UP);
             double z = zScore.doubleValue();
-            signal = z <= Z_GREEN ? Signal.GREEN : (z <= Z_RED ? Signal.GRAY : Signal.RED);
+            SignalConfig cfg = signalConfigService.getConfig();
+            double zGreen = cfg.getZGreen().doubleValue();
+            double zRed = cfg.getZRed().doubleValue();
+            signal = z <= zGreen ? Signal.GREEN : (z <= zRed ? Signal.GRAY : Signal.RED);
         }
 
         // docs/domain.md §3 — 반복 결제(통신비·구독 등)는 사용자의 의식적 결정이 아님 → RED 자동 제외

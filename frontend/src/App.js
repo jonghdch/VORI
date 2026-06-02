@@ -35,11 +35,21 @@ const AdminPlaceholder = lazy(() =>
 );
 const AdminUsersPage = lazy(() => import("./pages/Admin/UsersPage"));
 const AdminDashboardPage = lazy(() => import("./pages/Admin/DashboardPage"));
+const AdminCategoryStatsPage = lazy(() =>
+  import("./pages/Admin/CategoryStatsPage"),
+);
+const AdminRationalityRulesPage = lazy(() =>
+  import("./pages/Admin/RationalityRulesPage"),
+);
+const AdminAiLogsPage = lazy(() => import("./pages/Admin/AiLogsPage"));
 
 // 실제 화면이 준비된 어드민 메뉴만 매핑. 나머지는 AdminPlaceholder.
 const ADMIN_PAGES = {
   "/admin/dashboard": AdminDashboardPage,
   "/admin/users": AdminUsersPage,
+  "/admin/category-stats": AdminCategoryStatsPage,
+  "/admin/rationality-rules": AdminRationalityRulesPage,
+  "/admin/ai-logs": AdminAiLogsPage,
 };
 
 // 라우터 경로
