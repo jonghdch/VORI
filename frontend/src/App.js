@@ -25,6 +25,8 @@ const LedgerAnalysisPage = lazy(() =>
 const LedgerConfirmPage = lazy(() =>
   import("./pages/LedgerEntry/LedgerConfirmPage"),
 );
+// 가계부 달력/조회 (AppShell 기반).
+const LedgerPage = lazy(() => import("./pages/Ledger/LedgerPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
 
 // 라우터 경로
@@ -33,9 +35,11 @@ const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
 //   /signup                 회원가입
 //   /story                  스토리 (서비스 소개)
 //   /home                   홈 대시보드 (인증 필요)
+//   /ledger                 가계부 달력/조회 (인증 필요)
 //   /ledger/new             가계부 작성 Step 1 (입력)
 //   /ledger/new/analysis    Step 2 (AI 사유 질문)
 //   /ledger/new/confirm     Step 3 (확인)
+//   /settings               환경설정
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -101,6 +105,14 @@ function App() {
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <HomeDashboard user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ledger"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <LedgerPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
