@@ -44,4 +44,36 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
         ORDER BY totalAmount DESC
         """, nativeQuery = true)
     List<Object[]> aggregateByCategory();
+
+    // ───── 홈 대시보드 (사용자 본인) ─────
+
+    /** 기간 내 본인 지출 합계. */
+    @Query("""
+        SELECT COALESCE(SUM(e.amount), 0)
+        FROM Expense e
+        WHERE e.userId = :userId AND e.spentAt >= :start AND e.spentAt < :end
+        """)
+    long sumAmountInRange(
+        @Param("userId") Long userId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end);
+
+    /** 최근 지출 5건. */
+    List<Expense> findTop5ByUserIdOrderBySpentAtDesc(Long userId);
+
+    /**
+     * 기간 내 카테고리별 본인 지출 합계 (내림차순). 행: [categoryName, amount].
+     */
+    @Query(value = """
+        SELECT c.name AS categoryName, COALESCE(SUM(e.amount), 0) AS amount
+        FROM expenses e
+        JOIN categories c ON c.id = e.category_id
+        WHERE e.user_id = :userId AND e.spent_at >= :start AND e.spent_at < :end
+        GROUP BY c.name
+        ORDER BY amount DESC
+        """, nativeQuery = true)
+    List<Object[]> categoryBreakdownInRange(
+        @Param("userId") Long userId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end);
 }
