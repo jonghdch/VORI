@@ -9,6 +9,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 회원. 이메일·비번 해시·약관 동의 시각·튜토리얼 수집값·게임 자원 보유.
+ * 회원가입 트랜잭션은 UserService.signup 참조. 가입 시 user_stat_stats 4행도 같이 INSERT.
+ */
 @Entity
 @Table(name = "users")
 @Getter
@@ -42,6 +46,7 @@ public class User {
     @Column(name = "monthly_income", columnDefinition = "INT UNSIGNED")
     private Integer monthlyIncome;
 
+    // 현재 장착한 칭호. NULL = 미장착. FK 는 V1 마지막 ALTER 로 추가 (users↔user_titles 순환)
     @Column(name = "active_title_id")
     private Long activeTitleId;
 
@@ -68,9 +73,14 @@ public class User {
     @Column(name = "privacy_agreed_at", nullable = false)
     private LocalDateTime privacyAgreedAt;
 
+    // 선택 약관. NULL = 미동의, 시각 있음 = 동의
     @Column(name = "marketing_agreed_at")
     private LocalDateTime marketingAgreedAt;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public void addTotalSaved(int amount) {
+        this.totalSaved = (this.totalSaved == null ? 0 : this.totalSaved) + amount;
+    }
 }

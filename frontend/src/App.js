@@ -16,7 +16,18 @@ import { me, logout } from "./api/auth";
 // Story 페이지는 three.js + GLTFLoader 를 포함해서 무거움 (~100+ KB).
 // 랜딩만 보는 사용자가 다운로드 안 하도록 별도 chunk 로 분리.
 const StoryPage = lazy(() => import("./pages/Story/StoryPage"));
+const LedgerEntryPage = lazy(() =>
+  import("./pages/LedgerEntry/LedgerEntryPage"),
+);
+const LedgerAnalysisPage = lazy(() =>
+  import("./pages/LedgerEntry/LedgerAnalysisPage"),
+);
+const LedgerConfirmPage = lazy(() =>
+  import("./pages/LedgerEntry/LedgerConfirmPage"),
+);
+// 가계부 달력/조회 (AppShell 기반).
 const LedgerPage = lazy(() => import("./pages/Ledger/LedgerPage"));
+const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
 
 // 라우터 경로
 //   /                       랜딩
@@ -24,7 +35,11 @@ const LedgerPage = lazy(() => import("./pages/Ledger/LedgerPage"));
 //   /signup                 회원가입
 //   /story                  스토리 (서비스 소개)
 //   /home                   홈 대시보드 (인증 필요)
-//   /ledger                 가계부 달력
+//   /ledger                 가계부 달력/조회 (인증 필요)
+//   /ledger/new             가계부 작성 Step 1 (입력)
+//   /ledger/new/analysis    Step 2 (AI 사유 질문)
+//   /ledger/new/confirm     Step 3 (확인)
+//   /settings               환경설정
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -49,9 +64,9 @@ function App() {
   // 새로고침 등으로 진입했을 때 세션 쿠키가 살아있으면 자동 복원.
   useEffect(() => {
     me()
-        .then((u) => setUser(u))
-        .catch(() => setUser(null))
-        .finally(() => setAuthLoading(false));
+      .then((u) => setUser(u))
+      .catch(() => setUser(null))
+      .finally(() => setAuthLoading(false));
   }, []);
 
   const handleLogin = (u) => setUser(u);
@@ -65,45 +80,77 @@ function App() {
   };
 
   return (
-      <BrowserRouter>
-        <ScrollToTop />
-        <Suspense fallback={null}>
-          <Routes>
-            <Route
-                path="/"
-                element={<LandingPage user={user} onLogout={handleLogout} />}
-            />
-            <Route
-                path="/login"
-                element={<LoginPage onLogin={handleLogin} />}
-            />
-            <Route
-                path="/signup"
-                element={<SignupPage onLogin={handleLogin} />}
-            />
-            <Route
-                path="/story"
-                element={<StoryPage user={user} onLogout={handleLogout} />}
-            />
-            <Route
-                path="/home"
-                element={
-                  <ProtectedRoute user={user} authLoading={authLoading}>
-                    <HomeDashboard user={user} onLogout={handleLogout} />
-                  </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/ledger"
-                element={
-                  <ProtectedRoute user={user} authLoading={authLoading}>
-                    <LedgerPage user={user} onLogout={handleLogout} />
-                  </ProtectedRoute>
-                }
-            />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
+    <BrowserRouter>
+      <ScrollToTop />
+      <Suspense fallback={null}>
+        <Routes>
+          <Route
+            path="/"
+            element={<LandingPage user={user} onLogout={handleLogout} />}
+          />
+          <Route
+            path="/login"
+            element={<LoginPage onLogin={handleLogin} />}
+          />
+          <Route
+            path="/signup"
+            element={<SignupPage onLogin={handleLogin} />}
+          />
+          <Route
+            path="/story"
+            element={<StoryPage user={user} onLogout={handleLogout} />}
+          />
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <HomeDashboard user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ledger"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <LedgerPage user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ledger/new"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <LedgerEntryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ledger/new/analysis"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <LedgerAnalysisPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ledger/new/confirm"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <LedgerConfirmPage user={user} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <SettingsPage user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   );
 }
 

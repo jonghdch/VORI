@@ -1,6 +1,6 @@
 # Vori
 
-> **합리성 판정 자기관리 앱** — 지출 + 맥락 + 사유를 받아 4 방식 알고리즘으로 합리성 시그널(🟢/⚪/🔴) + 스탯 가감을 반환. 졸업작품.
+> **합리성 판정 자기관리 앱** — 지출 + 맥락 + 사유를 받아 합리성 시그널(🟢/⚪/🔴) + 스탯 가감을 반환. 졸업작품.
 
 ## 스택
 
@@ -49,45 +49,34 @@ brew services start mysql
 mysql -u root -e "CREATE DATABASE vori;"
 ```
 
-## 4 방식 알고리즘
-
-| 키 | 방식 | 비고 |
-|---|------|------|
-| A | Google Gemini 직접 판정 | 본 빌드 |
-| B | 한국어 임베딩 + k-NN | **회의 결정 필요** |
-| C | 규칙 엔진 8개 | 본 빌드 |
-| D | 하이브리드 (C 우선 → B 폴백) | 본 빌드 |
-
-## 팀 작업 흐름
-
-1. 본인 브랜치 생성: `git checkout -b feature/<기능명>`
-2. 작업 + 커밋 + push: `git push origin feature/<기능명>`
-3. GitHub 에서 Pull Request 열기
-4. 리뷰어가 검수 후 main 으로 머지
-
 ## 파일별 역할 가이드
 
 ---
 
 ### 🟦 backend/ (Spring Boot)
 
+**패키징 컨벤션**: 기능 단위 (feature-based) — 한 도메인 폴더 안에 controller·service·entity·repository·dto·enum 을 함께 둔다. 한 기능 고치려면 한 폴더만 보면 됨.
+
 #### 작업해야 하는 파일
 
 | 파일 | 역할 | 할 일 |
 |------|------|-------|
-| `build.gradle` | 빌드·의존성 정의 | 새 라이브러리 추가 시 `dependencies { ... }`에 한 줄 (예: Gemini client, jwt) |
-| `src/main/resources/application.properties` | Spring 설정 | DB 연결·API 키 등 추가 (아래 예시) |
-| `src/test/.../BackendApplicationTests.java` | 컨텍스트 로드 테스트 | `controller/`·`service/` 미러링해서 비즈 로직 테스트 추가 |
+| `build.gradle` | 빌드·의존성 정의 | 새 라이브러리 추가 시 `dependencies { ... }`에 한 줄 |
+| `src/main/resources/application.properties` | Spring 설정 | DB 연결·API 키 등 추가 |
+| `src/main/resources/db/migration/V<N>__<설명>.sql` | Flyway 마이그레이션 | 스키마 변경 시 새 V 파일 추가 (V1 절대 수정 X) |
+| `src/test/.../BackendApplicationTests.java` | 컨텍스트 로드 테스트 | 도메인 패키지 미러링해서 비즈 로직 테스트 추가 |
 
-`application.properties` 추가 예시:
+`application.properties` 주요 설정:
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/vori
-spring.datasource.username=root
-spring.datasource.password=...
-spring.jpa.hibernate.ddl-auto=update
+spring.datasource.url=jdbc:mysql://localhost:3306/vori?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD:}
+spring.jpa.hibernate.ddl-auto=validate
+spring.flyway.enabled=true
+server.servlet.session.timeout=1h
 gemini.api.key=${GEMINI_API_KEY}
 ```
-> API 키는 `.env` 또는 환경변수로. 평문 커밋 금지.
+> API 키·비밀번호는 `.env` 또는 환경변수로. 평문 커밋 금지.
 
 #### 손 안 대는 파일
 
@@ -99,30 +88,82 @@ gemini.api.key=${GEMINI_API_KEY}
 | `.gitignore` | `build/`·`.gradle/` 등 빌드 산출물 제외 |
 | `.gitattributes` | 줄바꿈 (CRLF/LF) 통일 |
 
-#### 새로 만들 폴더 (`src/main/java/com/vori/backend/` 아래)
+#### 도메인 패키지 (`src/main/java/com/vori/backend/`)
 
-| 폴더 | 역할 | 예시 |
-|------|------|------|
-| `controller/` | REST API 엔드포인트 | `@RestController` 클래스 |
-| `service/` | 비즈 로직 | 4 방식 알고리즘 A/B/C/D |
-| `repository/` | DB 접근 | `extends JpaRepository` |
-| `entity/` | JPA 엔티티 | `@Entity` (User·Expense·Stat 등) |
-| `dto/` | 요청/응답 객체 | `LoginRequest`, `SignalResponse` 등 |
-| `config/` | 환경 설정 | Spring Security·CORS |
+| 패키지 | 책임 | 포함되는 파일 |
+|---|---|---|
+| `auth/` | 인증·세션 | AuthController, UserPrincipal, CustomUserDetailsService, dto/ |
+| `user/` | 사용자 도메인 | User(Entity), Role(enum), UserRepository, UserService |
+| `common/` | 도메인 공용 | StatType 등 여러 도메인이 공유하는 enum |
+| `budget/` | 월 예산 | MonthlyBudget + Repository |
+| `category/` | 지출 카테고리 | Category + Repository |
+| `expense/` | 지출 | Expense, Signal(enum), Repository |
+| `income/` | 수입 | Income, IncomeSource(enum), Repository |
+| `goal/` | 절약 목표 | Goal, GoalStatus(enum), Repository |
+| `stats/` | EMA 통계 | UserStatStats, UserStatStatsId(composite PK), Repository |
+| `inquiry/` | AI 사유 질문 | AiInquiry, ReasonCategory(enum), Repository |
+| `receipt/` | 영수증 OCR | ReceiptOcrJob, OcrProvider/OcrStatus(enum), Repository |
+| `report/` | 일일 리포트 | DailyReport + Repository |
+| `pet/` | 펫·알·가챠·성장 | Pet, PetSpecies, Egg, GachaPull, PetGrowthLog + 4 enum + 5 Repository |
+| `theme/` | 테마 마스터 | ThemeMaster + Repository |
+| `furniture/` | 사용자 가구 | UserFurniture, FurnitureCategory(enum), Repository |
+| `title/` | 사용자 칭호 | UserTitle + Repository |
+| `config/` | 환경 설정 | SecurityConfig (FilterChain, CORS, PasswordEncoder) |
+| `seeder/` | 초기 데이터 시더 | AdminSeeder, CategorySeeder, PetSpeciesSeeder |
+
+#### 각 도메인 안 파일 패턴
+
+```
+<도메인>/
+├── <Entity>.java            JPA @Entity (테이블 매핑)
+├── <Entity>Repository.java  DAO (extends JpaRepository<T, ID>)
+├── <Entity>Service.java     비즈 로직 (필요한 경우)
+├── <Entity>Controller.java  REST API (필요한 경우)
+├── <Enum>.java              해당 도메인 전용 enum (있는 경우)
+└── dto/                     요청/응답 DTO (외부 노출 도메인만)
+```
+
+#### 새 기능 추가 시 예시
+
+지출 등록 기능을 만든다면 `expense/` 폴더에 다음을 추가:
+- `ExpenseController.java` — `POST /api/expenses` 등 REST 엔드포인트
+- `ExpenseService.java` — 비즈 로직 (z-score 산출·신호등 판정 등)
+- `dto/ExpenseCreateRequest.java`, `dto/ExpenseResponse.java`
+- `Expense.java` 와 `ExpenseRepository.java` 는 이미 있음 (재사용)
 
 ---
 
 ### 🟩 frontend/ (React)
 
+**라우팅**: React Router v7 의 `BrowserRouter` 사용. 페이지 전환마다 URL 이 바뀌며 브라우저 뒤로가기·새로고침·링크 공유 모두 동작.
+
+| 경로 | 페이지 | 인증 |
+|---|---|---|
+| `/` | LandingPage | 공개 |
+| `/login` | LoginPage | 공개 |
+| `/signup` | SignupPage | 공개 |
+| `/story` | StoryPage | 공개 |
+| `/home` | HomeDashboard | **인증 필요** (미인증 시 `/login` 으로 리다이렉트) |
+
+`App.js` 가 `BrowserRouter` 안에 `<Routes>` 정의 + 사용자 인증 state(`user`) 보유 + 첫 진입 시 `me()` 호출로 세션 복원. `ProtectedRoute` 컴포넌트가 `/home` 가드.
+
+페이지 안에서 다른 페이지로 이동할 땐 `useNavigate()` 훅 사용:
+
+```jsx
+import { useNavigate } from "react-router-dom";
+const navigate = useNavigate();
+navigate("/login");
+```
+
 #### 작업해야 하는 파일
 
 | 파일 | 역할 | 할 일 |
 |------|------|-------|
-| `package.json` | npm 의존성·스크립트 | 라이브러리 추가 시 `npm install <name>` (예: `axios`, `react-router-dom`) |
+| `package.json` | npm 의존성·스크립트 | 라이브러리 추가 시 `npm install <name>` (예: `axios`) |
 | `public/index.html` | HTML 템플릿 | `<title>VORI</title>`로 변경 정도 |
-| `src/index.js` | React 진입점 (`<App />` mount) | 라우터 도입 시 `<BrowserRouter>` 감싸기 |
+| `src/index.js` | React 진입점 (`<App />` mount) | 거의 손댈 일 없음 |
 | `src/index.css` | 전역 스타일 | 디자인 시스템(색·폰트) 정의 |
-| `src/App.js` | 최상위 컴포넌트 (현재 CRA 기본 화면) | **통째로 갈아엎기** — 페이지 라우팅·레이아웃 |
+| `src/App.js` | 최상위 컴포넌트 | `BrowserRouter` + `<Routes>` 정의. 새 페이지 추가 시 `<Route>` 한 줄 추가 |
 | `src/App.css` | App 컴포넌트 스타일 | 갈아엎기 |
 | `src/App.test.js` | App 테스트 1개 (현재 깨짐) | 의미 있는 테스트로 교체 또는 삭제 |
 
@@ -149,3 +190,15 @@ gemini.api.key=${GEMINI_API_KEY}
 | `api/` | 백엔드 호출 함수 | axios wrapper |
 | `hooks/` | 커스텀 훅 | `useAuth`, `useExpense` |
 | `styles/` | 공통 CSS | 변수·믹스인 |
+
+---
+
+## 관련 문서
+
+| 문서 | 내용 |
+|---|---|
+| [`DATABASE.md`](DATABASE.md) | DB 셋업·Flyway·application.properties·트러블슈팅 |
+| [`docs/architecture.md`](docs/architecture.md) | 시스템 경계·외부 의존·통신 규약·큰 그림 데이터 흐름 |
+| [`docs/backend-flow.md`](docs/backend-flow.md) | 요청·응답 흐름·레이어 책임·신규 기능 추가 체크리스트 |
+| [`docs/domain.md`](docs/domain.md) | 비즈 룰·계산식·상태머신·용어집 (Service 짤 때 SSOT) |
+| [`docs/db-spec.md`](docs/db-spec.md) | 테이블 18종 명세 + 변경 이력 |
