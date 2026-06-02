@@ -27,11 +27,12 @@ public class CategoryController {
 
     /**
      * 사용자 입력 → 가장 가까운 leaf 자동 추론.
-     * 매칭 실패(threshold 미달 또는 서비스 미준비) 시 leafId=null 반환 → 프론트에서 "기타" 처리.
+     * 매칭 실패(threshold 미달·서비스 미준비·Gemini 미연결) 시 "기타 생활" 폴백 leaf 반환
+     * → 자동 분류가 안 돼도 사용자가 입력을 이어갈 수 있다 (다음 단계 진행 가능).
      */
     @PostMapping("/categorize")
     public CategorizeResponse categorize(@RequestBody CategorizeRequest req) {
-        CategorizeService.Result r = categorizeService.categorize(req.name());
+        CategorizeService.Result r = categorizeService.categorizeOrFallback(req.name());
         if (r == null) return CategorizeResponse.empty();
         return new CategorizeResponse(r.leafId(), r.leafName(), r.parentId(), r.parentName(), r.score());
     }

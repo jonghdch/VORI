@@ -131,6 +131,32 @@ public class CategorizeService {
         }
     }
 
+    // 분류 실패(서비스 미준비·threshold 미달) 시 떨어질 기본 leaf 이름. CategorySeeder 와 일치.
+    private static final String FALLBACK_LEAF_NAME = "기타 생활";
+
+    /**
+     * 분류 시도 후 실패하면 폴백 leaf("기타 생활")로 떨어뜨린다.
+     * → 자동 분류가 안 돼도(예: Gemini 미연결) 사용자가 입력을 이어갈 수 있게.
+     */
+    public Result categorizeOrFallback(String name) {
+        if (name == null || name.isBlank()) return null;
+        Result r = categorize(name);
+        return r != null ? r : fallback();
+    }
+
+    /** Gemini 없이 categories 테이블만으로 폴백 leaf 를 만든다. 없으면 null. */
+    private Result fallback() {
+        return categoryRepository.findFirstByName(FALLBACK_LEAF_NAME)
+                .filter(c -> c.getParentId() != null)
+                .map(c -> {
+                    String parentName = categoryRepository.findById(c.getParentId())
+                            .map(Category::getName)
+                            .orElse("");
+                    return new Result(c.getId(), c.getName(), c.getParentId(), parentName, 0.0);
+                })
+                .orElse(null);
+    }
+
     /**
      * 사용자 입력 → 가장 가까운 leaf 반환. ready=false 또는 threshold 미달이면 null.
      */
