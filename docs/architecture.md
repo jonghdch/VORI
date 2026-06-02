@@ -40,10 +40,10 @@
 
 | 컴포넌트 | 책임 | 상태 |
 |---|---|---|
-| Frontend (React) | 화면·폼·라우팅·세션 쿠키 전송 | 진행 중 (랜딩/로그인/회원가입/스토리 페이지) |
-| Backend (Spring Boot) | REST API·인증·비즈 로직·DB 접근 | 진행 중 (auth 모듈은 Controller/Service 까지 완성. 나머지 도메인은 Entity·Repository 만 있고 Controller/Service 미작성) |
+| Frontend (React) | 화면·폼·라우팅·세션 쿠키 전송 | 진행 중 (랜딩·로그인·회원가입·스토리·홈·가계부(작성/조회)·환경설정·어드민 페이지) |
+| Backend (Spring Boot) | REST API·인증·비즈 로직·DB 접근 | 진행 중 (auth·expense·income·savings·category·stats·inquiry·admin 컨트롤러/서비스 구현. furniture·pet·goal·budget·report·title·theme·receipt 는 Entity·Repository 중심) |
 | MySQL | 영속 데이터 저장 | 18개 테이블, V1__init.sql 자동 적용 |
-| Google Gemini | AI 사유 질문 생성·답변 분류 | **미연결** (Phase 2) |
+| Google Gemini | AI 사유 질문 생성·답변 분류·카테고리 임베딩 | **연결됨** (`gemini.api.key` = `.env` 의 `GEMINI_API_KEY`. 키 없으면 호출 시 403) |
 | Google Vision | 영수증 OCR | **미연결** (Phase 2) |
 
 ## 포트·URL
@@ -65,11 +65,20 @@ React Router v7 (`BrowserRouter`) 사용. SPA 이지만 URL 이 페이지마다 
 | `/signup` | SignupPage | 공개 |
 | `/story` | StoryPage | 공개 |
 | `/home` | HomeDashboard | **인증 필요** (미인증 시 `/login` 으로 리다이렉트) |
+| `/wallet` | WalletPage (가계부 달력/조회) | **인증 필요** |
+| `/wallet/new` | WalletEntryPage (작성 Step 1 · 입력) | **인증 필요** |
+| `/wallet/new/analysis` | WalletAnalysisPage (Step 2 · AI 사유 질문) | **인증 필요** |
+| `/wallet/new/confirm` | WalletConfirmPage (Step 3 · 확인) | **인증 필요** |
+| `/settings` | SettingsPage (환경설정) | **인증 필요** |
+| `/admin` (→ `/admin/dashboard`) | AdminLayout + 중첩 라우트 (종합 대시보드·유저 현황 등) | **ADMIN 전용** (일반 사용자는 `/home` 으로 리다이렉트) |
+
+> 가계부 화면은 작성(`/wallet/new` 3-step)과 조회/달력(`/wallet`)으로 나뉜다. 폴더는 각각 `pages/WalletEntry/`, `pages/Wallet/`. 공통 레이아웃(상단바·사이드바)은 `components/AppShell` 이 담당.
 
 핵심 컴포넌트:
 - `App.js` — `BrowserRouter` 안에 `<Routes>` 정의 + 사용자 state (`user`) 보유 + 첫 진입 시 `me()` 호출로 세션 자동 복원
 - `ScrollToTop` — pathname 변경 시 스크롤 맨 위로 리셋
-- `ProtectedRoute` — `/home` 가드. `authLoading` 동안 빈 화면 (깜빡임 방지), 미인증이면 `<Navigate to="/login" replace />`
+- `ProtectedRoute` — 인증 필요 경로(`/home`·`/wallet`·`/wallet/new*`·`/settings`) 가드. `authLoading` 동안 빈 화면 (깜빡임 방지), 미인증이면 `<Navigate to="/login" replace />`
+- `AdminRoute` — `/admin/*` 가드. 미인증이면 `/login`, 로그인했지만 `role !== "ADMIN"` 이면 `/home` 으로 보냄
 
 페이지 내부에서 다른 경로로 이동: `useNavigate()` 훅. `onNavigate` prop 패턴은 사용 안 함.
 
@@ -103,7 +112,7 @@ React Router v7 (`BrowserRouter`) 사용. SPA 이지만 URL 이 페이지마다 
            → 자동 login → JSESSIONID 발급 → 랜딩 진입
 ```
 
-### 지출 기록 (Phase 2 — 미구현)
+### 지출 기록 (구현됨 · 지출→스탯→시그널→AI 사유까지. 저축·펫 성장 후속 연동은 진행 중)
 ```
 지출 입력 → expenses INSERT
         → user_stat_stats EMA 갱신 (스탯 단위)

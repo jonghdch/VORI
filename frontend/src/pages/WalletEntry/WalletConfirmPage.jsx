@@ -13,7 +13,7 @@ import {
   listIncomesByDate,
   listSavingsByDate,
 } from "../../api/ledger";
-import "./LedgerEntry.css";
+import "./WalletEntry.css";
 
 const PAYMENT_LABELS = {
   CASH: "현금",
@@ -36,7 +36,7 @@ const INCOME_SOURCE_LABELS = {
 };
 
 // Step 3 — 확인. 그 날짜에 저장된 expenses/incomes/savings 를 결제수단별로 묶어 표시.
-function LedgerConfirmPage({ user }) {
+function WalletConfirmPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
@@ -137,8 +137,8 @@ function LedgerConfirmPage({ user }) {
 
   const goBack = () => {
     const qs = `?date=${dateStr}`;
-    if (past) navigate(`/ledger/new${qs}`);
-    else navigate(`/ledger/new/analysis${qs}`);
+    if (past) navigate(`/wallet/new${qs}`);
+    else navigate(`/wallet/new/analysis${qs}`);
   };
 
   return (
@@ -361,4 +361,4 @@ function SavingGroup({ items, total, open, onToggle }) {
   );
 }
 
-export default LedgerConfirmPage;
+export default WalletConfirmPage;

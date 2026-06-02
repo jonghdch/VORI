@@ -1,0 +1,179 @@
+/* 어드민 셸. 색·보더·라운드·폰트는 기존 페이지(Settings/Home) 컨벤션을 따른다.
+   배경 #f5f3ee, 표면 #fffdf9/#fbfaf6, 보더 #e2dfd7/#e8e3d8, 그린 액센트 #7c8b5c. */
+.admin {
+  --admin-bg: #f5f3ee;
+  --admin-surface: #fbfaf6;
+  --admin-card: #fffdf9;
+  --admin-border: #e2dfd7;
+  --admin-card-border: #e8e3d8;
+  --admin-text: #3d3830;
+  --admin-muted: #6e6b65;
+  --admin-faint: #9c9488;
+  --admin-green: #7c8b5c;
+
+  min-height: 100vh;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+.admin button,
+.admin input,
+.admin select {
+  font-family: inherit;
+}
+
+/* ───── 상단 바 ───── */
+.admin-topbar {
+  width: 100%;
+  padding: 18px 32px;
+  border-bottom: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.admin-logo {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+  padding: 0;
+}
+.admin-logo-vori {
+  color: var(--admin-green);
+}
+.admin-logo-admin {
+  color: var(--admin-text);
+}
+.admin-topbar-link {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--admin-faint);
+}
+.admin-topbar-link:hover {
+  color: var(--admin-green);
+}
+
+/* ───── 본문 레이아웃 (사이드바 + 메인) ───── */
+.admin-body {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+}
+
+/* ───── 사이드바 ───── */
+.admin-sidebar {
+  flex: 0 0 230px;
+  width: 230px;
+  padding: 28px 18px 40px;
+  background: var(--admin-surface);
+  border-right: 1px solid var(--admin-border);
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.admin-nav-group-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-faint);
+  padding: 0 12px 4px;
+  letter-spacing: 0.2px;
+}
+.admin-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.admin-nav-link {
+  display: block;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--admin-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.admin-nav-link:hover {
+  background: rgba(127, 176, 105, 0.08);
+  color: var(--admin-text);
+}
+.admin-nav-link--active {
+  color: var(--admin-green);
+  font-weight: 700;
+  background: rgba(127, 176, 105, 0.12);
+}
+
+/* ───── 메인 ───── */
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  padding: 40px 48px 80px;
+}
+
+/* placeholder (각 메뉴 공통 빈 상태) */
+.admin-placeholder {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.admin-placeholder-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.admin-placeholder-sub {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: var(--admin-muted);
+}
+.admin-placeholder-card {
+  background: var(--admin-card);
+  border: 1px solid var(--admin-card-border);
+  border-radius: 14px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-placeholder-empty {
+  font-size: 14px;
+  color: var(--admin-faint);
+}
+
+/* 좁은 화면 대응 */
+@media (max-width: 860px) {
+  .admin-body {
+    flex-direction: column;
+  }
+  .admin-sidebar {
+    flex-basis: auto;
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--admin-border);
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .admin-main {
+    padding: 28px 20px 60px;
+  }
+}

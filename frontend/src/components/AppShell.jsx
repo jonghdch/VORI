@@ -3,7 +3,7 @@ import "../pages/Home/HomeDashboard.css";
 
 const TOP_NAV = [
   { id: "home", label: "홈" },
-  { id: "ledger", label: "가계부" },
+  { id: "wallet", label: "가계부" },
   { id: "room", label: "마이룸" },
   { id: "shop", label: "상점" },
   { id: "raise", label: "키우기" },
@@ -11,7 +11,7 @@ const TOP_NAV = [
 
 const SIDE_MENU = [
   { id: "home", label: "홈 대시보드", page: "home" },
-  { id: "ledger", label: "가계부", page: "ledger" },
+  { id: "wallet", label: "가계부", page: "wallet" },
   { id: "report", label: "소비 리포트", page: null },
 ];
 
@@ -53,7 +53,7 @@ function AppShell({
                 type="button"
                 className={`home-topnav-item ${item.id === activeTop ? "is-active" : ""}`}
                 onClick={() => {
-                  if (item.id === "home" || item.id === "ledger") go(item.id);
+                  if (item.id === "home" || item.id === "wallet") go(item.id);
                 }}
               >
                 {item.label}

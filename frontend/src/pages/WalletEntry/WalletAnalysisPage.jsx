@@ -3,14 +3,14 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import StepIndicator from "./StepIndicator";
 import { isPastDate, toIsoDate } from "./utils";
 import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
-import "./LedgerEntry.css";
+import "./WalletEntry.css";
 
 // Step 2 — 소비 분석.
 // - 백엔드가 z-score 로 anomaly 감지한 expense 만 AI 질문 생성됨 (비동기).
 // - 질문이 없으면 안내 + "다음 단계" 만 표시.
 // - 있으면 페이지네이션으로 한 건씩 답변. "다음에 할게요" 누르면 답변 안 한 채로 넘어감.
 // - 과거 날짜는 AI 분석 안 해서 무조건 Step 3 로 직행 (기존 로직 유지).
-function LedgerAnalysisPage() {
+function WalletAnalysisPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
@@ -55,15 +55,15 @@ function LedgerAnalysisPage() {
   }, [dateStr, past]);
 
   if (past) {
-    return <Navigate to={`/ledger/new/confirm?date=${dateStr}`} replace />;
+    return <Navigate to={`/wallet/new/confirm?date=${dateStr}`} replace />;
   }
 
   const total = inquiries.length;
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () => setPage((p) => Math.min(total, p + 1));
 
-  const goConfirm = () => navigate(`/ledger/new/confirm?date=${dateStr}`);
-  const goBack = () => navigate(`/ledger/new?date=${dateStr}`);
+  const goConfirm = () => navigate(`/wallet/new/confirm?date=${dateStr}`);
+  const goBack = () => navigate(`/wallet/new?date=${dateStr}`);
 
   // 답변 입력된 inquiry 들만 POST. 끝나면 Step 3 로 이동.
   const submitAll = async () => {
@@ -295,4 +295,4 @@ function paymentLabel(pm) {
   }
 }
 
-export default LedgerAnalysisPage;
+export default WalletAnalysisPage;

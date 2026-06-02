@@ -178,6 +178,15 @@ auth/
     ├── SignupRequest.java     ← Request DTO
     ├── LoginRequest.java
     └── AuthResponse.java      ← Response DTO
+
+admin/                          ← 어드민 전용. SecurityConfig 가 /api/admin/** → hasRole("ADMIN") 로 보호
+├── AdminController.java        ← GET /api/admin/users, GET /api/admin/dashboard/summary
+├── AdminUserService.java       ← 유저 목록 (페이지네이션·role 필터)
+├── AdminDashboardService.java  ← KPI 집계 + 최근 7일 가입 추이
+└── dto/
+    ├── AdminUserResponse.java  ← User 화이트리스트 매핑 (passwordHash 등 제외)
+    ├── PageResponse.java       ← 페이지네이션 공통 래퍼
+    └── DashboardSummaryResponse.java
 ```
 
 ## 신규 기능 추가 체크리스트
