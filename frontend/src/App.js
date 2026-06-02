@@ -1,45 +1,58 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import "./App.css";
 import LandingPage from "./pages/Landing/LandingPage";
 import LoginPage from "./pages/Login/LoginPage";
 import SignupPage from "./pages/Signup/SignupPage";
-import StoryPage from "./pages/Story/StoryPage";
 import HomeDashboard from "./pages/Home/HomeDashboard";
-import LedgerPage from "./pages/Ledger/LedgerPage";
 import { me, logout } from "./api/auth";
 
-// 로그인·백엔드 없이 홈 UI만 볼 때 사용 (page === "home" 이고 세션 없을 때)
-const PREVIEW_USER = {
-  id: "preview",
-  nickname: "사용자",
-  email: "preview@vori.local",
-  role: "USER",
-};
+// Story 페이지는 three.js + GLTFLoader 를 포함해서 무거움 (~100+ KB).
+// 랜딩만 보는 사용자가 다운로드 안 하도록 별도 chunk 로 분리.
+const StoryPage = lazy(() => import("./pages/Story/StoryPage"));
+const LedgerPage = lazy(() => import("./pages/Ledger/LedgerPage"));
 
-// 앱의 진입점.
-// page 값에 따라 보여줄 페이지를 바꿉니다.
-//   "landing" → 로그인 전 메인 페이지
-//   "login"   → 로그인 페이지
-//   "signup"  → 회원가입 페이지
-//   "story"   → 스토리(서비스 소개) 페이지
-//   "home"    → 홈 대시보드 (로그인 없으면 미리보기용 더미 계정으로 표시)
-//   "ledger"  → 가계부 페이지
-// onNavigate(pageName, sectionId?) — 페이지 이동과 동시에 그 페이지 안의
-// 특정 섹션으로 스크롤하고 싶을 때 두 번째 인자에 섹션 id 를 넘기세요.
+// 라우터 경로
+//   /                       랜딩
+//   /login                  로그인
+//   /signup                 회원가입
+//   /story                  스토리 (서비스 소개)
+//   /home                   홈 대시보드 (인증 필요)
+//   /ledger                 가계부 달력
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [pathname]);
+  return null;
+}
+
+// 보호 라우트 — 미인증 사용자는 /login 으로 보냄.
+// 첫 me() 호출 끝날 때까지는 화면 깜빡임 방지 위해 아무것도 렌더 X.
+function ProtectedRoute({ user, authLoading, children }) {
+  if (authLoading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
 function App() {
-  const [page, setPage] = useState("landing");
-  const [scrollTo, setScrollTo] = useState(null);
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // 새로고침 등으로 진입했을 때 세션 쿠키가 살아있으면 자동 복원.
   useEffect(() => {
-    me().then((u) => setUser(u)).catch(() => setUser(null));
+    me()
+        .then((u) => setUser(u))
+        .catch(() => setUser(null))
+        .finally(() => setAuthLoading(false));
   }, []);
-
-  const navigate = (nextPage, sectionId) => {
-    setPage(nextPage);
-    setScrollTo(sectionId || null);
-  };
 
   const handleLogin = (u) => setUser(u);
 
@@ -48,49 +61,50 @@ function App() {
       await logout();
     } finally {
       setUser(null);
-      navigate("landing");
     }
   };
 
-  // 페이지가 바뀌면 항상 맨 위로 스크롤하고,
-  // 섹션 id 가 지정되어 있다면 그 위치로 부드럽게 이동합니다.
-  useEffect(() => {
-    if (scrollTo) {
-      // 페이지 mount 직후라 약간의 지연을 둡니다.
-      const timer = setTimeout(() => {
-        const el = document.getElementById(scrollTo);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-        setScrollTo(null);
-      }, 60);
-      return () => clearTimeout(timer);
-    }
-    window.scrollTo({ top: 0, behavior: "auto" });
-  }, [page, scrollTo]);
-
-  if (page === "login")
-    return <LoginPage onNavigate={navigate} onLogin={handleLogin} />;
-  if (page === "signup") return <SignupPage onNavigate={navigate} />;
-  if (page === "story")
-    return <StoryPage onNavigate={navigate} user={user} onLogout={handleLogout} />;
-  if (page === "home") {
-    return (
-      <HomeDashboard
-        user={user ?? PREVIEW_USER}
-        onNavigate={navigate}
-        onLogout={handleLogout}
-      />
-    );
-  }
-  if (page === "ledger") {
-    return (
-      <LedgerPage
-        user={user ?? PREVIEW_USER}
-        onNavigate={navigate}
-        onLogout={handleLogout}
-      />
-    );
-  }
-  return <LandingPage onNavigate={navigate} user={user} onLogout={handleLogout} />;
+  return (
+      <BrowserRouter>
+        <ScrollToTop />
+        <Suspense fallback={null}>
+          <Routes>
+            <Route
+                path="/"
+                element={<LandingPage user={user} onLogout={handleLogout} />}
+            />
+            <Route
+                path="/login"
+                element={<LoginPage onLogin={handleLogin} />}
+            />
+            <Route
+                path="/signup"
+                element={<SignupPage onLogin={handleLogin} />}
+            />
+            <Route
+                path="/story"
+                element={<StoryPage user={user} onLogout={handleLogout} />}
+            />
+            <Route
+                path="/home"
+                element={
+                  <ProtectedRoute user={user} authLoading={authLoading}>
+                    <HomeDashboard user={user} onLogout={handleLogout} />
+                  </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/ledger"
+                element={
+                  <ProtectedRoute user={user} authLoading={authLoading}>
+                    <LedgerPage user={user} onLogout={handleLogout} />
+                  </ProtectedRoute>
+                }
+            />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+  );
 }
 
 export default App;

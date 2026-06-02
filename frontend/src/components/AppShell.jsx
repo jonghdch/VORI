@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import "../pages/Home/HomeDashboard.css";
 
 const TOP_NAV = [
@@ -10,7 +11,7 @@ const TOP_NAV = [
 
 const SIDE_MENU = [
   { id: "home", label: "홈 대시보드", page: "home" },
-  { id: "ledger", label: "가계부 달력", page: "ledger" },
+  { id: "ledger", label: "가계부", page: "ledger" },
   { id: "report", label: "소비 리포트", page: null },
 ];
 
@@ -21,8 +22,15 @@ function AppShell({
   onLogout,
   children,
 }) {
+  const navigate = useNavigate();
+
   const go = (page) => {
-    if (typeof onNavigate === "function" && page) onNavigate(page);
+    if (!page) return;
+    if (typeof onNavigate === "function") {
+      onNavigate(page);
+      return;
+    }
+    navigate(page.startsWith("/") ? page : `/${page}`);
   };
 
   return (
