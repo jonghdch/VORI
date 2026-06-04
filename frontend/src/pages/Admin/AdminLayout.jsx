@@ -22,7 +22,7 @@ function AdminLayout() {
         <button
           type="button"
           className="admin-topbar-link"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/home")}
         >
           사용자 페이지
         </button>
