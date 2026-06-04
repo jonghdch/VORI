@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import StepIndicator from "./StepIndicator";
 import {
+  CATEGORIES_BY_TYPE,
   PAYMENT_METHODS,
   categorize,
   formatToday,
-  getCategoryDisplayPath,
   isPastDate,
   parseIsoDate,
   toIsoDate,
@@ -15,6 +15,7 @@ import {
   createExpense,
   createIncome,
   createSaving,
+  listCategoryTree,
   listExpensesByDate,
   listIncomesByDate,
   listSavingsByDate,
@@ -43,13 +44,13 @@ function WalletEntryPage() {
   };
   const draft = loadDraft();
 
-  // 행 id 시퀀스 — 복원된 데이터가 있으면 그 max id 다음, 없으면 기본 행 3개(id 1·2·3) 다음.
+  // 행 id 시퀀스 — 복원된 데이터가 있으면 그 max id 다음, 없으면 1 부터.
   const draftRows = (draft?.income || []).concat(
     draft?.expense || [],
     draft?.savings || [],
   );
   const maxDraftId = draftRows.reduce((m, r) => Math.max(m, r.id || 0), 0);
-  const nextId = useRef(1 + Math.max(3, maxDraftId));
+  const nextId = useRef(1 + maxDraftId);
   // 사용자 설정의 기본 결제수단 — 없으면 CREDIT
   const defaultPayment =
     loadUserSettings().defaultPaymentMethod || "CREDIT";
@@ -60,18 +61,31 @@ function WalletEntryPage() {
     amount: "",
   });
 
-  const [income, setIncome] = useState(
-    draft?.income || [
-      { id: 1, paymentMethod: defaultPayment, name: "", amount: "" },
-    ],
-  );
-  const [expense, setExpense] = useState(
-    draft?.expense || [
-      { id: 2, paymentMethod: defaultPayment, name: "", amount: "" },
-      { id: 3, paymentMethod: defaultPayment, name: "", amount: "" },
-    ],
-  );
+  // 초기엔 빈 행을 강제하지 않음 (행 0개로 시작). 사용자가 "+ 추가"로 직접 넣음.
+  const [income, setIncome] = useState(draft?.income || []);
+  const [expense, setExpense] = useState(draft?.expense || []);
   const [savings, setSavings] = useState(draft?.savings || []);
+
+  // 지출 카테고리 편집 드롭다운 옵션 — 백엔드 카테고리 트리를 평면화 (value=leafId).
+  const [expenseCatOptions, setExpenseCatOptions] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    listCategoryTree()
+      .then((tree) => {
+        if (!alive) return;
+        const opts = [];
+        (tree || []).forEach((p) =>
+          (p.children || []).forEach((leaf) =>
+            opts.push({ value: leaf.id, label: `${p.name} · ${leaf.name}` }),
+          ),
+        );
+        setExpenseCatOptions(opts);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // 변경마다 저장
   useEffect(() => {
@@ -126,26 +140,27 @@ function WalletEntryPage() {
             name: e.item,
             amount: String(e.amount),
             categoryId: e.categoryId,
+            categoryTouched: true, // 저장된 카테고리 — 자동분류로 덮지 않음
           })),
         );
         setIncome(
           incs.map((i) => ({
             id: next(),
             dbId: i.id,
-            paymentMethod: i.paymentMethod || "CREDIT",
             name: i.item,
             amount: String(i.amount),
             categoryEnum: i.source,
+            sourceTouched: true,
           })),
         );
         setSavings(
           savs.map((s) => ({
             id: next(),
             dbId: s.id,
-            paymentMethod: "CREDIT",
             name: s.item,
             amount: String(s.amount),
             categoryEnum: s.savingType,
+            sourceTouched: true,
           })),
         );
       } catch {
@@ -165,14 +180,18 @@ function WalletEntryPage() {
   const updateRow = (setter, id, patch) =>
     setter((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
-  // 모든 행이 내역·금액 둘 다 채워졌는지. 빈 섹션은 무시.
+  // 빈 행(내역·금액 둘 다 비어있음)은 제출 시 무시한다 → 강제 삭제 불필요.
+  const isRowEmpty = (r) =>
+    !(r.name && r.name.trim()) && !(r.amount && String(r.amount).trim());
   const isRowComplete = (r) =>
-    r.name && r.name.trim().length > 0 && r.amount && r.amount.length > 0;
+    r.name && r.name.trim().length > 0 && r.amount && String(r.amount).length > 0;
   const allRows = [...income, ...expense, ...savings];
-  // expense 자동 분류가 진행 중인 행이 있으면 잠시 대기 — categoryId=null 인 채로 저장 시도하면 throw.
-  const isCategorizing = expense.some((r) => r.categorizing);
+  const filledRows = allRows.filter((r) => !isRowEmpty(r));
+  // 비어있지 않은 지출 행이 자동 분류 중이면 대기.
+  const isCategorizing = expense.some((r) => !isRowEmpty(r) && r.categorizing);
+  // 채워진 행이 하나 이상 있고, 그 행들이 전부 완성됐을 때만 진행.
   const canProceed =
-    (allRows.length === 0 || allRows.every(isRowComplete)) && !isCategorizing;
+    filledRows.length > 0 && filledRows.every(isRowComplete) && !isCategorizing;
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -185,7 +204,7 @@ function WalletEntryPage() {
     setSubmitError(null);
     try {
       for (const r of expense) {
-        if (r.dbId) continue; // 이미 DB 에 있음 — skip
+        if (r.dbId || isRowEmpty(r)) continue; // 이미 저장됐거나 빈 행 — skip
         if (!r.categoryId) {
           throw new Error(`"${r.name}" 카테고리를 분류하지 못했어요. 잠시 후 다시 시도해주세요.`);
         }
@@ -201,12 +220,12 @@ function WalletEntryPage() {
         );
       }
       for (const r of income) {
-        if (r.dbId) continue;
+        if (r.dbId || isRowEmpty(r)) continue;
         const saved = await createIncome({
           item: r.name.trim(),
           amount: r.amount,
           source: r.categoryEnum || "OTHER",
-          paymentMethod: r.paymentMethod,
+          paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
           receivedAt: dateStr,
         });
         setIncome((rows) =>
@@ -214,7 +233,7 @@ function WalletEntryPage() {
         );
       }
       for (const r of savings) {
-        if (r.dbId) continue;
+        if (r.dbId || isRowEmpty(r)) continue;
         const saved = await createSaving({
           item: r.name.trim(),
           amount: r.amount,
@@ -295,6 +314,7 @@ function WalletEntryPage() {
                 num={idx + 1}
                 row={row}
                 type="expense"
+                expenseCatOptions={expenseCatOptions}
                 onChange={(patch) => updateRow(setExpense, row.id, patch)}
                 onDelete={() => removeRow(setExpense, row.id)}
               />
@@ -375,38 +395,43 @@ function WalletEntryPage() {
   );
 }
 
-function EntryRow({ num, row, type, onChange, onDelete }) {
-  // 카테고리 자동 분류 결과 (chip 에 표시할 라벨).
-  // - expense: 백엔드 /api/categories/categorize (Gemini embedding) — debounce 후 호출
-  // - income/savings: 로컬 키워드 룰 (백엔드에 income/savings 카테고리가 없어서 일단 유지)
-  const [autoLabel, setAutoLabel] = useState(null);
+function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }) {
+  // 이름이 바뀌면 자동 분류로 카테고리/출처를 "제안"한다.
+  // 단, 사용자가 드롭다운에서 직접 고른 경우(*Touched)엔 그 선택을 덮지 않는다.
   useEffect(() => {
     const name = (row.name || "").trim();
     if (!name) {
-      setAutoLabel(null);
-      onChange({ categoryId: null, categoryEnum: null, categorizing: false });
+      onChange({
+        categoryId: null,
+        categoryEnum: null,
+        categorizing: false,
+        categoryTouched: false,
+        sourceTouched: false,
+      });
       return;
     }
     if (type !== "expense") {
-      const v = categorize(name, type);
-      setAutoLabel(getCategoryDisplayPath(v, type));
-      // income/savings 는 ENUM 값을 그대로 row 에 보관 (제출 시 source/savingType 로 사용)
-      onChange({ categoryEnum: v, categoryId: null, categorizing: false });
+      // income/savings — 로컬 키워드 룰로 출처/유형 제안 (미선택 시에만)
+      if (row.sourceTouched) return;
+      onChange({ categoryEnum: categorize(name, type), categorizing: false });
       return;
     }
-    // expense — debounce 400ms 후 백엔드 호출. 진행 중엔 categorizing=true 로 부모의 next 버튼 막음.
+    // expense — 사용자가 직접 고른 경우 자동 분류로 덮지 않음
+    if (row.categoryTouched) {
+      onChange({ categorizing: false });
+      return;
+    }
+    // 백엔드 분류(Gemini). debounce 400ms. 진행 중엔 categorizing=true.
     onChange({ categorizing: true });
     let cancelled = false;
     const handle = setTimeout(async () => {
       const r = await categorizeRemote(name);
       if (cancelled) return;
-      if (r == null) {
-        setAutoLabel("기타");
-        onChange({ categoryId: null, categoryEnum: null, categorizing: false });
-      } else {
-        setAutoLabel(`${r.parentName} · ${r.leafName}`);
-        onChange({ categoryId: r.leafId, categoryEnum: null, categorizing: false });
-      }
+      onChange(
+        r == null
+          ? { categoryId: null, categorizing: false }
+          : { categoryId: r.leafId, categorizing: false },
+      );
     }, 400);
     return () => {
       cancelled = true;
@@ -415,18 +440,41 @@ function EntryRow({ num, row, type, onChange, onDelete }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row.name, type]);
 
+  // 카테고리/출처 선택 컨트롤 (눌러서 수정 가능한 드롭다운).
+  const categoryControl =
+    type === "expense" ? (
+      <Dropdown
+        value={row.categoryId ?? null}
+        options={expenseCatOptions}
+        onChange={(v) => onChange({ categoryId: v, categoryTouched: true })}
+        placeholder={row.categorizing ? "분류 중…" : "카테고리"}
+        align="right"
+      />
+    ) : (
+      <Dropdown
+        value={row.categoryEnum ?? null}
+        options={CATEGORIES_BY_TYPE[type]}
+        onChange={(v) => onChange({ categoryEnum: v, sourceTouched: true })}
+        placeholder={type === "income" ? "수입 출처" : "저축 유형"}
+        align="right"
+      />
+    );
+
   return (
     <div className="ledger-row">
       <div className="ledger-row-head">
         <span className="ledger-row-num">{String(num).padStart(2, "0")}</span>
-        <Dropdown
-          value={row.paymentMethod}
-          options={PAYMENT_METHODS}
-          onChange={(v) => onChange({ paymentMethod: v })}
-          placeholder="결제수단"
-        />
+        {/* 결제수단은 지출만. 수입은 "어디서 받았나"(출처), 저축은 유형만 고른다. */}
+        {type === "expense" && (
+          <Dropdown
+            value={row.paymentMethod}
+            options={PAYMENT_METHODS}
+            onChange={(v) => onChange({ paymentMethod: v })}
+            placeholder="결제수단"
+          />
+        )}
         <span className="ledger-row-spacer" />
-        <CategoryChip label={autoLabel} />
+        {categoryControl}
         <button
           type="button"
           className="ledger-row-del"
@@ -443,7 +491,11 @@ function EntryRow({ num, row, type, onChange, onDelete }) {
           className="ledger-row-input"
           value={row.name}
           onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="예: 스타벅스, GS25, 지하철"
+          placeholder={
+            type === "income"
+              ? "예: 6월 월급, 엄마 용돈"
+              : "예: 스타벅스, GS25, 지하철"
+          }
         />
       </div>
       <div className="ledger-row-field">
@@ -462,23 +514,6 @@ function EntryRow({ num, row, type, onChange, onDelete }) {
         </div>
       </div>
     </div>
-  );
-}
-
-// 자동 분류 결과 표시 전용 chip. 클릭 불가.
-// label 이 null/undefined 면 "자동 분류" placeholder.
-function CategoryChip({ label }) {
-  if (!label) {
-    return (
-      <span className="ledger-chip ledger-chip-readonly ledger-chip-placeholder">
-        자동 분류
-      </span>
-    );
-  }
-  return (
-    <span className="ledger-chip ledger-chip-readonly ledger-chip-auto">
-      {label}
-    </span>
   );
 }
 
@@ -515,13 +550,19 @@ function Dropdown({ value, options, onChange, placeholder, align = "left" }) {
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        {label}
+        <span className="ledger-chip-text">{label}</span>
+        <span className="ledger-chip-caret" aria-hidden>
+          ▾
+        </span>
       </button>
       {open && (
         <ul
           className={`ledger-dropdown-menu ledger-dropdown-menu-${align}`}
           role="listbox"
         >
+          {options.length === 0 && (
+            <li className="ledger-dropdown-empty">불러오는 중…</li>
+          )}
           {options.map((o) => (
             <li key={o.value}>
               <button
