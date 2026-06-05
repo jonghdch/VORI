@@ -59,7 +59,7 @@
   background: rgba(127, 176, 105, 0.07);
 }
 .admin-dash-kpi-label {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--admin-muted);
   margin-bottom: 4px;
 }
@@ -152,7 +152,7 @@
   transition: height 0.3s ease;
 }
 .admin-dash-bar-label {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--admin-faint);
   margin-top: 8px;
   font-variant-numeric: tabular-nums;
