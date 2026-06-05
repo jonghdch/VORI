@@ -4,13 +4,15 @@
   margin: 0 auto;
 }
 .admin-dash-title {
-  margin: 0 0 4px;
+  display: inline-block;
+  margin: 0 8px 0 0;
   font-size: 22px;
   font-weight: 700;
 }
 .admin-dash-sub {
+  display: inline-block;
   margin: 0 0 24px;
-  font-size: 16px;
+  font-size: 14px;
   color: var(--admin-muted);
 }
 
@@ -59,7 +61,7 @@
 .admin-dash-kpi-label {
   font-size: 16px;
   color: var(--admin-muted);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .admin-dash-kpi-value {
   font-size: 28px;
@@ -84,7 +86,7 @@
   background: var(--admin-card);
   border: 1px solid var(--admin-card-border);
   border-radius: 14px;
-  padding: 24px 24px 16px;
+  padding: 16px 24px;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
 }
 .admin-dash-card-head {

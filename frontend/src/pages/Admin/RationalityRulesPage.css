@@ -22,7 +22,7 @@
   display: block;
   font-size: 16px;
   color: var(--admin-muted);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .rule-field-label code {
   font-size: 12px;

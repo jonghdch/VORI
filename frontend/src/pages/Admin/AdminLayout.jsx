@@ -24,7 +24,7 @@ function AdminLayout() {
           className="admin-topbar-link"
           onClick={() => navigate("/home")}
         >
-          사용자 페이지
+          사용자 페이지 →
         </button>
       </header>
 

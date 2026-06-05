@@ -11,11 +11,15 @@
   --admin-faint: #9c9488;
   --admin-green: #7c8b5c;
 
-  min-height: 100vh;
+  /* 전체 페이지 스크롤 없음 — 사이드바·본문이 각자 내부 스크롤 */
+  height: 100vh;
+  overflow: hidden;
   background: var(--admin-bg);
   color: var(--admin-text);
-  font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
-    "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
+  /* import 한 폰트가 variable 버전이라 실제 패밀리명은 "Pretendard Variable".
+     "Pretendard" 만 쓰면 매칭 안 돼 시스템 폰트로 떨어지므로 둘 다 명시. */
+  font-family: "Pretendard Variable", "Pretendard", -apple-system,
+    BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
   /* 타이포 가이드: 본문 line-height 1.5 (미지정 요소가 상속) */
   line-height: 1.5;
   display: flex;
@@ -59,7 +63,8 @@
   border: 0;
   background: transparent;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--admin-faint);
 }
 .admin-topbar-link:hover {
@@ -71,6 +76,7 @@
   flex: 1;
   display: flex;
   align-items: stretch;
+  min-height: 0;
 }
 
 /* ───── 사이드바 ───── */
@@ -82,7 +88,8 @@
   border-right: 1px solid var(--admin-border);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
+  overflow-y: auto;
 }
 .admin-nav-group {
   display: flex;
@@ -93,7 +100,7 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--admin-faint);
-  padding: 0 12px 4px;
+  padding: 0 12px;
   letter-spacing: 0.2px;
 }
 .admin-nav-list {
@@ -128,6 +135,8 @@
 .admin-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
   padding: 40px 48px 80px;
 }
 
@@ -137,13 +146,15 @@
   margin: 0 auto;
 }
 .admin-placeholder-title {
-  margin: 0 0 4px;
+  display: inline-block;
+  margin: 0 8px 0 0;
   font-size: 22px;
   font-weight: 700;
 }
 .admin-placeholder-sub {
+  display: inline-block;
   margin: 0 0 24px;
-  font-size: 16px;
+  font-size: 14px;
   color: var(--admin-muted);
 }
 .admin-placeholder-card {
