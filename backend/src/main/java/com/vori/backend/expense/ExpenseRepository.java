@@ -76,4 +76,5 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
         @Param("userId") Long userId,
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end);
+    List<Expense> findByUserIdAndSpentAtBetween(Long userId, LocalDateTime start, LocalDateTime end);
 }
