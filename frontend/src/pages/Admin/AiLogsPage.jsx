@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getAiLogs } from "../../api/admin";
+import RefreshButton from "./RefreshButton";
 import "./AdminCommon.css";
 
 const PAGE_SIZE = 20;
@@ -55,13 +56,20 @@ function AiLogsPage() {
 
   return (
     <div className="adm-page">
-      <h1 className="adm-title">AI 대사 로그</h1>
-      <p className="adm-sub">
-        AI가 지출 사유를 물은 기록과 사용자 답변·분류 결과입니다.{" "}
-        {!loading && !error && (
-          <span className="adm-accent">총 {totalElements.toLocaleString("ko-KR")}건</span>
-        )}
-      </p>
+      <div className="admin-page-head">
+        <div>
+          <h1 className="adm-title">AI 대사 로그</h1>
+          <p className="adm-sub">
+            AI가 지출 사유를 물은 기록과 사용자 답변·분류 결과입니다.{" "}
+            {!loading && !error && (
+              <span className="adm-accent">
+                총 {totalElements.toLocaleString("ko-KR")}건
+              </span>
+            )}
+          </p>
+        </div>
+        <RefreshButton onClick={load} disabled={loading} />
+      </div>
 
       <div className="adm-toolbar">
         <div className="adm-tabs" role="tablist" aria-label="분류 필터">
@@ -78,9 +86,6 @@ function AiLogsPage() {
             </button>
           ))}
         </div>
-        <button type="button" className="adm-btn" onClick={load} disabled={loading}>
-          새로고침
-        </button>
       </div>
 
       <div className="adm-card">

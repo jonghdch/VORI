@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { listUsers } from "../../api/admin";
+import RefreshButton from "./RefreshButton";
 import "./UsersPage.css";
 
 const PAGE_SIZE = 20;
@@ -57,13 +58,20 @@ function UsersPage() {
 
   return (
     <div className="admin-users">
-      <h1 className="admin-users-title">유저 현황</h1>
-      <p className="admin-users-sub">
-        가입한 회원 목록입니다.{" "}
-        {!loading && !error && (
-          <span className="admin-users-count">총 {formatNumber(totalElements)}명</span>
-        )}
-      </p>
+      <div className="admin-page-head">
+        <div>
+          <h1 className="admin-users-title">유저 현황</h1>
+          <p className="admin-users-sub">
+            가입한 회원 목록입니다.{" "}
+            {!loading && !error && (
+              <span className="admin-users-count">
+                총 {formatNumber(totalElements)}명
+              </span>
+            )}
+          </p>
+        </div>
+        <RefreshButton onClick={load} disabled={loading} />
+      </div>
 
       <div className="admin-users-toolbar">
         <div className="admin-users-tabs" role="tablist" aria-label="권한 필터">
@@ -84,14 +92,6 @@ function UsersPage() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className="admin-users-refresh"
-          onClick={load}
-          disabled={loading}
-        >
-          새로고침
-        </button>
       </div>
 
       <div className="admin-users-card">

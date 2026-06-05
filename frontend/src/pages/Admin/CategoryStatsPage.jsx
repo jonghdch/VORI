@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getCategoryStats } from "../../api/admin";
+import RefreshButton from "./RefreshButton";
 import "./AdminCommon.css";
 
 const won = (n) => (n == null ? "—" : `${n.toLocaleString("ko-KR")}원`);
@@ -40,19 +41,17 @@ function CategoryStatsPage() {
 
   return (
     <div className="adm-page">
-      <h1 className="adm-title">지출 카테고리 통계</h1>
-      <p className="adm-sub">
-        전체 사용자 기준 카테고리별 지출 집계입니다.{" "}
-        {!loading && !error && rows.length > 0 && (
-          <span className="adm-accent">총 {won(grandTotal)}</span>
-        )}
-      </p>
-
-      <div className="adm-toolbar">
-        <span />
-        <button type="button" className="adm-btn" onClick={load} disabled={loading}>
-          새로고침
-        </button>
+      <div className="admin-page-head">
+        <div>
+          <h1 className="adm-title">지출 카테고리 통계</h1>
+          <p className="adm-sub">
+            전체 사용자 기준 카테고리별 지출 집계입니다.{" "}
+            {!loading && !error && rows.length > 0 && (
+              <span className="adm-accent">총 {won(grandTotal)}</span>
+            )}
+          </p>
+        </div>
+        <RefreshButton onClick={load} disabled={loading} />
       </div>
 
       <div className="adm-card">

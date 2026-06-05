@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getDashboardSummary } from "../../api/admin";
+import RefreshButton from "./RefreshButton";
 import "./DashboardPage.css";
 
 function formatNumber(n) {
@@ -10,7 +11,7 @@ function formatNumber(n) {
 // KPI 카드 정의. accessor 로 summary 에서 값을 뽑고, suffix 는 단위.
 const KPI_CARDS = [
   { key: "totalUsers", label: "전체 회원", suffix: "명" },
-  { key: "newUsersToday", label: "오늘 신규 가입", suffix: "명", accent: true },
+  { key: "newUsersToday", label: "오늘 신규 가입", suffix: "명" },
   { key: "adminCount", label: "관리자 계정", suffix: "명" },
   { key: "totalSaved", label: "누적 절약액 합계", suffix: "원" },
   { key: "totalExpenses", label: "지출 기록", suffix: "건" },
@@ -68,8 +69,13 @@ function DashboardPage() {
 
   return (
     <div className="admin-dash">
-      <h1 className="admin-dash-title">종합 대시보드</h1>
-      <p className="admin-dash-sub">VORI 운영 현황 한눈에 보기</p>
+      <div className="admin-page-head">
+        <div>
+          <h1 className="admin-dash-title">종합 대시보드</h1>
+          <p className="admin-dash-sub">VORI 운영 현황 한눈에 보기</p>
+        </div>
+        <RefreshButton onClick={load} disabled={loading} />
+      </div>
 
       {error ? (
         <div className="admin-dash-state admin-dash-state--error">
@@ -104,13 +110,6 @@ function DashboardPage() {
           <div className="admin-dash-card">
             <div className="admin-dash-card-head">
               <h2 className="admin-dash-card-title">최근 7일 가입 추이</h2>
-              <button
-                type="button"
-                className="admin-dash-refresh"
-                onClick={load}
-              >
-                새로고침
-              </button>
             </div>
             <SignupTrendChart trend={summary.signupTrend ?? []} />
           </div>
