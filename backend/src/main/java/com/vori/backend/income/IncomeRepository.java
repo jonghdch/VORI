@@ -13,4 +13,6 @@ public interface IncomeRepository extends JpaRepository<Income, Long> {
     List<Income> findByUserIdAndReceivedAtOrderByIdAsc(Long userId, LocalDate receivedAt);
 
     List<Income> findByUserIdAndSource(Long userId, IncomeSource source);
+
+    List<Income> findByUserIdAndReceivedAtBetween(Long userId, LocalDate start, LocalDate end);
 }

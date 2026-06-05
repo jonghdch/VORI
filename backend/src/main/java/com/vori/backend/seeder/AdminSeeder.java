@@ -6,6 +6,7 @@ import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -22,21 +23,32 @@ public class AdminSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbc;
 
     @Override
     public void run(String... args) {
-        if (userRepository.existsByEmail(ADMIN_EMAIL)) return;
+        User admin = userRepository.findByEmail(ADMIN_EMAIL).orElseGet(() -> {
+            LocalDateTime now = LocalDateTime.now();
+            return userRepository.save(User.builder()
+                .email(ADMIN_EMAIL)
+                .passwordHash(passwordEncoder.encode(ADMIN_PLAIN_PASSWORD))
+                .nickname(ADMIN_NICKNAME)
+                .role(Role.ADMIN)
+                .termsAgreedAt(now)
+                .privacyAgreedAt(now)
+                .createdAt(now)
+                .build());
+        });
 
-        LocalDateTime now = LocalDateTime.now();
-        User admin = User.builder()
-            .email(ADMIN_EMAIL)
-            .passwordHash(passwordEncoder.encode(ADMIN_PLAIN_PASSWORD))
-            .nickname(ADMIN_NICKNAME)
-            .role(Role.ADMIN)
-            .termsAgreedAt(now)
-            .privacyAgreedAt(now)
-            .createdAt(now)
-            .build();
-        userRepository.save(admin);
+        initializeStatStatsIfMissing(admin.getId());
+    }
+
+    private void initializeStatStatsIfMissing(Long userId) {
+        String sql = "INSERT IGNORE INTO user_stat_stats " +
+            "(user_id, stat_type, mean_ema, stddev_ema, sample_count) " +
+            "VALUES (?, ?, 0, 0, 0)";
+        for (String type : new String[]{"ENERGY", "CHARM", "IQ", "ENDURANCE"}) {
+            jdbc.update(sql, userId, type);
+        }
     }
 }
