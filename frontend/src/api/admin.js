@@ -92,6 +92,45 @@ export function getRationalityRules() {
   return adminGet("/admin/rationality-rules", "합리성 룰 조회");
 }
 
+/** 제재 목록 (페이지네이션). */
+export function getSanctions({ page = 0, size = 20 } = {}) {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return adminGet(`/admin/sanctions?${params.toString()}`, "제재 목록 조회");
+}
+
+/** 제재 생성. type=SUSPENSION 이면 durationDays 필요(미입력 시 400). */
+export async function createSanction({ userId, type, reason, durationDays }) {
+  const res = await fetch(`${API_BASE}/admin/sanctions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ userId, type, reason, durationDays: durationDays ?? null }),
+  });
+  if (res.status === 401) throw new AdminApiError("로그인이 필요합니다", 401);
+  if (res.status === 403) throw new AdminApiError("관리자 권한이 필요합니다", 403);
+  if (res.status === 400 || res.status === 404) {
+    const msg = await res
+      .json()
+      .then((b) => b.message)
+      .catch(() => null);
+    throw new AdminApiError(msg || "입력값을 확인해 주세요", res.status);
+  }
+  if (!res.ok) throw new AdminApiError(`제재 생성 실패 (${res.status})`, res.status);
+  return res.json();
+}
+
+/** 제재 해제. */
+export async function liftSanction(id) {
+  const res = await fetch(`${API_BASE}/admin/sanctions/${id}/lift`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (res.status === 401) throw new AdminApiError("로그인이 필요합니다", 401);
+  if (res.status === 403) throw new AdminApiError("관리자 권한이 필요합니다", 403);
+  if (!res.ok) throw new AdminApiError(`제재 해제 실패 (${res.status})`, res.status);
+  return res.json();
+}
+
 /** 합리성 룰 수정 (zGreen < zRed 필수, 위반 시 400). */
 export async function updateRationalityRules({ zRed, zGreen }) {
   const res = await fetch(`${API_BASE}/admin/rationality-rules`, {
