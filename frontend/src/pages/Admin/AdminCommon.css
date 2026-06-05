@@ -24,13 +24,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 .adm-tabs {
   display: inline-flex;
   gap: 4px;
-  padding: 3px;
+  padding: 4px;
   background: var(--admin-surface);
   border: 1px solid var(--admin-border);
   border-radius: 10px;
@@ -40,7 +40,7 @@
   border: 0;
   background: transparent;
   cursor: pointer;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 7px;
   font-size: 13px;
   color: var(--admin-muted);
@@ -59,7 +59,7 @@
   border: 1px solid var(--admin-border);
   background: var(--admin-card);
   cursor: pointer;
-  padding: 7px 16px;
+  padding: 8px 16px;
   border-radius: 8px;
   font-size: 13px;
   color: var(--admin-muted);
@@ -98,7 +98,7 @@
   border: 1px solid var(--admin-border);
   background: var(--admin-surface);
   cursor: pointer;
-  padding: 6px 16px;
+  padding: 8px 16px;
   border-radius: 8px;
   font-size: 13px;
   color: var(--admin-text);
@@ -144,7 +144,7 @@
 /* 뱃지 (신호·분류) */
 .adm-badge {
   display: inline-block;
-  padding: 2px 9px;
+  padding: 2px 8px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
@@ -196,7 +196,7 @@
   border: 1px solid var(--admin-border);
   background: var(--admin-card);
   cursor: pointer;
-  padding: 7px 18px;
+  padding: 8px 16px;
   border-radius: 8px;
   font-size: 13px;
   color: var(--admin-text);

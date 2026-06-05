@@ -21,7 +21,7 @@
 /* ───── 상단 헤더 ───── */
 .ledger-header {
   width: 100%;
-  padding: 18px 32px;
+  padding: 16px 32px;
   border-bottom: 1px solid #e2dfd7;
   background: #fbfaf6;
 }
@@ -73,7 +73,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 88px;
 }
 .ledger-step-circle {
@@ -112,7 +112,7 @@
   width: 60px;
   height: 1px;
   background: #c9c5bd;
-  margin-top: 18px;
+  margin-top: 16px;
 }
 .ledger-step-line-done {
   background: #7c8b5c;
@@ -133,7 +133,7 @@
   margin: 0;
 }
 .ledger-info-icon {
-  margin-left: 6px;
+  margin-left: 8px;
   width: 18px;
   height: 18px;
   border-radius: 50%;
@@ -150,7 +150,7 @@
 /* ───── 이미지 업로드 버튼 ───── */
 .ledger-upload {
   width: 100%;
-  padding: 14px 0;
+  padding: 16px 0;
   border: 0;
   border-radius: 10px;
   background: #7c8b5c;
@@ -181,10 +181,10 @@
   background: #fbfaf6;
   border: 1px solid #e2dfd7;
   border-radius: 14px;
-  padding: 16px 18px;
+  padding: 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .ledger-row-readonly {
   background: #fdfcf8;
@@ -192,7 +192,7 @@
 .ledger-row-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 .ledger-row-num {
   width: 36px;
@@ -204,7 +204,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 14px;
+  padding: 4px 16px;
   border-radius: 999px;
   border: 1px solid #d8d4ca;
   background: #efece4;
@@ -255,7 +255,7 @@
   color: #8a8780;
 }
 .ledger-dropdown-empty {
-  padding: 8px 14px;
+  padding: 8px 16px;
   font-size: 12px;
   color: #8a8780;
   white-space: nowrap;
@@ -272,7 +272,7 @@
   z-index: 20;
   min-width: 120px;
   margin: 0;
-  padding: 6px;
+  padding: 8px;
   list-style: none;
   background: #fff;
   border: 1px solid #e2dfd7;
@@ -325,7 +325,7 @@
 .ledger-row-field {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 .ledger-row-label {
   width: 36px;
@@ -373,7 +373,7 @@
   gap: 16px;
 }
 .ledger-add-btn {
-  padding: 10px 18px;
+  padding: 8px 16px;
   border: 1px dashed #c9c5bd;
   background: transparent;
   border-radius: 999px;
@@ -402,7 +402,7 @@
 }
 .ledger-next {
   width: 200px;
-  padding: 14px 0;
+  padding: 16px 0;
   border: 0;
   border-radius: 8px;
   background: #3a3835;
@@ -426,7 +426,7 @@
 }
 .ledger-back {
   width: 100px;
-  padding: 14px 0;
+  padding: 16px 0;
   border: 1px solid #d8d4ca;
   border-radius: 8px;
   background: #fbfaf6;
@@ -456,7 +456,7 @@
 .ledger-info-wrap {
   position: relative;
   display: inline-block;
-  margin-left: 6px;
+  margin-left: 8px;
   vertical-align: middle;
 }
 .ledger-info-tooltip {
@@ -466,11 +466,11 @@
   transform: translateY(-50%);
   display: none;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: #fbfaf6;
   border: 1px solid #e2dfd7;
   border-radius: 999px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   z-index: 10;
@@ -532,10 +532,10 @@
   background: #fbfaf6;
   border: 1px solid #e2dfd7;
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 .ledger-qa-question {
   font-size: 14px;
@@ -550,7 +550,7 @@
   border: 1px solid #e2dfd7;
   border-radius: 10px;
   background: #f3f1ea;
-  padding: 12px 14px;
+  padding: 12px 16px;
   font-size: 14px;
   resize: vertical;
   outline: none;
@@ -571,14 +571,14 @@
   background: #fbfaf6;
   border: 1px solid #e2dfd7;
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
 }
 .ledger-pay-head {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 .ledger-pay-icon {
   width: 36px;
@@ -613,7 +613,7 @@
   margin-top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 /* 전체 카드 — 항상 펼친 상태, 토글 없음 */
 .ledger-pay-summary .ledger-pay-label {

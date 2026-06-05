@@ -16,7 +16,7 @@
 /* ───── 헤더 ───── */
 .settings-header {
   width: 100%;
-  padding: 18px 32px;
+  padding: 16px 32px;
   border-bottom: 1px solid #e2dfd7;
   background: #fbfaf6;
   display: flex;
@@ -38,7 +38,7 @@
 .settings-header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 /* ───── 본문 ───── */
@@ -67,10 +67,10 @@
   background: #fbfaf6;
   border: 1px solid #e2dfd7;
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 .settings-row {
   display: flex;
@@ -94,7 +94,7 @@
 .settings-row-control {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 .settings-select {
   padding: 8px 12px;

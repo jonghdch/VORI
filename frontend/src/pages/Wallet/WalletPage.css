@@ -29,7 +29,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   background: var(--home-card-surface);
   border: 1px solid var(--home-card-border);
   border-radius: var(--home-radius-sm);
@@ -43,7 +43,7 @@
   line-height: 1;
   color: var(--home-muted);
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 4px 8px;
   border-radius: 6px;
 }
 
@@ -61,12 +61,12 @@
 }
 
 .ledger-add-btn {
-  padding: 10px 20px;
+  padding: 8px 20px;
   white-space: nowrap;
 }
 
 .ledger-history-toggle {
-  padding: 10px 20px;
+  padding: 8px 20px;
   background: var(--home-card-surface);
   color: var(--home-text);
   border: 1px solid var(--home-card-border);
@@ -140,7 +140,7 @@
 }
 
 .ledger-history-table th {
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: rgba(232, 227, 216, 0.42);
   color: var(--home-muted);
   font-size: 12px;
@@ -159,7 +159,7 @@
 }
 
 .ledger-history-table td {
-  padding: 13px 12px;
+  padding: 12px 12px;
   border-bottom: 1px solid var(--home-card-border);
   font-size: 13px;
   font-weight: 700;
@@ -191,7 +191,7 @@
 .ledger-history-time,
 .ledger-history-memo {
   display: block;
-  margin-top: 3px;
+  margin-top: 4px;
   font-size: 12px;
   font-weight: 600;
   color: var(--home-muted);
@@ -199,7 +199,7 @@
 
 .ledger-history-badge {
   display: inline-flex;
-  padding: 4px 9px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: var(--home-green-soft);
   color: var(--home-green-dark);
@@ -220,7 +220,7 @@
 }
 
 .ledger-calendar-card {
-  padding: 20px 22px 24px;
+  padding: 20px 24px 24px;
 }
 
 .ledger-cal-weekdays {
@@ -235,13 +235,13 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--home-muted);
-  padding: 6px 0;
+  padding: 8px 0;
 }
 
 .ledger-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  gap: 8px;
 }
 
 .ledger-cal-cell {
@@ -373,7 +373,7 @@
 
 .ledger-day-empty {
   margin-top: 12px;
-  padding: 18px;
+  padding: 16px;
   border: 1px dashed var(--home-card-border);
   border-radius: var(--home-radius-sm);
   background: rgba(255, 253, 249, 0.72);
@@ -388,8 +388,8 @@
 }
 
 .ledger-expense-detail {
-  margin-top: 18px;
-  padding: 18px;
+  margin-top: 16px;
+  padding: 16px;
   background: #fffdf9;
   border: 1px solid var(--home-card-border);
   border-radius: var(--home-radius-sm);
@@ -399,7 +399,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
+  gap: 16px;
   margin-bottom: 16px;
 }
 
@@ -427,8 +427,8 @@
 .ledger-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px 14px;
-  margin: 0 0 14px;
+  gap: 8px 16px;
+  margin: 0 0 16px;
 }
 
 .ledger-detail-grid div {
@@ -466,8 +466,8 @@
 }
 
 .ledger-detail-ai {
-  margin-top: 14px;
-  padding: 14px;
+  margin-top: 16px;
+  padding: 16px;
   background: var(--home-green-soft);
   border-radius: 10px;
 }
@@ -475,7 +475,7 @@
 .ledger-detail-ai-badge {
   display: inline-flex;
   margin-bottom: 8px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: #fffdf9;
   color: var(--home-green-dark);
@@ -558,7 +558,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px 16px;
+  gap: 8px 16px;
   width: 100%;
   font-size: 12px;
   font-weight: 600;
@@ -568,7 +568,7 @@
 .ledger-donut-legend li {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .ledger-legend-dot {
@@ -635,7 +635,7 @@
 }
 
 .ledger-ai-footnote {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   text-align: center;
   font-size: 13px;
   font-weight: 600;
@@ -652,7 +652,7 @@
 .ledger-cat-card .ledger-cat-chart {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .ledger-budget-card {

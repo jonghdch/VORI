@@ -28,7 +28,7 @@
 /* ───── 상단 바 ───── */
 .admin-topbar {
   width: 100%;
-  padding: 18px 32px;
+  padding: 16px 32px;
   border-bottom: 1px solid var(--admin-border);
   background: var(--admin-surface);
   display: flex;
@@ -41,7 +41,7 @@
   cursor: pointer;
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
   font-weight: 800;
   font-size: 22px;
   letter-spacing: 0.5px;
@@ -75,12 +75,12 @@
 .admin-sidebar {
   flex: 0 0 230px;
   width: 230px;
-  padding: 28px 18px 40px;
+  padding: 28px 16px 40px;
   background: var(--admin-surface);
   border-right: 1px solid var(--admin-border);
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 24px;
 }
 .admin-nav-group {
   display: flex;
@@ -104,7 +104,7 @@
 }
 .admin-nav-link {
   display: block;
-  padding: 9px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
   font-size: 14px;
   color: var(--admin-muted);

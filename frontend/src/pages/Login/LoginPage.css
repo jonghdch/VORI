@@ -30,7 +30,7 @@
 .login-header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 14px 32px;
+  padding: 16px 32px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -90,7 +90,7 @@
 .login-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .login-label {
   font-size: 13px;
@@ -102,7 +102,7 @@
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 12px 16px;
   font-family: inherit;
   font-size: 14px;
   color: var(--text);
@@ -131,7 +131,7 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--text-3);
-  padding: 6px 10px;
+  padding: 8px 8px;
   cursor: pointer;
   border-radius: 6px;
 }
@@ -182,7 +182,7 @@
   color: #fffdf9;
   border: none;
   border-radius: 12px;
-  padding: 14px;
+  padding: 16px;
   font-family: inherit;
   font-size: 15px;
   font-weight: 800;
@@ -221,13 +221,13 @@
 .login-socials {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .login-social {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   border-radius: 10px;
   padding: 12px;
   font-family: inherit;
@@ -272,13 +272,13 @@
 /* ── 반응형 ───────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .login-card {
-    padding: 28px 22px;
+    padding: 28px 24px;
   }
   .login-header {
-    padding: 12px 18px;
+    padding: 12px 16px;
   }
   .login-back {
     font-size: 12px;
-    padding: 6px 10px;
+    padding: 8px 8px;
   }
 }

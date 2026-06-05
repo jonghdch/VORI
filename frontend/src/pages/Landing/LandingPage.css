@@ -38,7 +38,7 @@
 .landing-btn {
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 10px 18px;
+  padding: 8px 16px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 700;
@@ -67,7 +67,7 @@
   color: var(--text);
 }
 .landing-btn-lg {
-  padding: 14px 26px;
+  padding: 16px 24px;
   font-size: 15px;
   border-radius: 12px;
 }
@@ -124,7 +124,7 @@
 .landing-header-inner {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 14px 32px;
+  padding: 16px 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -161,7 +161,7 @@
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-radius: 8px;
 }
 /* button 으로 쓸 때 기본 스타일 리셋 */
@@ -208,7 +208,7 @@
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
-  padding: 14px;
+  padding: 16px;
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -255,7 +255,7 @@
 .user-popover-item,
 .user-popover-logout {
   width: 100%;
-  padding: 9px 14px;
+  padding: 8px 16px;
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   background: #fff;
@@ -333,7 +333,7 @@
   color: var(--green-dark);
   font-size: 12px;
   font-weight: 700;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 999px;
   margin-bottom: 20px;
 }
@@ -400,7 +400,7 @@
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 28px 22px;
+  padding: 28px 24px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .landing-feature-card:hover {
@@ -460,7 +460,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 42px;
+  gap: 40px;
 }
 .landing-step {
   display: grid;
@@ -560,7 +560,7 @@
   letter-spacing: 0.12em;
   color: var(--green);
   text-transform: uppercase;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 .landing-story-title {
   font-size: 30px;
@@ -594,13 +594,13 @@
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
+  gap: 16px;
 }
 .landing-ai-prompt {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 26px 24px;
+  padding: 24px 24px;
 }
 .landing-ai-prompt--accent {
   background: var(--green-50);
@@ -610,7 +610,7 @@
   font-size: 12px;
   font-weight: 800;
   color: var(--green);
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 .landing-ai-prompt-text {
   font-size: 16px;
@@ -641,7 +641,7 @@
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 0 22px;
+  padding: 0 24px;
   transition: border-color 0.2s ease;
 }
 .landing-faq-item.is-open {
@@ -656,7 +656,7 @@
   font-size: 15px;
   font-weight: 700;
   color: var(--text);
-  padding: 18px 0;
+  padding: 16px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -690,7 +690,7 @@
 }
 .landing-faq-a {
   margin: 0;
-  padding: 0 0 18px;
+  padding: 0 0 16px;
   font-size: 14px;
   line-height: 1.7;
   color: var(--text-2);
@@ -759,7 +759,7 @@
 
 .landing-hero-preview-link {
   display: inline-block;
-  margin-top: 18px;
+  margin-top: 16px;
   padding: 0;
   border: none;
   background: none;

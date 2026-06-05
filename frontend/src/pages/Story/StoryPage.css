@@ -228,7 +228,7 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: #c2cdde;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 .story-cover-title {
   font-size: 52px;
@@ -383,7 +383,7 @@
 .story-paragraph {
   font-size: 17px;
   line-height: 1.86;
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   word-break: keep-all;
   opacity: 1;
 }
@@ -478,7 +478,7 @@
   font-weight: 900;
   letter-spacing: -0.02em;
   color: var(--text);
-  margin: 10px 0 14px;
+  margin: 8px 0 16px;
 }
 .story-pets-sub {
   font-size: 15px;
@@ -500,7 +500,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 10px 18px;
+  padding: 8px 16px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -571,7 +571,7 @@
   filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.1));
 }
 .story-character-info {
-  padding: 16px 18px 20px;
+  padding: 16px 16px 20px;
   text-align: center;
 }
 .story-character-tag {
@@ -585,7 +585,7 @@
   font-size: 17px;
   font-weight: 800;
   color: var(--text);
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   letter-spacing: -0.01em;
 }
 .story-character-desc {
@@ -607,13 +607,13 @@
 .story-evolution {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 16px;
 }
 .story-evolution-step {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 18px;
+  padding: 16px;
   text-align: center;
 }
 .story-evolution-thumb {
@@ -624,7 +624,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 .story-evolution-emoji {
   font-size: 54px;
@@ -635,7 +635,7 @@
   font-size: 15px;
   font-weight: 800;
   color: var(--text);
-  margin-bottom: 7px;
+  margin-bottom: 8px;
 }
 .story-evolution-note {
   font-size: 12px;
@@ -647,7 +647,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 32px 34px;
+  padding: 32px 32px;
 }
 .story-character-detail-name {
   font-size: 32px;
@@ -660,7 +660,7 @@
   font-size: 15px;
   line-height: 1.75;
   color: var(--text-2);
-  margin: 0 0 26px;
+  margin: 0 0 24px;
   word-break: keep-all;
 }
 .story-character-detail-list {
@@ -674,7 +674,7 @@
   font-size: 13px;
   font-weight: 800;
   color: var(--text);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .story-character-detail-list dd {
   font-size: 13px;
@@ -684,11 +684,11 @@
   word-break: keep-all;
 }
 .story-detail-back {
-  margin-top: 18px;
+  margin-top: 16px;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 11px 16px;
+  padding: 12px 16px;
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -713,7 +713,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 22px 22px;
+  padding: 24px 24px;
 }
 .story-info-icon {
   font-size: 26px;
@@ -743,7 +743,7 @@
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 12px 22px;
+  padding: 12px 24px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -796,14 +796,14 @@
   }
   .story-character-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    gap: 16px;
   }
   .story-character-emoji {
     font-size: 60px;
   }
   .story-character-detail {
     grid-template-columns: 1fr;
-    gap: 18px;
+    gap: 16px;
     margin-bottom: 64px;
   }
   .story-evolution {
@@ -813,7 +813,7 @@
   .story-evolution-step {
     display: grid;
     grid-template-columns: 88px 1fr;
-    gap: 14px;
+    gap: 16px;
     align-items: center;
     text-align: left;
   }
@@ -824,7 +824,7 @@
     font-size: 42px;
   }
   .story-character-detail-info {
-    padding: 24px 22px;
+    padding: 24px 24px;
   }
   .story-character-detail-name {
     font-size: 26px;
