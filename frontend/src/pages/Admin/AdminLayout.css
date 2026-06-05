@@ -16,6 +16,8 @@
   color: var(--admin-text);
   font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
     "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
+  /* 타이포 가이드: 본문 line-height 1.5 (미지정 요소가 상속) */
+  line-height: 1.5;
   display: flex;
   flex-direction: column;
 }
@@ -57,7 +59,7 @@
   border: 0;
   background: transparent;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--admin-faint);
 }
 .admin-topbar-link:hover {
@@ -106,7 +108,7 @@
   display: block;
   padding: 8px 12px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--admin-muted);
   text-decoration: none;
   cursor: pointer;
@@ -141,7 +143,7 @@
 }
 .admin-placeholder-sub {
   margin: 0 0 24px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--admin-muted);
 }
 .admin-placeholder-card {
@@ -155,7 +157,7 @@
   justify-content: center;
 }
 .admin-placeholder-empty {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--admin-faint);
 }
 

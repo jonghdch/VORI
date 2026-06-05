@@ -10,7 +10,7 @@
 }
 .adm-sub {
   margin: 0 0 24px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--admin-muted);
 }
 .adm-accent {
@@ -42,7 +42,7 @@
   cursor: pointer;
   padding: 8px 16px;
   border-radius: 7px;
-  font-size: 13px;
+  font-size: 16px;
   color: var(--admin-muted);
   transition: background 0.15s ease, color 0.15s ease;
 }
@@ -61,7 +61,7 @@
   cursor: pointer;
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 16px;
   color: var(--admin-muted);
 }
 .adm-btn:hover:not(:disabled) {
@@ -87,7 +87,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--admin-faint);
 }
 .adm-state--error {
@@ -100,7 +100,7 @@
   cursor: pointer;
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 16px;
   color: var(--admin-text);
 }
 
@@ -112,7 +112,7 @@
 .adm-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 16px;
 }
 .adm-table th,
 .adm-table td {
@@ -198,7 +198,7 @@
   cursor: pointer;
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 16px;
   color: var(--admin-text);
 }
 .adm-pager button:hover:not(:disabled) {
@@ -210,7 +210,7 @@
   cursor: default;
 }
 .adm-pager-info {
-  font-size: 13px;
+  font-size: 16px;
   color: var(--admin-muted);
   font-variant-numeric: tabular-nums;
 }
