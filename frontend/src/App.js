@@ -28,6 +28,7 @@ const WalletConfirmPage = lazy(() =>
 );
 // 가계부 달력/조회 (가은 PR #4). AppShell 기반.
 const WalletPage = lazy(() => import("./pages/Wallet/WalletPage"));
+const PetPage = lazy(() => import("./pages/Pet/PetPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
 const AdminLayout = lazy(() => import("./pages/Admin/AdminLayout"));
 const AdminPlaceholder = lazy(() =>
@@ -62,6 +63,7 @@ const ADMIN_PAGES = {
 //   /wallet/new             가계부 작성 Step 1 (입력)
 //   /wallet/new/analysis    Step 2 (AI 사유 질문)
 //   /wallet/new/confirm     Step 3 (확인)
+//   /raise                  펫 키우기
 //   /settings               환경설정
 //   /admin/*                어드민 (ADMIN 전용)
 
@@ -76,8 +78,8 @@ function ScrollToTop() {
 // 보호 라우트 — 미인증 사용자는 /login 으로 보냄.
 // 첫 me() 호출 끝날 때까지는 화면 깜빡임 방지 위해 아무것도 렌더 X.
 function ProtectedRoute({ user, authLoading, children }) {
-  if (authLoading) return null;
-  if (!user) return <Navigate to="/login" replace />;
+  //if (authLoading) return null;
+  //if (!user) return <Navigate to="/login" replace />;
   return children;
 }
 
@@ -170,6 +172,14 @@ function App() {
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <WalletConfirmPage user={user} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/raise"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <PetPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />

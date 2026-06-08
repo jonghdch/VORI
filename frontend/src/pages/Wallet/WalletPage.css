@@ -52,6 +52,16 @@
   color: var(--home-text);
 }
 
+.ledger-date-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ledger-date-arrow:disabled:hover {
+  background: none;
+  color: var(--home-muted);
+}
+
 .ledger-date-display {
   font-size: 14px;
   font-weight: 600;

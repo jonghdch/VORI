@@ -111,13 +111,20 @@ const DONUT_LEGEND = [
 ];
 
 const AI_PENDING_COUNT = 3;
+const CALENDAR_YEAR = 2026;
+const CALENDAR_MONTH_INDEX = 3;
+const CALENDAR_MONTH_LABEL = "04";
+const CALENDAR_DAYS_IN_MONTH = new Date(
+  CALENDAR_YEAR,
+  CALENDAR_MONTH_INDEX + 1,
+  0,
+).getDate();
 
 function buildApril2026Cells() {
-  const firstDay = new Date(2026, 3, 1).getDay();
-  const daysInMonth = new Date(2026, 4, 0).getDate();
+  const firstDay = new Date(CALENDAR_YEAR, CALENDAR_MONTH_INDEX, 1).getDay();
   return [
     ...Array.from({ length: firstDay }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
+    ...Array.from({ length: CALENDAR_DAYS_IN_MONTH }, (_, index) => index + 1),
   ];
 }
 
@@ -131,9 +138,13 @@ function formatWon(value) {
 
 function getDayLabel(day) {
   const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "short" }).format(
-    new Date(2026, 3, day),
+    new Date(CALENDAR_YEAR, CALENDAR_MONTH_INDEX, day),
   );
   return `4월 ${day}일 (${weekday})`;
+}
+
+function getDateDisplay(day) {
+  return `${CALENDAR_YEAR}. ${CALENDAR_MONTH_LABEL}. ${String(day).padStart(2, "0")}`;
 }
 
 function getExpensesByDay(day) {
@@ -178,6 +189,14 @@ function WalletPage({ user, onLogout }) {
     setSelectedExpense(dayExpenses[0] ?? null);
   };
 
+  const moveSelectedDay = (direction) => {
+    const nextDay = Math.min(
+      CALENDAR_DAYS_IN_MONTH,
+      Math.max(1, selectedDay + direction),
+    );
+    selectDay(nextDay);
+  };
+
   const selectExpense = (expense) => {
     setSelectedDay(expense.day);
     setSelectedExpense(expense);
@@ -196,12 +215,24 @@ function WalletPage({ user, onLogout }) {
             {nickname}님, 오늘도 보리와 함께해요!
           </h1>
           <div className="ledger-header-actions">
-            <div className="ledger-date-nav" aria-label="월 선택">
-              <button type="button" className="ledger-date-arrow" aria-label="이전">
+            <div className="ledger-date-nav" aria-label="날짜 선택">
+              <button
+                type="button"
+                className="ledger-date-arrow"
+                aria-label="이전 날짜"
+                disabled={selectedDay === 1}
+                onClick={() => moveSelectedDay(-1)}
+              >
                 ‹
               </button>
-              <span className="ledger-date-display">2026. 04. 01</span>
-              <button type="button" className="ledger-date-arrow" aria-label="다음">
+              <span className="ledger-date-display">{getDateDisplay(selectedDay)}</span>
+              <button
+                type="button"
+                className="ledger-date-arrow"
+                aria-label="다음 날짜"
+                disabled={selectedDay === CALENDAR_DAYS_IN_MONTH}
+                onClick={() => moveSelectedDay(1)}
+              >
                 ›
               </button>
             </div>
