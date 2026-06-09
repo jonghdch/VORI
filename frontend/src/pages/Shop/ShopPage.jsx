@@ -6,7 +6,7 @@ import "./ShopPage.css";
 
 const SHOP_ITEMS = [
   {
-    id: "basic-egg",
+    id: "basic-egg-1",
     name: "기본 알",
     type: "랜덤 알",
     price: "2,500 코인",
@@ -14,7 +14,7 @@ const SHOP_ITEMS = [
     image: eggImage,
   },
   {
-    id: "basic-egg",
+    id: "basic-egg-2",
     name: "기본 알",
     type: "랜덤 알",
     price: "2,500 코인",
@@ -22,7 +22,7 @@ const SHOP_ITEMS = [
     image: eggImage,
   },
   {
-    id: "basic-egg",
+    id: "basic-egg-3",
     name: "기본 알",
     type: "랜덤 알",
     price: "2,500 코인",
