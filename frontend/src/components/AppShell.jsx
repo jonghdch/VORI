@@ -4,7 +4,6 @@ import "../pages/Home/HomeDashboard.css";
 const TOP_NAV = [
   { id: "home", label: "홈" },
   { id: "wallet", label: "가계부" },
-  { id: "room", label: "마이룸" },
   { id: "shop", label: "상점" },
   { id: "raise", label: "키우기" },
 ];
@@ -13,6 +12,12 @@ const SIDE_MENU = [
   { id: "home", label: "홈 대시보드", page: "home" },
   { id: "wallet", label: "가계부", page: "wallet" },
   { id: "report", label: "소비 리포트", page: null },
+];
+
+const GAME_MENU = [
+  { id: "raise", label: "펫 키우기", page: "raise" },
+  { id: "shop", label: "상점", page: null },
+  { id: "achievement", label: "업적/칭호", page: null },
 ];
 
 function AppShell({
@@ -53,7 +58,9 @@ function AppShell({
                 type="button"
                 className={`home-topnav-item ${item.id === activeTop ? "is-active" : ""}`}
                 onClick={() => {
-                  if (item.id === "home" || item.id === "wallet") go(item.id);
+                  if (item.id === "home" || item.id === "wallet" || item.id === "raise") {
+                    go(item.id);
+                  }
                 }}
               >
                 {item.label}
@@ -96,10 +103,14 @@ function AppShell({
           <div className="home-side-block">
             <div className="home-side-title">게임</div>
             <ul className="home-side-list">
-              {["펫 키우기", "마이룸", "상점", "업적/칭호"].map((label) => (
-                <li key={label}>
-                  <button type="button" className="home-side-link">
-                    {label}
+              {GAME_MENU.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className={`home-side-link ${item.id === activeSide ? "is-active" : ""}`}
+                    onClick={() => go(item.page)}
+                  >
+                    {item.label}
                   </button>
                 </li>
               ))}

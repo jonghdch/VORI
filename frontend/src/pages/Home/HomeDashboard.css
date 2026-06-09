@@ -330,6 +330,14 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
 }
 
+.home-pet-image {
+  display: block;
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
 .home-pet-bubble {
   margin-top: 16px;
   padding: 16px 16px;

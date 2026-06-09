@@ -28,6 +28,7 @@ const WalletConfirmPage = lazy(() =>
 );
 // 가계부 달력/조회 (가은 PR #4). AppShell 기반.
 const WalletPage = lazy(() => import("./pages/Wallet/WalletPage"));
+const PetPage = lazy(() => import("./pages/Pet/PetPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
 const AdminLayout = lazy(() => import("./pages/Admin/AdminLayout"));
 const AdminPlaceholder = lazy(() =>
@@ -62,6 +63,7 @@ const ADMIN_PAGES = {
 //   /wallet/new             가계부 작성 Step 1 (입력)
 //   /wallet/new/analysis    Step 2 (AI 사유 질문)
 //   /wallet/new/confirm     Step 3 (확인)
+//   /raise                  펫 키우기
 //   /settings               환경설정
 //   /admin/*                어드민 (ADMIN 전용)
 
@@ -170,6 +172,14 @@ function App() {
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <WalletConfirmPage user={user} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/raise"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <PetPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />

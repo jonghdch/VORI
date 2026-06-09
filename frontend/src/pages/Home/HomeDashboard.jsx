@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import { getHomeSummary } from "../../api/home";
+import boriImage from "../../assets/pets/bori.png";
 import "./HomeDashboard.css";
 
 // 스탯 4종 표시 메타 (값은 백엔드 stats 에서).
@@ -95,7 +96,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 <p className="home-pet-status">상태 : 배고픔</p>
               </div>
               <div className="home-pet-art" aria-hidden>
-                <span className="home-pet-pixel">🐕</span>
+                <img src={boriImage} alt="" className="home-pet-image" />
               </div>
             </div>
             <div className="home-pet-bubble">
