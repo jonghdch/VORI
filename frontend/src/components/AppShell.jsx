@@ -16,7 +16,7 @@ const SIDE_MENU = [
 
 const GAME_MENU = [
   { id: "raise", label: "펫 키우기", page: "raise" },
-  { id: "shop", label: "상점", page: null },
+  { id: "shop", label: "상점", page: "shop" },
   { id: "achievement", label: "업적/칭호", page: null },
 ];
 
@@ -58,7 +58,12 @@ function AppShell({
                 type="button"
                 className={`home-topnav-item ${item.id === activeTop ? "is-active" : ""}`}
                 onClick={() => {
-                  if (item.id === "home" || item.id === "wallet" || item.id === "raise") {
+                  if (
+                    item.id === "home" ||
+                    item.id === "wallet" ||
+                    item.id === "raise" ||
+                    item.id === "shop"
+                  ) {
                     go(item.id);
                   }
                 }}
