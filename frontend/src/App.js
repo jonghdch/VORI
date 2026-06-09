@@ -78,8 +78,8 @@ function ScrollToTop() {
 // 보호 라우트 — 미인증 사용자는 /login 으로 보냄.
 // 첫 me() 호출 끝날 때까지는 화면 깜빡임 방지 위해 아무것도 렌더 X.
 function ProtectedRoute({ user, authLoading, children }) {
-  //if (authLoading) return null;
-  //if (!user) return <Navigate to="/login" replace />;
+  if (authLoading) return null;
+  if (!user) return <Navigate to="/login" replace />;
   return children;
 }
 
