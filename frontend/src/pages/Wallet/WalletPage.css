@@ -301,6 +301,7 @@
 
 .ledger-cal-cell {
   height: 88px;
+  min-width: 0;
   border: 1px solid var(--home-card-border);
   border-radius: 10px;
   padding: 8px;
@@ -431,6 +432,18 @@
   margin-right: 8px;
 }
 
+.ledger-detail-row .home-tx-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--home-green-soft);
+  font-size: 20px;
+}
+
 .ledger-day-empty {
   margin-top: 12px;
   padding: 16px;
@@ -467,8 +480,23 @@
 }
 
 .ledger-detail-icon {
-  font-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--home-green-soft);
+  font-size: 24px;
   line-height: 1;
+}
+
+.ledger-detail-title-amount {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .ledger-detail-eyebrow {
@@ -535,10 +563,9 @@
   line-height: 1.55;
   color: var(--home-text);
 }
-.ledger-detail-note p:empty::before {
-  content: "작성된 내용이 없어요";
-  color: #a7ac9f;
-  font-weight: 500;
+.ledger-detail-note p:empty {
+  background: rgba(232, 227, 216, 0.42);
+  border-color: rgba(232, 227, 216, 0.42);
 }
 
 .ledger-detail-ai {

@@ -33,6 +33,15 @@ const AI_PENDING_COUNT = 3;
 
 // 합리성 시그널(백엔드 enum) → 한글 상태 + 배지 색상 클래스.
 const SIGNAL_STATUS = { GREEN: "합리적", GRAY: "중립", RED: "비합리적" };
+
+// 결제수단 enum(백엔드 PaymentMethod) → 한글 라벨.
+const PAYMENT_LABEL = {
+  CASH: "현금",
+  DEBIT: "체크카드",
+  CREDIT: "신용카드",
+  TRANSFER: "계좌이체",
+  MOBILE_PAY: "모바일페이",
+};
 const SIGNAL_BADGE = {
   GREEN: "ledger-history-badge--green",
   GRAY: "ledger-history-badge--gray",
@@ -92,6 +101,8 @@ function toRow(item) {
     date: formatDateDisplay(item.date),
     signal: item.signal, // GREEN | GRAY | RED | null
     aiStatus: item.signal ? SIGNAL_STATUS[item.signal] : null,
+    payment: item.paymentMethod ? PAYMENT_LABEL[item.paymentMethod] : null,
+    memo: item.memo || "",
   };
 }
 
@@ -134,6 +145,11 @@ function WalletPage({ user, onLogout }) {
       })
       .catch((e) => {
         if (!alive) return;
+        // 세션 만료 — 거짓 "빈 달" 대신 로그인으로 보냄
+        if (e.status === 401) {
+          navigate("/login", { replace: true });
+          return;
+        }
         setError(e.message || "불러오기 실패");
         setRows([]);
       })
@@ -143,7 +159,7 @@ function WalletPage({ user, onLogout }) {
     return () => {
       alive = false;
     };
-  }, [viewYear, viewMonth]);
+  }, [viewYear, viewMonth, navigate]);
 
   // 달력 셀 구성 (선행 빈칸 + 1일~말일).
   const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
@@ -457,10 +473,12 @@ function WalletPage({ user, onLogout }) {
                     <span className="ledger-detail-icon" aria-hidden>
                       {iconFor(selectedRow)}
                     </span>
-                    <h3 className="ledger-detail-title">{selectedRow.name}</h3>
-                    <span className="ledger-detail-amount">
-                      {selectedRow.amount}
-                    </span>
+                    <div className="ledger-detail-title-amount">
+                      <h3 className="ledger-detail-title">{selectedRow.name}</h3>
+                      <span className="ledger-detail-amount">
+                        {selectedRow.amount}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -489,7 +507,7 @@ function WalletPage({ user, onLogout }) {
                   </div>
                   <div>
                     <dt>결제수단</dt>
-                    <dd>{selectedRow.payment}</dd>
+                    <dd>{selectedRow.payment || "—"}</dd>
                   </div>
                 </dl>
 
@@ -497,10 +515,12 @@ function WalletPage({ user, onLogout }) {
                   <span>메모</span>
                   <p>{selectedRow.memo}</p>
                 </div>
-                <div className="ledger-detail-note">
-                  <span>소비 사유</span>
-                  <p>{selectedRow.reason}</p>
-                </div>
+                {selectedRow.reason && (
+                  <div className="ledger-detail-note">
+                    <span>소비 사유</span>
+                    <p>{selectedRow.reason}</p>
+                  </div>
+                )}
                 {selectedRow.aiStatus && (
                   <div className="ledger-detail-ai">
                     <span className="ledger-detail-ai-badge">

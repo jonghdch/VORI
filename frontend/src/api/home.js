@@ -1,5 +1,5 @@
 // 홈 대시보드 요약 API. 스탯 + 기간별 지출 + 최근 지출 + 카테고리 분포.
-const API_BASE = "http://localhost:8080/api";
+import { API_BASE } from "./base";
 
 /**
  * @returns {Promise<null | {

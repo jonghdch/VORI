@@ -1,7 +1,7 @@
 // 가계부 행 저장 API 클라이언트.
 // 백엔드 3개 endpoint (POST /api/expenses, /api/incomes, /api/savings) 호출.
 
-const API_BASE = "http://localhost:8080/api";
+import { API_BASE } from "./base";
 
 async function post(path, body) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -26,7 +26,15 @@ async function get(path) {
     method: "GET",
     credentials: "include",
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    // silent failure 금지 — 401/500 을 빈 배열로 바꾸면 "데이터 없음" 과
+    // "조회 실패" 가 구분 불가능해진다. status 를 실어 throw, 처리(401→로그인 유도)는 호출부 책임.
+    const err = new Error(
+      res.status === 401 ? "로그인이 필요합니다" : `조회 실패 (${res.status})`,
+    );
+    err.status = res.status;
+    throw err;
+  }
   return res.json();
 }
 

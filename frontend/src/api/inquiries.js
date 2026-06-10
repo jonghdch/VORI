@@ -2,7 +2,7 @@
 // GET /api/inquiries?date=...  : 그 날짜의 미답변 질문 목록
 // POST /api/inquiries/{id}/answer : 답변 제출
 
-const API_BASE = "http://localhost:8080/api";
+import { API_BASE } from "./base";
 
 export async function listInquiriesByDate(date) {
   const res = await fetch(`${API_BASE}/inquiries?date=${date}`, {

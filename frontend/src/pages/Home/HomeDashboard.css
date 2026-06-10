@@ -128,7 +128,12 @@
 }
 
 .home-shell {
-  display: flex;
+  /* 좌측 사이드바 | 본문(1fr) | 우측 사이드바.
+     flex-grow 대신 grid 명시 트랙을 써서 lazy 마운트 타이밍에도
+     본문 폭이 결정론적으로 채워지도록 함 (간헐 폭 붕괴 방지).
+     우측 사이드바가 없는 페이지면 3번째 auto 트랙은 0으로 접힘. */
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   width: 100%;
   max-width: none;
   margin: 0;
@@ -687,7 +692,7 @@
   }
 
   .home-shell {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   .home-sidebar {

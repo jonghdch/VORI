@@ -1,5 +1,5 @@
 // 사용자 스탯 API. 홈 대시보드 우측 위젯용.
-const API_BASE = "http://localhost:8080/api";
+import { API_BASE } from "./base";
 
 export async function getMyStats() {
   try {
