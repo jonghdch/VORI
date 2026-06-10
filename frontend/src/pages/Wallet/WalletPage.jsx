@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
+import { getMonthlyLedger } from "../../api/ledger";
 import "../Home/HomeDashboard.css";
 import "./WalletPage.css";
 
@@ -13,88 +14,6 @@ const SUMMARY_CARDS = [
 ];
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-
-const EXPENSES = [
-  {
-    id: "expense-movie",
-    day: 6,
-    icon: "🎟️",
-    name: "영화관",
-    cat: "문화",
-    amount: "15,000원",
-    date: "2026. 04. 06",
-    time: "오후 08:15",
-    payment: "카드",
-    memo: "주말 영화 관람",
-    reason: "주말 여가 활동으로 계획했던 문화 지출이에요.",
-    aiStatus: "중립",
-    aiMessage: "문화 지출은 적정하지만 다음 주 예산을 함께 확인해보세요.",
-  },
-  {
-    id: "expense-cafe",
-    day: 11,
-    icon: "☕",
-    name: "스타벅스",
-    cat: "식비",
-    amount: "5,500원",
-    date: "2026. 04. 11",
-    time: "오후 03:10",
-    payment: "카드",
-    memo: "오후 회의 전 커피",
-    reason: "회의 전 집중을 위해 커피를 구매했어요.",
-    aiStatus: "중립",
-    aiMessage: "단발성 지출이지만 이번 주 카페 지출이 조금 늘었어요.",
-  },
-  {
-    id: "expense-netflix",
-    day: 12,
-    icon: "🎬",
-    name: "넷플릭스",
-    cat: "고정비",
-    amount: "28,000원",
-    date: "2026. 04. 12",
-    time: "오전 09:20",
-    payment: "카드",
-    memo: "월 정기 구독 결제",
-    reason: "매달 사용하는 영상 구독 서비스라 고정 지출로 분류했어요.",
-    aiStatus: "합리적",
-    aiMessage: "정기 결제 패턴과 예산 범위 안에 있어 안정적인 소비로 보여요.",
-  },
-  {
-    id: "expense-lunch",
-    day: 12,
-    icon: "🍱",
-    name: "점심식사",
-    cat: "식비",
-    amount: "12,000원",
-    date: "2026. 04. 12",
-    time: "오후 12:35",
-    payment: "체크카드",
-    memo: "회사 근처 점심",
-    reason: "업무 중 필요한 식사였고 하루 식비 예산 안에서 사용했어요.",
-    aiStatus: "합리적",
-    aiMessage: "평균 점심 지출과 비슷해 과소비 신호는 낮아요.",
-  },
-  {
-    id: "expense-daiso",
-    day: 27,
-    icon: "🛒",
-    name: "다이소",
-    cat: "쇼핑",
-    amount: "5,000원",
-    date: "2026. 04. 27",
-    time: "오후 06:40",
-    payment: "체크카드",
-    memo: "생활용품 구매",
-    reason: "필요한 소모품을 한 번에 구매했어요.",
-    aiStatus: "합리적",
-    aiMessage: "생활 필수품 구매로 예산 범위 안에 있어요.",
-  },
-];
-
-const INCOME_EVENTS = {
-  10: [{ text: "월급 1,000,000", type: "income" }],
-};
 
 const CATEGORY_BARS = [
   { label: "식비", pct: 25, amount: "10,000", color: "var(--home-bar-green)" },
@@ -111,61 +30,86 @@ const DONUT_LEGEND = [
 ];
 
 const AI_PENDING_COUNT = 3;
-const CALENDAR_YEAR = 2026;
-const CALENDAR_MONTH_INDEX = 3;
-const CALENDAR_MONTH_LABEL = "04";
-const CALENDAR_DAYS_IN_MONTH = new Date(
-  CALENDAR_YEAR,
-  CALENDAR_MONTH_INDEX + 1,
-  0,
-).getDate();
 
-function buildApril2026Cells() {
-  const firstDay = new Date(CALENDAR_YEAR, CALENDAR_MONTH_INDEX, 1).getDay();
-  return [
-    ...Array.from({ length: firstDay }, () => null),
-    ...Array.from({ length: CALENDAR_DAYS_IN_MONTH }, (_, index) => index + 1),
-  ];
+// 합리성 시그널(백엔드 enum) → 한글 상태 + 배지 색상 클래스.
+const SIGNAL_STATUS = { GREEN: "합리적", GRAY: "중립", RED: "비합리적" };
+const SIGNAL_BADGE = {
+  GREEN: "ledger-history-badge--green",
+  GRAY: "ledger-history-badge--gray",
+  RED: "ledger-history-badge--red",
+};
+
+// 카테고리/타입 → 아이콘 (백엔드가 아이콘을 주지 않으므로 프론트에서 매핑).
+const CATEGORY_ICON = {
+  식비: "🍚",
+  카페: "☕",
+  문화: "🎟️",
+  쇼핑: "🛍️",
+  교통: "🚌",
+  생활: "🧺",
+  고정비: "🏠",
+  의료: "💊",
+  교육: "📚",
+};
+
+function iconFor(row) {
+  if (row.type === "INCOME") return "💰";
+  return CATEGORY_ICON[row.cat] || "💸";
 }
 
-function parseWon(amount) {
-  return Number(amount.replace(/[^\d]/g, ""));
+function pad2(n) {
+  return String(n).padStart(2, "0");
 }
 
 function formatWon(value) {
   return `${value.toLocaleString("ko-KR")}원`;
 }
 
-function getDayLabel(day) {
+// "2026-06-09" → "2026. 06. 09"
+function formatDateDisplay(isoDate) {
+  const [y, m, d] = isoDate.split("-");
+  return `${y}. ${m}. ${d}`;
+}
+
+function dayLabel(year, month, day) {
   const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "short" }).format(
-    new Date(CALENDAR_YEAR, CALENDAR_MONTH_INDEX, day),
+    new Date(year, month - 1, day),
   );
-  return `4월 ${day}일 (${weekday})`;
+  return `${month}월 ${day}일 (${weekday})`;
 }
 
-function getDateDisplay(day) {
-  return `${CALENDAR_YEAR}. ${CALENDAR_MONTH_LABEL}. ${String(day).padStart(2, "0")}`;
+// 백엔드 LedgerResponse → 화면이 쓰는 행 형태로 변환.
+function toRow(item) {
+  const day = Number(item.date.split("-")[2]);
+  return {
+    id: `${item.type}-${item.id}`,
+    type: item.type, // "EXPENSE" | "INCOME"
+    day,
+    name: item.item || (item.type === "INCOME" ? "수입" : "지출"),
+    cat: item.category || "—",
+    amountNum: item.amount,
+    amount: formatWon(item.amount),
+    date: formatDateDisplay(item.date),
+    signal: item.signal, // GREEN | GRAY | RED | null
+    aiStatus: item.signal ? SIGNAL_STATUS[item.signal] : null,
+  };
 }
-
-function getExpensesByDay(day) {
-  return EXPENSES.filter((expense) => expense.day === day);
-}
-
-function getCalendarEvents(day) {
-  const expenseEvents = getExpensesByDay(day).map((expense) => ({
-    text: `${expense.name} ${expense.amount.replace("원", "")}`,
-    type: "expense",
-  }));
-  return [...(INCOME_EVENTS[day] || []), ...expenseEvents];
-}
-
-const CALENDAR_CELLS = buildApril2026Cells();
 
 function WalletPage({ user, onLogout }) {
   const navigate = useNavigate();
   const nickname = user?.nickname || "사용자";
-  const [selectedDay, setSelectedDay] = useState(12);
-  const [selectedExpense, setSelectedExpense] = useState(() => getExpensesByDay(12)[0]);
+
+  // 보고 있는 달 (1-based month). 처음엔 실제 이번 달부터.
+  const today = useMemo(() => new Date(), []);
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
+
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const [showExpenseHistory, setShowExpenseHistory] = useState(false);
   const [isAiActive, setIsAiActive] = useState(() => new Date().getHours() >= 20);
 
@@ -176,30 +120,89 @@ function WalletPage({ user, onLogout }) {
     return () => clearInterval(id);
   }, []);
 
-  const selectedDayExpenses = getExpensesByDay(selectedDay);
-  const selectedDayTotal = selectedDayExpenses.reduce(
-    (sum, expense) => sum + parseWon(expense.amount),
-    0,
-  );
-  const historyTotal = EXPENSES.reduce((sum, expense) => sum + parseWon(expense.amount), 0);
+  // 달이 바뀌면 그 달 데이터를 다시 불러오고 선택 초기화.
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    setSelectedDay(null);
+    setSelectedId(null);
+    getMonthlyLedger(`${viewYear}-${pad2(viewMonth)}`)
+      .then((data) => {
+        if (!alive) return;
+        setRows(Array.isArray(data) ? data.map(toRow) : []);
+      })
+      .catch((e) => {
+        if (!alive) return;
+        setError(e.message || "불러오기 실패");
+        setRows([]);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [viewYear, viewMonth]);
+
+  // 달력 셀 구성 (선행 빈칸 + 1일~말일).
+  const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
+  const firstWeekday = new Date(viewYear, viewMonth - 1, 1).getDay();
+  const calendarCells = [
+    ...Array.from({ length: firstWeekday }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+
+  // 일자별 행 그룹.
+  const rowsByDay = useMemo(() => {
+    const map = new Map();
+    rows.forEach((row) => {
+      if (!map.has(row.day)) map.set(row.day, []);
+      map.get(row.day).push(row);
+    });
+    return map;
+  }, [rows]);
+
+  const expenseRows = rows.filter((r) => r.type === "EXPENSE");
+  const monthExpenseTotal = expenseRows.reduce((sum, r) => sum + r.amountNum, 0);
+
+  const selectedDayRows = selectedDay ? rowsByDay.get(selectedDay) ?? [] : [];
+  const selectedDayTotal = selectedDayRows
+    .filter((r) => r.type === "EXPENSE")
+    .reduce((sum, r) => sum + r.amountNum, 0);
+  const selectedRow = selectedId
+    ? rows.find((r) => r.id === selectedId) ?? null
+    : null;
+
+  // 보고 있는 달이 실제 이번 달일 때만 '오늘' 표시.
+  const todayDay =
+    viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1
+      ? today.getDate()
+      : null;
+
+  const changeMonth = (delta) => {
+    let m = viewMonth + delta;
+    let y = viewYear;
+    if (m < 1) {
+      m = 12;
+      y -= 1;
+    } else if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+    setViewYear(y);
+    setViewMonth(m);
+  };
 
   const selectDay = (day) => {
-    const dayExpenses = getExpensesByDay(day);
     setSelectedDay(day);
-    setSelectedExpense(dayExpenses[0] ?? null);
+    const dayRows = rowsByDay.get(day) ?? [];
+    setSelectedId(dayRows[0]?.id ?? null);
   };
 
-  const moveSelectedDay = (direction) => {
-    const nextDay = Math.min(
-      CALENDAR_DAYS_IN_MONTH,
-      Math.max(1, selectedDay + direction),
-    );
-    selectDay(nextDay);
-  };
-
-  const selectExpense = (expense) => {
-    setSelectedDay(expense.day);
-    setSelectedExpense(expense);
+  const selectRow = (row) => {
+    setSelectedDay(row.day);
+    setSelectedId(row.id);
   };
 
   return (
@@ -215,23 +218,23 @@ function WalletPage({ user, onLogout }) {
             {nickname}님, 오늘도 보리와 함께해요!
           </h1>
           <div className="ledger-header-actions">
-            <div className="ledger-date-nav" aria-label="날짜 선택">
+            <div className="ledger-date-nav" aria-label="달 선택">
               <button
                 type="button"
                 className="ledger-date-arrow"
-                aria-label="이전 날짜"
-                disabled={selectedDay === 1}
-                onClick={() => moveSelectedDay(-1)}
+                aria-label="이전 달"
+                onClick={() => changeMonth(-1)}
               >
                 ‹
               </button>
-              <span className="ledger-date-display">{getDateDisplay(selectedDay)}</span>
+              <span className="ledger-date-display">
+                {viewYear}. {pad2(viewMonth)}
+              </span>
               <button
                 type="button"
                 className="ledger-date-arrow"
-                aria-label="다음 날짜"
-                disabled={selectedDay === CALENDAR_DAYS_IN_MONTH}
-                onClick={() => moveSelectedDay(1)}
+                aria-label="다음 달"
+                onClick={() => changeMonth(1)}
               >
                 ›
               </button>
@@ -264,10 +267,13 @@ function WalletPage({ user, onLogout }) {
                   전체 지출 내역
                 </h2>
                 <p className="ledger-history-sub">
-                  이번 달 등록된 지출 {EXPENSES.length}건을 한 번에 확인해요.
+                  {viewYear}년 {viewMonth}월 등록된 지출 {expenseRows.length}건을
+                  한 번에 확인해요.
                 </p>
               </div>
-              <span className="ledger-history-total">총 {formatWon(historyTotal)}</span>
+              <span className="ledger-history-total">
+                총 {formatWon(monthExpenseTotal)}
+              </span>
             </div>
 
             <div className="ledger-history-table-wrap">
@@ -277,44 +283,60 @@ function WalletPage({ user, onLogout }) {
                     <th>날짜</th>
                     <th>내역</th>
                     <th>카테고리</th>
-                    <th>결제수단</th>
                     <th>AI 판정</th>
                     <th>금액</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {EXPENSES.map((expense) => (
+                  {expenseRows.map((row) => (
                     <tr
-                      key={expense.id}
+                      key={row.id}
                       role="button"
                       tabIndex={0}
-                      className={selectedExpense?.id === expense.id ? "is-selected" : ""}
-                      onClick={() => selectExpense(expense)}
+                      className={selectedId === row.id ? "is-selected" : ""}
+                      onClick={() => selectRow(row)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          selectExpense(expense);
+                          selectRow(row);
                         }
                       }}
                     >
                       <td>
-                        <span className="ledger-history-date">{expense.date}</span>
-                        <span className="ledger-history-time">{expense.time}</span>
+                        <span className="ledger-history-date">{row.date}</span>
                       </td>
                       <td>
                         <span className="ledger-history-name">
-                          {expense.icon} {expense.name}
+                          {iconFor(row)} {row.name}
                         </span>
-                        <span className="ledger-history-memo">{expense.memo}</span>
                       </td>
-                      <td>{expense.cat}</td>
-                      <td>{expense.payment}</td>
+                      <td>{row.cat}</td>
                       <td>
-                        <span className="ledger-history-badge">{expense.aiStatus}</span>
+                        {row.aiStatus ? (
+                          <span
+                            className={`ledger-history-badge ${
+                              SIGNAL_BADGE[row.signal] ||
+                              "ledger-history-badge--gray"
+                            }`}
+                          >
+                            {row.aiStatus}
+                          </span>
+                        ) : (
+                          <span className="ledger-history-badge ledger-history-badge--gray">
+                            미판정
+                          </span>
+                        )}
                       </td>
-                      <td className="ledger-history-amount">{expense.amount}</td>
+                      <td className="ledger-history-amount">{row.amount}</td>
                     </tr>
                   ))}
+                  {!loading && expenseRows.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="ledger-history-empty-cell">
+                        이 달에는 등록된 지출이 없어요.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -331,7 +353,7 @@ function WalletPage({ user, onLogout }) {
               ))}
             </div>
             <div className="ledger-cal-grid">
-              {CALENDAR_CELLS.map((day, index) => {
+              {calendarCells.map((day, index) => {
                 if (day === null) {
                   return (
                     <div
@@ -342,15 +364,15 @@ function WalletPage({ user, onLogout }) {
                   );
                 }
 
-                const events = getCalendarEvents(day);
-                const isToday = day === 12;
+                const dayRows = rowsByDay.get(day) ?? [];
+                const isToday = day === todayDay;
                 return (
                   <button
                     key={day}
                     type="button"
                     className={[
                       "ledger-cal-cell",
-                      events.length > 0 ? "ledger-cal-cell--highlight" : "",
+                      dayRows.length > 0 ? "ledger-cal-cell--highlight" : "",
                       isToday ? "ledger-cal-cell--today" : "",
                       selectedDay === day ? "ledger-cal-cell--selected" : "",
                     ]
@@ -361,12 +383,14 @@ function WalletPage({ user, onLogout }) {
                   >
                     <span className="ledger-cal-day">{day}</span>
                     <div className="ledger-cal-events">
-                      {events.map((event) => (
+                      {dayRows.map((row) => (
                         <span
-                          key={`${day}-${event.text}`}
-                          className={`ledger-cal-event ledger-cal-event--${event.type}`}
+                          key={row.id}
+                          className={`ledger-cal-event ledger-cal-event--${
+                            row.type === "INCOME" ? "income" : "expense"
+                          }`}
                         >
-                          {event.text}
+                          {row.name} {row.amountNum.toLocaleString("ko-KR")}
                         </span>
                       ))}
                     </div>
@@ -374,27 +398,41 @@ function WalletPage({ user, onLogout }) {
                 );
               })}
             </div>
+            {loading && (
+              <p className="ledger-cal-state">불러오는 중…</p>
+            )}
+            {error && !loading && (
+              <p className="ledger-cal-state ledger-cal-state--error">
+                {error}
+              </p>
+            )}
           </section>
 
           <section className="home-card ledger-day-card">
             <div className="ledger-day-head">
               <h2 className="home-card-title home-card-title--sm">
-                {getDayLabel(selectedDay)}
+                {selectedDay
+                  ? dayLabel(viewYear, viewMonth, selectedDay)
+                  : "날짜를 선택하세요"}
               </h2>
-              <span className="ledger-day-total">{formatWon(selectedDayTotal)}</span>
+              {selectedDay && (
+                <span className="ledger-day-total">
+                  {formatWon(selectedDayTotal)}
+                </span>
+              )}
             </div>
 
             <ul className="home-tx-list">
-              {selectedDayExpenses.map((row) => (
+              {selectedDayRows.map((row) => (
                 <li key={row.id} className="ledger-detail-list-item">
                   <button
                     type="button"
                     className={`home-tx-row ledger-detail-row ${
-                      selectedExpense?.id === row.id ? "is-selected" : ""
+                      selectedId === row.id ? "is-selected" : ""
                     }`}
-                    onClick={() => setSelectedExpense(row)}
+                    onClick={() => setSelectedId(row.id)}
                   >
-                    <span className="home-tx-icon">{row.icon}</span>
+                    <span className="home-tx-icon">{iconFor(row)}</span>
                     <div className="home-tx-mid">
                       <span className="home-tx-name">{row.name}</span>
                       <span className="home-tx-cat">{row.cat}</span>
@@ -405,57 +443,72 @@ function WalletPage({ user, onLogout }) {
               ))}
             </ul>
 
-            {selectedDayExpenses.length === 0 && (
+            {selectedDay && selectedDayRows.length === 0 && (
               <div className="ledger-day-empty">
-                <p>이 날짜에는 등록된 지출 내역이 없어요.</p>
+                <p>이 날짜에는 등록된 내역이 없어요.</p>
               </div>
             )}
 
-            {selectedExpense && (
+            {selectedRow && (
               <div className="ledger-expense-detail" aria-live="polite">
                 <div className="ledger-expense-detail-head">
-                  <div>
-                    <p className="ledger-detail-eyebrow">상세 내역</p>
-                    <h3 className="ledger-detail-title">
-                      {selectedExpense.icon} {selectedExpense.name}
-                    </h3>
+                  <p className="ledger-detail-eyebrow">상세 내역</p>
+                  <div className="ledger-detail-title-row">
+                    <span className="ledger-detail-icon" aria-hidden>
+                      {iconFor(selectedRow)}
+                    </span>
+                    <h3 className="ledger-detail-title">{selectedRow.name}</h3>
+                    <span className="ledger-detail-amount">
+                      {selectedRow.amount}
+                    </span>
                   </div>
-                  <span className="ledger-detail-amount">{selectedExpense.amount}</span>
                 </div>
 
                 <dl className="ledger-detail-grid">
                   <div>
                     <dt>날짜</dt>
-                    <dd>{selectedExpense.date}</dd>
+                    <dd>{selectedRow.date}</dd>
                   </div>
                   <div>
-                    <dt>시간</dt>
-                    <dd>{selectedExpense.time}</dd>
+                    <dt>구분</dt>
+                    <dd>
+                      <span
+                        className={`ledger-detail-type ${
+                          selectedRow.type === "INCOME"
+                            ? "ledger-detail-type--income"
+                            : "ledger-detail-type--expense"
+                        }`}
+                      >
+                        {selectedRow.type === "INCOME" ? "수입" : "지출"}
+                      </span>
+                    </dd>
                   </div>
                   <div>
                     <dt>카테고리</dt>
-                    <dd>{selectedExpense.cat}</dd>
+                    <dd>{selectedRow.cat}</dd>
                   </div>
                   <div>
                     <dt>결제수단</dt>
-                    <dd>{selectedExpense.payment}</dd>
+                    <dd>{selectedRow.payment}</dd>
                   </div>
                 </dl>
 
                 <div className="ledger-detail-note">
                   <span>메모</span>
-                  <p>{selectedExpense.memo}</p>
+                  <p>{selectedRow.memo}</p>
                 </div>
                 <div className="ledger-detail-note">
                   <span>소비 사유</span>
-                  <p>{selectedExpense.reason}</p>
+                  <p>{selectedRow.reason}</p>
                 </div>
-                <div className="ledger-detail-ai">
-                  <span className="ledger-detail-ai-badge">
-                    AI 판정 · {selectedExpense.aiStatus}
-                  </span>
-                  <p>{selectedExpense.aiMessage}</p>
-                </div>
+                {selectedRow.aiStatus && (
+                  <div className="ledger-detail-ai">
+                    <span className="ledger-detail-ai-badge">
+                      AI 판정 · {selectedRow.aiStatus}
+                    </span>
+                    {selectedRow.aiMessage && <p>{selectedRow.aiMessage}</p>}
+                  </div>
+                )}
               </div>
             )}
           </section>

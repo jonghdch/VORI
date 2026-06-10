@@ -34,6 +34,11 @@ export const listExpensesByDate = (date) => get(`/expenses?date=${date}`);
 export const listIncomesByDate = (date) => get(`/incomes?date=${date}`);
 export const listSavingsByDate = (date) => get(`/savings?date=${date}`);
 
+// 월별 가계부 통합 조회 — GET /api/ledger?yearMonth=2026-06.
+// 그 달 지출+수입을 날짜 오름차순으로 반환 (LedgerResponse[]).
+export const getMonthlyLedger = (yearMonth) =>
+  get(`/ledger?yearMonth=${yearMonth}`);
+
 // 카테고리 트리 (대분류 + 소분류). 가계부 확인 화면에서 categoryId → 이름 매핑용.
 export const listCategoryTree = () => get(`/categories`);
 
