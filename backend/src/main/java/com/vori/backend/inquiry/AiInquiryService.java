@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,6 +34,7 @@ public class AiInquiryService {
     private final ExpenseRepository expenseRepository;
     private final CategoryRepository categoryRepository;
     private final GeminiClient geminiClient;
+    private final TransactionTemplate transactionTemplate;
 
     /** 특정 날짜의 미답변 inquiry 목록 — Step 2 화면용. */
     @Transactional(readOnly = true)
@@ -95,8 +97,13 @@ public class AiInquiryService {
         }
     }
 
-    @Transactional
+    /**
+     * 외부 API(Gemini, read timeout 최대 15s)를 트랜잭션 밖에서 호출한다.
+     * 메서드 전체에 @Transactional 을 걸면 응답 대기 동안 DB 커넥션을 점유 →
+     * 동시 답변 몇 건이면 커넥션 풀 고갈. 검증(읽기) → Gemini → 짧은 쓰기 순으로 분리.
+     */
     public void answerInquiry(Long inquiryId, Long userId, AnswerRequest req) {
+        // 1) 검증 — 짧은 읽기 (repo 자체 트랜잭션)
         AiInquiry inquiry = aiInquiryRepository.findById(inquiryId)
                 .filter(i -> i.getUserId().equals(userId))
                 .orElseThrow(() -> new IllegalArgumentException("질문을 찾을 수 없습니다."));
@@ -104,14 +111,21 @@ public class AiInquiryService {
         // 이미 답변된 inquiry 는 재처리 X — 클라이언트 retry·중복 호출 시 Gemini 재호출/signal 재보정 방지
         if (inquiry.getAnsweredAt() != null) return;
 
+        // 2) 외부 API — 트랜잭션·커넥션 비점유 상태로 호출
         ReasonCategory reason = geminiClient.classifyAnswer(inquiry.getQuestion(), req.answerText());
 
-        Expense expense = expenseRepository.findById(inquiry.getExpenseId()).orElseThrow();
-        Signal newSignal = computeSignalFinal(expense.getSignalFinal(), reason);
-        boolean adjusted = newSignal != expense.getSignalFinal();
+        // 3) 짧은 쓰기 트랜잭션
+        transactionTemplate.executeWithoutResult(tx -> {
+            AiInquiry fresh = aiInquiryRepository.findById(inquiryId).orElseThrow();
+            if (fresh.getAnsweredAt() != null) return; // 동시 답변 멱등 가드 재확인
 
-        inquiry.recordAnswer(req.answerText(), reason, adjusted);
-        expense.updateSignalFinal(newSignal);
+            Expense expense = expenseRepository.findById(fresh.getExpenseId()).orElseThrow();
+            Signal newSignal = computeSignalFinal(expense.getSignalFinal(), reason);
+            boolean adjusted = newSignal != expense.getSignalFinal();
+
+            fresh.recordAnswer(req.answerText(), reason, adjusted);
+            expense.updateSignalFinal(newSignal);
+        });
     }
 
     private Signal computeSignalFinal(Signal original, ReasonCategory reason) {
