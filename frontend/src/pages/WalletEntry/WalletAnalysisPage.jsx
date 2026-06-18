@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import StepIndicator from "./StepIndicator";
-import { isPastDate, toIsoDate } from "./utils";
+import { toIsoDate } from "./utils";
 import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
 import "./WalletEntry.css";
 
-// Step 2 — 소비 분석.
+// 소비 분석 — /wallet 의 ledger-ai-card 에서 오후 8시~자정 이벤트로 진입하는 독립 페이지.
+// (더 이상 가계부 작성 위저드의 단계가 아니다.)
 // - 백엔드가 z-score 로 anomaly 감지한 expense 만 AI 질문 생성됨 (비동기).
-// - 질문이 없으면 안내 + "다음 단계" 만 표시.
-// - 있으면 페이지네이션으로 한 건씩 답변. "다음에 할게요" 누르면 답변 안 한 채로 넘어감.
-// - 과거 날짜는 AI 분석 안 해서 무조건 Step 3 로 직행 (기존 로직 유지).
+// - 질문이 없으면 안내 + "완료" 만 표시.
+// - 있으면 페이지네이션으로 한 건씩 답변. "다음에 할게요" 누르면 답변 안 한 채로 닫음.
+// - 오후 8시~자정 밖에서 직접 URL 로 들어오면 /wallet 로 돌려보낸다.
 function WalletAnalysisPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
+  // 이벤트 활성 시간대(오후 8시~자정) 가드. 카드 버튼과 동일 기준.
+  const isEventOpen = new Date().getHours() >= 20;
 
   const [loading, setLoading] = useState(true);
   const [inquiries, setInquiries] = useState([]);
@@ -25,13 +27,10 @@ function WalletAnalysisPage() {
   // 클라이언트도 skip 해 불필요한 round-trip 차단.
   const submittedRef = useRef(new Set());
 
-  // 과거 날짜는 Step 2 자체를 우회
-  const past = isPastDate(dateStr);
-
   // mount 시 fetch. Gemini 비동기 (질문 생성에 보통 5~10s) 라 즉시 응답엔 비어있음.
   // 2s 간격으로 최대 6번 polling — 첫 호출 + 5회 retry = 최대 10s 대기.
   useEffect(() => {
-    if (past) return;
+    if (!isEventOpen) return;
     let cancelled = false;
     let attempts = 0;
     const MAX_RETRIES = 5;
@@ -52,18 +51,20 @@ function WalletAnalysisPage() {
     return () => {
       cancelled = true;
     };
-  }, [dateStr, past]);
+  }, [dateStr, isEventOpen]);
 
-  if (past) {
-    return <Navigate to={`/wallet/new/confirm?date=${dateStr}`} replace />;
+  // 활성 시간대(오후 8시~자정) 밖이면 가계부로 돌려보낸다.
+  if (!isEventOpen) {
+    return <Navigate to="/wallet" replace />;
   }
 
   const total = inquiries.length;
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () => setPage((p) => Math.min(total, p + 1));
 
-  const goConfirm = () => navigate(`/wallet/new/confirm?date=${dateStr}`);
-  const goBack = () => navigate(`/wallet/new?date=${dateStr}`);
+  // 이벤트 종료/닫기는 모두 가계부로 복귀.
+  const goDone = () => navigate("/wallet");
+  const goBack = () => navigate("/wallet");
 
   // 답변 입력된 inquiry 들만 POST. 끝나면 Step 3 로 이동.
   const submitAll = async () => {
@@ -78,7 +79,7 @@ function WalletAnalysisPage() {
         await answerInquiry(inq.inquiryId, text);
         submittedRef.current.add(inq.inquiryId);
       }
-      goConfirm();
+      goDone();
     } catch (e) {
       setSubmitError(e.message || "답변 저장 중 오류가 발생했어요");
     } finally {
@@ -100,8 +101,6 @@ function WalletAnalysisPage() {
       </header>
 
       <main className="ledger-main">
-        <StepIndicator current={2} />
-
         {loading ? (
           <div className="ledger-center-y">
             <div className="ledger-title-block ledger-title-block-center">
@@ -112,21 +111,18 @@ function WalletAnalysisPage() {
             </div>
           </div>
         ) : total === 0 ? (
-          // ───── 분석할 항목 없음 — 안내 + 다음 단계만 ─────
+          // ───── 분석할 항목 없음 — 안내 + 닫기만 ─────
           <div className="ledger-center-y">
             <div className="ledger-title-block">
               <h1 className="ledger-title">예외적인 지출이 없어요</h1>
               <p className="ledger-subtitle">
-                평소와 비슷한 패턴이라 추가 질문이 필요하지 않아요. 바로 확인 단계로 넘어갈게요.
+                평소와 비슷한 패턴이라 오늘은 분석할 지출이 없어요.
               </p>
             </div>
             <div className="ledger-actions">
               <div className="ledger-actions-row">
-                <button type="button" className="ledger-back" onClick={goBack}>
-                  돌아가기
-                </button>
-                <button type="button" className="ledger-next" onClick={goConfirm}>
-                  다음 단계
+                <button type="button" className="ledger-next" onClick={goDone}>
+                  가계부로 돌아가기
                 </button>
               </div>
             </div>
@@ -136,7 +132,7 @@ function WalletAnalysisPage() {
           <>
             <div className="ledger-title-block">
               <h1 className="ledger-title">
-                등록하기 전 몇가지만 물어볼게요
+                오늘의 소비를 분석해볼게요
                 <span className="ledger-info-wrap">
                   <button
                     type="button"
@@ -253,7 +249,7 @@ function WalletAnalysisPage() {
               <button
                 type="button"
                 className="ledger-skip-link"
-                onClick={goConfirm}
+                onClick={goDone}
                 disabled={submitting}
               >
                 다음에 할게요
@@ -273,7 +269,7 @@ function WalletAnalysisPage() {
                   onClick={submitAll}
                   disabled={submitting}
                 >
-                  {submitting ? "저장 중…" : "다음 단계"}
+                  {submitting ? "저장 중…" : "완료"}
                 </button>
               </div>
             </div>

@@ -573,6 +573,7 @@ function WalletPage({ user, onLogout }) {
                     : "ledger-ai-action-btn--waiting"
                 }`}
                 disabled={!isAiActive}
+                onClick={() => navigate("/wallet/analysis")}
               >
                 {isAiActive ? "판정 시작하기" : "대기 중 (오후 8시 활성화)"}
               </button>

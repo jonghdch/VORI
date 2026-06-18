@@ -64,8 +64,8 @@ const ADMIN_PAGES = {
 //   /home                   홈 대시보드 (인증 필요)
 //   /wallet                 가계부 달력/조회 (인증 필요)
 //   /wallet/new             가계부 작성 Step 1 (입력)
-//   /wallet/new/analysis    Step 2 (AI 사유 질문)
-//   /wallet/new/confirm     Step 3 (확인)
+//   /wallet/new/confirm     Step 2 (확인)
+//   /wallet/analysis        소비 분석 (오후 8시~자정 이벤트, ledger-ai-card 진입)
 //   /raise                  펫 키우기
 //   /shop                   상점
 //   /settings               환경설정
@@ -163,8 +163,10 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* 소비 분석 — 위저드 단계가 아니라 /wallet 의 ledger-ai-card 에서
+              오후 8시~자정 이벤트로 진입하는 독립 페이지. */}
           <Route
-            path="/wallet/new/analysis"
+            path="/wallet/analysis"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <WalletAnalysisPage />

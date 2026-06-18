@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import StepIndicator from "./StepIndicator";
 import {
   formatToday,
-  isPastDate,
   parseIsoDate,
   toIsoDate,
 } from "./utils";
@@ -41,7 +40,6 @@ function WalletConfirmPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
-  const past = isPastDate(dateStr);
 
   const [expenses, setExpenses] = useState([]);
   const [incomes, setIncomes] = useState([]);
@@ -136,11 +134,8 @@ function WalletConfirmPage({ user }) {
   const isOpen = (k) => !collapsed[k];
   const toggleOpen = (k) => setCollapsed((p) => ({ ...p, [k]: !p[k] }));
 
-  const goBack = () => {
-    const qs = `?date=${dateStr}`;
-    if (past) navigate(`/wallet/new${qs}`);
-    else navigate(`/wallet/new/analysis${qs}`);
-  };
+  // 확인 직전 단계는 항상 입력(Step 1). 소비 분석은 작성 흐름에서 빠졌다.
+  const goBack = () => navigate(`/wallet/new?date=${dateStr}`);
 
   return (
     <div className="ledger">
@@ -156,7 +151,7 @@ function WalletConfirmPage({ user }) {
       </header>
 
       <main className="ledger-main">
-        <StepIndicator current={past ? 2 : 3} includeAnalysis={!past} />
+        <StepIndicator current={2} includeAnalysis={false} />
 
         <div className="ledger-title-block ledger-title-block-center">
           <h1 className="ledger-title">

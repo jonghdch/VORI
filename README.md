@@ -185,7 +185,7 @@ navigate("/login");
 
 | 폴더 | 역할 | 예시 |
 |------|------|------|
-| `pages/` | 페이지 단위 컴포넌트 | `Home`, `Wallet`(가계부 조회), `WalletEntry`(작성 3-step), `Admin`, `Settings` |
+| `pages/` | 페이지 단위 컴포넌트 | `Home`, `Wallet`(가계부 조회 + 소비 분석 이벤트), `WalletEntry`(작성 2-step), `Admin`, `Settings` |
 | `components/` | 재사용 컴포넌트 | `AppShell`(상단바+사이드바 셸), `AppRightSidebar` |
 | `api/` | 백엔드 호출 함수 | axios wrapper |
 | `hooks/` | 커스텀 훅 | `useAuth`, `useExpense` |
