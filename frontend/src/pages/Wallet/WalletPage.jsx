@@ -424,6 +424,7 @@ function WalletPage({ user, onLogout }) {
             )}
           </section>
 
+          <div className="ledger-day-col">
           <section className="home-card ledger-day-card">
             <div className="ledger-day-head">
               <h2 className="home-card-title home-card-title--sm">
@@ -438,6 +439,7 @@ function WalletPage({ user, onLogout }) {
               )}
             </div>
 
+            <div className="ledger-day-body">
             <ul className="home-tx-list">
               {selectedDayRows.map((row) => (
                 <li key={row.id} className="ledger-detail-list-item">
@@ -531,7 +533,9 @@ function WalletPage({ user, onLogout }) {
                 )}
               </div>
             )}
+            </div>
           </section>
+          </div>
         </div>
 
         <div className="ledger-row ledger-row-bottom">

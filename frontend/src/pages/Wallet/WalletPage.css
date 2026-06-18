@@ -271,7 +271,21 @@
 
 .ledger-row-calendar {
   grid-template-columns: 1.55fr 1fr;
+  /* 캘린더 높이를 기준으로 두 열의 세로 길이를 맞춘다.
+     날짜 카드는 .ledger-day-col 안에서 absolute 로 채워지므로(아래 참조)
+     행 높이는 캘린더 내용만으로 결정 → 캘린더엔 빈 여백이 안 생기고,
+     날짜 카드는 캘린더 높이에 맞춰지며 내용이 길면 내부 스크롤된다. */
   align-items: stretch;
+}
+
+/* 날짜 카드 래퍼 — 행 높이(=캘린더)에 맞춰 늘어나고, 카드는 이 박스를 꽉 채운다. */
+.ledger-day-col {
+  position: relative;
+}
+
+.ledger-day-col > .ledger-day-card {
+  position: absolute;
+  inset: 0;
 }
 
 .ledger-calendar-card {
@@ -382,6 +396,7 @@
 .ledger-day-card {
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .ledger-day-head {
@@ -390,6 +405,17 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+/* 헤더 아래 본문(거래 리스트 + 상세)만 스크롤. 헤더는 고정. */
+.ledger-day-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* 스크롤바가 내용과 겹치지 않게 약간의 여백 */
+  margin-right: -8px;
+  padding-right: 8px;
 }
 
 .ledger-day-head .home-card-title--sm {
@@ -831,6 +857,12 @@
   .ledger-row-calendar,
   .ledger-row-bottom {
     grid-template-columns: 1fr;
+  }
+
+  /* 1열로 쌓이면 더 이상 캘린더 높이에 맞출 필요가 없다.
+     absolute 해제해 카드가 제 내용 높이대로 자연스럽게 흐르게. */
+  .ledger-day-col > .ledger-day-card {
+    position: static;
   }
 
   .ledger-bottom-right {
