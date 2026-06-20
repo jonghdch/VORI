@@ -75,6 +75,24 @@ repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"
 
 > Windows 에서 로그인 안 될 때 트러블슈팅은 위 [백엔드 셋업](#백엔드-spring-boot) 주의 박스 참조.
 
+### 초기 세팅 파일 (`.env`)
+
+비밀값은 코드가 아니라 repo 루트의 `.env` 에 둔다. **`.env` 는 gitignore(절대 커밋 X)**, 공유되는 건 키 이름만 담은 **`.env.example`** 뿐이다. 새 환경에서는 이걸 복사해서 채운다:
+
+```bash
+cp .env.example .env   # repo 루트에서
+```
+
+| 키 | 필수 | 설명 |
+|----|------|------|
+| `DB_USERNAME` | ✅ | MySQL 계정 (기본 `root`) |
+| `DB_PASSWORD` | ✅ | MySQL 비밀번호 (Windows root 는 보통 비번 있음 → 반드시 명시. 없으면 빈 값) |
+| `GEMINI_API_KEY` | ✅ | Gemini 키 — https://aistudio.google.com/app/apikey |
+| `GEMINI_MODEL` | — | 사용할 모델 (기본 `gemini-2.0-flash`) |
+
+> 백엔드는 `spring.config.import` 로 `.env` 를 **repo 루트 기준 상대경로**로 읽는다. 그래서 백엔드는 항상 **repo 루트를 작업 디렉터리로** 실행해야 한다(위 1회 준비 4번).
+> 편집기에서 `.env` 저장 시 **줄바꿈은 LF** 로 (CRLF 면 값 끝에 `\r` 이 붙어 DB 비번이 깨질 수 있음).
+
 ## 파일별 역할 가이드
 
 ---
