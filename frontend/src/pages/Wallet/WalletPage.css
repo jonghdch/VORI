@@ -230,6 +230,12 @@
   color: #c0504a;
 }
 
+/* AI 판정 대상이 아닌 지출 — 배지 대신 옅은 대시 */
+.ledger-history-ai-none {
+  color: var(--home-muted);
+  opacity: 0.5;
+}
+
 .ledger-history-empty-cell {
   text-align: center;
   padding: 28px 0;

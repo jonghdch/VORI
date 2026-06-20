@@ -100,7 +100,9 @@ function toRow(item) {
     amount: formatWon(item.amount),
     date: formatDateDisplay(item.date),
     signal: item.signal, // GREEN | GRAY | RED | null
-    aiStatus: item.signal ? SIGNAL_STATUS[item.signal] : null,
+    // AI 판정은 예외적 지출(aiJudged)에만. 평소 지출은 배지 미표시.
+    aiJudged: Boolean(item.aiJudged),
+    aiStatus: item.aiJudged && item.signal ? SIGNAL_STATUS[item.signal] : null,
     payment: item.paymentMethod ? PAYMENT_LABEL[item.paymentMethod] : null,
     memo: item.memo || "",
   };
@@ -338,9 +340,8 @@ function WalletPage({ user, onLogout }) {
                             {row.aiStatus}
                           </span>
                         ) : (
-                          <span className="ledger-history-badge ledger-history-badge--gray">
-                            미판정
-                          </span>
+                          // 예외 지출이 아니면 AI 판정 미표시
+                          <span className="ledger-history-ai-none" aria-hidden>—</span>
                         )}
                       </td>
                       <td className="ledger-history-amount">{row.amount}</td>

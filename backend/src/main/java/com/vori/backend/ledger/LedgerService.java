@@ -4,6 +4,7 @@ import com.vori.backend.category.CategoryRepository;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.ExpenseRepository;
 import com.vori.backend.income.IncomeRepository;
+import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +18,10 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +31,7 @@ public class LedgerService {
     private final IncomeRepository incomeRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final AiInquiryRepository aiInquiryRepository;
 
     /** 해당 월(yyyy-MM) 의 본인 지출+수입을 날짜 오름차순으로 병합. */
     @Transactional(readOnly = true)
@@ -42,12 +46,19 @@ public class LedgerService {
         Map<Long, String> categoryNames = new HashMap<>();
         categoryRepository.findAll().forEach(c -> categoryNames.put(c.getId(), c.getName()));
 
+        List<Expense> expenses = expenseRepository.findByUserIdAndSpentAtBetween(
+                userId, ym.atDay(1).atStartOfDay(), ym.atEndOfMonth().atTime(23, 59, 59));
+
+        // 이 달 지출 중 AI 질문(판정)을 거친 것 = 예외적 지출. 배지를 그것에만 노출.
+        Set<Long> aiJudgedIds = expenses.isEmpty() ? Set.of()
+                : new HashSet<>(aiInquiryRepository.findExpenseIdsWithInquiry(
+                        expenses.stream().map(Expense::getId).toList()));
+
         List<LedgerResponse> rows = new ArrayList<>();
-        expenseRepository
-                .findByUserIdAndSpentAtBetween(
-                        userId, ym.atDay(1).atStartOfDay(), ym.atEndOfMonth().atTime(23, 59, 59))
-                .forEach(e -> rows.add(
-                        LedgerResponse.expense(e, categoryNames.getOrDefault(e.getCategoryId(), "기타"))));
+        expenses.forEach(e -> rows.add(LedgerResponse.expense(
+                e,
+                categoryNames.getOrDefault(e.getCategoryId(), "기타"),
+                aiJudgedIds.contains(e.getId()))));
         incomeRepository
                 .findByUserIdAndReceivedAtBetween(userId, ym.atDay(1), ym.atEndOfMonth())
                 .forEach(i -> rows.add(LedgerResponse.income(i)));
