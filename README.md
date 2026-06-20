@@ -53,6 +53,28 @@ brew services start mysql
 mysql -u root -e "CREATE DATABASE vori;"
 ```
 
+## 새 환경에서 실행 (클론 후)
+
+repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"는 사람이 1회, 그 다음은 백엔드가 자동.**
+
+### 1회 수동 준비 (이게 안 되면 백엔드가 부팅 중 죽음 → 로그인 포함 전부 실패)
+1. **MySQL 설치 + 실행**
+   - macOS: `brew install mysql && brew services start mysql`
+   - Windows: MySQL Installer 설치 후 MySQL 서비스 시작
+2. **DB 생성**: `mysql -u root -p -e "CREATE DATABASE vori;"` (테이블이 아니라 DB 자체. Flyway 가 DB 는 안 만든다)
+3. **`.env` 작성** — repo 루트에 `.env.example` 복사 후 값 채우기
+   - `DB_USERNAME` / `DB_PASSWORD` = 본인 MySQL 계정 (Windows root 는 보통 비밀번호 있음 → 반드시 명시)
+   - `GEMINI_API_KEY` = 본인 키
+4. **백엔드 실행** — **repo 루트를 작업 디렉터리로** (`backend/` 에서 띄우면 `.env` 못 읽음)
+5. **프론트엔드**: `cd frontend && npm install && npm start`
+
+### 백엔드가 자동으로 하는 것 (위 준비가 끝났으면)
+- MySQL 커넥션 풀 생성·연결
+- Flyway 마이그레이션 자동 실행 → 테이블 생성/검증
+- 시드 자동 생성 — 관리자 계정 `admin@vori.com` / `1234`
+
+> Windows 에서 로그인 안 될 때 트러블슈팅은 위 [백엔드 셋업](#백엔드-spring-boot) 주의 박스 참조.
+
 ## 파일별 역할 가이드
 
 ---
