@@ -34,6 +34,10 @@
 2. 압축 풀어서 `~/Projects/vori/backend/` 로 이동
 3. `./gradlew bootRun` 으로 실행 (port 8080)
 
+> **실행 위치 주의**: `.env`(DB 비밀번호·Gemini 키)는 **repo 루트**에 있고 `spring.config.import` 가 CWD 상대경로라, 백엔드는 **repo 루트를 작업 디렉터리로** 실행해야 한다. `backend/` 에서 띄우면 `.env` 를 못 읽어 DB·AI 연결이 깨진다(로그인 실패 포함).
+>
+> **Windows 로그인 안 될 때**: DB URL 은 `127.0.0.1` 로 고정돼 있다(Windows 는 `localhost` 를 IPv6 `::1` 로 먼저 해석해 MySQL 연결이 실패할 수 있음). 그래도 안 되면 `.env` 를 **CRLF→LF** 로 저장하고, 본인 MySQL `root` 비밀번호를 `.env` 의 `DB_PASSWORD` 에 명시. 프론트는 `localhost:3000` / `127.0.0.1:3000` 둘 다 허용된다. 시드 계정은 `admin@vori.com` / `1234`.
+
 ### 프론트엔드 (React.js)
 ```bash
 cd ~/Projects/vori
@@ -68,7 +72,7 @@ mysql -u root -e "CREATE DATABASE vori;"
 
 `application.properties` 주요 설정:
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/vori?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+spring.datasource.url=jdbc:mysql://127.0.0.1:3306/vori?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
 spring.datasource.username=${DB_USERNAME:root}
 spring.datasource.password=${DB_PASSWORD:}
 spring.jpa.hibernate.ddl-auto=validate
