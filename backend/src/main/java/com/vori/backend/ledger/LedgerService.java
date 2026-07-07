@@ -4,6 +4,7 @@ import com.vori.backend.category.CategoryRepository;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.ExpenseRepository;
 import com.vori.backend.income.IncomeRepository;
+import com.vori.backend.inquiry.AiInquiry;
 import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
@@ -18,10 +19,9 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -49,16 +49,24 @@ public class LedgerService {
         List<Expense> expenses = expenseRepository.findByUserIdAndSpentAtBetween(
                 userId, ym.atDay(1).atStartOfDay(), ym.atEndOfMonth().atTime(23, 59, 59));
 
-        // 이 달 지출 중 AI 질문(판정)을 거친 것 = 예외적 지출. 배지를 그것에만 노출.
-        Set<Long> aiJudgedIds = expenses.isEmpty() ? Set.of()
-                : new HashSet<>(aiInquiryRepository.findExpenseIdsWithInquiry(
-                        expenses.stream().map(Expense::getId).toList()));
+        // 이 달 지출 중 AI 질문(판정)을 거친 것 = 예외적 지출.
+        // aiJudged 배지 + 답변된 소비 사유(answerText)를 함께 내려준다.
+        Map<Long, AiInquiry> inquiryByExpenseId = expenses.isEmpty() ? Map.of()
+                : aiInquiryRepository.findByExpenseIdIn(
+                                expenses.stream().map(Expense::getId).toList())
+                        .stream()
+                        .collect(Collectors.toMap(
+                                AiInquiry::getExpenseId, i -> i, (a, b) -> a));
 
         List<LedgerResponse> rows = new ArrayList<>();
-        expenses.forEach(e -> rows.add(LedgerResponse.expense(
-                e,
-                categoryNames.getOrDefault(e.getCategoryId(), "기타"),
-                aiJudgedIds.contains(e.getId()))));
+        expenses.forEach(e -> {
+            AiInquiry inquiry = inquiryByExpenseId.get(e.getId());
+            rows.add(LedgerResponse.expense(
+                    e,
+                    categoryNames.getOrDefault(e.getCategoryId(), "기타"),
+                    inquiry != null,
+                    inquiry != null ? inquiry.getAnswerText() : null));
+        });
         incomeRepository
                 .findByUserIdAndReceivedAtBetween(userId, ym.atDay(1), ym.atEndOfMonth())
                 .forEach(i -> rows.add(LedgerResponse.income(i)));

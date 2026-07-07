@@ -91,6 +91,8 @@ function toRow(item) {
     aiStatus: item.aiJudged && item.signal ? SIGNAL_STATUS[item.signal] : null,
     payment: item.paymentMethod ? PAYMENT_LABEL[item.paymentMethod] : null,
     memo: item.memo || "",
+    // AI 질문에 답한 소비 사유 — 답변한 예외 지출에만 존재.
+    reason: item.reason || "",
   };
 }
 
@@ -569,7 +571,6 @@ function WalletPage({ user, onLogout }) {
                     <span className="ledger-detail-ai-badge">
                       AI 판정 · {selectedRow.aiStatus}
                     </span>
-                    {selectedRow.aiMessage && <p>{selectedRow.aiMessage}</p>}
                   </div>
                 )}
               </div>

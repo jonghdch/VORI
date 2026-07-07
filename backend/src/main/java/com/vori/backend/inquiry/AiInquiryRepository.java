@@ -15,11 +15,11 @@ public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
     Optional<AiInquiry> findByExpenseId(Long expenseId);
 
     /**
-     * 주어진 expense 들 중 AI 질문(inquiry)이 생성된 expenseId 목록.
-     * = 예외적 지출(GRAY/RED·비반복)로 AI 판정을 거친 지출. 가계부 목록 배지용 배치 조회.
+     * 주어진 expense 들의 AI 질문(inquiry) 배치 조회.
+     * = 예외적 지출(GRAY/RED·비반복)로 AI 판정을 거친 지출. 가계부 목록의
+     * aiJudged 배지 + 소비 사유(answerText) 표시용.
      */
-    @Query("SELECT DISTINCT i.expenseId FROM AiInquiry i WHERE i.expenseId IN :expenseIds")
-    List<Long> findExpenseIdsWithInquiry(@Param("expenseIds") List<Long> expenseIds);
+    List<AiInquiry> findByExpenseIdIn(List<Long> expenseIds);
 
     // 어드민 AI 대사 로그 — 최근 질문순 페이지네이션 (+ reason 필터)
     Page<AiInquiry> findByReasonCategory(ReasonCategory reasonCategory, Pageable pageable);
