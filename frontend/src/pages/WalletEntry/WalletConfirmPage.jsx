@@ -139,7 +139,7 @@ function WalletConfirmPage({ user }) {
 
   return (
     <div className="ledger">
-      <header className="ledger-header">
+      <header className="ledger-entry-header">
         <button
           type="button"
           className="ledger-logo-btn"
@@ -150,7 +150,7 @@ function WalletConfirmPage({ user }) {
         </button>
       </header>
 
-      <main className="ledger-main">
+      <main className="ledger-entry-main">
         <StepIndicator current={2} includeAnalysis={false} />
 
         <div className="ledger-title-block ledger-title-block-center">

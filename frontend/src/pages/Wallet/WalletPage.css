@@ -236,6 +236,16 @@
   opacity: 0.5;
 }
 
+/* 하단 카드 공용 빈 상태 (지출 없음 · 기능 준비 중) */
+.ledger-card-empty {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--home-muted);
+}
+
 .ledger-history-empty-cell {
   text-align: center;
   padding: 28px 0;

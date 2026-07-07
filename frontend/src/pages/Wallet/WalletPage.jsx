@@ -3,33 +3,19 @@ import { useNavigate } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import { getMonthlyLedger } from "../../api/ledger";
+import { listInquiriesByDate } from "../../api/inquiries";
 import "../Home/HomeDashboard.css";
 import "./WalletPage.css";
 
-const SUMMARY_CARDS = [
-  { title: "이번 달 지출", value: "348,000원", sub: "예산 내 유지 중" },
-  { title: "예산 잔액", value: "50,000원", sub: "300,000원 중" },
-  { title: "이번 달 수입", value: "1,200,000원", sub: "급여 + 용돈" },
-  { title: "AI 판정 완료", value: "13건", sub: "미판정 3건 남음" },
-];
-
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-const CATEGORY_BARS = [
-  { label: "식비", pct: 25, amount: "10,000", color: "var(--home-bar-green)" },
-  { label: "쇼핑", pct: 26, amount: "10,000", color: "var(--home-bar-red)" },
-  { label: "문화", pct: 25, amount: "10,000", color: "var(--home-bar-orange)" },
-  { label: "고정비", pct: 25, amount: "10,000", color: "var(--home-bar-blue)" },
+// 카테고리 차트·도넛 공용 팔레트 (상위 카테고리 순서대로 순환).
+const CHART_COLORS = [
+  "var(--home-bar-green)",
+  "var(--home-bar-red)",
+  "var(--home-bar-orange)",
+  "var(--home-bar-blue)",
 ];
-
-const DONUT_LEGEND = [
-  { label: "식비", pct: 25, color: "var(--home-bar-green)" },
-  { label: "쇼핑", pct: 26, color: "var(--home-bar-red)" },
-  { label: "문화", pct: 25, color: "var(--home-bar-orange)" },
-  { label: "고정비", pct: 25, color: "var(--home-bar-blue)" },
-];
-
-const AI_PENDING_COUNT = 3;
 
 // 합리성 시그널(백엔드 enum) → 한글 상태 + 배지 색상 클래스.
 const SIGNAL_STATUS = { GREEN: "합리적", GRAY: "중립", RED: "비합리적" };
@@ -183,6 +169,60 @@ function WalletPage({ user, onLogout }) {
 
   const expenseRows = rows.filter((r) => r.type === "EXPENSE");
   const monthExpenseTotal = expenseRows.reduce((sum, r) => sum + r.amountNum, 0);
+  const incomeRows = rows.filter((r) => r.type === "INCOME");
+  const monthIncomeTotal = incomeRows.reduce((sum, r) => sum + r.amountNum, 0);
+  // AI 질문을 거친 예외 지출 수 (이 달 기준).
+  const aiJudgedCount = expenseRows.filter((r) => r.aiJudged).length;
+
+  // 카테고리별 지출 집계 — 금액 내림차순 상위 4개 (차트·도넛 공용).
+  const categoryBreakdown = useMemo(() => {
+    const byCat = new Map();
+    expenseRows.forEach((r) => {
+      byCat.set(r.cat, (byCat.get(r.cat) || 0) + r.amountNum);
+    });
+    return [...byCat.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([label, amount], i) => ({
+        label,
+        amount,
+        pct: monthExpenseTotal > 0 ? Math.round((amount / monthExpenseTotal) * 100) : 0,
+        color: CHART_COLORS[i % CHART_COLORS.length],
+      }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
+  // 도넛 = 상위 카테고리 비중 conic-gradient (CSS 고정값 대신 실데이터).
+  const donutGradient = useMemo(() => {
+    if (monthExpenseTotal <= 0) return null;
+    let acc = 0;
+    const stops = categoryBreakdown.map((c) => {
+      const from = acc;
+      acc += (c.amount / monthExpenseTotal) * 360;
+      return `${c.color} ${from}deg ${acc}deg`;
+    });
+    // 상위 4개 밖 나머지 금액은 회색으로 채움.
+    if (acc < 359.9) stops.push(`#e8e3d8 ${acc}deg 360deg`);
+    return `conic-gradient(${stops.join(", ")})`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryBreakdown, monthExpenseTotal]);
+
+  // 오늘 미답변 AI 질문 수 — 실카운트. 실패 시 null 로 두고 문구 숨김.
+  const [pendingCount, setPendingCount] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const iso = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+    listInquiriesByDate(iso)
+      .then((data) => {
+        if (alive) setPendingCount(Array.isArray(data) ? data.length : null);
+      })
+      .catch(() => {
+        if (alive) setPendingCount(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [today]);
 
   const selectedDayRows = selectedDay ? rowsByDay.get(selectedDay) ?? [] : [];
   const selectedDayTotal = selectedDayRows
@@ -542,26 +582,35 @@ function WalletPage({ user, onLogout }) {
         <div className="ledger-row ledger-row-bottom">
           <section className="home-card ledger-report-card">
             <h2 className="home-card-title home-card-title--sm">보이는 리포트</h2>
-            <div className="ledger-donut-wrap">
-              <div
-                className="ledger-donut"
-                role="img"
-                aria-label="이번 달 지출 248,000원, 예산 300,000원"
-              >
-                <div className="ledger-donut-hole">
-                  <span className="ledger-donut-amount">248,000원</span>
-                  <span className="ledger-donut-budget">/ 300,000원</span>
+            {donutGradient ? (
+              <>
+                <div className="ledger-donut-wrap">
+                  <div
+                    className="ledger-donut"
+                    role="img"
+                    aria-label={`이번 달 지출 ${formatWon(monthExpenseTotal)}`}
+                    style={{ background: donutGradient }}
+                  >
+                    <div className="ledger-donut-hole">
+                      <span className="ledger-donut-amount">
+                        {formatWon(monthExpenseTotal)}
+                      </span>
+                      <span className="ledger-donut-budget">이번 달 지출</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <ul className="ledger-donut-legend">
-              {DONUT_LEGEND.map((item) => (
-                <li key={item.label}>
-                  <span className="ledger-legend-dot" style={{ background: item.color }} />
-                  {item.label} {item.pct}%
-                </li>
-              ))}
-            </ul>
+                <ul className="ledger-donut-legend">
+                  {categoryBreakdown.map((item) => (
+                    <li key={item.label}>
+                      <span className="ledger-legend-dot" style={{ background: item.color }} />
+                      {item.label} {item.pct}%
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="ledger-card-empty">이번 달 지출이 없어요.</p>
+            )}
           </section>
 
           <section className="home-card ledger-ai-card">
@@ -582,9 +631,11 @@ function WalletPage({ user, onLogout }) {
               >
                 {isAiActive ? "판정 시작하기" : "대기 중 (오후 8시 활성화)"}
               </button>
-              <p className="ledger-ai-footnote">
-                오늘 미판정 제출 {AI_PENDING_COUNT}건
-              </p>
+              {pendingCount != null && (
+                <p className="ledger-ai-footnote">
+                  오늘 미답변 질문 {pendingCount}건
+                </p>
+              )}
             </div>
           </section>
 
@@ -593,38 +644,64 @@ function WalletPage({ user, onLogout }) {
               <h2 className="home-card-title home-card-title--sm">
                 카테고리별 지출
               </h2>
-              <div className="ledger-cat-chart">
-                {CATEGORY_BARS.map((category) => (
-                  <div key={category.label} className="home-cat-row">
-                    <span className="home-cat-label">{category.label}</span>
-                    <div className="home-cat-track">
-                      <div
-                        className="home-cat-fill"
-                        style={{ width: `${category.pct}%`, background: category.color }}
-                      />
+              {categoryBreakdown.length > 0 ? (
+                <div className="ledger-cat-chart">
+                  {categoryBreakdown.map((category) => (
+                    <div key={category.label} className="home-cat-row">
+                      <span className="home-cat-label">{category.label}</span>
+                      <div className="home-cat-track">
+                        <div
+                          className="home-cat-fill"
+                          style={{ width: `${category.pct}%`, background: category.color }}
+                        />
+                      </div>
+                      <span className="home-cat-amount">
+                        {category.amount.toLocaleString("ko-KR")}
+                      </span>
                     </div>
-                    <span className="home-cat-amount">{category.amount}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="ledger-card-empty">이번 달 지출이 없어요.</p>
+              )}
             </section>
 
+            {/* 예산 API 미구현 — 가짜 수치 대신 준비 중임을 명시 */}
             <section className="home-card ledger-budget-card">
               <div className="ledger-budget-head">
                 <h2 className="home-card-title home-card-title--sm">예산 현황</h2>
-                <span className="ledger-budget-meta">잔액 52,000원 · 87% 사용</span>
               </div>
-              <p className="ledger-budget-label">이번 달 지출 / 예산</p>
-              <p className="ledger-budget-values">248,000원 / 300,000원</p>
-              <div className="ledger-budget-track">
-                <div className="ledger-budget-fill" style={{ width: "87%" }} />
-              </div>
+              <p className="ledger-card-empty">예산 설정 기능을 준비 중이에요.</p>
             </section>
           </div>
         </div>
 
         <div className="ledger-row ledger-row-summary ledger-row-summary--bottom">
-          {SUMMARY_CARDS.map((card) => (
+          {[
+            {
+              title: "이번 달 지출",
+              value: formatWon(monthExpenseTotal),
+              sub: `지출 ${expenseRows.length}건`,
+            },
+            {
+              title: "이번 달 수입",
+              value: formatWon(monthIncomeTotal),
+              sub: `수입 ${incomeRows.length}건`,
+            },
+            {
+              title: "AI 판정",
+              value: `${aiJudgedCount}건`,
+              sub:
+                pendingCount != null
+                  ? `오늘 미답변 ${pendingCount}건`
+                  : "예외적인 지출만 판정해요",
+            },
+            {
+              title: "이번 달 기록",
+              value: `${rows.length}건`,
+              sub: `지출 ${expenseRows.length} · 수입 ${incomeRows.length}`,
+            },
+          ].map((card) => (
             <article key={card.title} className="home-card ledger-summary-card">
               <h3 className="home-kpi-title">{card.title}</h3>
               <p className="home-kpi-value">{card.value}</p>

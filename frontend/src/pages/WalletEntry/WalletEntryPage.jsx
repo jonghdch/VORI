@@ -258,7 +258,7 @@ function WalletEntryPage() {
 
   return (
     <div className="ledger">
-      <header className="ledger-header">
+      <header className="ledger-entry-header">
         <button
           type="button"
           className="ledger-logo-btn"
@@ -269,7 +269,7 @@ function WalletEntryPage() {
         </button>
       </header>
 
-      <main className="ledger-main">
+      <main className="ledger-entry-main">
         <StepIndicator current={1} includeAnalysis={false} />
 
         <div className="ledger-title-block">
@@ -341,21 +341,21 @@ function WalletEntryPage() {
         <div className="ledger-add-row">
           <button
             type="button"
-            className="ledger-add-btn"
+            className="ledger-entry-add-btn"
             onClick={() => addRow(setIncome)}
           >
             + 수입 추가하기
           </button>
           <button
             type="button"
-            className="ledger-add-btn"
+            className="ledger-entry-add-btn"
             onClick={() => addRow(setExpense)}
           >
             + 지출 추가하기
           </button>
           <button
             type="button"
-            className="ledger-add-btn"
+            className="ledger-entry-add-btn"
             onClick={() => addRow(setSavings)}
           >
             + 저축 추가하기
@@ -396,9 +396,14 @@ function WalletEntryPage() {
 }
 
 function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }) {
+  // 이미 DB 에 저장된 행 — 수정/삭제 API 가 없어서 여기서 고쳐도 반영되지 않는다.
+  // 수정 가능한 척하지 않도록 읽기 전용으로 잠그고 "저장됨" 표시.
+  const saved = Boolean(row.dbId);
+
   // 이름이 바뀌면 자동 분류로 카테고리/출처를 "제안"한다.
   // 단, 사용자가 드롭다운에서 직접 고른 경우(*Touched)엔 그 선택을 덮지 않는다.
   useEffect(() => {
+    if (saved) return; // 저장된 행은 재분류 대상 아님
     const name = (row.name || "").trim();
     if (!name) {
       onChange({
@@ -449,6 +454,7 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
         onChange={(v) => onChange({ categoryId: v, categoryTouched: true })}
         placeholder={row.categorizing ? "분류 중…" : "카테고리"}
         align="right"
+        disabled={saved}
       />
     ) : (
       <Dropdown
@@ -457,11 +463,12 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
         onChange={(v) => onChange({ categoryEnum: v, sourceTouched: true })}
         placeholder={type === "income" ? "수입 출처" : "저축 유형"}
         align="right"
+        disabled={saved}
       />
     );
 
   return (
-    <div className="ledger-row">
+    <div className="ledger-entry-row">
       <div className="ledger-row-head">
         <span className="ledger-row-num">{String(num).padStart(2, "0")}</span>
         {/* 결제수단은 지출만. 수입은 "어디서 받았나"(출처), 저축은 유형만 고른다. */}
@@ -471,18 +478,27 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
             options={PAYMENT_METHODS}
             onChange={(v) => onChange({ paymentMethod: v })}
             placeholder="결제수단"
+            disabled={saved}
           />
         )}
         <span className="ledger-row-spacer" />
+        {saved && (
+          <span className="ledger-chip ledger-chip-readonly ledger-chip-saved">
+            저장됨
+          </span>
+        )}
         {categoryControl}
-        <button
-          type="button"
-          className="ledger-row-del"
-          aria-label="삭제"
-          onClick={onDelete}
-        >
-          ×
-        </button>
+        {/* 저장된 행은 삭제 API 가 없어 로컬에서만 지워지는 가짜 삭제가 됨 — 버튼 숨김 */}
+        {!saved && (
+          <button
+            type="button"
+            className="ledger-row-del"
+            aria-label="삭제"
+            onClick={onDelete}
+          >
+            ×
+          </button>
+        )}
       </div>
       <div className="ledger-row-field">
         <span className="ledger-row-label">내역</span>
@@ -491,6 +507,7 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
           className="ledger-row-input"
           value={row.name}
           onChange={(e) => onChange({ name: e.target.value })}
+          disabled={saved}
           placeholder={
             type === "income"
               ? "예: 6월 월급, 엄마 용돈"
@@ -509,6 +526,7 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
             onChange={(e) =>
               onChange({ amount: e.target.value.replace(/[^\d]/g, "") })
             }
+            disabled={saved}
           />
           <span className="ledger-row-unit">원</span>
         </div>
@@ -518,7 +536,7 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
 }
 
 // 클릭 chip + 펼침 메뉴 (결제수단용).
-function Dropdown({ value, options, onChange, placeholder, align = "left" }) {
+function Dropdown({ value, options, onChange, placeholder, align = "left", disabled = false }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
@@ -549,11 +567,14 @@ function Dropdown({ value, options, onChange, placeholder, align = "left" }) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
+        disabled={disabled}
       >
         <span className="ledger-chip-text">{label}</span>
-        <span className="ledger-chip-caret" aria-hidden>
-          ▾
-        </span>
+        {!disabled && (
+          <span className="ledger-chip-caret" aria-hidden>
+            ▾
+          </span>
+        )}
       </button>
       {open && (
         <ul
