@@ -752,9 +752,25 @@
 }
 .landing-footer-meta {
   display: flex;
-  gap: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
   font-size: 13px;
   color: var(--text-3);
+}
+
+.landing-footer-legal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.landing-footer-legal a {
+  color: var(--text-2, #5a6152);
+  text-decoration: none;
+  font-weight: 600;
+}
+.landing-footer-legal a:hover {
+  text-decoration: underline;
 }
 
 .landing-hero-preview-link {

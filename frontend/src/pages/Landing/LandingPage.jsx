@@ -334,6 +334,11 @@ function LandingPage({ user, onLogout }) {
             </p>
           </div>
           <div className="landing-footer-meta">
+            <div className="landing-footer-legal">
+              <a href="/terms">이용약관</a>
+              <span aria-hidden>·</span>
+              <a href="/privacy">개인정보처리방침</a>
+            </div>
             <span>졸업작품 © 2026 VORI Team</span>
             <span>문의 : vori@example.com</span>
           </div>

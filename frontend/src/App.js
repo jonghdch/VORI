@@ -31,6 +31,9 @@ const WalletPage = lazy(() => import("./pages/Wallet/WalletPage"));
 const PetPage = lazy(() => import("./pages/Pet/PetPage"));
 const ShopPage = lazy(() => import("./pages/Shop/ShopPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
+// 이용약관·개인정보처리방침 — 공개(비인증) 페이지.
+const TermsPage = lazy(() => import("./pages/Legal/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/Legal/PrivacyPage"));
 const AdminLayout = lazy(() => import("./pages/Admin/AdminLayout"));
 const AdminPlaceholder = lazy(() =>
   import("./pages/Admin/AdminPlaceholder"),
@@ -61,6 +64,8 @@ const ADMIN_PAGES = {
 //   /login                  로그인
 //   /signup                 회원가입
 //   /story                  스토리 (서비스 소개)
+//   /terms                  이용약관 (공개)
+//   /privacy                개인정보처리방침 (공개)
 //   /home                   홈 대시보드 (인증 필요)
 //   /wallet                 가계부 달력/조회 (인증 필요)
 //   /wallet/new             가계부 작성 Step 1 (입력)
@@ -139,6 +144,8 @@ function App() {
             path="/story"
             element={<StoryPage user={user} onLogout={handleLogout} />}
           />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route
             path="/home"
             element={

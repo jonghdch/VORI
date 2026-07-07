@@ -140,7 +140,16 @@ function LoginPage({ onLogin }) {
       </main>
 
       <footer className="login-footer">
-        졸업작품 © 2026 VORI Team
+        <div className="login-footer-legal">
+          <a href="/terms" target="_blank" rel="noopener noreferrer">
+            이용약관
+          </a>
+          <span aria-hidden>·</span>
+          <a href="/privacy" target="_blank" rel="noopener noreferrer">
+            개인정보처리방침
+          </a>
+        </div>
+        <span>졸업작품 © 2026 VORI Team</span>
       </footer>
     </div>
   );
