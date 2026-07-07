@@ -279,15 +279,12 @@ function WalletEntryPage() {
           <p className="ledger-subtitle">
             {past
               ? "이전 날짜의 지출과 수입을 입력해주세요."
-              : "오늘의 지출과 수입을 입력해주세요. 사진을 올리면 자동으로 채워져요."}
+              : "오늘의 지출과 수입을 입력해주세요."}
           </p>
         </div>
 
-        {!past && (
-          <button type="button" className="ledger-upload">
-            이미지 업로드
-          </button>
-        )}
+        {/* 이미지 업로드(영수증 OCR 자동 입력)는 미구현 — 동작 없는 버튼과
+            "사진을 올리면 자동으로 채워져요" 약속을 함께 내렸다. 구현 시 복원. */}
 
         {income.length > 0 && (
           <section className="ledger-section">

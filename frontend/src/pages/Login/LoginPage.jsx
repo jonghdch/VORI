@@ -122,18 +122,8 @@ function LoginPage({ onLogin }) {
             </button>
           </form>
 
-          {/* ───────── 구분선 ───────── */}
-          <div className="login-divider">
-            <span>또는</span>
-          </div>
-
-          {/* ───────── 소셜 로그인 (UI만) ───────── */}
-          <div className="login-socials">
-            <button type="button" className="login-social login-social-google">
-              <span className="login-social-icon" aria-hidden>G</span>
-              Google로 시작하기
-            </button>
-          </div>
+          {/* 소셜 로그인 — 백엔드 OAuth 미구현. 동작 없는 버튼을 노출하지 않고,
+              구현되면 이 자리에 되살린다. */}
 
           {/* ───────── 회원가입 안내 ───────── */}
           <p className="login-signup">

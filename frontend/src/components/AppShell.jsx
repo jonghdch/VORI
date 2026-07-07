@@ -8,6 +8,8 @@ const TOP_NAV = [
   { id: "raise", label: "키우기" },
 ];
 
+// page: null = 아직 화면이 없는 메뉴 — 누르면 아무 일도 없는 척하지 않도록
+// disabled + "준비 중" 표기로 렌더한다.
 const SIDE_MENU = [
   { id: "home", label: "홈 대시보드", page: "home" },
   { id: "wallet", label: "가계부", page: "wallet" },
@@ -98,8 +100,12 @@ function AppShell({
                     type="button"
                     className={`home-side-link ${item.id === activeSide ? "is-active" : ""}`}
                     onClick={() => go(item.page)}
+                    disabled={!item.page}
                   >
                     {item.label}
+                    {!item.page && (
+                      <span className="home-side-soon">준비 중</span>
+                    )}
                   </button>
                 </li>
               ))}
@@ -114,8 +120,12 @@ function AppShell({
                     type="button"
                     className={`home-side-link ${item.id === activeSide ? "is-active" : ""}`}
                     onClick={() => go(item.page)}
+                    disabled={!item.page}
                   >
                     {item.label}
+                    {!item.page && (
+                      <span className="home-side-soon">준비 중</span>
+                    )}
                   </button>
                 </li>
               ))}
@@ -125,7 +135,11 @@ function AppShell({
             <div className="home-side-title">설정</div>
             <ul className="home-side-list">
               <li>
-                <button type="button" className="home-side-link">
+                <button
+                  type="button"
+                  className="home-side-link"
+                  onClick={() => go("settings")}
+                >
                   환경설정
                 </button>
               </li>

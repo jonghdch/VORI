@@ -88,19 +88,23 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
         </div>
 
         <div className="home-row home-row-pet">
+          {/* 성장 단계·상태·AI 멘트는 데이터 소스가 없어 정적 문구였음 — 허위 노출 대신
+              실지출 기반 말풍선만 유지. 펫 상태 API 가 생기면 단계/상태 표시 복원. */}
           <section className="home-card home-card-pet">
-            <p className="home-pet-stage">청소년기 · 성체까지 00일 남음</p>
             <div className="home-pet-head">
               <div>
                 <h2 className="home-pet-name">보리</h2>
-                <p className="home-pet-status">상태 : 배고픔</p>
               </div>
               <div className="home-pet-art" aria-hidden>
                 <img src={boriImage} alt="" className="home-pet-image" />
               </div>
             </div>
             <div className="home-pet-bubble">
-              어제 카페를 두 번이나 갔군요! 오늘은 아메리카노 한 잔만 해요
+              {loading
+                ? "오늘 소비를 살펴보고 있어요…"
+                : (spending?.today ?? 0) > 0
+                  ? `오늘 ${won(spending.today)} 지출했어요. 저녁 8시에 같이 돌아봐요!`
+                  : "오늘은 아직 지출 기록이 없어요. 첫 기록을 남겨볼까요?"}
             </div>
           </section>
 
@@ -133,7 +137,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           <article className="home-card home-kpi">
             <h3 className="home-kpi-title">오늘 지출</h3>
             <p className="home-kpi-value">{won(spending?.today)}</p>
-            <p className="home-kpi-sub">오늘 기록 {recent.length}건 기준</p>
+            {/* recent.length 는 "최근 지출 5건" 목록 길이지 오늘 기록 수가 아님 — 오표기 제거 */}
+            <p className="home-kpi-sub">오늘 0시부터 누적</p>
           </article>
           <article className="home-card home-kpi">
             <h3 className="home-kpi-title">이번 달 누적</h3>

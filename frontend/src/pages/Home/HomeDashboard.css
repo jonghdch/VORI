@@ -221,6 +221,27 @@
   background: var(--home-green-soft);
 }
 
+/* 아직 화면이 없는 메뉴 — 눌리는 척하지 않음 */
+.home-side-link:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.home-side-link:disabled:hover {
+  background: none;
+}
+
+.home-side-soon {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--home-muted);
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  padding: 1px 6px;
+  vertical-align: 1px;
+}
+
 .home-main {
   flex: 1;
   padding: 28px 28px 40px;
@@ -691,24 +712,51 @@
     grid-template-columns: 1fr;
   }
 
+  /* 데스크톱은 고정 높이 3열 grid + 본문 내부 스크롤이지만,
+     모바일에서 같은 구조를 1열로 접으면 행들이 뷰포트 높이를 넘쳐
+     우측 요약 패널이 본문 위를 덮었다. 모바일은 자연스러운 세로 흐름
+     (메뉴 → 본문 → 바로가기) + 쉘 전체 스크롤로 전환. */
   .home-shell {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .home-main {
+    /* 내부 스크롤 해제 — 쉘 스크롤로 일원화 (이중 스크롤 방지) */
+    overflow-y: visible;
+    flex: none;
   }
 
   .home-sidebar {
     width: 100%;
+    height: auto;
+    flex: none;
     min-height: 0;
     border-right: none;
     border-left: none;
     border-bottom: 1px solid var(--home-border);
     display: flex;
     flex-wrap: wrap;
-    gap: 16px 32px;
-    padding: 16px 20px;
+    gap: 8px 24px;
+    padding: 10px 16px;
+    overflow-y: visible;
+  }
+
+  /* 본문 뒤에 오는 바로가기 패널 — 아래 경계선으로 구분 */
+  .home-sidebar--right {
+    border-bottom: none;
+    border-top: 1px solid var(--home-border);
   }
 
   .home-side-block {
     margin-top: 0 !important;
+  }
+
+  /* 섹션 제목(메뉴/게임/설정)은 모바일에서 생략 — 첫 화면을 메뉴가
+     절반 가까이 차지하던 문제 완화. 링크 칩 1~2줄로 압축된다. */
+  .home-side-title {
+    display: none;
   }
 
   .home-side-list {
@@ -719,6 +767,7 @@
 
   .home-side-link {
     margin-bottom: 0;
+    padding: 6px 8px;
   }
 }
 
