@@ -323,6 +323,16 @@
   padding: 8px 0;
 }
 
+/* 일요일 헤더 — 관례적 빨간 표기 */
+.ledger-cal-weekday--sun {
+  color: #c0504a;
+}
+
+/* 토요일 헤더 — 관례적 파란 표기 */
+.ledger-cal-weekday--sat {
+  color: #3f6ea5;
+}
+
 .ledger-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

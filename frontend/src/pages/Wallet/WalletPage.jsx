@@ -109,7 +109,8 @@ function WalletPage({ user, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [selectedDay, setSelectedDay] = useState(null);
+  // 기본 선택 = 오늘 (이번 달 한정)
+  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
   const [selectedId, setSelectedId] = useState(null);
   const [showExpenseHistory, setShowExpenseHistory] = useState(false);
   const [isAiActive, setIsAiActive] = useState(() => new Date().getHours() >= 20);
@@ -126,12 +127,19 @@ function WalletPage({ user, onLogout }) {
     let alive = true;
     setLoading(true);
     setError(null);
-    setSelectedDay(null);
+    const isCurrentMonth =
+      viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1;
+    setSelectedDay(isCurrentMonth ? today.getDate() : null);
     setSelectedId(null);
     getMonthlyLedger(`${viewYear}-${pad2(viewMonth)}`)
       .then((data) => {
         if (!alive) return;
-        setRows(Array.isArray(data) ? data.map(toRow) : []);
+        const mapped = Array.isArray(data) ? data.map(toRow) : [];
+        setRows(mapped);
+        if (isCurrentMonth) {
+          const todayRows = mapped.filter((r) => r.day === today.getDate());
+          setSelectedId(todayRows[0]?.id ?? null);
+        }
       })
       .catch((e) => {
         if (!alive) return;
@@ -149,7 +157,7 @@ function WalletPage({ user, onLogout }) {
     return () => {
       alive = false;
     };
-  }, [viewYear, viewMonth, navigate]);
+  }, [viewYear, viewMonth, navigate, today]);
 
   // 달력 셀 구성 (선행 빈칸 + 1일~말일).
   const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
@@ -405,8 +413,8 @@ function WalletPage({ user, onLogout }) {
         <div className="ledger-row ledger-row-calendar">
           <section className="home-card ledger-calendar-card">
             <div className="ledger-cal-weekdays">
-              {WEEKDAYS.map((weekday) => (
-                <span key={weekday} className="ledger-cal-weekday">
+              {WEEKDAYS.map((weekday, i) => (
+                <span key={weekday} className={`ledger-cal-weekday ${i === 0 ? "ledger-cal-weekday--sun" : ""} ${i === 6 ? "ledger-cal-weekday--sat" : ""}`}>
                   {weekday}
                 </span>
               ))}

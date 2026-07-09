@@ -281,7 +281,7 @@
 }
 
 .home-row-pet {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 1fr; /* 펫 카드 : 스탯 = 2 : 1 */
 }
 
 .home-row-kpi {
