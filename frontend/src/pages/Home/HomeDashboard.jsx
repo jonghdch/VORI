@@ -31,7 +31,6 @@ const ACHIEVEMENTS = [
 ];
 
 const won = (n) => `${(n ?? 0).toLocaleString("ko-KR")}원`;
-const SIGNAL_ICON = { RED: "🔴", GRAY: "⚪", GREEN: "🟢" };
 
 function HomeDashboard({ user, onNavigate, onLogout }) {
   const navigate = useNavigate();
@@ -154,8 +153,10 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
 
         <div className="home-row home-row-bottom">
           <section className="home-card home-card-list">
-            <h2 className="home-card-title home-card-title--sm">최근 지출 내역</h2>
-            <p className="home-list-date">최근 {recent.length}건</p>
+            <div className="home-list-head">
+              <h2 className="home-card-title home-card-title--sm">최근 지출 내역</h2>
+              <p className="home-list-date">최근 {recent.length}건</p>
+            </div>
             <ul className="home-tx-list">
               {loading ? (
                 <li className="home-tx-row">불러오는 중…</li>
@@ -165,7 +166,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 recent.map((row) => (
                   <li key={row.id} className="home-tx-row">
                     <span className="home-tx-icon">
-                      {SIGNAL_ICON[row.signalFinal] || "⚪"}
+                      <span className={`home-tx-dot home-tx-dot--${(row.signalFinal || "GRAY").toLowerCase()}`} />
                     </span>
                     <div className="home-tx-mid">
                       <span className="home-tx-name">{row.item}</span>
