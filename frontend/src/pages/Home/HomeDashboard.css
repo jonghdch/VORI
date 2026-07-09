@@ -306,6 +306,15 @@
   border-color: #d8e8cc;
 }
 
+/* 제목은 위, 스탯 리스트는 카드 하단 정렬 */
+.home-card-stats {
+  display: flex;
+  flex-direction: column;
+}
+.home-card-stats .home-stat-list {
+  margin-top: auto;
+}
+
 .home-card-title {
   margin: 0 0 16px;
   font-size: 17px;
