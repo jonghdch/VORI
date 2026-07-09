@@ -442,6 +442,8 @@
   /* 스크롤바가 내용과 겹치지 않게 약간의 여백 */
   margin-right: -8px;
   padding-right: 8px;
+  display: flex;
+  flex-direction: column;
 }
 
 .ledger-day-head .home-card-title--sm {
@@ -518,6 +520,9 @@
   background: #fffdf9;
   border: 1px solid var(--home-card-border);
   border-radius: var(--home-radius-sm);
+  flex: 1 0 auto;          /* 리스트 아래 남는 높이를 끝까지 채움 */
+  display: flex;
+  flex-direction: column;
 }
 
 .ledger-expense-detail-head {
@@ -603,9 +608,14 @@
   margin-top: 12px;
 }
 
+/* 메모(그리드 다음 첫 note)부터 하단 정렬 — 이후 형제(사유·AI)도 같이 하단 묶음 */
+.ledger-detail-grid + .ledger-detail-note {
+  margin-top: auto;
+}
+
 .ledger-detail-note p {
   margin: 0;
-  min-height: 44px;
+  min-height: 56px; /* 메모 영역 살짝 여유 있게 */
   padding: 10px 12px;
   border: 1px solid var(--home-card-border);
   border-radius: 10px;
