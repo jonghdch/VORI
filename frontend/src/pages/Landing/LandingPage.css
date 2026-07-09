@@ -499,18 +499,249 @@
 }
 .landing-step-media {
   position: relative;
-  aspect-ratio: 16 / 10;
-  background: #ece8df;
-  border-radius: 12px;
+}
+
+/* ── step 미디어 목업 (브라우저 창) ───────────────────────── */
+.landing-mock {
+  display: flex;
+  flex-direction: column;
+  /* 세 목업의 세로 크기를 동일하게 (내용이 가장 많은 입력폼 기준) */
+  min-height: 240px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(61, 56, 48, 0.04),
+    0 18px 44px -26px rgba(61, 56, 48, 0.3);
+}
+.landing-mock-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.landing-mock-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+.landing-mock-dot--r { background: #ff5f56; }
+.landing-mock-dot--y { background: #ffbd2e; }
+.landing-mock-dot--g { background: #27c93f; }
+.landing-mock-bar-title {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+.landing-mock-body {
+  flex: 1;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ① 입력 폼 */
+.landing-mock-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.landing-mock-label {
+  width: 36px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+.landing-mock-input {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.landing-mock-amount {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.landing-mock-chip {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green-dark);
+  background: var(--green-50);
+  border: 1px solid var(--green-100);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+.landing-mock-reason {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.landing-mock-reason p {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-2);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+/* ② 판정 결과 */
+.landing-mock-verdict {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.landing-mock-signals {
+  display: inline-flex;
+  gap: 8px;
+}
+.landing-mock-sig {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+.landing-mock-sig--on {
+  background: var(--green);
+  box-shadow: 0 0 0 4px var(--green-50);
+}
+.landing-mock-sig--gray {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--border);
+}
+.landing-mock-sig--red {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px #e6c3ba;
+}
+.landing-mock-verdict-text {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--green-dark);
+}
+.landing-mock-reasons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.landing-mock-reasons li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.landing-mock-reasons li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--green-50);
+  box-shadow: inset 0 0 0 3px var(--green);
+}
+
+/* ③ 펫 성장 */
+.landing-mock-pet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.landing-mock-pet-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 40% 34%, #fff 0%, var(--green-50) 100%);
+  border: 1px solid var(--green-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
-.landing-step-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.landing-mock-pet-avatar img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+.landing-mock-pet-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.landing-mock-pet-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+.landing-mock-pet-sub {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.landing-mock-grow {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--green-dark);
+  background: var(--green-50);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.landing-mock-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.landing-mock-stats li {
+  display: grid;
+  grid-template-columns: 48px 1fr 26px;
+  align-items: center;
+  gap: 10px;
+}
+.landing-mock-stats li > span:first-child {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.landing-mock-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--green-50);
+  overflow: hidden;
+}
+.landing-mock-fill {
   display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--green-200), var(--green));
+}
+.landing-mock-val {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .landing-step-head {
   display: flex;
