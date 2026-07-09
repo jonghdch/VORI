@@ -75,20 +75,6 @@
   white-space: nowrap;
 }
 
-.ledger-history-toggle {
-  padding: 8px 20px;
-  background: var(--home-card-surface);
-  color: var(--home-text);
-  border: 1px solid var(--home-card-border);
-  white-space: nowrap;
-}
-
-.ledger-history-toggle:hover,
-.ledger-history-toggle.is-active {
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
-}
-
 .ledger-row {
   display: grid;
   gap: 20px;
@@ -108,9 +94,6 @@
   font-size: 20px;
 }
 
-.ledger-history-card {
-  margin-bottom: 28px;
-}
 
 .ledger-history-head {
   display: flex;
@@ -145,12 +128,20 @@
 
 .ledger-history-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 0;
+  table-layout: fixed; /* 열 폭 고정 — 가로 잘림 방지 */
   border-collapse: collapse;
 }
 
+/* 5열 폭 배분: 날짜 96px / 내역 auto / 카테고리 22% / AI 판정 84px / 금액 92px */
+.ledger-history-table th:nth-child(1) { width: 96px; }
+.ledger-history-table th:nth-child(2) { width: auto; }
+.ledger-history-table th:nth-child(3) { width: 22%; }
+.ledger-history-table th:nth-child(4) { width: 84px; }
+.ledger-history-table th:nth-child(5) { width: 92px; }
+
 .ledger-history-table th {
-  padding: 8px 12px;
+  padding: 8px 8px;
   background: rgba(232, 227, 216, 0.42);
   color: var(--home-muted);
   font-size: 12px;
@@ -169,7 +160,7 @@
 }
 
 .ledger-history-table td {
-  padding: 12px 12px;
+  padding: 12px 8px;
   border-bottom: 1px solid var(--home-card-border);
   font-size: 13px;
   font-weight: 700;
@@ -192,19 +183,34 @@
   outline-offset: -2px;
 }
 
-.ledger-history-date,
-.ledger-history-name {
+.ledger-history-date {
   display: block;
   white-space: nowrap;
 }
 
-.ledger-history-time,
+.ledger-history-name {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ledger-history-time {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--home-muted);
+}
+
 .ledger-history-memo {
   display: block;
   margin-top: 4px;
   font-size: 12px;
   font-weight: 600;
   color: var(--home-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ledger-history-badge {
@@ -656,8 +662,26 @@
   color: var(--home-text);
 }
 
-.ledger-row-bottom {
-  grid-template-columns: 1fr 0.9fr 1.1fr;
+/* 지출 내역 표(토글) 2 : 카테고리·예산 1 */
+.ledger-row-history {
+  grid-template-columns: 2fr 1fr;
+  align-items: start;
+}
+
+.ledger-history-col {
+  min-width: 0; /* 표 min-width 가 grid 열을 밀지 않게 — 내부 overflow-x 로 처리 */
+}
+
+.ledger-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* 보이는 리포트 : AI 판정 = 1:1 */
+.ledger-row-insights {
+  grid-template-columns: 1fr 1fr;
   align-items: stretch;
 }
 
@@ -807,12 +831,6 @@
   color: var(--home-muted);
 }
 
-.ledger-bottom-right {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-height: 0;
-}
 
 .ledger-cat-card .ledger-cat-chart {
   display: flex;
@@ -875,23 +893,19 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .ledger-row-bottom {
+  .ledger-row-history {
+    grid-template-columns: 1fr;
+  }
+
+  .ledger-row-insights {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .ledger-bottom-right {
-    grid-column: 1 / -1;
-    flex-direction: row;
-  }
-
-  .ledger-bottom-right > .home-card {
-    flex: 1;
   }
 }
 
 @media (max-width: 900px) {
   .ledger-row-calendar,
-  .ledger-row-bottom {
+  .ledger-row-history,
+  .ledger-row-insights {
     grid-template-columns: 1fr;
   }
 
@@ -899,10 +913,6 @@
      absolute 해제해 카드가 제 내용 높이대로 자연스럽게 흐르게. */
   .ledger-day-col > .ledger-day-card {
     position: static;
-  }
-
-  .ledger-bottom-right {
-    flex-direction: column;
   }
 
   .ledger-cal-cell {
