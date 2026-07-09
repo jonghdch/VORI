@@ -333,11 +333,16 @@
   font-weight: 600;
 }
 
-.home-pet-head {
+/* 말풍선(좌) + 보리(우) 한 행 — 말풍선이 남는 폭을 채움 */
+.home-pet-body {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+.home-pet-body .home-pet-bubble {
+  flex: 1;
+  margin-top: 0;
 }
 
 .home-pet-name {

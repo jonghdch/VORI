@@ -90,20 +90,18 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           {/* 성장 단계·상태·AI 멘트는 데이터 소스가 없어 정적 문구였음 — 허위 노출 대신
               실지출 기반 말풍선만 유지. 펫 상태 API 가 생기면 단계/상태 표시 복원. */}
           <section className="home-card home-card-pet">
-            <div className="home-pet-head">
-              <div>
-                <h2 className="home-pet-name">보리</h2>
+            <h2 className="home-pet-name">보리</h2>
+            <div className="home-pet-body">
+              <div className="home-pet-bubble">
+                {loading
+                  ? "오늘 소비를 살펴보고 있어요…"
+                  : (spending?.today ?? 0) > 0
+                    ? `오늘 ${won(spending.today)} 지출했어요. 저녁 8시에 같이 돌아봐요!`
+                    : "오늘은 아직 지출 기록이 없어요. 첫 기록을 남겨볼까요?"}
               </div>
               <div className="home-pet-art" aria-hidden>
                 <img src={boriImage} alt="" className="home-pet-image" />
               </div>
-            </div>
-            <div className="home-pet-bubble">
-              {loading
-                ? "오늘 소비를 살펴보고 있어요…"
-                : (spending?.today ?? 0) > 0
-                  ? `오늘 ${won(spending.today)} 지출했어요. 저녁 8시에 같이 돌아봐요!`
-                  : "오늘은 아직 지출 기록이 없어요. 첫 기록을 남겨볼까요?"}
             </div>
           </section>
 
