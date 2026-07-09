@@ -304,6 +304,8 @@
 .home-card-pet {
   background: linear-gradient(145deg, #eef6ea 0%, #e4efd9 100%);
   border-color: #d8e8cc;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 제목은 위, 스탯 리스트는 카드 하단 정렬 */
@@ -336,13 +338,18 @@
 /* 말풍선(좌) + 보리(우) 한 행 — 말풍선이 남는 폭을 채움 */
 .home-pet-body {
   display: flex;
-  align-items: center;
   gap: 16px;
+  /* 제목 아래 남는 공간 전부 차지 — 이미지는 중앙, 말풍선은 하단 개별 정렬 */
+  flex: 1;
   margin-top: 12px;
 }
 .home-pet-body .home-pet-bubble {
   flex: 1;
   margin-top: 0;
+  align-self: flex-end;   /* 말풍선은 카드 하단 */
+}
+.home-pet-body .home-pet-art {
+  align-self: center;      /* 보리는 세로 중앙 */
 }
 
 .home-pet-name {
@@ -372,8 +379,8 @@
 
 .home-pet-image {
   display: block;
-  width: 112px;
-  height: 112px;
+  width: 150px;
+  height: 150px;
   object-fit: contain;
   image-rendering: pixelated;
 }
