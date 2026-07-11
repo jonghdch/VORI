@@ -107,31 +107,27 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               <div className="home-pet-art" aria-hidden>
                 <img src={boriImage} alt="" className="home-pet-image" />
               </div>
+              <ul className="home-stat-list home-pet-stats">
+                {STAT_META.map((m) => {
+                  const value = stats?.[m.key] ?? 0;
+                  return (
+                    <li key={m.key} className="home-stat-row">
+                      <span className="home-stat-label">{m.label}</span>
+                      <div className="home-stat-track">
+                        <div
+                          className="home-stat-fill"
+                          style={{
+                            width: `${Math.min(Math.max(value, 0), 100)}%`,
+                            background: m.color,
+                          }}
+                        />
+                      </div>
+                      <span className="home-stat-num">{value}</span>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
-          </section>
-
-          <section className="home-card home-card-stats">
-            <h2 className="home-card-title">스탯 현황</h2>
-            <ul className="home-stat-list">
-              {STAT_META.map((m) => {
-                const value = stats?.[m.key] ?? 0;
-                return (
-                  <li key={m.key} className="home-stat-row">
-                    <span className="home-stat-label">{m.label}</span>
-                    <div className="home-stat-track">
-                      <div
-                        className="home-stat-fill"
-                        style={{
-                          width: `${Math.min(Math.max(value, 0), 100)}%`,
-                          background: m.color,
-                        }}
-                      />
-                    </div>
-                    <span className="home-stat-num">{value}</span>
-                  </li>
-                );
-              })}
-            </ul>
           </section>
         </div>
 

@@ -281,7 +281,7 @@
 }
 
 .home-row-pet {
-  grid-template-columns: 2fr 1fr; /* 펫 카드 : 스탯 = 2 : 1 */
+  grid-template-columns: 1fr; /* 펫+스탯 통합 카드 한 줄 */
 }
 
 .home-row-kpi {
@@ -308,14 +308,6 @@
   flex-direction: column;
 }
 
-/* 제목은 위, 스탯 리스트는 카드 하단 정렬 */
-.home-card-stats {
-  display: flex;
-  flex-direction: column;
-}
-.home-card-stats .home-stat-list {
-  margin-top: auto;
-}
 
 .home-card-title {
   margin: 0 0 16px;
@@ -335,21 +327,28 @@
   font-weight: 600;
 }
 
-/* 말풍선(좌) + 보리(우) 한 행 — 말풍선이 남는 폭을 채움 */
+/* 말풍선(좌) + 보리(중앙) + 스탯(우) 3열 grid — 좌우 1fr 이 같아 보리가 항상 카드 정중앙 */
 .home-pet-body {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 16px;
-  /* 제목 아래 남는 공간 전부 차지 — 이미지는 중앙, 말풍선은 하단 개별 정렬 */
-  flex: 1;
+  flex: 1;            /* 카드 세로 채움 */
   margin-top: 12px;
 }
 .home-pet-body .home-pet-bubble {
-  flex: 1;
   margin-top: 0;
-  align-self: flex-end;   /* 말풍선은 카드 하단 */
+  align-self: end;    /* 말풍선 하단 유지 */
 }
 .home-pet-body .home-pet-art {
-  align-self: center;      /* 보리는 세로 중앙 */
+  align-self: center;
+  justify-self: center;
+}
+
+/* 펫 카드 안 스탯 블록 — 우측 고정폭, 세로 중앙 */
+.home-pet-stats {
+  width: 300px;
+  justify-self: end;  /* 우측 열 안에서 오른쪽 붙임 */
+  align-self: center;
 }
 
 /* 이름 + 칭호 캡슐 한 줄 */
@@ -780,6 +779,20 @@
   .home-row-kpi,
   .home-row-bottom {
     grid-template-columns: 1fr;
+  }
+
+  .home-pet-body {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .home-pet-stats {
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .home-pet-body .home-pet-bubble {
+    justify-self: stretch;
   }
 
   /* 데스크톱은 고정 높이 3열 grid + 본문 내부 스크롤이지만,
