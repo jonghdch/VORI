@@ -95,6 +95,11 @@
 }
 
 
+.ledger-history-card {
+  margin-bottom: 28px;
+  /* 카드 크롬 없음 — 표가 페이지 배경 위에 바로 놓임 */
+}
+
 .ledger-history-head {
   display: flex;
   align-items: flex-start;
@@ -103,22 +108,18 @@
   margin-bottom: 16px;
 }
 
-.ledger-history-head .home-card-title--sm {
-  margin-bottom: 4px;
-}
-
-.ledger-history-sub {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--home-muted);
-}
-
-.ledger-history-total {
-  flex-shrink: 0;
-  font-size: 16px;
-  font-weight: 900;
+/* 표 헤더 캡슐 — 제목·총액 각각 */
+.ledger-history-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: var(--home-card-surface);
+  font-size: 14px;
+  font-weight: 800;
   color: var(--home-text);
+  white-space: nowrap;
 }
 
 .ledger-history-table-wrap {
@@ -662,16 +663,6 @@
   color: var(--home-text);
 }
 
-/* 지출 내역 표(토글) 2 : 카테고리·예산 1 */
-.ledger-row-history {
-  grid-template-columns: 2fr 1fr;
-  align-items: start;
-}
-
-.ledger-history-col {
-  min-width: 0; /* 표 min-width 가 grid 열을 밀지 않게 — 내부 overflow-x 로 처리 */
-}
-
 .ledger-side-col {
   display: flex;
   flex-direction: column;
@@ -679,9 +670,9 @@
   min-width: 0;
 }
 
-/* 보이는 리포트 : AI 판정 = 1:1 */
+/* 보이는 리포트 : AI 판정 : side-col = 1:1:1 */
 .ledger-row-insights {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   align-items: stretch;
 }
 
@@ -893,20 +884,28 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .ledger-row-history {
-    grid-template-columns: 1fr;
-  }
-
   .ledger-row-insights {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .ledger-side-col {
+    grid-column: 1 / -1;
+    flex-direction: row;
+  }
+
+  .ledger-side-col > .home-card {
+    flex: 1;
   }
 }
 
 @media (max-width: 900px) {
   .ledger-row-calendar,
-  .ledger-row-history,
   .ledger-row-insights {
     grid-template-columns: 1fr;
+  }
+
+  .ledger-side-col {
+    flex-direction: column;
   }
 
   /* 1열로 쌓이면 더 이상 캘린더 높이에 맞출 필요가 없다.

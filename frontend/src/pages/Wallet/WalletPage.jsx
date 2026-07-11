@@ -98,7 +98,6 @@ function toRow(item) {
 
 function WalletPage({ user, onLogout }) {
   const navigate = useNavigate();
-  const nickname = user?.nickname || "사용자";
 
   // 보고 있는 달 (1-based month). 처음엔 실제 이번 달부터.
   const today = useMemo(() => new Date(), []);
@@ -128,17 +127,17 @@ function WalletPage({ user, onLogout }) {
     setError(null);
     const isCurrentMonth =
       viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1;
-    setSelectedDay(isCurrentMonth ? today.getDate() : null);
+    // 기본 선택 = 이번 달이면 오늘, 아니면 1일
+    const defaultDay = isCurrentMonth ? today.getDate() : 1;
+    setSelectedDay(defaultDay);
     setSelectedId(null);
     getMonthlyLedger(`${viewYear}-${pad2(viewMonth)}`)
       .then((data) => {
         if (!alive) return;
         const mapped = Array.isArray(data) ? data.map(toRow) : [];
         setRows(mapped);
-        if (isCurrentMonth) {
-          const todayRows = mapped.filter((r) => r.day === today.getDate());
-          setSelectedId(todayRows[0]?.id ?? null);
-        }
+        const dayRows = mapped.filter((r) => r.day === defaultDay);
+        setSelectedId(dayRows[0]?.id ?? null);
       })
       .catch((e) => {
         if (!alive) return;
@@ -282,7 +281,7 @@ function WalletPage({ user, onLogout }) {
       <main className="home-main ledger-main">
         <div className="ledger-header">
           <h1 className="ledger-greeting">
-            {nickname}님, 오늘도 보리와 함께해요!
+            총 지출액 {formatWon(monthExpenseTotal)}
           </h1>
           <div className="ledger-header-actions">
             <div className="ledger-date-nav" aria-label="달 선택">
@@ -494,125 +493,76 @@ function WalletPage({ user, onLogout }) {
           </div>
         </div>
 
-        <div className="ledger-row ledger-row-history">
-          <div className="ledger-history-col">
-            <section className="home-card ledger-history-card">
-                <div className="ledger-history-head">
-                  <div>
-                    <h2 className="home-card-title home-card-title--sm">
-                      전체 지출 내역
-                    </h2>
-                    <p className="ledger-history-sub">
-                      {viewYear}년 {viewMonth}월 등록된 지출 {expenseRows.length}건을
-                      한 번에 확인해요.
-                    </p>
-                  </div>
-                  <span className="ledger-history-total">
-                    총 {formatWon(monthExpenseTotal)}
-                  </span>
-                </div>
-
-                <div className="ledger-history-table-wrap">
-                  <table className="ledger-history-table">
-                    <thead>
-                      <tr>
-                        <th>날짜</th>
-                        <th>내역</th>
-                        <th>카테고리</th>
-                        <th>AI 판정</th>
-                        <th>금액</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {expenseRows.map((row) => (
-                        <tr
-                          key={row.id}
-                          role="button"
-                          tabIndex={0}
-                          className={selectedId === row.id ? "is-selected" : ""}
-                          onClick={() => selectRow(row)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              selectRow(row);
-                            }
-                          }}
-                        >
-                          <td>
-                            <span className="ledger-history-date">{row.date}</span>
-                          </td>
-                          <td>
-                            <span className="ledger-history-name">
-                              {iconFor(row)} {row.name}
-                            </span>
-                          </td>
-                          <td>{row.cat}</td>
-                          <td>
-                            {row.aiStatus ? (
-                              <span
-                                className={`ledger-history-badge ${
-                                  SIGNAL_BADGE[row.signal] ||
-                                  "ledger-history-badge--gray"
-                                }`}
-                              >
-                                {row.aiStatus}
-                              </span>
-                            ) : (
-                              // 예외 지출이 아니면 AI 판정 미표시
-                              <span className="ledger-history-ai-none" aria-hidden>—</span>
-                            )}
-                          </td>
-                          <td className="ledger-history-amount">{row.amount}</td>
-                        </tr>
-                      ))}
-                      {!loading && expenseRows.length === 0 && (
-                        <tr>
-                          <td colSpan={5} className="ledger-history-empty-cell">
-                            이 달에는 등록된 지출이 없어요.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+        <section className="ledger-history-card">
+          <div className="ledger-history-head">
+            <span className="ledger-history-chip">전체 지출 내역</span>
+            <span className="ledger-history-chip ledger-history-chip--total">총 {formatWon(monthExpenseTotal)}</span>
           </div>
-          <div className="ledger-side-col">
-            <section className="home-card ledger-cat-card">
-              <h2 className="home-card-title home-card-title--sm">
-                카테고리별 지출
-              </h2>
-              {categoryBreakdown.length > 0 ? (
-                <div className="ledger-cat-chart">
-                  {categoryBreakdown.map((category) => (
-                    <div key={category.label} className="home-cat-row">
-                      <span className="home-cat-label">{category.label}</span>
-                      <div className="home-cat-track">
-                        <div
-                          className="home-cat-fill"
-                          style={{ width: `${category.pct}%`, background: category.color }}
-                        />
-                      </div>
-                      <span className="home-cat-amount">
-                        {category.amount.toLocaleString("ko-KR")}
+
+          <div className="ledger-history-table-wrap">
+            <table className="ledger-history-table">
+              <thead>
+                <tr>
+                  <th>날짜</th>
+                  <th>내역</th>
+                  <th>카테고리</th>
+                  <th>AI 판정</th>
+                  <th>금액</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenseRows.map((row) => (
+                  <tr
+                    key={row.id}
+                    role="button"
+                    tabIndex={0}
+                    className={selectedId === row.id ? "is-selected" : ""}
+                    onClick={() => selectRow(row)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        selectRow(row);
+                      }
+                    }}
+                  >
+                    <td>
+                      <span className="ledger-history-date">{row.date}</span>
+                    </td>
+                    <td>
+                      <span className="ledger-history-name">
+                        {iconFor(row)} {row.name}
                       </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="ledger-card-empty">이번 달 지출이 없어요.</p>
-              )}
-            </section>
-
-            {/* 예산 API 미구현 — 가짜 수치 대신 준비 중임을 명시 */}
-            <section className="home-card ledger-budget-card">
-              <div className="ledger-budget-head">
-                <h2 className="home-card-title home-card-title--sm">예산 현황</h2>
-              </div>
-              <p className="ledger-card-empty">예산 설정 기능을 준비 중이에요.</p>
-            </section>
+                    </td>
+                    <td>{row.cat}</td>
+                    <td>
+                      {row.aiStatus ? (
+                        <span
+                          className={`ledger-history-badge ${
+                            SIGNAL_BADGE[row.signal] ||
+                            "ledger-history-badge--gray"
+                          }`}
+                        >
+                          {row.aiStatus}
+                        </span>
+                      ) : (
+                        // 예외 지출이 아니면 AI 판정 미표시
+                        <span className="ledger-history-ai-none" aria-hidden>—</span>
+                      )}
+                    </td>
+                    <td className="ledger-history-amount">{row.amount}</td>
+                  </tr>
+                ))}
+                {!loading && expenseRows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="ledger-history-empty-cell">
+                      이 달에는 등록된 지출이 없어요.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
+        </section>
 
         <div className="ledger-row ledger-row-insights">
           <section className="home-card ledger-report-card">
@@ -673,6 +623,42 @@ function WalletPage({ user, onLogout }) {
               )}
             </div>
           </section>
+
+          <div className="ledger-side-col">
+            <section className="home-card ledger-cat-card">
+              <h2 className="home-card-title home-card-title--sm">
+                카테고리별 지출
+              </h2>
+              {categoryBreakdown.length > 0 ? (
+                <div className="ledger-cat-chart">
+                  {categoryBreakdown.map((category) => (
+                    <div key={category.label} className="home-cat-row">
+                      <span className="home-cat-label">{category.label}</span>
+                      <div className="home-cat-track">
+                        <div
+                          className="home-cat-fill"
+                          style={{ width: `${category.pct}%`, background: category.color }}
+                        />
+                      </div>
+                      <span className="home-cat-amount">
+                        {category.amount.toLocaleString("ko-KR")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="ledger-card-empty">이번 달 지출이 없어요.</p>
+              )}
+            </section>
+
+            {/* 예산 API 미구현 — 가짜 수치 대신 준비 중임을 명시 */}
+            <section className="home-card ledger-budget-card">
+              <div className="ledger-budget-head">
+                <h2 className="home-card-title home-card-title--sm">예산 현황</h2>
+              </div>
+              <p className="ledger-card-empty">예산 설정 기능을 준비 중이에요.</p>
+            </section>
+          </div>
         </div>
 
         <div className="ledger-row ledger-row-summary ledger-row-summary--bottom">
