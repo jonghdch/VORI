@@ -879,6 +879,82 @@
   transition: width 0.4s ease;
 }
 
+/* ── 주/월 세그먼트 토글 ─────────────────────────────── */
+.ledger-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  background: var(--home-card-surface);
+  padding: 3px;
+  gap: 2px;
+}
+
+.ledger-view-toggle button {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--home-muted);
+  padding: 5px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.ledger-view-toggle button.is-active {
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+}
+
+/* ── 주 보기 — 세로로 긴 요일 칸 7개 ────────────────── */
+.ledger-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.ledger-week-cell {
+  min-height: 384px;
+  height: auto;
+}
+
+.ledger-week-cell--other {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* 표 페이지네이션 — 10건 초과 시 */
+.ledger-history-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.ledger-history-pager button {
+  border: 1px solid var(--home-card-border);
+  background: var(--home-card-surface);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--home-text);
+  cursor: pointer;
+  font-family: inherit;
+}
+.ledger-history-pager button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.ledger-history-pager span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--home-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 1200px) {
   .ledger-row-summary {
     grid-template-columns: repeat(2, 1fr);

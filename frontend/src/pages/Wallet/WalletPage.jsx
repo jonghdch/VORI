@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
@@ -104,6 +104,15 @@ function WalletPage({ user, onLogout }) {
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
 
+  // 주/월 보기 전환
+  const [viewMode, setViewMode] = useState("month");
+
+  // 지출 내역 표 페이지네이션
+  const [historyPage, setHistoryPage] = useState(1);
+
+  // 달 경계를 넘는 주 이동 시 fetch 후 선택할 날짜를 임시 보관
+  const pendingDayRef = useRef(null);
+
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -127,8 +136,10 @@ function WalletPage({ user, onLogout }) {
     setError(null);
     const isCurrentMonth =
       viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1;
-    // 기본 선택 = 이번 달이면 오늘, 아니면 1일
-    const defaultDay = isCurrentMonth ? today.getDate() : 1;
+    // 주 이동으로 달 경계를 넘은 경우 pendingDayRef 에 저장된 날짜 우선 사용
+    const pending = pendingDayRef.current;
+    pendingDayRef.current = null;
+    const defaultDay = pending ?? (isCurrentMonth ? today.getDate() : 1);
     setSelectedDay(defaultDay);
     setSelectedId(null);
     getMonthlyLedger(`${viewYear}-${pad2(viewMonth)}`)
@@ -260,6 +271,21 @@ function WalletPage({ user, onLogout }) {
     setViewMonth(m);
   };
 
+  const changeWeek = (delta) => {
+    const cur = new Date(viewYear, viewMonth - 1, selectedDay ?? 1);
+    cur.setDate(cur.getDate() + delta * 7);
+    const y = cur.getFullYear();
+    const m = cur.getMonth() + 1;
+    const d = cur.getDate();
+    if (y === viewYear && m === viewMonth) {
+      selectDay(d);
+      return;
+    }
+    pendingDayRef.current = d;
+    setViewYear(y);
+    setViewMonth(m);
+  };
+
   const selectDay = (day) => {
     setSelectedDay(day);
     const dayRows = rowsByDay.get(day) ?? [];
@@ -270,6 +296,53 @@ function WalletPage({ user, onLogout }) {
     setSelectedDay(row.day);
     setSelectedId(row.id);
   };
+
+  // 주 보기 — selectedDay 가 속한 주의 7일 배열 (일요일 시작)
+  const weekDates = useMemo(() => {
+    const base = new Date(viewYear, viewMonth - 1, selectedDay ?? 1);
+    const startOffset = base.getDay(); // 0=일 … 6=토
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base);
+      d.setDate(d.getDate() - startOffset + i);
+      return d;
+    });
+  }, [viewYear, viewMonth, selectedDay]);
+
+  // 표시 범위의 지출 — 월 모드는 달 전체, 주 모드는 보고 있는 주(이번 달 날짜만)
+  const visibleExpenseRows = useMemo(() => {
+    if (viewMode !== "week") return expenseRows;
+    const weekDaySet = new Set(
+      weekDates
+        .filter((d) => d.getFullYear() === viewYear && d.getMonth() + 1 === viewMonth)
+        .map((d) => d.getDate()),
+    );
+    return expenseRows.filter((r) => weekDaySet.has(r.day));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, weekDates, rows]);
+  const visibleExpenseTotal = visibleExpenseRows.reduce((s, r) => s + r.amountNum, 0);
+
+  // 표시 범위가 바뀌면 1페이지로 리셋
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [viewMode, viewYear, viewMonth, weekDates]);
+
+  const HISTORY_PAGE_SIZE = 10;
+  const historyTotalPages = Math.max(1, Math.ceil(visibleExpenseRows.length / HISTORY_PAGE_SIZE));
+  const safeHistoryPage = Math.min(historyPage, historyTotalPages);
+  const pagedExpenseRows = visibleExpenseRows.slice(
+    (safeHistoryPage - 1) * HISTORY_PAGE_SIZE,
+    safeHistoryPage * HISTORY_PAGE_SIZE,
+  );
+
+  // 날짜 네비 표시 문자열
+  const dateDisplayLabel = useMemo(() => {
+    if (viewMode === "month") {
+      return `${viewYear}. ${pad2(viewMonth)}`;
+    }
+    const first = weekDates[0];
+    const last = weekDates[6];
+    return `${pad2(first.getMonth() + 1)}. ${pad2(first.getDate())} ~ ${pad2(last.getMonth() + 1)}. ${pad2(last.getDate())}`;
+  }, [viewMode, viewYear, viewMonth, weekDates]);
 
   return (
     <AppShell
@@ -284,23 +357,41 @@ function WalletPage({ user, onLogout }) {
             총 지출액 {formatWon(monthExpenseTotal)}
           </h1>
           <div className="ledger-header-actions">
+            <div className="ledger-view-toggle" role="group" aria-label="보기 방식">
+              <button
+                type="button"
+                className={viewMode === "week" ? "is-active" : ""}
+                aria-pressed={viewMode === "week"}
+                onClick={() => setViewMode("week")}
+              >
+                주
+              </button>
+              <button
+                type="button"
+                className={viewMode === "month" ? "is-active" : ""}
+                aria-pressed={viewMode === "month"}
+                onClick={() => setViewMode("month")}
+              >
+                월
+              </button>
+            </div>
             <div className="ledger-date-nav" aria-label="달 선택">
               <button
                 type="button"
                 className="ledger-date-arrow"
-                aria-label="이전 달"
-                onClick={() => changeMonth(-1)}
+                aria-label={viewMode === "week" ? "이전 주" : "이전 달"}
+                onClick={() => viewMode === "week" ? changeWeek(-1) : changeMonth(-1)}
               >
                 ‹
               </button>
               <span className="ledger-date-display">
-                {viewYear}. {pad2(viewMonth)}
+                {dateDisplayLabel}
               </span>
               <button
                 type="button"
                 className="ledger-date-arrow"
-                aria-label="다음 달"
-                onClick={() => changeMonth(1)}
+                aria-label={viewMode === "week" ? "다음 주" : "다음 달"}
+                onClick={() => viewMode === "week" ? changeWeek(1) : changeMonth(1)}
               >
                 ›
               </button>
@@ -324,52 +415,108 @@ function WalletPage({ user, onLogout }) {
                 </span>
               ))}
             </div>
-            <div className="ledger-cal-grid">
-              {calendarCells.map((day, index) => {
-                if (day === null) {
-                  return (
-                    <div
-                      key={`empty-${index}`}
-                      className="ledger-cal-cell ledger-cal-cell--empty"
-                      aria-hidden
-                    />
-                  );
-                }
+            {viewMode === "month" ? (
+              <div className="ledger-cal-grid">
+                {calendarCells.map((day, index) => {
+                  if (day === null) {
+                    return (
+                      <div
+                        key={`empty-${index}`}
+                        className="ledger-cal-cell ledger-cal-cell--empty"
+                        aria-hidden
+                      />
+                    );
+                  }
 
-                const dayRows = rowsByDay.get(day) ?? [];
-                const isToday = day === todayDay;
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    className={[
-                      "ledger-cal-cell",
-                      dayRows.length > 0 ? "ledger-cal-cell--highlight" : "",
-                      isToday ? "ledger-cal-cell--today" : "",
-                      selectedDay === day ? "ledger-cal-cell--selected" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    aria-pressed={selectedDay === day}
-                    onClick={() => selectDay(day)}
-                  >
-                    <span className="ledger-cal-day">{day}</span>
-                    <div className="ledger-cal-events">
-                      {dayRows.map((row) => (
-                        <span
-                          key={row.id}
-                          className={`ledger-cal-event ledger-cal-event--${
-                            row.type === "INCOME" ? "income" : "expense"
-                          }`}
-                        >
-                          {row.name} {row.amountNum.toLocaleString("ko-KR")}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                  const dayRows = rowsByDay.get(day) ?? [];
+                  const isToday = day === todayDay;
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      className={[
+                        "ledger-cal-cell",
+                        dayRows.length > 0 ? "ledger-cal-cell--highlight" : "",
+                        isToday ? "ledger-cal-cell--today" : "",
+                        selectedDay === day ? "ledger-cal-cell--selected" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      aria-pressed={selectedDay === day}
+                      onClick={() => selectDay(day)}
+                    >
+                      <span className="ledger-cal-day">{day}</span>
+                      <div className="ledger-cal-events">
+                        {dayRows.map((row) => (
+                          <span
+                            key={row.id}
+                            className={`ledger-cal-event ledger-cal-event--${
+                              row.type === "INCOME" ? "income" : "expense"
+                            }`}
+                          >
+                            {row.name} {row.amountNum.toLocaleString("ko-KR")}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="ledger-week-grid">
+                {weekDates.map((d) => {
+                  const isCurrentMonth = d.getMonth() + 1 === viewMonth && d.getFullYear() === viewYear;
+                  const day = d.getDate();
+                  const isToday = isCurrentMonth && day === todayDay;
+                  const dayRows = isCurrentMonth ? (rowsByDay.get(day) ?? []) : [];
+                  const isSelected = isCurrentMonth && selectedDay === day;
+
+                  if (!isCurrentMonth) {
+                    return (
+                      <div
+                        key={d.toISOString()}
+                        className="ledger-cal-cell ledger-week-cell ledger-week-cell--other"
+                        aria-hidden
+                      >
+                        <span className="ledger-cal-day">{day}</span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={d.toISOString()}
+                      type="button"
+                      className={[
+                        "ledger-cal-cell",
+                        "ledger-week-cell",
+                        dayRows.length > 0 ? "ledger-cal-cell--highlight" : "",
+                        isToday ? "ledger-cal-cell--today" : "",
+                        isSelected ? "ledger-cal-cell--selected" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      aria-pressed={isSelected}
+                      onClick={() => selectDay(day)}
+                    >
+                      <span className="ledger-cal-day">{day}</span>
+                      <div className="ledger-cal-events">
+                        {dayRows.map((row) => (
+                          <span
+                            key={row.id}
+                            className={`ledger-cal-event ledger-cal-event--${
+                              row.type === "INCOME" ? "income" : "expense"
+                            }`}
+                          >
+                            {row.name} {row.amountNum.toLocaleString("ko-KR")}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {loading && (
               <p className="ledger-cal-state">불러오는 중…</p>
             )}
@@ -495,8 +642,8 @@ function WalletPage({ user, onLogout }) {
 
         <section className="ledger-history-card">
           <div className="ledger-history-head">
-            <span className="ledger-history-chip">전체 지출 내역</span>
-            <span className="ledger-history-chip ledger-history-chip--total">총 {formatWon(monthExpenseTotal)}</span>
+            <span className="ledger-history-chip">{viewMode === "week" ? "주간 지출 내역" : "월간 지출 내역"}</span>
+            <span className="ledger-history-chip ledger-history-chip--total">총 {formatWon(visibleExpenseTotal)}</span>
           </div>
 
           <div className="ledger-history-table-wrap">
@@ -511,7 +658,7 @@ function WalletPage({ user, onLogout }) {
                 </tr>
               </thead>
               <tbody>
-                {expenseRows.map((row) => (
+                {pagedExpenseRows.map((row) => (
                   <tr
                     key={row.id}
                     role="button"
@@ -552,16 +699,25 @@ function WalletPage({ user, onLogout }) {
                     <td className="ledger-history-amount">{row.amount}</td>
                   </tr>
                 ))}
-                {!loading && expenseRows.length === 0 && (
+                {!loading && visibleExpenseRows.length === 0 && (
                   <tr>
                     <td colSpan={5} className="ledger-history-empty-cell">
-                      이 달에는 등록된 지출이 없어요.
+                      {viewMode === "week" ? "이 기간에는 지출이 없어요." : "이 달에는 등록된 지출이 없어요."}
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+          {historyTotalPages > 1 && (
+            <div className="ledger-history-pager">
+              <button type="button" aria-label="이전 페이지" disabled={safeHistoryPage === 1}
+                onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}>‹</button>
+              <span>{safeHistoryPage} / {historyTotalPages}</span>
+              <button type="button" aria-label="다음 페이지" disabled={safeHistoryPage === historyTotalPages}
+                onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}>›</button>
+            </div>
+          )}
         </section>
 
         <div className="ledger-row ledger-row-insights">
