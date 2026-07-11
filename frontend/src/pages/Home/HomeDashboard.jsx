@@ -90,7 +90,12 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           {/* 성장 단계·상태·AI 멘트는 데이터 소스가 없어 정적 문구였음 — 허위 노출 대신
               실지출 기반 말풍선만 유지. 펫 상태 API 가 생기면 단계/상태 표시 복원. */}
           <section className="home-card home-card-pet">
-            <h2 className="home-pet-name">보리</h2>
+            <div className="home-pet-name-row">
+              <h2 className="home-pet-name">보리</h2>
+              {/* 칭호 — 백엔드에 active_title_id 는 있으나 조회 API 미구현.
+                  API 가 생기면 이 텍스트에 실제 칭호를 꽂는다. 없으면 "칭호 없음". */}
+              <span className="home-pet-title-badge">칭호 없음</span>
+            </div>
             <div className="home-pet-body">
               <div className="home-pet-bubble">
                 {loading

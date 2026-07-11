@@ -352,11 +352,35 @@
   align-self: center;      /* 보리는 세로 중앙 */
 }
 
+/* 이름 + 칭호 캡슐 한 줄 */
+.home-pet-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .home-pet-name {
   margin: 0;
   font-size: 28px;
   font-weight: 800;
   color: var(--home-green-dark);
+}
+
+/* h2 기본 마진 보정 */
+.home-pet-name-row .home-pet-name {
+  margin: 0;
+}
+
+/* 칭호 캡슐 — 칭호 없으면 muted 톤 */
+.home-pet-title-badge {
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+  background: var(--home-card-surface);
+  white-space: nowrap;
 }
 
 .home-pet-status {
