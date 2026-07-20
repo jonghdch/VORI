@@ -103,23 +103,37 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             </div>
             <div className="home-pet-body">
               <div className="home-pet-center">
-                {/* 칭호 — 백엔드에 active_title_id 는 있으나 조회 API 미구현.
-                    API 가 생기면 이 텍스트에 실제 칭호를 꽂는다. 없으면 "칭호 없음". */}
-                <span className="home-pet-title-badge">칭호 없음</span>
-                <div className="home-pet-art" aria-hidden>
-                  <img src={boriImage} alt="" className="home-pet-image" />
+                {/* 원형 경험치 게이지 — 270° 아치(아래 90° 열림)가 보리를 감싼다.
+                    프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
+                    백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체. */}
+                <div
+                  className="home-pet-gauge"
+                  role="img"
+                  aria-label={`경험치 ${petExp}/100 (Lv. ${petLevel})`}
+                >
+                  <svg className="home-pet-gauge-ring" viewBox="0 0 120 120" aria-hidden>
+                    <circle
+                      className="home-pet-gauge-track"
+                      cx="60" cy="60" r="52"
+                      transform="rotate(135 60 60)"
+                      strokeDasharray="245.04 326.73"
+                    />
+                    <circle
+                      className="home-pet-gauge-fill"
+                      cx="60" cy="60" r="52"
+                      transform="rotate(135 60 60)"
+                      strokeDasharray={`${(245.04 * petExp) / 100} 326.73`}
+                    />
+                  </svg>
+                  <div className="home-pet-art" aria-hidden>
+                    <img src={boriImage} alt="" className="home-pet-image" />
+                  </div>
+                  {/* 칭호 — 게이지 하단 열린 틈에 배치. API 미구현, "칭호 없음" */}
+                  <span className="home-pet-title-badge">칭호 없음</span>
                 </div>
                 <div className="home-pet-name-line">
                   <h2 className="home-pet-name">보리</h2>
                   <span className="home-pet-level-label">Lv. {petLevel}</span>
-                </div>
-                {/* 경험치바 — 프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
-                    백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체. */}
-                <div className="home-pet-level">
-                  <div className="home-pet-level-track">
-                    <div className="home-pet-level-fill" style={{ width: `${petExp}%` }} />
-                  </div>
-                  <span className="home-pet-level-num">{petExp}/100</span>
                 </div>
               </div>
               <ul className="home-stat-list home-pet-stats">

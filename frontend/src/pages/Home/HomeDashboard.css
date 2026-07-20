@@ -383,39 +383,35 @@
   gap: 8px;
 }
 
-/* 경험치바 — track + 숫자 */
-.home-pet-level {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .home-pet-level-label {
   font-size: 14px;
   font-weight: 800;
   color: var(--home-green-dark);
 }
 
-.home-pet-level-track {
-  width: 140px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--home-white);
-  overflow: hidden;
+/* 원형 경험치 게이지 — 보리를 감싸는 270° 아치 */
+.home-pet-gauge {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-
-.home-pet-level-fill {
+.home-pet-gauge-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #c8dfaa, var(--home-green));
 }
-
-.home-pet-level-num {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--home-muted);
-  font-variant-numeric: tabular-nums;
+.home-pet-gauge-track,
+.home-pet-gauge-fill {
+  fill: none;
+  stroke-width: 11;
+  stroke-linecap: round;
 }
+.home-pet-gauge-track { stroke: var(--home-white); }
+.home-pet-gauge-fill { stroke: var(--home-green); }
 
 /* 펫 카드 안 스탯 블록 — 우측 정렬, 하단 붙임, 열 폭에 맞춰 줄어듦 */
 .home-pet-stats {
@@ -444,6 +440,14 @@
   color: var(--home-muted);
   background: var(--home-card-surface);
   white-space: nowrap;
+}
+
+/* 칭호 — 게이지 하단 열린 틈 중앙 */
+.home-pet-gauge .home-pet-title-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* 마이룸 가기 링크 */
