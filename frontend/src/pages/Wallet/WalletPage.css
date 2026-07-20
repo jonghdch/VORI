@@ -13,9 +13,16 @@
 
 .ledger-greeting {
   margin: 0;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.35;
+  /* 캡슐 박스 */
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  background: var(--home-card-surface);
+  padding: 10px 20px;
 }
 
 .ledger-header-actions {
@@ -108,15 +115,9 @@
   margin-bottom: 16px;
 }
 
-/* 표 헤더 캡슐 — 제목·총액 각각 */
+/* 표 헤더 — 캡슐 없이 텍스트만 */
 .ledger-history-chip {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--home-card-border);
-  border-radius: 999px;
-  padding: 8px 16px;
-  background: var(--home-card-surface);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--home-text);
   white-space: nowrap;
@@ -174,8 +175,15 @@
   transition: background 0.12s ease;
 }
 
+/* 짝수 행 흰 배경 — 행 구분 가독성 */
+.ledger-history-table tbody tr:nth-child(even) {
+  background: var(--home-white);
+}
+
 .ledger-history-table tbody tr:hover,
-.ledger-history-table tbody tr.is-selected {
+.ledger-history-table tbody tr:nth-child(even):hover,
+.ledger-history-table tbody tr.is-selected,
+.ledger-history-table tbody tr:nth-child(even).is-selected {
   background: rgba(127, 176, 105, 0.1);
 }
 
