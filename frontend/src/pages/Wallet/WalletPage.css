@@ -682,6 +682,9 @@
   align-items: center;
 }
 
+/* 보이는 리포트 — 리포트 페이지 링크 */
+.ledger-report-more { margin-top: 12px; align-self: center; }
+
 .ledger-donut-wrap {
   flex: 1;
   display: flex;

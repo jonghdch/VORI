@@ -752,6 +752,13 @@ function WalletPage({ user, onLogout }) {
             ) : (
               <p className="ledger-card-empty">이번 달 지출이 없어요.</p>
             )}
+            <button
+              type="button"
+              className="home-link-btn ledger-report-more"
+              onClick={() => navigate("/report")}
+            >
+              자세히보기 →
+            </button>
           </section>
 
           <section className="home-card ledger-ai-card">
