@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../pages/Home/HomeDashboard.css";
 
@@ -30,9 +31,11 @@ function AppShell({
   children,
 }) {
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const go = (page) => {
     if (!page) return;
+    setMenuOpen(false);
     if (typeof onNavigate === "function") {
       onNavigate(page);
       return;
@@ -44,15 +47,28 @@ function AppShell({
     <div className="home">
       <header className="home-topbar">
         <div className="home-topbar-inner">
-          <button
-            type="button"
-            className="home-logo"
-            onClick={() => go("home")}
-            aria-label="VORI 홈"
-          >
-            <span className="home-logo-vo">VO</span>
-            <span className="home-logo-ri">RI</span>
-          </button>
+          <div className="home-topbar-left">
+            <button
+              type="button"
+              className="home-menu-toggle"
+              aria-label={menuOpen ? "메뉴 닫기" : "메뉴 열기"}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <button
+              type="button"
+              className="home-logo"
+              onClick={() => go("home")}
+              aria-label="VORI 홈"
+            >
+              <span className="home-logo-vo">VO</span>
+              <span className="home-logo-ri">RI</span>
+            </button>
+          </div>
           <nav className="home-topnav" aria-label="주 메뉴">
             {TOP_NAV.map((item) => (
               <button
@@ -74,21 +90,19 @@ function AppShell({
               </button>
             ))}
           </nav>
-          <button
-            type="button"
-            className="home-logout-link"
-            onClick={() => {
-              if (typeof onLogout === "function") onLogout();
-            }}
-          >
-            로그아웃
-          </button>
         </div>
       </header>
 
       <div className="home-shell">
+        {menuOpen && (
+          <div
+            className="home-sidebar-backdrop"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden
+          />
+        )}
         <aside
-          className="home-sidebar home-sidebar--left"
+          className={`home-sidebar home-sidebar--left ${menuOpen ? "is-open" : ""}`}
           aria-label="사이드 메뉴"
         >
           <div className="home-side-block">
@@ -148,6 +162,7 @@ function AppShell({
                   type="button"
                   className="home-side-link"
                   onClick={() => {
+                    setMenuOpen(false);
                     if (typeof onLogout === "function") onLogout();
                   }}
                 >

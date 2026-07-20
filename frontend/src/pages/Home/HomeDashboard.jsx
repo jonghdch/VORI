@@ -34,7 +34,6 @@ const won = (n) => `${(n ?? 0).toLocaleString("ko-KR")}원`;
 
 function HomeDashboard({ user, onNavigate, onLogout }) {
   const navigate = useNavigate();
-  const nickname = user?.nickname || "사용자";
 
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -61,15 +60,17 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     weekday: "long",
   }).format(today);
 
-  const hour = today.getHours();
-  const greeting =
-    hour < 11 ? "좋은 아침이에요!" : hour < 18 ? "좋은 오후예요!" : "좋은 저녁이에요!";
-
   const stats = summary?.stats;
   const spending = summary?.spending;
   const recent = summary?.recentExpenses ?? [];
   const breakdown = summary?.categoryBreakdown ?? [];
   const monthTotal = breakdown.reduce((s, c) => s + c.amount, 0);
+
+  // 경험치바 — 프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
+  // 백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체.
+  const statTotal = STAT_META.reduce((s, m) => s + (stats?.[m.key] ?? 0), 0);
+  const petLevel = Math.floor(statTotal / 100) + 1;
+  const petExp = statTotal % 100;
 
   return (
     <AppShell
@@ -79,33 +80,47 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
       onLogout={onLogout}
     >
       <main className="home-main">
-        <div className="home-main-header">
-          <h1 className="home-greeting">
-            {greeting} {nickname}님, 오늘도 보리와 함께해요!
-          </h1>
-          <p className="home-date">{dateStr}</p>
-        </div>
-
         <div className="home-row home-row-pet">
           {/* 성장 단계·상태·AI 멘트는 데이터 소스가 없어 정적 문구였음 — 허위 노출 대신
               실지출 기반 말풍선만 유지. 펫 상태 API 가 생기면 단계/상태 표시 복원. */}
           <section className="home-card home-card-pet">
-            <div className="home-pet-name-row">
-              <h2 className="home-pet-name">보리</h2>
-              {/* 칭호 — 백엔드에 active_title_id 는 있으나 조회 API 미구현.
-                  API 가 생기면 이 텍스트에 실제 칭호를 꽂는다. 없으면 "칭호 없음". */}
-              <span className="home-pet-title-badge">칭호 없음</span>
+            <div className="home-pet-top">
+              <p className="home-date">{dateStr}</p>
+              <button
+                type="button"
+                className="home-pet-room-link"
+                onClick={() => navigate("/raise")}
+              >
+                마이룸 가기 →
+              </button>
+            </div>
+            <div className="home-pet-bubble">
+              {loading
+                ? "오늘 소비를 살펴보고 있어요…"
+                : (spending?.today ?? 0) > 0
+                  ? `오늘 ${won(spending.today)} 지출했어요. 저녁 8시에 같이 돌아봐요!`
+                  : "오늘은 아직 지출 기록이 없어요. 첫 기록을 남겨볼까요?"}
             </div>
             <div className="home-pet-body">
-              <div className="home-pet-bubble">
-                {loading
-                  ? "오늘 소비를 살펴보고 있어요…"
-                  : (spending?.today ?? 0) > 0
-                    ? `오늘 ${won(spending.today)} 지출했어요. 저녁 8시에 같이 돌아봐요!`
-                    : "오늘은 아직 지출 기록이 없어요. 첫 기록을 남겨볼까요?"}
-              </div>
-              <div className="home-pet-art" aria-hidden>
-                <img src={boriImage} alt="" className="home-pet-image" />
+              <div className="home-pet-center">
+                {/* 칭호 — 백엔드에 active_title_id 는 있으나 조회 API 미구현.
+                    API 가 생기면 이 텍스트에 실제 칭호를 꽂는다. 없으면 "칭호 없음". */}
+                <span className="home-pet-title-badge">칭호 없음</span>
+                <div className="home-pet-art" aria-hidden>
+                  <img src={boriImage} alt="" className="home-pet-image" />
+                </div>
+                <div className="home-pet-name-line">
+                  <h2 className="home-pet-name">보리</h2>
+                  <span className="home-pet-level-label">Lv. {petLevel}</span>
+                </div>
+                {/* 경험치바 — 프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
+                    백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체. */}
+                <div className="home-pet-level">
+                  <div className="home-pet-level-track">
+                    <div className="home-pet-level-fill" style={{ width: `${petExp}%` }} />
+                  </div>
+                  <span className="home-pet-level-num">{petExp}/100</span>
+                </div>
               </div>
               <ul className="home-stat-list home-pet-stats">
                 {STAT_META.map((m) => {
