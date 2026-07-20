@@ -1,0 +1,21 @@
+/* 주간 리포트: 표(2) : 날짜 상세(1) */
+.report-week-row {
+  grid-template-columns: 2fr 1fr;
+  align-items: stretch;
+}
+.report-week-table {
+  min-width: 0;
+  margin-bottom: 0;
+}
+/* 표가 짧아도 우측 카드가 찌그러지지 않게 */
+.report-week-row .ledger-day-col {
+  min-height: 360px;
+}
+@media (max-width: 900px) {
+  .report-week-row {
+    grid-template-columns: 1fr;
+  }
+  .report-week-row .ledger-day-col {
+    min-height: 280px;
+  }
+}
