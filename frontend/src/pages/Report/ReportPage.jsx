@@ -93,15 +93,18 @@ function ReportPage({ user, onLogout }) {
 
   const today = useMemo(() => new Date(), []);
 
-  // 이번 주 = 오늘이 속한 주, 일요일 시작 7일.
+  // 보고 있는 주의 기준일. 이동 시 이 값만 갱신되고 weekDates 가 따라간다.
+  const [weekAnchor, setWeekAnchor] = useState(() => new Date());
+
+  // 보고 있는 주 = weekAnchor 가 속한 주, 일요일 시작 7일.
   const weekDates = useMemo(() => {
-    const startOffset = today.getDay(); // 0=일 … 6=토
+    const startOffset = weekAnchor.getDay(); // 0=일 … 6=토
     return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today);
+      const d = new Date(weekAnchor);
       d.setDate(d.getDate() - startOffset + i);
       return d;
     });
-  }, [today]);
+  }, [weekAnchor]);
 
   // 이번 주가 걸친 달(최대 2개) — "YYYY-MM" 목록.
   const yearMonths = useMemo(() => {
@@ -129,6 +132,11 @@ function ReportPage({ user, onLogout }) {
   }));
   const [preview, setPreview] = useState(null);
 
+  // 보고 있는 주에 오늘이 포함되는지 — 기본 선택 규칙 분기용.
+  const containsToday = weekKeySet.has(
+    `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`,
+  );
+
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -141,14 +149,29 @@ function ReportPage({ user, onLogout }) {
           .map(toRow)
           .filter((r) => weekKeySet.has(`${r.year}-${r.month}-${r.day}`));
         setRows(mapped);
-        const todayRows = mapped.filter(
-          (r) => r.day === today.getDate() && r.month === today.getMonth() + 1,
-        );
-        setSelected({
-          day: today.getDate(),
-          month: today.getMonth() + 1,
-          id: todayRows[0]?.id ?? null,
-        });
+        // 기본 선택: 보는 주에 오늘이 있으면 오늘, 없으면 주 첫날(일요일).
+        if (containsToday) {
+          const todayRows = mapped.filter(
+            (r) => r.day === today.getDate() && r.month === today.getMonth() + 1,
+          );
+          setSelected({
+            day: today.getDate(),
+            month: today.getMonth() + 1,
+            id: todayRows[0]?.id ?? null,
+          });
+        } else {
+          const first = weekDates[0];
+          const firstDay = first.getDate();
+          const firstMonth = first.getMonth() + 1;
+          const firstRows = mapped.filter(
+            (r) => r.day === firstDay && r.month === firstMonth,
+          );
+          setSelected({
+            day: firstDay,
+            month: firstMonth,
+            id: firstRows[0]?.id ?? null,
+          });
+        }
       })
       .catch((e) => {
         if (!alive) return;
@@ -167,7 +190,7 @@ function ReportPage({ user, onLogout }) {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yearMonths, weekKeySet, navigate, today, reloadKey]);
+  }, [yearMonths, weekKeySet, weekDates, containsToday, navigate, today, reloadKey]);
 
   const expenseRows = rows.filter((r) => r.type === "EXPENSE");
   const weekExpenseTotal = expenseRows.reduce((sum, r) => sum + r.amountNum, 0);
@@ -191,11 +214,47 @@ function ReportPage({ user, onLogout }) {
     setSelected({ day: row.day, month: row.month, id: row.id });
   };
 
+  const changeWeek = (delta) => {
+    setWeekAnchor((d) => {
+      const n = new Date(d);
+      n.setDate(n.getDate() + delta * 7);
+      return n;
+    });
+  };
+
+  // 헤더 날짜 네비 표시 문자열 — "MM. DD ~ MM. DD" (가계부 주 모드와 동일 포맷).
+  const weekRangeLabel = useMemo(() => {
+    const first = weekDates[0];
+    const last = weekDates[6];
+    return `${pad2(first.getMonth() + 1)}. ${pad2(first.getDate())} ~ ${pad2(
+      last.getMonth() + 1,
+    )}. ${pad2(last.getDate())}`;
+  }, [weekDates]);
+
   return (
     <AppShell activeTop="wallet" activeSide="report" user={user} onLogout={onLogout}>
       <main className="home-main">
         <div className="ledger-header">
           <h1 className="ledger-greeting">소비 리포트</h1>
+          <div className="ledger-date-nav" aria-label="주 선택">
+            <button
+              type="button"
+              className="ledger-date-arrow"
+              aria-label="이전 주"
+              onClick={() => changeWeek(-1)}
+            >
+              ‹
+            </button>
+            <span className="ledger-date-display">{weekRangeLabel}</span>
+            <button
+              type="button"
+              className="ledger-date-arrow"
+              aria-label="다음 주"
+              onClick={() => changeWeek(1)}
+            >
+              ›
+            </button>
+          </div>
         </div>
 
         <div className="ledger-row report-week-row">
