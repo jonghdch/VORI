@@ -47,6 +47,32 @@ public class GeminiClient {
         return callGemini(prompt);
     }
 
+    /**
+     * 하루 소비 요약 → 펫이 사용자에게 말 거는 코멘트.
+     * 통계 나열이 아니라 캐릭터의 말투로 뽑는 게 핵심 (VORI 의 스토리텔링 컨셉).
+     *
+     * @param petName 말하는 주체가 될 펫 종족명. 펫이 없으면 null.
+     */
+    public String generateDailyComment(String petName, int expenseTotal, int incomeTotal,
+                                       int savedAmount, int statDelta) {
+        String speaker = (petName == null || petName.isBlank())
+                ? "사용자의 절약을 돕는 반려 캐릭터"
+                : "사용자가 키우는 반려 캐릭터 '" + petName + "'";
+
+        String prompt = String.format(
+                "당신은 %s입니다.\n" +
+                        "어제 사용자의 가계부 요약입니다.\n" +
+                        "- 지출 합계: %,d원\n" +
+                        "- 수입 합계: %,d원\n" +
+                        "- 평소 소비 패턴 대비 절약액: %,d원 (음수면 평소보다 더 씀)\n" +
+                        "- 그 결과 오른 내 스탯: %d\n" +
+                        "이 내용을 바탕으로 사용자에게 건네는 짧은 코멘트를 한국어 2문장으로 쓰세요.\n" +
+                        "친근한 말투로 칭찬이나 격려를 담고, 숫자를 그대로 나열하지 말고 이야기하듯 쓰세요. 코멘트만 출력하세요.",
+                speaker, expenseTotal, incomeTotal, savedAmount, statDelta
+        );
+        return callGemini(prompt);
+    }
+
     public ReasonCategory classifyAnswer(String question, String answer) {
         String prompt = String.format(
                 "다음 질문에 대한 사용자 답변을 카테고리 중 하나로 분류하세요.\n" +

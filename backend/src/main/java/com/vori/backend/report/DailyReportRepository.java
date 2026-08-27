@@ -12,4 +12,7 @@ public interface DailyReportRepository extends JpaRepository<DailyReport, Long> 
 
     List<DailyReport> findByUserIdAndReportDateBetweenOrderByReportDateDesc(
         Long userId, LocalDate start, LocalDate end);
+
+    /** 가장 최근 리포트 — 홈 화면의 "오늘의 이야기" 진입점. */
+    Optional<DailyReport> findFirstByUserIdOrderByReportDateDesc(Long userId);
 }

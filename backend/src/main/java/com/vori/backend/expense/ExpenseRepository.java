@@ -77,4 +77,17 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end);
     List<Expense> findByUserIdAndSpentAtBetween(Long userId, LocalDateTime start, LocalDateTime end);
+
+    /**
+     * 기간 내 지출을 남긴 사용자 id 목록 — 일일 리포트 배치 대상 선별용.
+     * 전체 사용자를 돌면 활동 없는 계정까지 AI 를 호출하게 되므로 변경분만 추린다.
+     */
+    @Query("""
+        SELECT DISTINCT e.userId
+        FROM Expense e
+        WHERE e.spentAt >= :start AND e.spentAt < :end
+        """)
+    List<Long> findUserIdsWithExpenseInRange(
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end);
 }

@@ -57,4 +57,25 @@ public class DailyReport {
 
     @Column(name = "read_at")
     private LocalDateTime readAt;
+
+    /**
+     * 같은 날 리포트를 다시 만들 때 덮어쓴다 (UNIQUE(user_id, report_date) 라 INSERT 는 불가).
+     * read_at 은 건드리지 않는다 — 이미 읽은 리포트가 재생성만으로 미확인 상태로 돌아가면 안 된다.
+     */
+    public void refresh(int incomeTotal, int expenseTotal, int savedAmount,
+                        int statDeltaTotal, String petSnapshot, String aiComment,
+                        LocalDateTime generatedAt) {
+        this.incomeTotal = incomeTotal;
+        this.expenseTotal = expenseTotal;
+        this.savedAmount = savedAmount;
+        this.statDeltaTotal = statDeltaTotal;
+        this.petSnapshot = petSnapshot;
+        this.aiComment = aiComment;
+        this.generatedAt = generatedAt;
+    }
+
+    /** 이미 읽은 리포트는 시각을 갱신하지 않는다(최초 확인 시점 보존). */
+    public void markRead(LocalDateTime at) {
+        if (this.readAt == null) this.readAt = at;
+    }
 }
