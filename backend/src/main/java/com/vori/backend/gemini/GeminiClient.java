@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -27,9 +30,9 @@ public class GeminiClient {
         int n = apiKey == null ? 0 : apiKey.length();
         log.info("[Gemini] api key loaded — length={} (값 자체는 로그 X)", n);
     }
-
+    
     private static final String BASE_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=";
 
     private static final String EMBED_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=";
@@ -72,7 +75,7 @@ public class GeminiClient {
                 "content", Map.of("parts", List.of(Map.of("text", text)))
         );
         try {
-            Map<?, ?> response = restTemplate.postForObject(url, body, Map.class);
+            Map<?, ?> response = postWithRetry(url, body, "embed");
             Map<?, ?> embedding = (Map<?, ?>) response.get("embedding");
             List<Number> values = (List<Number>) embedding.get("values");
             double[] vec = new double[values.size()];
@@ -90,11 +93,56 @@ public class GeminiClient {
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", text))))
         );
         try {
-            Map<?, ?> response = restTemplate.postForObject(url, body, Map.class);
-            return extractText(response);
+            return extractText(postWithRetry(url, body, "generateContent"));
         } catch (Exception e) {
             log.error("Gemini API 호출 실패", e);
             throw new RuntimeException("AI 서비스 호출에 실패했습니다.");
+        }
+    }
+
+    // ───── 재시도 ─────
+
+    private static final int MAX_ATTEMPTS = 3;
+    private static final long BACKOFF_BASE_MS = 500;
+
+    /**
+     * Gemini POST + 일시적 장애 재시도.
+     *
+     * 재시도 대상은 시간이 지나면 풀릴 수 있는 것만 — 5xx(특히 503 "high demand")와 429.
+     * 401·403·404 같은 4xx 는 몇 번을 더 보내도 같은 답이 오므로 즉시 실패시킨다
+     * (모델 은퇴로 404 가 났을 때 3배 느리게 실패하는 걸 막는다).
+     *
+     * 이 한 곳이 generateContent·embedContent 양쪽을 모두 덮는다. 특히 부팅 시
+     * CategorizeService 가 임베딩을 수십 번 연속 호출하는데, 거기서 503 한 번에
+     * 카테고리 캐시 전체가 날아가던 위험을 없앤다.
+     */
+    private Map<?, ?> postWithRetry(String url, Object body, String label) {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                return restTemplate.postForObject(url, body, Map.class);
+            } catch (HttpServerErrorException | HttpClientErrorException.TooManyRequests e) {
+                if (attempt >= MAX_ATTEMPTS) {
+                    log.error("[Gemini] {} — {}회 시도 모두 실패", label, attempt);
+                    throw e;
+                }
+                long waitMs = BACKOFF_BASE_MS * attempt;
+                log.warn("[Gemini] {} 일시 장애({}) — {}ms 후 재시도 {}/{}",
+                        label, statusOf(e), waitMs, attempt + 1, MAX_ATTEMPTS);
+                sleep(waitMs);
+            }
+        }
+    }
+
+    private static String statusOf(RestClientResponseException e) {
+        return String.valueOf(e.getStatusCode().value());
+    }
+
+    private static void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("AI 호출 대기 중 중단되었습니다.", ie);
         }
     }
 
