@@ -83,4 +83,24 @@ public class User {
     public void addTotalSaved(int amount) {
         this.totalSaved = (this.totalSaved == null ? 0 : this.totalSaved) + amount;
     }
+
+    /** 게임머니 적립. 절약 전환·펫 분양 보상 등. */
+    public void addGameMoney(int amount) {
+        if (amount < 0) throw new IllegalArgumentException("적립액은 음수일 수 없습니다: " + amount);
+        this.gameMoney = (this.gameMoney == null ? 0 : this.gameMoney) + amount;
+    }
+
+    /**
+     * 게임머니 차감. 알 구매·가구 구매 등.
+     * game_money 는 INT UNSIGNED 라 음수가 되면 DB 레벨에서 터진다 —
+     * 잔액 부족은 여기서 막아 불변식을 지킨다. (호출부는 사용자용 메시지로 변환)
+     */
+    public void spendGameMoney(int amount) {
+        if (amount < 0) throw new IllegalArgumentException("차감액은 음수일 수 없습니다: " + amount);
+        int current = this.gameMoney == null ? 0 : this.gameMoney;
+        if (current < amount) {
+            throw new IllegalStateException("게임머니 부족: 보유 " + current + ", 필요 " + amount);
+        }
+        this.gameMoney = current - amount;
+    }
 }

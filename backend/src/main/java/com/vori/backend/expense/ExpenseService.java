@@ -47,6 +47,11 @@ public class ExpenseService {
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
     private static final double EMA_ALPHA = 0.2;
 
+    // 절약액 → 게임머니 전환 비율 (N 원 절약당 1 코인).
+    // 기본 알이 2,500 코인이므로 25,000 원 절약 = 알 1 개. 게임 루프가 며칠 단위로 돌게 잡은 값 —
+    // 밸런싱은 이 상수만 바꾸면 된다. 분양 보상(스탯총합×10)은 여기에 얹히는 보너스 성격.
+    private static final int SAVED_PER_GAME_MONEY = 10;
+
     /** 가계부 작성 화면 mount 시 그 날짜 기존 expense 들 불러오기. */
     @Transactional(readOnly = true)
     public List<ExpenseResponse> listByDate(Long userId, LocalDate date) {
@@ -112,6 +117,8 @@ public class ExpenseService {
         if (savedAmount > 0) {
             User user = userRepository.findById(userId).orElseThrow();
             user.addTotalSaved(savedAmount);
+            // 절약분의 일부를 게임머니로 전환 — 알 구매(상점)의 유일한 수입원.
+            user.addGameMoney(savedAmount / SAVED_PER_GAME_MONEY);
             updateActiveGoals(userId, req.categoryId(), req.amount(), req.spentAt());
         }
 
@@ -172,6 +179,7 @@ public class ExpenseService {
 
         Pet pet = pets.get(0);
         pet.addStat(statType, statDelta);
+        pet.evaluateStage(); // 스탯 합이 임계값을 넘었으면 INFANT→JUVENILE→ADULT 로 승급
 
         petGrowthLogRepository.save(PetGrowthLog.builder()
                 .petId(pet.getId())

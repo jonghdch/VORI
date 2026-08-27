@@ -67,6 +67,10 @@ public class Pet {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    // 진화 임계값 — 4대 스탯 합 기준. 1학기 설계서 §Step 4 기준값.
+    private static final int JUVENILE_THRESHOLD = 200;
+    private static final int ADULT_THRESHOLD = 300;
+
     public void addStat(com.vori.backend.common.StatType statType, int delta) {
         switch (statType) {
             case ENERGY     -> this.statEnergy     += delta;
@@ -74,6 +78,40 @@ public class Pet {
             case IQ         -> this.statIq         += delta;
             case ENDURANCE  -> this.statEndurance  += delta;
         }
+    }
+
+    /** 4대 스탯 합. 진화 판정·분양가 산출의 기준값. */
+    public int statTotal() {
+        return nz(statEnergy) + nz(statCharm) + nz(statIq) + nz(statEndurance);
+    }
+
+    /**
+     * 스탯 합에 따라 성장 단계를 갱신한다. addStat 직후 호출.
+     * 단계는 되돌아가지 않는다 — 지출 삭제로 스탯이 줄어도 이미 큰 펫이 도로 작아지면
+     * 사용자 경험이 무너지므로 상향 전이만 허용.
+     */
+    public void evaluateStage() {
+        int total = statTotal();
+        PetStage next = total >= ADULT_THRESHOLD ? PetStage.ADULT
+                : total >= JUVENILE_THRESHOLD ? PetStage.JUVENILE
+                : PetStage.INFANT;
+        if (next.ordinal() > this.stage.ordinal()) {
+            this.stage = next;
+        }
+    }
+
+    public boolean isReleased() {
+        return releasedAt != null;
+    }
+
+    /** 분양 처리. 보상 금액 산출은 PetService 가 맡는다(가구 보너스가 펫 밖의 정보라서). */
+    public void release(int value, LocalDateTime at) {
+        this.releasedAt = at;
+        this.releaseValue = value;
+    }
+
+    private static int nz(Integer v) {
+        return v == null ? 0 : v;
     }
 
     // NULL = 현재 키우는 활성 펫. 값 있음 = 분양됨 (다 키워서 처분)

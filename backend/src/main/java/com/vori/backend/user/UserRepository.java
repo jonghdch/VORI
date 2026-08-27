@@ -1,8 +1,10 @@
 package com.vori.backend.user;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -15,6 +17,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    /**
+     * 게임머니 증감처럼 "읽고 → 계산해서 → 쓰는" 경로 전용 조회 (SELECT ... FOR UPDATE).
+     * 일반 findById 로 하면 알 구매를 더블클릭했을 때 두 트랜잭션이 같은 잔액을 읽어
+     * 둘 다 통과 → 잔액이 실제보다 많이 빠진다. 행 잠금으로 직렬화한다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.id = :id")
+    Optional<User> findByIdForUpdate(@Param("id") Long id);
 
     Page<User> findByRole(Role role, Pageable pageable);
 
