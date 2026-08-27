@@ -80,6 +80,15 @@ public class Pet {
         }
     }
 
+    /** 해당 단계가 되기 위한 최소 스탯 합. 임계값이 여기 한 곳에만 있도록 밖에서도 이걸 쓴다. */
+    public static int minStatTotalFor(PetStage stage) {
+        return switch (stage) {
+            case INFANT -> 0;
+            case JUVENILE -> JUVENILE_THRESHOLD;
+            case ADULT -> ADULT_THRESHOLD;
+        };
+    }
+
     /** 4대 스탯 합. 진화 판정·분양가 산출의 기준값. */
     public int statTotal() {
         return nz(statEnergy) + nz(statCharm) + nz(statIq) + nz(statEndurance);
