@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
@@ -31,8 +33,12 @@ public class GeminiClient {
         log.info("[Gemini] api key loaded — length={} (값 자체는 로그 X)", n);
     }
     
+    // gemini-2.0-flash 은퇴 시 구글이 후속으로 지목한 모델.
+    // -latest 별칭은 은퇴 걱정이 없는 대신 어떤 모델에 붙을지 알 수 없다 — 실측에서
+    // gemini-flash-latest 는 503 이 3/3, 응답이 40~58초였고 3.6-flash 는 3/3 성공에 평균 9.6초였다.
+    // 지연시간을 예측할 수 있는 쪽을 택한다. 이 모델이 은퇴하면 404 본문이 다음 후속을 알려준다.
     private static final String BASE_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=";
 
     private static final String EMBED_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=";
@@ -134,7 +140,11 @@ public class GeminiClient {
     /**
      * Gemini POST + 일시적 장애 재시도.
      *
-     * 재시도 대상은 시간이 지나면 풀릴 수 있는 것만 — 5xx(특히 503 "high demand")와 429.
+     * 재시도 대상은 시간이 지나면 풀릴 수 있는 것만 — 5xx(특히 503 "high demand"), 429,
+     * 그리고 타임아웃·연결 실패(ResourceAccessException). 타임아웃은 HTTP 상태가 없어
+     * 위 두 예외에 잡히지 않으므로 따로 명시해야 한다. 이게 빠져 있으면 응답이 조금 늦은 것만으로
+     * 재시도 없이 즉시 실패한다.
+     *
      * 401·403·404 같은 4xx 는 몇 번을 더 보내도 같은 답이 오므로 즉시 실패시킨다
      * (모델 은퇴로 404 가 났을 때 3배 느리게 실패하는 걸 막는다).
      *
@@ -146,21 +156,26 @@ public class GeminiClient {
         for (int attempt = 1; ; attempt++) {
             try {
                 return restTemplate.postForObject(url, body, Map.class);
-            } catch (HttpServerErrorException | HttpClientErrorException.TooManyRequests e) {
+            } catch (HttpServerErrorException
+                     | HttpClientErrorException.TooManyRequests
+                     | ResourceAccessException e) {
                 if (attempt >= MAX_ATTEMPTS) {
-                    log.error("[Gemini] {} — {}회 시도 모두 실패", label, attempt);
+                    log.error("[Gemini] {} — {}회 시도 모두 실패 ({})", label, attempt, causeOf(e));
                     throw e;
                 }
                 long waitMs = BACKOFF_BASE_MS * attempt;
                 log.warn("[Gemini] {} 일시 장애({}) — {}ms 후 재시도 {}/{}",
-                        label, statusOf(e), waitMs, attempt + 1, MAX_ATTEMPTS);
+                        label, causeOf(e), waitMs, attempt + 1, MAX_ATTEMPTS);
                 sleep(waitMs);
             }
         }
     }
 
-    private static String statusOf(RestClientResponseException e) {
-        return String.valueOf(e.getStatusCode().value());
+    /** 로그용 사유 — HTTP 응답이 있으면 상태코드, 타임아웃·연결 실패면 "timeout/IO". */
+    private static String causeOf(RestClientException e) {
+        return (e instanceof RestClientResponseException r)
+                ? String.valueOf(r.getStatusCode().value())
+                : "timeout/IO";
     }
 
     private static void sleep(long ms) {

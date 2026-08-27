@@ -6,6 +6,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -69,6 +70,21 @@ class GeminiClientTest {
 
         String result = new GeminiClient(rt)
                 .generateQuestion("커피", 8_000, BigDecimal.valueOf(4_000), null);
+
+        assertThat(result).isNotBlank();
+        verify(rt, times(2)).postForObject(anyString(), any(), eq(Map.class));
+    }
+
+    @Test
+    @DisplayName("읽기 타임아웃도 재시도한다 — HTTP 상태가 없어 놓치기 쉬운 경로")
+    void retriesOnReadTimeout() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(anyString(), any(), eq(Map.class)))
+                .thenThrow(new ResourceAccessException("Request timed out"))
+                .thenReturn(OK_RESPONSE);
+
+        String result = new GeminiClient(rt)
+                .generateDailyComment("강아지", 303_000, 0, -3_000, 57);
 
         assertThat(result).isNotBlank();
         verify(rt, times(2)).postForObject(anyString(), any(), eq(Map.class));
