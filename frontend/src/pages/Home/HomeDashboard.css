@@ -792,47 +792,6 @@
   margin-right: auto;
 }
 
-/* 기록 캘린더 — 계산기 키패드 느낌의 7열 숫자 그리드 */
-.home-cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-}
-
-.home-cal-weekday {
-  text-align: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--home-muted);
-  padding-bottom: 2px;
-}
-
-.home-cal-cell {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: #eef1ea;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--home-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.home-cal-cell--blank {
-  background: none;
-}
-
-.home-cal-cell.is-marked {
-  background: var(--home-green);
-  color: #fff;
-}
-
-.home-cal-cell.is-today {
-  box-shadow: inset 0 0 0 2px var(--home-green-dark);
-}
-
 .home-card-chart > .home-btn-block {
   margin-top: auto;
   padding-top: 8px;
@@ -1061,4 +1020,18 @@
   .home-main {
     padding: 20px 16px 32px;
   }
+}
+
+/* 펫 이미지 에셋이 없는 종족 — 이모지로 대체 (이미지와 같은 자리) */
+.home-pet-emoji {
+  font-size: 96px;
+  line-height: 1;
+}
+.home-pet-bubble-date {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--home-green-dark);
+  letter-spacing: 0.02em;
 }

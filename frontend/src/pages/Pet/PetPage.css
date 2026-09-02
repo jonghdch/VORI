@@ -607,3 +607,169 @@
     height: 150px;
   }
 }
+
+/* ── 펫 API 연동 후 추가 ── */
+/* 이미지 에셋이 없는 종족은 이모지로 — 이미지와 같은 자리를 차지하게 */
+.pet-current-emoji {
+  font-size: 120px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 14px rgba(61, 56, 48, 0.18));
+}
+.pet-profile-emoji {
+  font-size: 40px;
+  line-height: 1;
+}
+.pet-status-emoji {
+  font-size: 44px;
+  line-height: 1;
+}
+
+/* 펫 없음 — 방 가운데 안내 */
+.pet-room-empty {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 24px;
+  border-radius: var(--home-radius-sm);
+  background: rgba(255, 253, 249, 0.92);
+  box-shadow: 0 12px 24px rgba(45, 35, 28, 0.14);
+  text-align: center;
+}
+.pet-room-empty strong {
+  font-size: 16px;
+  font-weight: 900;
+}
+.pet-room-empty p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--home-muted);
+}
+
+/* 진화 진행도 */
+.pet-evolve {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: var(--home-radius-sm);
+  background: #f6f8f3;
+}
+.pet-evolve-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--home-muted);
+  font-weight: 700;
+}
+.pet-evolve-head strong {
+  color: var(--home-text);
+  font-variant-numeric: tabular-nums;
+}
+.pet-evolve-help {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--home-muted);
+  line-height: 1.5;
+}
+.pet-release-btn {
+  margin-top: 12px;
+  width: 100%;
+}
+.pet-release-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pet-empty {
+  margin: 0;
+  padding: 16px 0;
+  font-size: 14px;
+  color: var(--home-muted);
+  text-align: center;
+}
+.pet-inline-error {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #b23b3b;
+  font-weight: 700;
+}
+.pet-notice {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--home-radius-sm);
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+.pet-notice--err {
+  background: #fbe5e5;
+  color: #b23b3b;
+}
+
+/* 펫 이력 */
+.pet-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pet-history-item {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--home-radius-sm);
+  background: #f6f8f3;
+}
+.pet-history-item.is-released {
+  opacity: 0.7;
+}
+.pet-history-art {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--home-green-soft);
+  overflow: hidden;
+}
+.pet-history-image {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.pet-history-emoji {
+  font-size: 22px;
+  line-height: 1;
+}
+.pet-history-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pet-history-info strong {
+  font-size: 14px;
+}
+.pet-history-info small {
+  font-size: 11px;
+  color: var(--home-muted);
+  font-weight: 700;
+}
+.pet-history-state {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+  white-space: nowrap;
+}

@@ -19,3 +19,217 @@
     min-height: 280px;
   }
 }
+
+/* ── 상단 대시보드 행: 기록 캘린더 · 기간 요약 · 카테고리 TOP ── */
+.report-top-row {
+  grid-template-columns: minmax(300px, 1fr) 1.25fr 1fr;
+  align-items: stretch;
+}
+.report-top-row > .home-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 1200px) {
+  .report-top-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .report-top-row > .report-cat-card {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 800px) {
+  .report-top-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 카드 제목 + 기간 라벨 한 줄 */
+.report-card-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.report-card-period {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 캘린더 카드 */
+.report-cal-card .ledger-history-head {
+  margin-bottom: 20px;
+  align-items: baseline;
+}
+.report-cal-card .home-card-title {
+  margin-bottom: 0;
+}
+.report-cal-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--home-muted);
+  white-space: nowrap;
+}
+.report-cal-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-left: 8px;
+}
+.report-cal-swatch.is-marked {
+  background: var(--home-green);
+}
+.report-cal-swatch.is-highlight {
+  background: var(--home-green-soft);
+  box-shadow: inset 0 0 0 1px var(--home-green);
+}
+.report-cal-legend .report-cal-swatch:first-child {
+  margin-left: 0;
+}
+
+/* 기간 요약 — KPI 2×2 + AI 판정 분포 */
+.report-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
+}
+.report-kpi {
+  padding: 12px 14px;
+  border-radius: var(--home-radius-sm);
+  background: #f6f8f3;
+  min-width: 0;
+}
+.report-kpi .home-kpi-title {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.report-kpi .home-kpi-value {
+  margin-bottom: 2px;
+  /* 큰 금액(수백만 원)도 한 줄에 — 줄바꿈 대신 글자 크기를 살짝 줄인다 */
+  font-size: clamp(16px, 1.35vw, 20px);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.report-kpi .home-kpi-sub {
+  font-size: 12px;
+}
+.report-kpi-unit {
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--home-muted);
+}
+
+.report-signal {
+  margin-top: auto;
+  padding-top: 16px;
+}
+.report-signal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.report-signal-head .home-kpi-title,
+.report-signal-head .home-kpi-sub {
+  margin: 0;
+}
+.report-signal-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #eef1ea;
+  gap: 2px;
+}
+.report-signal-seg {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  transition: width 0.4s ease;
+}
+.report-signal-seg--green { background: var(--home-bar-green); }
+.report-signal-seg--gray  { background: #b9c0b3; }
+.report-signal-seg--red   { background: var(--home-bar-red); }
+.report-signal-legend {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--home-muted);
+}
+.report-signal-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.report-signal-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.report-signal-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--home-muted);
+}
+
+/* 카테고리 TOP — 라벨 · 막대 · 금액(비율) */
+.report-cat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: center;
+  flex: 1;
+}
+.report-cat-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.report-cat-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--home-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.report-cat-track {
+  height: 12px;
+}
+.report-cat-amount {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.report-cat-amount small {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--home-muted);
+}
+
+/* 페이지 제목 — 캡슐 없이 텍스트만 (표 헤더 텍스트와 같은 톤) */
+.report-greeting {
+  display: block;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--home-text);
+}

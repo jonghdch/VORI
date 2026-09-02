@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import AppRightSidebar from "../../components/AppRightSidebar";
+import RecordCalendar, { dateKey } from "../../components/RecordCalendar";
 import { getHomeSummary } from "../../api/home";
 import { getMonthlyLedger } from "../../api/ledger";
-import boriImage from "../../assets/pets/bori.png";
+import { getActivePet } from "../../api/pet";
+import { getLatestDailyReport, markDailyReportRead } from "../../api/report";
+import { PetArt } from "../../components/petVisual";
 import "./HomeDashboard.css";
 
 // 스탯 4종 표시 메타 (값은 백엔드 stats 에서).
@@ -14,9 +17,6 @@ const STAT_META = [
   { key: "iq", label: "지능", color: "var(--home-bar-orange)" },
   { key: "endurance", label: "지구력", color: "var(--home-bar-blue)" },
 ];
-
-// 기록 캘린더 요일 헤더.
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 // 업적은 아직 백엔드 도메인 미연동 — 정적 유지.
 const ACHIEVEMENTS = [
@@ -48,6 +48,27 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     };
   }, []);
 
+  // 키우는 펫(이름·외형) + 최신 일일 리포트(펫 말풍선). 둘 다 실패해도 홈은 떠야 하므로 조용히 fallback.
+  const [activePet, setActivePet] = useState(null);
+  const [dailyReport, setDailyReport] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    getActivePet()
+      .then((p) => alive && setActivePet(p))
+      .catch(() => {});
+    getLatestDailyReport()
+      .then((r) => {
+        if (!alive) return;
+        setDailyReport(r);
+        // 화면에 보인 순간 읽음 처리 — 실패해도 표시엔 영향 없음
+        if (r && !r.readAt) markDailyReportRead(r.id).catch(() => {});
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   // 기록 캘린더 — 이번 달 가계부에서 기록이 있는 날짜(일) 집합. null = 로딩 중.
   const [recordedDays, setRecordedDays] = useState(null);
 
@@ -59,7 +80,12 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
       .then((rows) => {
         if (alive)
           setRecordedDays(
-            new Set(rows.map((r) => Number(r.date.split("-")[2]))),
+            new Set(
+              rows.map((r) => {
+                const [y, m, d] = r.date.split("-").map(Number);
+                return dateKey(y, m, d);
+              }),
+            ),
           );
       })
       .catch(() => {
@@ -82,9 +108,6 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   const spending = summary?.spending;
   const recent = summary?.recentExpenses ?? [];
 
-  // 기록 캘린더 그리드 계산 — 이번 달 1일의 요일만큼 앞을 비운다.
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const firstWeekday = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
 
   // 경험치바 — 프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
   // 백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체.
@@ -114,12 +137,22 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 마이룸 가기 →
               </button>
             </div>
+            {/* 말풍선 — 일일 리포트의 AI 코멘트가 있으면 그걸, 없으면 오늘 지출 기반 문구 */}
             <div className="home-pet-bubble">
-              {loading
-                ? "오늘 소비를 살펴보고 있어요…"
-                : (spending?.today ?? 0) > 0
-                  ? `오늘 ${won(spending.today)} 지출했어요. 저녁 8시에 같이 돌아봐요!`
-                  : "오늘은 아직 지출 기록이 없어요. 첫 기록을 남겨볼까요?"}
+              {dailyReport?.aiComment ? (
+                <>
+                  <span className="home-pet-bubble-date">
+                    {dailyReport.reportDate.slice(5).replace("-", "/")} 리포트
+                  </span>
+                  {dailyReport.aiComment}
+                </>
+              ) : loading ? (
+                "오늘 소비를 살펴보고 있어요…"
+              ) : (spending?.today ?? 0) > 0 ? (
+                `오늘 ${won(spending.today)} 지출했어요. 저녁 8시에 같이 돌아봐요!`
+              ) : (
+                "오늘은 아직 지출 기록이 없어요. 첫 기록을 남겨볼까요?"
+              )}
             </div>
             <div className="home-pet-body">
               <div className="home-pet-center">
@@ -146,13 +179,18 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                     />
                   </svg>
                   <div className="home-pet-art" aria-hidden>
-                    <img src={boriImage} alt="" className="home-pet-image" />
+                    <PetArt
+                      appearanceKey={activePet?.appearanceKey ?? "puppy"}
+                      name=""
+                      className="home-pet-image"
+                      emojiClassName="home-pet-emoji"
+                    />
                   </div>
                   {/* 칭호 — 게이지 하단 열린 틈에 배치. API 미구현, "칭호 없음" */}
                   <span className="home-pet-title-badge">칭호 없음</span>
                 </div>
                 <div className="home-pet-name-line">
-                  <h2 className="home-pet-name">보리</h2>
+                  <h2 className="home-pet-name">{activePet?.speciesName ?? "보리"}</h2>
                   <span className="home-pet-level-label">Lv. {petLevel}</span>
                 </div>
               </div>
@@ -265,34 +303,12 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             <h2 className="home-card-title home-card-title--sm">
               {today.getMonth() + 1}월 기록 캘린더
             </h2>
-            <div
-              className="home-cal"
-              role="img"
-              aria-label={`${today.getMonth() + 1}월 가계부 기록 캘린더`}
-            >
-              <div className="home-cal-grid">
-                {WEEKDAYS.map((d) => (
-                  <span key={d} className="home-cal-weekday">
-                    {d}
-                  </span>
-                ))}
-                {Array.from({ length: firstWeekday }, (_, i) => (
-                  <span key={`blank-${i}`} className="home-cal-cell home-cal-cell--blank" />
-                ))}
-                {Array.from({ length: daysInMonth }, (_, i) => {
-                  const day = i + 1;
-                  const marked = recordedDays?.has(day);
-                  const isToday = day === today.getDate();
-                  return (
-                    <span
-                      key={day}
-                      className={`home-cal-cell${marked ? " is-marked" : ""}${isToday ? " is-today" : ""}`}
-                    >
-                      {day}
-                    </span>
-                  );
-                })}
-              </div>
+            <div className="home-cal">
+              <RecordCalendar
+                year={today.getFullYear()}
+                month={today.getMonth() + 1}
+                recordedKeys={recordedDays}
+              />
             </div>
             <button
               type="button"
