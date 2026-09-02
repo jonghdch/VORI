@@ -691,7 +691,17 @@
 }
 
 /* 보이는 리포트 — 리포트 페이지 링크 */
-.ledger-report-more { margin-top: 12px; align-self: center; }
+.ledger-report-more {
+  margin-top: auto; /* 카드 바닥에 붙임 — 도넛/빈 상태 높이와 무관하게 위치 고정 */
+  padding-top: 12px;
+  align-self: center;
+}
+.ledger-report-card .ledger-card-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .ledger-donut-wrap {
   flex: 1;
