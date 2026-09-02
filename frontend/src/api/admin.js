@@ -2,7 +2,7 @@
 // 전 경로가 백엔드에서 hasRole("ADMIN") 으로 보호됨 → 일반 유저는 403.
 // 세션 쿠키 인증이라 credentials: 'include' 필수.
 
-const API_BASE = "http://localhost:8080/api";
+import { API_BASE } from "./base";
 
 export class AdminApiError extends Error {
   constructor(message, status) {

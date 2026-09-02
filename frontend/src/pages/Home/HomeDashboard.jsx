@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import { getHomeSummary } from "../../api/home";
+import { getMonthlyLedger } from "../../api/ledger";
 import boriImage from "../../assets/pets/bori.png";
 import "./HomeDashboard.css";
 
@@ -14,13 +15,8 @@ const STAT_META = [
   { key: "endurance", label: "지구력", color: "var(--home-bar-blue)" },
 ];
 
-// 카테고리 막대 색 순환.
-const CAT_COLORS = [
-  "var(--home-bar-green)",
-  "var(--home-bar-red)",
-  "var(--home-bar-orange)",
-  "var(--home-bar-blue)",
-];
+// 기록 캘린더 요일 헤더.
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 // 업적은 아직 백엔드 도메인 미연동 — 정적 유지.
 const ACHIEVEMENTS = [
@@ -31,11 +27,9 @@ const ACHIEVEMENTS = [
 ];
 
 const won = (n) => `${(n ?? 0).toLocaleString("ko-KR")}원`;
-const SIGNAL_ICON = { RED: "🔴", GRAY: "⚪", GREEN: "🟢" };
 
 function HomeDashboard({ user, onNavigate, onLogout }) {
   const navigate = useNavigate();
-  const nickname = user?.nickname || "사용자";
 
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,6 +48,28 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     };
   }, []);
 
+  // 기록 캘린더 — 이번 달 가계부에서 기록이 있는 날짜(일) 집합. null = 로딩 중.
+  const [recordedDays, setRecordedDays] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    getMonthlyLedger(ym)
+      .then((rows) => {
+        if (alive)
+          setRecordedDays(
+            new Set(rows.map((r) => Number(r.date.split("-")[2]))),
+          );
+      })
+      .catch(() => {
+        if (alive) setRecordedDays(new Set());
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const today = new Date();
   const dateStr = new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
@@ -62,15 +78,19 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     weekday: "long",
   }).format(today);
 
-  const hour = today.getHours();
-  const greeting =
-    hour < 11 ? "좋은 아침이에요!" : hour < 18 ? "좋은 오후예요!" : "좋은 저녁이에요!";
-
   const stats = summary?.stats;
   const spending = summary?.spending;
   const recent = summary?.recentExpenses ?? [];
-  const breakdown = summary?.categoryBreakdown ?? [];
-  const monthTotal = breakdown.reduce((s, c) => s + c.amount, 0);
+
+  // 기록 캘린더 그리드 계산 — 이번 달 1일의 요일만큼 앞을 비운다.
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const firstWeekday = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
+
+  // 경험치바 — 프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
+  // 백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체.
+  const statTotal = STAT_META.reduce((s, m) => s + (stats?.[m.key] ?? 0), 0);
+  const petLevel = Math.floor(statTotal / 100) + 1;
+  const petExp = statTotal % 100;
 
   return (
     <AppShell
@@ -80,52 +100,82 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
       onLogout={onLogout}
     >
       <main className="home-main">
-        <div className="home-main-header">
-          <h1 className="home-greeting">
-            {greeting} {nickname}님, 오늘도 보리와 함께해요!
-          </h1>
-          <p className="home-date">{dateStr}</p>
-        </div>
-
         <div className="home-row home-row-pet">
+          {/* 성장 단계·상태·AI 멘트는 데이터 소스가 없어 정적 문구였음 — 허위 노출 대신
+              실지출 기반 말풍선만 유지. 펫 상태 API 가 생기면 단계/상태 표시 복원. */}
           <section className="home-card home-card-pet">
-            <p className="home-pet-stage">청소년기 · 성체까지 00일 남음</p>
-            <div className="home-pet-head">
-              <div>
-                <h2 className="home-pet-name">보리</h2>
-                <p className="home-pet-status">상태 : 배고픔</p>
-              </div>
-              <div className="home-pet-art" aria-hidden>
-                <img src={boriImage} alt="" className="home-pet-image" />
-              </div>
+            <div className="home-pet-top">
+              <p className="home-date">{dateStr}</p>
+              <button
+                type="button"
+                className="home-pet-room-link"
+                onClick={() => navigate("/raise")}
+              >
+                마이룸 가기 →
+              </button>
             </div>
             <div className="home-pet-bubble">
-              어제 카페를 두 번이나 갔군요! 오늘은 아메리카노 한 잔만 해요
+              {loading
+                ? "오늘 소비를 살펴보고 있어요…"
+                : (spending?.today ?? 0) > 0
+                  ? `오늘 ${won(spending.today)} 지출했어요. 저녁 8시에 같이 돌아봐요!`
+                  : "오늘은 아직 지출 기록이 없어요. 첫 기록을 남겨볼까요?"}
             </div>
-          </section>
-
-          <section className="home-card home-card-stats">
-            <h2 className="home-card-title">스탯 현황</h2>
-            <ul className="home-stat-list">
-              {STAT_META.map((m) => {
-                const value = stats?.[m.key] ?? 0;
-                return (
-                  <li key={m.key} className="home-stat-row">
-                    <span className="home-stat-label">{m.label}</span>
-                    <div className="home-stat-track">
-                      <div
-                        className="home-stat-fill"
-                        style={{
-                          width: `${Math.min(Math.max(value, 0), 100)}%`,
-                          background: m.color,
-                        }}
-                      />
-                    </div>
-                    <span className="home-stat-num">{value}</span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="home-pet-body">
+              <div className="home-pet-center">
+                {/* 원형 경험치 게이지 — 270° 아치(아래 90° 열림)가 보리를 감싼다.
+                    프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
+                    백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체. */}
+                <div
+                  className="home-pet-gauge"
+                  role="img"
+                  aria-label={`경험치 ${petExp}/100 (Lv. ${petLevel})`}
+                >
+                  <svg className="home-pet-gauge-ring" viewBox="0 0 120 120" aria-hidden>
+                    <circle
+                      className="home-pet-gauge-track"
+                      cx="60" cy="60" r="52"
+                      transform="rotate(135 60 60)"
+                      strokeDasharray="245.04 326.73"
+                    />
+                    <circle
+                      className="home-pet-gauge-fill"
+                      cx="60" cy="60" r="52"
+                      transform="rotate(135 60 60)"
+                      strokeDasharray={`${(245.04 * petExp) / 100} 326.73`}
+                    />
+                  </svg>
+                  <div className="home-pet-art" aria-hidden>
+                    <img src={boriImage} alt="" className="home-pet-image" />
+                  </div>
+                  {/* 칭호 — 게이지 하단 열린 틈에 배치. API 미구현, "칭호 없음" */}
+                  <span className="home-pet-title-badge">칭호 없음</span>
+                </div>
+                <div className="home-pet-name-line">
+                  <h2 className="home-pet-name">보리</h2>
+                  <span className="home-pet-level-label">Lv. {petLevel}</span>
+                </div>
+              </div>
+              <ul className="home-stat-list home-pet-stats">
+                {STAT_META.map((m) => {
+                  const value = stats?.[m.key] ?? 0;
+                  return (
+                    <li key={m.key} className="home-stat-row">
+                      <span className="home-stat-label">{m.label}</span>
+                      <div className="home-stat-track">
+                        <div
+                          className="home-stat-fill"
+                          style={{
+                            width: `${Math.min(Math.max(value, 0), 100)}%`,
+                            background: m.color,
+                          }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </section>
         </div>
 
@@ -133,7 +183,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           <article className="home-card home-kpi">
             <h3 className="home-kpi-title">오늘 지출</h3>
             <p className="home-kpi-value">{won(spending?.today)}</p>
-            <p className="home-kpi-sub">오늘 기록 {recent.length}건 기준</p>
+            {/* recent.length 는 "최근 지출 5건" 목록 길이지 오늘 기록 수가 아님 — 오표기 제거 */}
+            <p className="home-kpi-sub">오늘 0시부터 누적</p>
           </article>
           <article className="home-card home-kpi">
             <h3 className="home-kpi-title">이번 달 누적</h3>
@@ -149,8 +200,10 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
 
         <div className="home-row home-row-bottom">
           <section className="home-card home-card-list">
-            <h2 className="home-card-title home-card-title--sm">최근 지출 내역</h2>
-            <p className="home-list-date">최근 {recent.length}건</p>
+            <div className="home-list-head">
+              <h2 className="home-card-title home-card-title--sm">최근 지출 내역</h2>
+              <p className="home-list-date">최근 {recent.length}건</p>
+            </div>
             <ul className="home-tx-list">
               {loading ? (
                 <li className="home-tx-row">불러오는 중…</li>
@@ -160,7 +213,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 recent.map((row) => (
                   <li key={row.id} className="home-tx-row">
                     <span className="home-tx-icon">
-                      {SIGNAL_ICON[row.signalFinal] || "⚪"}
+                      <span className={`home-tx-dot home-tx-dot--${(row.signalFinal || "GRAY").toLowerCase()}`} />
                     </span>
                     <div className="home-tx-mid">
                       <span className="home-tx-name">{row.item}</span>
@@ -209,29 +262,37 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           </section>
 
           <section className="home-card home-card-chart">
-            <h2 className="home-card-title home-card-title--sm">카테고리별 지출</h2>
-            <div className="home-cat-chart">
-              {loading ? (
-                <p className="home-cat-empty">불러오는 중…</p>
-              ) : breakdown.length === 0 ? (
-                <p className="home-cat-empty">이번 달 지출이 없어요.</p>
-              ) : (
-                breakdown.map((c, i) => (
-                  <div key={c.categoryName} className="home-cat-row">
-                    <span className="home-cat-label">{c.categoryName}</span>
-                    <div className="home-cat-track">
-                      <div
-                        className="home-cat-fill"
-                        style={{
-                          width: monthTotal > 0 ? `${(c.amount / monthTotal) * 100}%` : "0%",
-                          background: CAT_COLORS[i % CAT_COLORS.length],
-                        }}
-                      />
-                    </div>
-                    <span className="home-cat-amount">{won(c.amount)}</span>
-                  </div>
-                ))
-              )}
+            <h2 className="home-card-title home-card-title--sm">
+              {today.getMonth() + 1}월 기록 캘린더
+            </h2>
+            <div
+              className="home-cal"
+              role="img"
+              aria-label={`${today.getMonth() + 1}월 가계부 기록 캘린더`}
+            >
+              <div className="home-cal-grid">
+                {WEEKDAYS.map((d) => (
+                  <span key={d} className="home-cal-weekday">
+                    {d}
+                  </span>
+                ))}
+                {Array.from({ length: firstWeekday }, (_, i) => (
+                  <span key={`blank-${i}`} className="home-cal-cell home-cal-cell--blank" />
+                ))}
+                {Array.from({ length: daysInMonth }, (_, i) => {
+                  const day = i + 1;
+                  const marked = recordedDays?.has(day);
+                  const isToday = day === today.getDate();
+                  return (
+                    <span
+                      key={day}
+                      className={`home-cal-cell${marked ? " is-marked" : ""}${isToday ? " is-today" : ""}`}
+                    >
+                      {day}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
             <button
               type="button"

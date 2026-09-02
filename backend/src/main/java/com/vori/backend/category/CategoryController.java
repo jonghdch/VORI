@@ -3,6 +3,7 @@ package com.vori.backend.category;
 import com.vori.backend.category.dto.CategorizeRequest;
 import com.vori.backend.category.dto.CategorizeResponse;
 import com.vori.backend.category.dto.CategoryTreeResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,7 +32,7 @@ public class CategoryController {
      * → 자동 분류가 안 돼도 사용자가 입력을 이어갈 수 있다 (다음 단계 진행 가능).
      */
     @PostMapping("/categorize")
-    public CategorizeResponse categorize(@RequestBody CategorizeRequest req) {
+    public CategorizeResponse categorize(@Valid @RequestBody CategorizeRequest req) {
         CategorizeService.Result r = categorizeService.categorizeOrFallback(req.name());
         if (r == null) return CategorizeResponse.empty();
         return new CategorizeResponse(r.leafId(), r.leafName(), r.parentId(), r.parentName(), r.score());

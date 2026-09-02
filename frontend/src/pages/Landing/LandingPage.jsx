@@ -2,7 +2,106 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import SiteHeader from "../../components/SiteHeader";
+import boriImage from "../../assets/pets/bori.png";
 import "./LandingPage.css";
+
+// 브라우저 창 크롬(신호등 + 타이틀) + 본문. 각 step 미디어 슬롯을 채우는 목업.
+function MockWindow({ label, children }) {
+  return (
+    <div className="landing-mock">
+      <div className="landing-mock-bar">
+        <span className="landing-mock-dot landing-mock-dot--r" />
+        <span className="landing-mock-dot landing-mock-dot--y" />
+        <span className="landing-mock-dot landing-mock-dot--g" />
+        <span className="landing-mock-bar-title">{label}</span>
+      </div>
+      <div className="landing-mock-body">{children}</div>
+    </div>
+  );
+}
+
+// ① 지출 + 사유 입력 폼
+function MockEntry() {
+  return (
+    <MockWindow label="오늘 지출 · 새 기록">
+      <div className="landing-mock-row">
+        <span className="landing-mock-label">내역</span>
+        <span className="landing-mock-input">점심에 친구랑 파스타</span>
+      </div>
+      <div className="landing-mock-row">
+        <span className="landing-mock-label">금액</span>
+        <span className="landing-mock-input landing-mock-amount">18,000원</span>
+      </div>
+      <div className="landing-mock-row">
+        <span className="landing-mock-label">분류</span>
+        <span className="landing-mock-chip">식비 · 외식</span>
+      </div>
+      <div className="landing-mock-reason">
+        <span className="landing-mock-label">사유</span>
+        <p>오랜만에 만난 친구라 기분 좋게 썼어요.</p>
+      </div>
+    </MockWindow>
+  );
+}
+
+// ② AI 시그널 판정 결과
+function MockVerdict() {
+  return (
+    <MockWindow label="AI 합리성 판정">
+      <div className="landing-mock-verdict">
+        <span className="landing-mock-signals" aria-hidden>
+          <span className="landing-mock-sig landing-mock-sig--on" />
+          <span className="landing-mock-sig landing-mock-sig--gray" />
+          <span className="landing-mock-sig landing-mock-sig--red" />
+        </span>
+        <strong className="landing-mock-verdict-text">합리적</strong>
+      </div>
+      <ul className="landing-mock-reasons">
+        <li>예산 안에서 쓴 지출이에요</li>
+        <li>평소 외식 패턴과 비슷해요</li>
+        <li>적어둔 사유가 분명해요</li>
+      </ul>
+    </MockWindow>
+  );
+}
+
+// ③ 펫 성장 (스탯 상승)
+function MockGrowth() {
+  const stats = [
+    { label: "에너지", pct: 72 },
+    { label: "매력", pct: 58 },
+    { label: "지능", pct: 66 },
+    { label: "지구력", pct: 80 },
+  ];
+  return (
+    <MockWindow label="보리의 방">
+      <div className="landing-mock-pet">
+        <span className="landing-mock-pet-avatar">
+          <img src={boriImage} alt="" />
+        </span>
+        <span className="landing-mock-pet-meta">
+          <span className="landing-mock-pet-name">보리</span>
+          <span className="landing-mock-pet-sub">합리적인 하루를 보냈어요</span>
+        </span>
+        <span className="landing-mock-grow">스탯 +2</span>
+      </div>
+      <ul className="landing-mock-stats">
+        {stats.map((s) => (
+          <li key={s.label}>
+            <span>{s.label}</span>
+            <span className="landing-mock-track">
+              <span
+                className="landing-mock-fill"
+                style={{ width: `${s.pct}%` }}
+              />
+            </span>
+            <span className="landing-mock-val">{s.pct}</span>
+          </li>
+        ))}
+      </ul>
+    </MockWindow>
+  );
+}
 
 // FAQ 한 항목 단위 컴포넌트.
 // 클릭하면 부드럽게 펼쳐지고 닫혀요. (grid-template-rows 트릭 사용)
@@ -28,7 +127,7 @@ function FaqItem({ question, children }) {
   );
 }
 
-function LandingStepCard({ number, title, desc, videoSrc }) {
+function LandingStepCard({ number, title, desc, mock }) {
   return (
     <motion.div
       className="landing-step"
@@ -49,16 +148,7 @@ function LandingStepCard({ number, title, desc, videoSrc }) {
         </div>
         <p className="landing-step-desc">{desc}</p>
       </div>
-      <div className="landing-step-media">
-        <video
-          className="landing-step-video"
-          src={videoSrc}
-          autoPlay
-          loop
-          muted
-          playsInline
-        />
-      </div>
+      <div className="landing-step-media">{mock}</div>
     </motion.div>
   );
 }
@@ -247,7 +337,7 @@ function LandingPage({ user, onLogout }) {
                 "점심에 친구랑 파스타" 처럼 자유롭게.
               </>
             }
-            videoSrc={`${process.env.PUBLIC_URL}/videos/step1.mp4`}
+            mock={<MockEntry />}
           />
           <LandingStepCard
             number="02"
@@ -258,7 +348,7 @@ function LandingPage({ user, onLogout }) {
                 합리성을 판단해 알려드려요.
               </>
             }
-            videoSrc={`${process.env.PUBLIC_URL}/videos/step2.mp4`}
+            mock={<MockVerdict />}
           />
           <LandingStepCard
             number="03"
@@ -269,7 +359,7 @@ function LandingPage({ user, onLogout }) {
                 마이룸에서 결과를 확인해요.
               </>
             }
-            videoSrc={`${process.env.PUBLIC_URL}/videos/step3.mp4`}
+            mock={<MockGrowth />}
           />
         </div>
       </section>
@@ -334,6 +424,11 @@ function LandingPage({ user, onLogout }) {
             </p>
           </div>
           <div className="landing-footer-meta">
+            <div className="landing-footer-legal">
+              <a href="/terms">이용약관</a>
+              <span aria-hidden>·</span>
+              <a href="/privacy">개인정보처리방침</a>
+            </div>
             <span>졸업작품 © 2026 VORI Team</span>
             <span>문의 : vori@example.com</span>
           </div>

@@ -8,14 +8,21 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .ledger-greeting {
   margin: 0;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.35;
+  /* 캡슐 박스 */
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  background: var(--home-card-surface);
+  padding: 10px 20px;
 }
 
 .ledger-header-actions {
@@ -29,7 +36,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 4px 12px;
   background: var(--home-card-surface);
   border: 1px solid var(--home-card-border);
   border-radius: var(--home-radius-sm);
@@ -75,20 +82,6 @@
   white-space: nowrap;
 }
 
-.ledger-history-toggle {
-  padding: 8px 20px;
-  background: var(--home-card-surface);
-  color: var(--home-text);
-  border: 1px solid var(--home-card-border);
-  white-space: nowrap;
-}
-
-.ledger-history-toggle:hover,
-.ledger-history-toggle.is-active {
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
-}
-
 .ledger-row {
   display: grid;
   gap: 20px;
@@ -108,8 +101,10 @@
   font-size: 20px;
 }
 
+
 .ledger-history-card {
   margin-bottom: 28px;
+  /* 카드 크롬 없음 — 표가 페이지 배경 위에 바로 놓임 */
 }
 
 .ledger-history-head {
@@ -120,22 +115,12 @@
   margin-bottom: 16px;
 }
 
-.ledger-history-head .home-card-title--sm {
-  margin-bottom: 4px;
-}
-
-.ledger-history-sub {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--home-muted);
-}
-
-.ledger-history-total {
-  flex-shrink: 0;
+/* 표 헤더 — 캡슐 없이 텍스트만 */
+.ledger-history-chip {
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 800;
   color: var(--home-text);
+  white-space: nowrap;
 }
 
 .ledger-history-table-wrap {
@@ -145,12 +130,20 @@
 
 .ledger-history-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 0;
+  table-layout: fixed; /* 열 폭 고정 — 가로 잘림 방지 */
   border-collapse: collapse;
 }
 
+/* 5열 폭 배분: 날짜 96px / 내역 auto / 카테고리 22% / AI 판정 84px / 금액 92px */
+.ledger-history-table th:nth-child(1) { width: 96px; }
+.ledger-history-table th:nth-child(2) { width: auto; }
+.ledger-history-table th:nth-child(3) { width: 22%; }
+.ledger-history-table th:nth-child(4) { width: 84px; }
+.ledger-history-table th:nth-child(5) { width: 92px; }
+
 .ledger-history-table th {
-  padding: 8px 12px;
+  padding: 8px 8px;
   background: rgba(232, 227, 216, 0.42);
   color: var(--home-muted);
   font-size: 12px;
@@ -169,7 +162,7 @@
 }
 
 .ledger-history-table td {
-  padding: 12px 12px;
+  padding: 12px 8px;
   border-bottom: 1px solid var(--home-card-border);
   font-size: 13px;
   font-weight: 700;
@@ -182,8 +175,15 @@
   transition: background 0.12s ease;
 }
 
+/* 짝수 행 흰 배경 — 행 구분 가독성 */
+.ledger-history-table tbody tr:nth-child(even) {
+  background: var(--home-white);
+}
+
 .ledger-history-table tbody tr:hover,
-.ledger-history-table tbody tr.is-selected {
+.ledger-history-table tbody tr:nth-child(even):hover,
+.ledger-history-table tbody tr.is-selected,
+.ledger-history-table tbody tr:nth-child(even).is-selected {
   background: rgba(127, 176, 105, 0.1);
 }
 
@@ -192,14 +192,19 @@
   outline-offset: -2px;
 }
 
-.ledger-history-date,
-.ledger-history-name {
+.ledger-history-date {
   display: block;
   white-space: nowrap;
 }
 
-.ledger-history-time,
-.ledger-history-memo {
+.ledger-history-name {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ledger-history-time {
   display: block;
   margin-top: 4px;
   font-size: 12px;
@@ -207,15 +212,86 @@
   color: var(--home-muted);
 }
 
+.ledger-history-memo {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--home-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .ledger-history-badge {
   display: inline-flex;
   padding: 4px 8px;
   border-radius: 999px;
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+/* 합리성 시그널 3단계 색상 */
+.ledger-history-badge--green {
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+}
+.ledger-history-badge--gray {
+  background: #eef0ec;
+  color: var(--home-muted);
+}
+.ledger-history-badge--red {
+  background: #fbe8e8;
+  color: #c0504a;
+}
+
+/* AI 판정 대상이 아닌 지출 — 배지 대신 옅은 대시 */
+.ledger-history-ai-none {
+  color: var(--home-muted);
+  opacity: 0.5;
+}
+
+/* 하단 카드 공용 빈 상태 (지출 없음 · 기능 준비 중) */
+.ledger-card-empty {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--home-muted);
+}
+
+.ledger-history-empty-cell {
+  text-align: center;
+  padding: 28px 0;
+  color: var(--home-muted);
+}
+
+.ledger-cal-state {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--home-muted);
+}
+.ledger-cal-state--error {
+  color: var(--home-warn);
+}
+
+/* 상세 패널 '구분' 칩 (수입/지출) */
+.ledger-detail-type {
+  display: inline-flex;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ledger-detail-type--income {
+  background: #fbe8e8;
+  color: #c0504a;
+}
+.ledger-detail-type--expense {
+  background: #e7eff8;
+  color: #3f6ea5;
 }
 
 .ledger-history-amount {
@@ -226,7 +302,21 @@
 
 .ledger-row-calendar {
   grid-template-columns: 1.55fr 1fr;
+  /* 캘린더 높이를 기준으로 두 열의 세로 길이를 맞춘다.
+     날짜 카드는 .ledger-day-col 안에서 absolute 로 채워지므로(아래 참조)
+     행 높이는 캘린더 내용만으로 결정 → 캘린더엔 빈 여백이 안 생기고,
+     날짜 카드는 캘린더 높이에 맞춰지며 내용이 길면 내부 스크롤된다. */
   align-items: stretch;
+}
+
+/* 날짜 카드 래퍼 — 행 높이(=캘린더)에 맞춰 늘어나고, 카드는 이 박스를 꽉 채운다. */
+.ledger-day-col {
+  position: relative;
+}
+
+.ledger-day-col > .ledger-day-card {
+  position: absolute;
+  inset: 0;
 }
 
 .ledger-calendar-card {
@@ -248,6 +338,16 @@
   padding: 8px 0;
 }
 
+/* 일요일 헤더 — 관례적 빨간 표기 */
+.ledger-cal-weekday--sun {
+  color: #c0504a;
+}
+
+/* 토요일 헤더 — 관례적 파란 표기 */
+.ledger-cal-weekday--sat {
+  color: #3f6ea5;
+}
+
 .ledger-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -255,7 +355,8 @@
 }
 
 .ledger-cal-cell {
-  min-height: 88px;
+  height: 88px;
+  min-width: 0;
   border: 1px solid var(--home-card-border);
   border-radius: 10px;
   padding: 8px;
@@ -267,6 +368,7 @@
   cursor: pointer;
   font-family: inherit;
   text-align: left;
+  overflow: hidden;
   transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -335,6 +437,7 @@
 .ledger-day-card {
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .ledger-day-head {
@@ -343,6 +446,19 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+/* 헤더 아래 본문(거래 리스트 + 상세)만 스크롤. 헤더는 고정. */
+.ledger-day-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* 스크롤바가 내용과 겹치지 않게 약간의 여백 */
+  margin-right: -8px;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
 }
 
 .ledger-day-head .home-card-title--sm {
@@ -381,6 +497,22 @@
   box-shadow: inset 0 0 0 1px rgba(124, 158, 107, 0.36);
 }
 
+.ledger-detail-row .home-tx-amount {
+  margin-right: 8px;
+}
+
+.ledger-detail-row .home-tx-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--home-green-soft);
+  font-size: 20px;
+}
+
 .ledger-day-empty {
   margin-top: 12px;
   padding: 16px;
@@ -403,14 +535,40 @@
   background: #fffdf9;
   border: 1px solid var(--home-card-border);
   border-radius: var(--home-radius-sm);
+  flex: 1 0 auto;          /* 리스트 아래 남는 높이를 끝까지 채움 */
+  display: flex;
+  flex-direction: column;
 }
 
 .ledger-expense-detail-head {
+  margin-bottom: 16px;
+}
+
+.ledger-detail-title-row {
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
+  gap: 4px;
+}
+
+.ledger-detail-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--home-green-soft);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.ledger-detail-title-amount {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
 }
 
 .ledger-detail-eyebrow {
@@ -463,16 +621,28 @@
 
 .ledger-detail-note {
   margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--home-card-border);
+}
+
+/* 메모(그리드 다음 첫 note)부터 하단 정렬 — 이후 형제(사유·AI)도 같이 하단 묶음 */
+.ledger-detail-grid + .ledger-detail-note {
+  margin-top: auto;
 }
 
 .ledger-detail-note p {
   margin: 0;
+  min-height: 56px; /* 메모 영역 살짝 여유 있게 */
+  padding: 10px 12px;
+  border: 1px solid var(--home-card-border);
+  border-radius: 10px;
+  background: var(--home-card-surface);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.55;
   color: var(--home-text);
+}
+.ledger-detail-note p:empty {
+  background: rgba(232, 227, 216, 0.42);
+  border-color: rgba(232, 227, 216, 0.42);
 }
 
 .ledger-detail-ai {
@@ -501,8 +671,16 @@
   color: var(--home-text);
 }
 
-.ledger-row-bottom {
-  grid-template-columns: 1fr 0.9fr 1.1fr;
+.ledger-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* 보이는 리포트 : AI 판정 : side-col = 1:1:1 */
+.ledger-row-insights {
+  grid-template-columns: 1fr 1fr 1fr;
   align-items: stretch;
 }
 
@@ -511,6 +689,9 @@
   flex-direction: column;
   align-items: center;
 }
+
+/* 보이는 리포트 — 리포트 페이지 링크 */
+.ledger-report-more { margin-top: 12px; align-self: center; }
 
 .ledger-donut-wrap {
   flex: 1;
@@ -652,12 +833,6 @@
   color: var(--home-muted);
 }
 
-.ledger-bottom-right {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-height: 0;
-}
 
 .ledger-cat-card .ledger-cat-chart {
   display: flex;
@@ -715,37 +890,119 @@
   transition: width 0.4s ease;
 }
 
+/* ── 주/월 세그먼트 토글 ─────────────────────────────── */
+.ledger-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  background: var(--home-card-surface);
+  padding: 3px;
+  gap: 2px;
+}
+
+.ledger-view-toggle button {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--home-muted);
+  padding: 5px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.ledger-view-toggle button.is-active {
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+}
+
+/* ── 주 보기 — 세로로 긴 요일 칸 7개 ────────────────── */
+.ledger-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.ledger-week-cell {
+  min-height: 384px;
+  height: auto;
+}
+
+.ledger-week-cell--other {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* 표 페이지네이션 — 10건 초과 시 */
+.ledger-history-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.ledger-history-pager button {
+  border: 1px solid var(--home-card-border);
+  background: var(--home-card-surface);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--home-text);
+  cursor: pointer;
+  font-family: inherit;
+}
+.ledger-history-pager button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.ledger-history-pager span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--home-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 1200px) {
   .ledger-row-summary {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .ledger-row-bottom {
+  .ledger-row-insights {
     grid-template-columns: 1fr 1fr;
   }
 
-  .ledger-bottom-right {
+  .ledger-side-col {
     grid-column: 1 / -1;
     flex-direction: row;
   }
 
-  .ledger-bottom-right > .home-card {
+  .ledger-side-col > .home-card {
     flex: 1;
   }
 }
 
 @media (max-width: 900px) {
   .ledger-row-calendar,
-  .ledger-row-bottom {
+  .ledger-row-insights {
     grid-template-columns: 1fr;
   }
 
-  .ledger-bottom-right {
+  .ledger-side-col {
     flex-direction: column;
   }
 
+  /* 1열로 쌓이면 더 이상 캘린더 높이에 맞출 필요가 없다.
+     absolute 해제해 카드가 제 내용 높이대로 자연스럽게 흐르게. */
+  .ledger-day-col > .ledger-day-card {
+    position: static;
+  }
+
   .ledger-cal-cell {
-    min-height: 72px;
+    height: 72px;
   }
 }
 

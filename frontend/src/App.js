@@ -28,9 +28,14 @@ const WalletConfirmPage = lazy(() =>
 );
 // 가계부 달력/조회 (가은 PR #4). AppShell 기반.
 const WalletPage = lazy(() => import("./pages/Wallet/WalletPage"));
+// 소비 리포트 — 아직 플레이스홀더 (/wallet 보이는 리포트의 "자세히보기" 진입점).
+const ReportPage = lazy(() => import("./pages/Report/ReportPage"));
 const PetPage = lazy(() => import("./pages/Pet/PetPage"));
 const ShopPage = lazy(() => import("./pages/Shop/ShopPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
+// 이용약관·개인정보처리방침 — 공개(비인증) 페이지.
+const TermsPage = lazy(() => import("./pages/Legal/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/Legal/PrivacyPage"));
 const AdminLayout = lazy(() => import("./pages/Admin/AdminLayout"));
 const AdminPlaceholder = lazy(() =>
   import("./pages/Admin/AdminPlaceholder"),
@@ -61,11 +66,14 @@ const ADMIN_PAGES = {
 //   /login                  로그인
 //   /signup                 회원가입
 //   /story                  스토리 (서비스 소개)
+//   /terms                  이용약관 (공개)
+//   /privacy                개인정보처리방침 (공개)
 //   /home                   홈 대시보드 (인증 필요)
 //   /wallet                 가계부 달력/조회 (인증 필요)
 //   /wallet/new             가계부 작성 Step 1 (입력)
-//   /wallet/new/analysis    Step 2 (AI 사유 질문)
-//   /wallet/new/confirm     Step 3 (확인)
+//   /wallet/new/confirm     Step 2 (확인)
+//   /wallet/analysis        소비 분석 (오후 8시~자정 이벤트, ledger-ai-card 진입)
+//   /report                 소비 리포트 (플레이스홀더)
 //   /raise                  펫 키우기
 //   /shop                   상점
 //   /settings               환경설정
@@ -139,6 +147,8 @@ function App() {
             path="/story"
             element={<StoryPage user={user} onLogout={handleLogout} />}
           />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route
             path="/home"
             element={
@@ -163,8 +173,10 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* 소비 분석 — 위저드 단계가 아니라 /wallet 의 ledger-ai-card 에서
+              오후 8시~자정 이벤트로 진입하는 독립 페이지. */}
           <Route
-            path="/wallet/new/analysis"
+            path="/wallet/analysis"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <WalletAnalysisPage />
@@ -176,6 +188,14 @@ function App() {
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <WalletConfirmPage user={user} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/report"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <ReportPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />

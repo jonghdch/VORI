@@ -34,6 +34,10 @@
 2. 압축 풀어서 `~/Projects/vori/backend/` 로 이동
 3. `./gradlew bootRun` 으로 실행 (port 8080)
 
+> **실행 위치 주의**: `.env`(DB 비밀번호·Gemini 키)는 **repo 루트**에 있고 `spring.config.import` 가 CWD 상대경로라, 백엔드는 **repo 루트를 작업 디렉터리로** 실행해야 한다. `backend/` 에서 띄우면 `.env` 를 못 읽어 DB·AI 연결이 깨진다(로그인 실패 포함).
+>
+> **Windows 로그인 안 될 때**: DB URL 은 `127.0.0.1` 로 고정돼 있다(Windows 는 `localhost` 를 IPv6 `::1` 로 먼저 해석해 MySQL 연결이 실패할 수 있음). 그래도 안 되면 `.env` 를 **CRLF→LF** 로 저장하고, 본인 MySQL `root` 비밀번호를 `.env` 의 `DB_PASSWORD` 에 명시. 프론트는 `localhost:3000` / `127.0.0.1:3000` 둘 다 허용된다. 시드 계정은 `admin@vori.com` / `1234`.
+
 ### 프론트엔드 (React.js)
 ```bash
 cd ~/Projects/vori
@@ -48,6 +52,46 @@ brew install mysql              # macOS
 brew services start mysql
 mysql -u root -e "CREATE DATABASE vori;"
 ```
+
+## 새 환경에서 실행 (클론 후)
+
+repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"는 사람이 1회, 그 다음은 백엔드가 자동.**
+
+### 1회 수동 준비 (이게 안 되면 백엔드가 부팅 중 죽음 → 로그인 포함 전부 실패)
+1. **MySQL 설치 + 실행**
+   - macOS: `brew install mysql && brew services start mysql`
+   - Windows: MySQL Installer 설치 후 MySQL 서비스 시작
+2. **DB 생성**: `mysql -u root -p -e "CREATE DATABASE vori;"` (테이블이 아니라 DB 자체. Flyway 가 DB 는 안 만든다)
+3. **`.env` 작성** — repo 루트에 `.env.example` 복사 후 값 채우기
+   - `DB_USERNAME` / `DB_PASSWORD` = 본인 MySQL 계정 (Windows root 는 보통 비밀번호 있음 → 반드시 명시)
+   - `GEMINI_API_KEY` = 본인 키
+4. **백엔드 실행** — **repo 루트를 작업 디렉터리로** (`backend/` 에서 띄우면 `.env` 못 읽음)
+5. **프론트엔드**: `cd frontend && npm install && npm start`
+
+### 백엔드가 자동으로 하는 것 (위 준비가 끝났으면)
+- MySQL 커넥션 풀 생성·연결
+- Flyway 마이그레이션 자동 실행 → 테이블 생성/검증
+- 시드 자동 생성 — 관리자 계정 `admin@vori.com` / `1234`
+
+> Windows 에서 로그인 안 될 때 트러블슈팅은 위 [백엔드 셋업](#백엔드-spring-boot) 주의 박스 참조.
+
+### 초기 세팅 파일 (`.env`)
+
+비밀값은 코드가 아니라 repo 루트의 `.env` 에 둔다. **`.env` 는 gitignore(절대 커밋 X)**, 공유되는 건 키 이름만 담은 **`.env.example`** 뿐이다. 새 환경에서는 이걸 복사해서 채운다:
+
+```bash
+cp .env.example .env   # repo 루트에서
+```
+
+| 키 | 필수 | 설명 |
+|----|------|------|
+| `DB_USERNAME` | ✅ | MySQL 계정 (기본 `root`) |
+| `DB_PASSWORD` | ✅ | MySQL 비밀번호 (Windows root 는 보통 비번 있음 → 반드시 명시. 없으면 빈 값) |
+| `GEMINI_API_KEY` | ✅ | Gemini 키 — https://aistudio.google.com/app/apikey |
+| `GEMINI_MODEL` | — | 사용할 모델 (기본 `gemini-2.0-flash`) |
+
+> 백엔드는 `spring.config.import` 로 `.env` 를 **repo 루트 기준 상대경로**로 읽는다. 그래서 백엔드는 항상 **repo 루트를 작업 디렉터리로** 실행해야 한다(위 1회 준비 4번).
+> 편집기에서 `.env` 저장 시 **줄바꿈은 LF** 로 (CRLF 면 값 끝에 `\r` 이 붙어 DB 비번이 깨질 수 있음).
 
 ## 파일별 역할 가이드
 
@@ -68,7 +112,7 @@ mysql -u root -e "CREATE DATABASE vori;"
 
 `application.properties` 주요 설정:
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/vori?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+spring.datasource.url=jdbc:mysql://127.0.0.1:3306/vori?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
 spring.datasource.username=${DB_USERNAME:root}
 spring.datasource.password=${DB_PASSWORD:}
 spring.jpa.hibernate.ddl-auto=validate
@@ -185,7 +229,7 @@ navigate("/login");
 
 | 폴더 | 역할 | 예시 |
 |------|------|------|
-| `pages/` | 페이지 단위 컴포넌트 | `Home`, `Wallet`(가계부 조회), `WalletEntry`(작성 3-step), `Admin`, `Settings` |
+| `pages/` | 페이지 단위 컴포넌트 | `Home`, `Wallet`(가계부 조회 + 소비 분석 이벤트), `WalletEntry`(작성 2-step), `Admin`, `Settings` |
 | `components/` | 재사용 컴포넌트 | `AppShell`(상단바+사이드바 셸), `AppRightSidebar` |
 | `api/` | 백엔드 호출 함수 | axios wrapper |
 | `hooks/` | 커스텀 훅 | `useAuth`, `useExpense` |

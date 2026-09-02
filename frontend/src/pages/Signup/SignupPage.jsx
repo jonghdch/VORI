@@ -235,6 +235,15 @@ function SignupPage({ onLogin }) {
                 <span>
                   <em className="signup-required">(필수)</em> 이용약관 동의
                 </span>
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="signup-agree-view"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  보기
+                </a>
               </label>
               <label className="signup-agree-row">
                 <input
@@ -247,6 +256,15 @@ function SignupPage({ onLogin }) {
                 <span>
                   <em className="signup-required">(필수)</em> 개인정보 수집·이용 동의
                 </span>
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="signup-agree-view"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  보기
+                </a>
               </label>
               <label className="signup-agree-row">
                 <input

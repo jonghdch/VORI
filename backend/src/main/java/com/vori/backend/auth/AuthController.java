@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -49,6 +50,11 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(req.email(), req.password())
             );
 
+            // 세션 고정(session fixation) 방어 — 로그인 성공 시 세션 ID 회전.
+            // formLogin 을 꺼서 필터의 changeSessionId 전략을 안 타므로 직접 수행.
+            request.getSession(true);
+            request.changeSessionId();
+
             SecurityContext context = SecurityContextHolder.createEmptyContext();
             context.setAuthentication(auth);
             SecurityContextHolder.setContext(context);
@@ -58,6 +64,9 @@ public class AuthController {
             return AuthResponse.from(principal.getUser());
         } catch (BadCredentialsException e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다");
+        } catch (LockedException e) {
+            // 제재(정지·영구정지) 계정 — CustomUserDetailsService 가 잠금 처리한 경우
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "제재 중인 계정입니다");
         }
     }
 

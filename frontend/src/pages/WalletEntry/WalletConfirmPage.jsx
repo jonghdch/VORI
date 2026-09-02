@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import StepIndicator from "./StepIndicator";
 import {
   formatToday,
-  isPastDate,
   parseIsoDate,
   toIsoDate,
 } from "./utils";
@@ -41,17 +40,22 @@ function WalletConfirmPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
-  const past = isPastDate(dateStr);
 
   const [expenses, setExpenses] = useState([]);
   const [incomes, setIncomes] = useState([]);
   const [savings, setSavings] = useState([]);
   const [categoryMap, setCategoryMap] = useState({}); // id → {name, parentName}
   const [loading, setLoading] = useState(true);
+  // fetch 실패를 빈 데이터와 구분 — 실패인데 "내역이 없어요"를 보여주면
+  // 방금 저장한 사용자가 유실로 오인한다. reloadKey = "다시 시도" 트리거.
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // 초기 fetch
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
     (async () => {
       try {
         const [exps, incs, savs, tree] = await Promise.all([
@@ -74,13 +78,15 @@ function WalletConfirmPage({ user }) {
         setSavings(savs);
         setLoading(false);
       } catch {
-        if (!cancelled) setLoading(false);
+        if (cancelled) return;
+        setLoadError(true);
+        setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [dateStr]);
+  }, [dateStr, reloadKey]);
 
   // 결제수단별 그룹핑
   const paymentGroups = useMemo(() => {
@@ -136,15 +142,12 @@ function WalletConfirmPage({ user }) {
   const isOpen = (k) => !collapsed[k];
   const toggleOpen = (k) => setCollapsed((p) => ({ ...p, [k]: !p[k] }));
 
-  const goBack = () => {
-    const qs = `?date=${dateStr}`;
-    if (past) navigate(`/wallet/new${qs}`);
-    else navigate(`/wallet/new/analysis${qs}`);
-  };
+  // 확인 직전 단계는 항상 입력(Step 1). 소비 분석은 작성 흐름에서 빠졌다.
+  const goBack = () => navigate(`/wallet/new?date=${dateStr}`);
 
   return (
     <div className="ledger">
-      <header className="ledger-header">
+      <header className="ledger-entry-header">
         <button
           type="button"
           className="ledger-logo-btn"
@@ -155,8 +158,8 @@ function WalletConfirmPage({ user }) {
         </button>
       </header>
 
-      <main className="ledger-main">
-        <StepIndicator current={past ? 2 : 3} includeAnalysis={!past} />
+      <main className="ledger-entry-main">
+        <StepIndicator current={2} includeAnalysis={false} />
 
         <div className="ledger-title-block ledger-title-block-center">
           <h1 className="ledger-title">
@@ -171,6 +174,27 @@ function WalletConfirmPage({ user }) {
           <p className="ledger-subtitle" style={{ textAlign: "center" }}>
             불러오는 중…
           </p>
+        ) : loadError ? (
+          // 조회 실패 — 저장 유실로 오인하지 않게 명확히 구분
+          <div className="ledger-center-y">
+            <div className="ledger-title-block">
+              <p className="ledger-subtitle">
+                저장된 내역을 불러오지 못했어요. 저장이 사라진 게 아니니
+                네트워크 확인 후 다시 시도해주세요.
+              </p>
+            </div>
+            <div className="ledger-actions">
+              <div className="ledger-actions-row">
+                <button
+                  type="button"
+                  className="ledger-next"
+                  onClick={() => setReloadKey((k) => k + 1)}
+                >
+                  다시 시도
+                </button>
+              </div>
+            </div>
+          </div>
         ) : visiblePayments.length === 0 && savings.length === 0 ? (
           <div className="ledger-center-y">
             <div className="ledger-title-block">

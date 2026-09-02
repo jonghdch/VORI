@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "../../components/AppShell";
+import { getMyStats } from "../../api/stats";
 import roomDefaultImage from "../../assets/backgrounds/room-default.png";
 import roomGreenImage from "../../assets/backgrounds/room-green.png";
 import roomPinkImage from "../../assets/backgrounds/room-pink.png";
@@ -76,11 +77,13 @@ const INITIAL_FURNITURE_POSITIONS = {
   books: { x: 62, y: 38 },
 };
 
-const PET_STATUS = [
-  { key: "satiety", label: "에너지", value: 76, color: "var(--home-bar-green)" },
-  { key: "mood", label: "매력", value: 88, color: "var(--home-bar-orange)" },
-  { key: "clean", label: "지능", value: 62, color: "var(--home-bar-blue)" },
-  { key: "energy", label: "지구력", value: 54, color: "var(--home-bar-red)" },
+// 스탯 4종 표시 메타 — 값은 홈 대시보드와 동일한 백엔드 스탯(/users/me/stats)에서.
+// (이전엔 76/88/62/54 하드코딩이라 홈과 같은 펫의 스탯이 서로 달랐음)
+const STAT_META = [
+  { key: "energy", label: "에너지", color: "var(--home-bar-green)" },
+  { key: "charm", label: "매력", color: "var(--home-bar-red)" },
+  { key: "iq", label: "지능", color: "var(--home-bar-orange)" },
+  { key: "endurance", label: "지구력", color: "var(--home-bar-blue)" },
 ];
 
 function clamp(value, min, max) {
@@ -90,6 +93,18 @@ function clamp(value, min, max) {
 function PetPage({ user, onLogout }) {
   const roomStageRef = useRef(null);
   const nickname = user?.nickname || "사용자";
+
+  // 홈 대시보드와 같은 소스의 실스탯. 실패 시 null → 0 표시.
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    getMyStats().then((res) => {
+      if (alive) setStats(res);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [selectedBackgroundId, setSelectedBackgroundId] = useState("default");
   const [placedFurnitureIds, setPlacedFurnitureIds] = useState(INITIAL_PLACED_FURNITURE);
   const [petPosition, setPetPosition] = useState(INITIAL_PET_POSITION);
@@ -185,14 +200,14 @@ function PetPage({ user, onLogout }) {
       <main className="home-main pet-main">
         <div className="pet-header">
           <div>
-            <p className="pet-eyebrow">펫 키우기</p>
+            <p className="pet-eyebrow">마이룸</p>
             <h1 className="pet-title">
               {nickname}님이 키우는 {selectedPet.name}의 방
             </h1>
           </div>
+          {/* 레벨은 펫 API 미구현이라 표시하지 않음 (Lv.7 하드코딩 제거) */}
           <div className="pet-header-status">
             <span>{selectedPet.type}</span>
-            <strong>Lv. 7</strong>
           </div>
         </div>
 
@@ -317,7 +332,7 @@ function PetPage({ user, onLogout }) {
               </span>
               <div>
                 <strong>{selectedPet.name}</strong>
-                <small>{selectedPet.type} · Lv. 7</small>
+                <small>{selectedPet.type}</small>
                 <p>{selectedPet.description}</p>
               </div>
             </div>
@@ -326,12 +341,12 @@ function PetPage({ user, onLogout }) {
           <section className="home-card pet-panel">
             <div className="pet-panel-head">
               <h2 className="home-card-title home-card-title--sm">펫 상태</h2>
-              <span>오늘 상태</span>
+              <span>누적 스탯</span>
             </div>
             <div className="pet-status-summary">
               <div>
                 <strong>{selectedPet.name}</strong>
-                <p>산책과 간식이 필요한 상태예요.</p>
+                <p>합리적인 지출을 기록하면 스탯이 자라요.</p>
               </div>
               <img
                 src={selectedPet.image}
@@ -340,20 +355,24 @@ function PetPage({ user, onLogout }) {
               />
             </div>
             <ul className="pet-status-list">
-              {PET_STATUS.map((status) => (
-                <li key={status.key}>
-                  <div className="pet-status-row">
-                    <span>{status.label}</span>
-                    <strong>{status.value}%</strong>
-                  </div>
-                  <div className="pet-status-track">
-                    <div
-                      className="pet-status-fill"
-                      style={{ width: `${status.value}%`, background: status.color }}
-                    />
-                  </div>
-                </li>
-              ))}
+              {STAT_META.map((meta) => {
+                const value = stats?.[meta.key] ?? 0;
+                const width = Math.min(Math.max(value, 0), 100);
+                return (
+                  <li key={meta.key}>
+                    <div className="pet-status-row">
+                      <span>{meta.label}</span>
+                      <strong>{value}</strong>
+                    </div>
+                    <div className="pet-status-track">
+                      <div
+                        className="pet-status-fill"
+                        style={{ width: `${width}%`, background: meta.color }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </section>
 

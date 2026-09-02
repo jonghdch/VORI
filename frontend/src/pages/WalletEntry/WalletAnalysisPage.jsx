@@ -1,21 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import StepIndicator from "./StepIndicator";
-import { isPastDate, toIsoDate } from "./utils";
+import { toIsoDate } from "./utils";
 import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
 import "./WalletEntry.css";
 
-// Step 2 — 소비 분석.
+// 소비 분석 — /wallet 의 ledger-ai-card 에서 오후 8시~자정 이벤트로 진입하는 독립 페이지.
+// (더 이상 가계부 작성 위저드의 단계가 아니다.)
 // - 백엔드가 z-score 로 anomaly 감지한 expense 만 AI 질문 생성됨 (비동기).
-// - 질문이 없으면 안내 + "다음 단계" 만 표시.
-// - 있으면 페이지네이션으로 한 건씩 답변. "다음에 할게요" 누르면 답변 안 한 채로 넘어감.
-// - 과거 날짜는 AI 분석 안 해서 무조건 Step 3 로 직행 (기존 로직 유지).
+// - 질문이 없으면 안내 + "완료" 만 표시.
+// - 있으면 페이지네이션으로 한 건씩 답변. "다음에 할게요" 누르면 답변 안 한 채로 닫음.
+// - 오후 8시~자정 밖에서 직접 URL 로 들어오면 /wallet 로 돌려보낸다.
 function WalletAnalysisPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
+  // 이벤트 활성 시간대(오후 8시~자정) 가드. 카드 버튼과 동일 기준.
+  // 진입 시점에 1회만 판정해 고정 — 매 렌더 재평가하면 23:59에 답변을
+  // 타이핑하던 사용자가 자정을 넘는 순간 리다이렉트로 축출되고 작성 내용이 날아간다.
+  const [isEventOpen] = useState(() => new Date().getHours() >= 20);
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [inquiries, setInquiries] = useState([]);
   const [page, setPage] = useState(1);
   const [answers, setAnswers] = useState({}); // inquiryId → text
@@ -25,45 +30,56 @@ function WalletAnalysisPage() {
   // 클라이언트도 skip 해 불필요한 round-trip 차단.
   const submittedRef = useRef(new Set());
 
-  // 과거 날짜는 Step 2 자체를 우회
-  const past = isPastDate(dateStr);
-
   // mount 시 fetch. Gemini 비동기 (질문 생성에 보통 5~10s) 라 즉시 응답엔 비어있음.
   // 2s 간격으로 최대 6번 polling — 첫 호출 + 5회 retry = 최대 10s 대기.
+  // reloadKey: 에러 화면의 "다시 시도"가 이 effect 를 재실행시키는 트리거.
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(() => {
-    if (past) return;
+    if (!isEventOpen) return;
     let cancelled = false;
     let attempts = 0;
     const MAX_RETRIES = 5;
     const RETRY_INTERVAL_MS = 2000;
+    setLoading(true);
+    setLoadError(false);
     const tryFetch = async () => {
       if (cancelled) return;
-      const data = await listInquiriesByDate(dateStr);
-      if (cancelled) return;
-      if (data.length === 0 && attempts < MAX_RETRIES) {
-        attempts++;
-        setTimeout(tryFetch, RETRY_INTERVAL_MS);
-        return;
+      try {
+        const data = await listInquiriesByDate(dateStr);
+        if (cancelled) return;
+        if (data.length === 0 && attempts < MAX_RETRIES) {
+          attempts++;
+          setTimeout(tryFetch, RETRY_INTERVAL_MS);
+          return;
+        }
+        setInquiries(data);
+        setLoading(false);
+      } catch {
+        // 네트워크 단절 등 fetch 자체 실패 — "분석 중" 화면에 영원히 갇히지 않게
+        // 에러 상태로 전환하고 탈출/재시도 경로를 준다.
+        if (cancelled) return;
+        setLoadError(true);
+        setLoading(false);
       }
-      setInquiries(data);
-      setLoading(false);
     };
     tryFetch();
     return () => {
       cancelled = true;
     };
-  }, [dateStr, past]);
+  }, [dateStr, isEventOpen, reloadKey]);
 
-  if (past) {
-    return <Navigate to={`/wallet/new/confirm?date=${dateStr}`} replace />;
+  // 활성 시간대(오후 8시~자정) 밖이면 가계부로 돌려보낸다.
+  if (!isEventOpen) {
+    return <Navigate to="/wallet" replace />;
   }
 
   const total = inquiries.length;
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () => setPage((p) => Math.min(total, p + 1));
 
-  const goConfirm = () => navigate(`/wallet/new/confirm?date=${dateStr}`);
-  const goBack = () => navigate(`/wallet/new?date=${dateStr}`);
+  // 이벤트 종료/닫기는 모두 가계부로 복귀.
+  const goDone = () => navigate("/wallet");
+  const goBack = () => navigate("/wallet");
 
   // 답변 입력된 inquiry 들만 POST. 끝나면 Step 3 로 이동.
   const submitAll = async () => {
@@ -78,7 +94,7 @@ function WalletAnalysisPage() {
         await answerInquiry(inq.inquiryId, text);
         submittedRef.current.add(inq.inquiryId);
       }
-      goConfirm();
+      goDone();
     } catch (e) {
       setSubmitError(e.message || "답변 저장 중 오류가 발생했어요");
     } finally {
@@ -88,7 +104,7 @@ function WalletAnalysisPage() {
 
   return (
     <div className="ledger">
-      <header className="ledger-header">
+      <header className="ledger-entry-header">
         <button
           type="button"
           className="ledger-logo-btn"
@@ -99,9 +115,7 @@ function WalletAnalysisPage() {
         </button>
       </header>
 
-      <main className="ledger-main">
-        <StepIndicator current={2} />
-
+      <main className="ledger-entry-main">
         {loading ? (
           <div className="ledger-center-y">
             <div className="ledger-title-block ledger-title-block-center">
@@ -111,22 +125,43 @@ function WalletAnalysisPage() {
               </p>
             </div>
           </div>
-        ) : total === 0 ? (
-          // ───── 분석할 항목 없음 — 안내 + 다음 단계만 ─────
+        ) : loadError ? (
+          // ───── 질문 조회 실패 — 갇히지 않게 재시도/복귀 제공 ─────
           <div className="ledger-center-y">
             <div className="ledger-title-block">
-              <h1 className="ledger-title">예외적인 지출이 없어요</h1>
+              <h1 className="ledger-title">질문을 불러오지 못했어요</h1>
               <p className="ledger-subtitle">
-                평소와 비슷한 패턴이라 추가 질문이 필요하지 않아요. 바로 확인 단계로 넘어갈게요.
+                네트워크 상태를 확인하고 다시 시도해주세요.
               </p>
             </div>
             <div className="ledger-actions">
               <div className="ledger-actions-row">
                 <button type="button" className="ledger-back" onClick={goBack}>
-                  돌아가기
+                  가계부로 돌아가기
                 </button>
-                <button type="button" className="ledger-next" onClick={goConfirm}>
-                  다음 단계
+                <button
+                  type="button"
+                  className="ledger-next"
+                  onClick={() => setReloadKey((k) => k + 1)}
+                >
+                  다시 시도
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : total === 0 ? (
+          // ───── 분석할 항목 없음 — 안내 + 닫기만 ─────
+          <div className="ledger-center-y">
+            <div className="ledger-title-block">
+              <h1 className="ledger-title">예외적인 지출이 없어요</h1>
+              <p className="ledger-subtitle">
+                평소와 비슷한 패턴이라 오늘은 분석할 지출이 없어요.
+              </p>
+            </div>
+            <div className="ledger-actions">
+              <div className="ledger-actions-row">
+                <button type="button" className="ledger-next" onClick={goDone}>
+                  가계부로 돌아가기
                 </button>
               </div>
             </div>
@@ -136,7 +171,7 @@ function WalletAnalysisPage() {
           <>
             <div className="ledger-title-block">
               <h1 className="ledger-title">
-                등록하기 전 몇가지만 물어볼게요
+                오늘의 소비를 분석해볼게요
                 <span className="ledger-info-wrap">
                   <button
                     type="button"
@@ -186,7 +221,7 @@ function WalletAnalysisPage() {
               const inq = inquiries[page - 1];
               return (
                 <>
-                  <div className="ledger-row ledger-row-readonly">
+                  <div className="ledger-entry-row ledger-row-readonly">
                     <div className="ledger-row-head">
                       <span className="ledger-row-num">
                         {String(page).padStart(2, "0")}
@@ -253,7 +288,7 @@ function WalletAnalysisPage() {
               <button
                 type="button"
                 className="ledger-skip-link"
-                onClick={goConfirm}
+                onClick={goDone}
                 disabled={submitting}
               >
                 다음에 할게요
@@ -273,7 +308,7 @@ function WalletAnalysisPage() {
                   onClick={submitAll}
                   disabled={submitting}
                 >
-                  {submitting ? "저장 중…" : "다음 단계"}
+                  {submitting ? "저장 중…" : "완료"}
                 </button>
               </div>
             </div>

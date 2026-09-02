@@ -55,8 +55,50 @@
   gap: 12px 16px;
 }
 
-.home-logo {
+.home-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   justify-self: start;
+}
+
+/* 햄버거 — 모바일 전용, 가로 세 줄 */
+.home-menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  border: 1px solid var(--home-border);
+  border-radius: 10px;
+  background: var(--home-card-surface);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.home-menu-toggle span {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--home-text);
+}
+
+.home-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(45, 51, 40, 0.35);
+  z-index: 40;
+}
+
+@media (min-width: 1025px) {
+  .home-sidebar-backdrop {
+    display: none;
+  }
+}
+
+.home-logo {
   border: none;
   background: none;
   font-family: "Nunito", "Pretendard", sans-serif;
@@ -111,24 +153,13 @@
   color: var(--home-green-dark);
 }
 
-.home-logout-link {
-  justify-self: end;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--home-muted);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.home-logout-link:hover {
-  color: var(--home-text);
-}
-
 .home-shell {
-  display: flex;
+  /* 좌측 사이드바 | 본문(1fr) | 우측 사이드바.
+     flex-grow 대신 grid 명시 트랙을 써서 lazy 마운트 타이밍에도
+     본문 폭이 결정론적으로 채워지도록 함 (간헐 폭 붕괴 방지).
+     우측 사이드바가 없는 페이지면 3번째 auto 트랙은 0으로 접힘. */
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   width: 100%;
   max-width: none;
   margin: 0;
@@ -216,6 +247,27 @@
   background: var(--home-green-soft);
 }
 
+/* 아직 화면이 없는 메뉴 — 눌리는 척하지 않음 */
+.home-side-link:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.home-side-link:disabled:hover {
+  background: none;
+}
+
+.home-side-soon {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--home-muted);
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  padding: 1px 6px;
+  vertical-align: 1px;
+}
+
 .home-main {
   flex: 1;
   padding: 28px 28px 40px;
@@ -223,22 +275,6 @@
   /* 헤더·사이드 고정. 본문이 길면 여기서만 스크롤 */
   overflow-y: auto;
   min-height: 0;
-}
-
-.home-main-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.home-greeting {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.35;
 }
 
 .home-date {
@@ -255,7 +291,7 @@
 }
 
 .home-row-pet {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr; /* 펫+스탯 통합 카드 한 줄 */
 }
 
 .home-row-kpi {
@@ -263,7 +299,7 @@
 }
 
 .home-row-bottom {
-  grid-template-columns: 1.15fr 0.95fr 0.95fr;
+  grid-template-columns: 1.3fr 0.9fr 0.9fr;
   align-items: stretch;
 }
 
@@ -278,7 +314,10 @@
 .home-card-pet {
   background: linear-gradient(145deg, #eef6ea 0%, #e4efd9 100%);
   border-color: #d8e8cc;
+  display: flex;
+  flex-direction: column;
 }
+
 
 .home-card-title {
   margin: 0 0 16px;
@@ -298,18 +337,138 @@
   font-weight: 600;
 }
 
-.home-pet-head {
+/* 빈 좌열 + 보리(중앙) + 스탯(우) 3열 grid — 좌우 1fr 이 같아 보리가 항상 카드 정중앙 */
+.home-pet-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 16px;
+  flex: 1;            /* 카드 세로 채움 */
+  margin-top: 12px;
+}
+
+/* 말풍선 — 날짜 바로 아래, 좌측 */
+.home-card-pet > .home-pet-bubble {
+  align-self: flex-start;
+  max-width: 380px;
+  margin-top: 10px;
+}
+
+/* 카드 상단: 날짜(좌) + 마이룸 링크(우) */
+.home-pet-top {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
   gap: 12px;
+}
+
+/* 중앙 세로 스택: 칭호→보리→이름(Lv 라벨 포함)→경험치바 */
+.home-pet-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  justify-self: center;
+  align-self: center;
+  grid-column: 2;
+}
+
+.home-pet-center .home-pet-name {
+  margin: 0;
+}
+
+/* 이름 + Lv 라벨 한 줄 */
+.home-pet-name-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.home-pet-level-label {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--home-green-dark);
+}
+
+/* 원형 경험치 게이지 — 보리를 감싸는 270° 아치 */
+.home-pet-gauge {
+  position: relative;
+  width: 340px;
+  height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.home-pet-gauge-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.home-pet-gauge-track,
+.home-pet-gauge-fill {
+  fill: none;
+  stroke-width: 11;
+  stroke-linecap: round;
+}
+.home-pet-gauge-track { stroke: var(--home-white); }
+.home-pet-gauge-fill {
+  stroke: var(--home-green);
+  transition: stroke-dasharray 0.9s ease;
+}
+
+/* 펫 카드 안 스탯 블록 — 우측 정렬, 하단 붙임, 열 폭에 맞춰 줄어듦 */
+.home-pet-stats {
+  width: 100%;
+  max-width: 300px;
+  min-width: 0;
+  justify-self: end;   /* 우측 열 안에서 오른쪽 붙임 */
+  align-self: center;  /* 우측 열 세로 중앙 */
+  /* 행 높이에 게이지 아래 이름줄이 포함돼 중앙점이 낮음 — 게이지 중심에 맞춰 보정 */
+  transform: translateY(-18px);
+  grid-column: 3;
 }
 
 .home-pet-name {
   margin: 0;
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--home-green-dark);
+}
+
+/* 칭호 캡슐 — 칭호 없으면 muted 톤 */
+.home-pet-title-badge {
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+  background: var(--home-card-surface);
+  white-space: nowrap;
+}
+
+/* 칭호 — 게이지 하단 열린 틈 중앙 */
+.home-pet-gauge .home-pet-title-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 마이룸 가기 링크 */
+.home-pet-room-link {
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--home-green-dark);
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.home-pet-room-link:hover {
+  background: rgba(127, 176, 105, 0.12);
 }
 
 .home-pet-status {
@@ -332,8 +491,8 @@
 
 .home-pet-image {
   display: block;
-  width: 112px;
-  height: 112px;
+  width: 150px;
+  height: 150px;
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -358,10 +517,10 @@
 
 .home-stat-row {
   display: grid;
-  grid-template-columns: 52px 1fr 36px;
+  grid-template-columns: 64px 1fr;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .home-stat-row:last-child {
@@ -374,23 +533,29 @@
   color: var(--home-muted);
 }
 
+.home-stat-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
 .home-stat-track {
-  height: 10px;
+  height: 16px;
   border-radius: 999px;
   background: #eef1ea;
   overflow: hidden;
+  min-width: 0;
 }
 
 .home-stat-fill {
   height: 100%;
   border-radius: 999px;
   transition: width 0.4s ease;
-}
-
-.home-stat-num {
-  font-size: 13px;
-  font-weight: 700;
-  text-align: right;
 }
 
 .home-kpi-title {
@@ -418,8 +583,21 @@
   color: var(--home-warn);
 }
 
+/* 제목 + 건수 라벨을 한 줄에 — 라벨은 우측 정렬 */
+.home-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.home-list-head .home-card-title--sm {
+  margin-bottom: 0;
+}
+
 .home-list-date {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 14px;
   font-weight: 700;
   color: var(--home-muted);
@@ -444,10 +622,22 @@
 }
 
 .home-tx-icon {
-  font-size: 22px;
   width: 36px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+/* 합리성 시그널 점 — 이모지 대신 채워진 원. 테두리·링 없음 */
+.home-tx-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.home-tx-dot--green { background: var(--home-bar-green); }
+.home-tx-dot--gray  { background: #c9cdc3; }
+.home-tx-dot--red   { background: var(--home-bar-red); }
 
 .home-tx-mid {
   flex: 1;
@@ -577,13 +767,7 @@
   color: #b86a1a;
 }
 
-.home-cat-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* 카테고리별 지출: 제목·차트·버튼 분리, 차트 가운데·버튼 하단 */
+/* 기록 캘린더: 제목·캘린더·버튼 분리, 캘린더 가운데·버튼 하단 */
 .home-card-chart {
   display: flex;
   flex-direction: column;
@@ -596,14 +780,57 @@
   flex-shrink: 0;
 }
 
-.home-card-chart > .home-cat-chart {
+.home-card-chart > .home-cal {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
   min-height: 0;
   width: 100%;
   max-width: 360px;
   margin-left: auto;
   margin-right: auto;
+}
+
+/* 기록 캘린더 — 계산기 키패드 느낌의 7열 숫자 그리드 */
+.home-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.home-cal-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--home-muted);
+  padding-bottom: 2px;
+}
+
+.home-cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #eef1ea;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-cal-cell--blank {
+  background: none;
+}
+
+.home-cal-cell.is-marked {
+  background: var(--home-green);
+  color: #fff;
+}
+
+.home-cal-cell.is-today {
+  box-shadow: inset 0 0 0 2px var(--home-green-dark);
 }
 
 .home-card-chart > .home-btn-block {
@@ -679,6 +906,10 @@
   font-weight: 500;
 }
 
+/* 소비 리포트 플레이스홀더 */
+.report-placeholder { text-align: center; padding: 64px 24px; }
+.report-placeholder-text { margin: 12px 0 0; font-size: 15px; color: var(--home-muted); }
+
 @media (max-width: 1024px) {
   .home-row-pet,
   .home-row-kpi,
@@ -686,34 +917,125 @@
     grid-template-columns: 1fr;
   }
 
-  .home-shell {
-    flex-direction: column;
+  .home-pet-body {
+    grid-template-columns: 1fr;
+    justify-items: center;
   }
 
-  .home-sidebar {
+  .home-pet-center,
+  .home-pet-stats {
+    grid-column: auto;
+  }
+
+  .home-pet-stats {
     width: 100%;
+    max-width: 420px;
+    justify-self: stretch;
+  }
+
+  .home-pet-body .home-pet-bubble {
+    justify-self: stretch;
+  }
+
+  /* 데스크톱은 고정 높이 3열 grid + 본문 내부 스크롤이지만,
+     모바일에서 같은 구조를 1열로 접으면 행들이 뷰포트 높이를 넘쳐
+     우측 요약 패널이 본문 위를 덮었다. 모바일은 자연스러운 세로 흐름
+     (메뉴 → 본문 → 바로가기) + 쉘 전체 스크롤로 전환. */
+  .home-shell {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .home-main {
+    /* 내부 스크롤 해제 — 쉘 스크롤로 일원화 (이중 스크롤 방지) */
+    overflow-y: visible;
+    flex: none;
+  }
+
+  .home-menu-toggle {
+    display: flex;
+  }
+
+  /* 우측 사이드바 — 기존 모바일 동작(본문 아래 인라인 칩 블록) 유지 */
+  .home-sidebar--right {
+    width: 100%;
+    height: auto;
+    flex: none;
     min-height: 0;
     border-right: none;
     border-left: none;
-    border-bottom: 1px solid var(--home-border);
+    /* 본문 뒤에 오는 바로가기 패널 — 위쪽 경계선으로 구분 */
+    border-bottom: none;
+    border-top: 1px solid var(--home-border);
     display: flex;
     flex-wrap: wrap;
-    gap: 16px 32px;
-    padding: 16px 20px;
+    gap: 8px 24px;
+    padding: 10px 16px;
+    overflow-y: visible;
   }
 
-  .home-side-block {
+  .home-sidebar--right .home-side-block {
     margin-top: 0 !important;
   }
 
-  .home-side-list {
+  /* 섹션 제목(메뉴/게임/설정)은 모바일에서 생략 — 첫 화면을 메뉴가
+     절반 가까이 차지하던 문제 완화. 링크 칩 1~2줄로 압축된다. */
+  .home-sidebar--right .home-side-title {
+    display: none;
+  }
+
+  .home-sidebar--right .home-side-list {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
   }
 
-  .home-side-link {
+  .home-sidebar--right .home-side-link {
     margin-bottom: 0;
+    padding: 6px 8px;
+  }
+
+  /* 좌측 사이드바 — 햄버거로 열고 닫는 슬라이드 드로어 */
+  .home-sidebar--left {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 264px;
+    height: 100%;
+    z-index: 41;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    border-right: 1px solid var(--home-border);
+    border-bottom: none;
+    /* 드로어 안은 데스크톱처럼 세로 리스트 */
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0;
+    padding: 24px 16px 32px 24px;
+    overflow-y: auto;
+  }
+
+  .home-sidebar--left.is-open {
+    transform: translateX(0);
+  }
+
+  .home-sidebar--left .home-side-title {
+    display: block;
+  }
+
+  .home-sidebar--left .home-side-list {
+    display: block;
+  }
+
+  .home-sidebar--left .home-side-link {
+    padding: 8px 8px;
+  }
+
+  .home-sidebar--left .home-side-block + .home-side-block {
+    margin-top: 24px;
   }
 }
 
@@ -736,15 +1058,7 @@
     justify-self: auto;
   }
 
-  .home-logout-link {
-    justify-self: auto;
-  }
-
   .home-main {
     padding: 20px 16px 32px;
-  }
-
-  .home-greeting {
-    font-size: 17px;
   }
 }

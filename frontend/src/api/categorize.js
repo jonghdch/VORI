@@ -1,7 +1,7 @@
 // 카테고리 자동 분류 API 클라이언트.
 // 백엔드 POST /api/categories/categorize 호출 → Gemini embedding 으로 분류 후 leaf 반환.
 
-const API_BASE = "http://localhost:8080/api";
+import { API_BASE } from "./base";
 
 /**
  * @param {string} name - 사용자가 "내역" 필드에 입력한 텍스트

@@ -2,7 +2,7 @@
 // - 세션 쿠키 사용: 모든 호출에 credentials: 'include' 필수.
 // - 백엔드 CORS 가 http://localhost:3000 을 허용하도록 설정돼 있어야 함.
 
-const API_BASE = "http://localhost:8080/api";
+import { API_BASE } from "./base";
 
 export class AuthError extends Error {
   constructor(message, status) {
