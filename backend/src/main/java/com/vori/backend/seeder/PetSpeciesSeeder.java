@@ -15,6 +15,9 @@ public class PetSpeciesSeeder implements CommandLineRunner {
 
     private final JdbcTemplate jdbc;
 
+    /** 회원가입 시 자동 지급하는 시작 펫. V7 마이그레이션과 값이 일치해야 한다. */
+    private static final String STARTER_NAME = "강아지";
+
     private record Species(String name, String tier, String appearanceKey) {}
 
     private static final List<Species> SPECIES = List.of(
@@ -46,8 +49,8 @@ public class PetSpeciesSeeder implements CommandLineRunner {
         for (Species s : SPECIES) {
             jdbc.update(
                 "INSERT INTO pet_species (name, tier, is_starter, appearance_key) " +
-                "VALUES (?, ?, FALSE, ?)",
-                s.name(), s.tier(), s.appearanceKey()
+                "VALUES (?, ?, ?, ?)",
+                s.name(), s.tier(), s.name().equals(STARTER_NAME), s.appearanceKey()
             );
         }
     }

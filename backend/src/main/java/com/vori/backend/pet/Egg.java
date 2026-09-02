@@ -44,4 +44,12 @@ public class Egg {
 
     @Column(name = "opened_at")
     private LocalDateTime openedAt;
+
+    public boolean isOpened() {
+        return openedAt != null;
+    }
+
+    public void markOpened(LocalDateTime at) {
+        this.openedAt = at;
+    }
 }

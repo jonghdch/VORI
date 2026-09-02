@@ -9,11 +9,15 @@ import com.vori.backend.admin.dto.SignalRuleResponse;
 import com.vori.backend.admin.dto.SignalRuleUpdateRequest;
 import com.vori.backend.expense.SignalConfigService;
 import com.vori.backend.inquiry.ReasonCategory;
+import com.vori.backend.pet.PetStage;
+import com.vori.backend.pet.dto.PetResponse;
 import com.vori.backend.user.Role;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +40,7 @@ public class AdminController {
     private final AdminCategoryStatsService adminCategoryStatsService;
     private final AdminAiLogService adminAiLogService;
     private final SignalConfigService signalConfigService;
+    private final AdminPetService adminPetService;
 
     @GetMapping("/users")
     public ResponseEntity<PageResponse<AdminUserResponse>> listUsers(
@@ -78,5 +83,23 @@ public class AdminController {
     ) {
         return ResponseEntity.ok(
                 SignalRuleResponse.from(signalConfigService.update(req.zRed(), req.zGreen())));
+    }
+
+    // ───── 시연·QA 도구 ─────
+
+    /**
+     * POST /api/admin/users/{userId}/pet/grow?stage=ADULT
+     * 대상 사용자의 활성 펫을 해당 단계까지 즉시 성장시킨다.
+     *
+     * 성체까지 정상적으로 키우려면 누적 30만원어치 절약이 필요해 발표 자리에서 분양을
+     * 보여줄 수 없다. 진화 임계값을 낮추면 운영 규칙이 왜곡되므로 어드민 경로로만 연다.
+     * 올린 스탯은 pet_growth_logs 에 reason=BONUS 로 기록된다.
+     */
+    @PostMapping("/users/{userId}/pet/grow")
+    public ResponseEntity<PetResponse> growUserPet(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "ADULT") PetStage stage
+    ) {
+        return ResponseEntity.ok(adminPetService.growActivePet(userId, stage));
     }
 }
