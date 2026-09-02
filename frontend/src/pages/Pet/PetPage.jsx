@@ -200,7 +200,7 @@ function PetPage({ user, onLogout }) {
       <main className="home-main pet-main">
         <div className="pet-header">
           <div>
-            <p className="pet-eyebrow">펫 키우기</p>
+            <p className="pet-eyebrow">마이룸</p>
             <h1 className="pet-title">
               {nickname}님이 키우는 {selectedPet.name}의 방
             </h1>

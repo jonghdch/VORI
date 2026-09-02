@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import { getHomeSummary } from "../../api/home";
+import { getMonthlyLedger } from "../../api/ledger";
 import boriImage from "../../assets/pets/bori.png";
 import "./HomeDashboard.css";
 
@@ -14,13 +15,8 @@ const STAT_META = [
   { key: "endurance", label: "지구력", color: "var(--home-bar-blue)" },
 ];
 
-// 카테고리 막대 색 순환.
-const CAT_COLORS = [
-  "var(--home-bar-green)",
-  "var(--home-bar-red)",
-  "var(--home-bar-orange)",
-  "var(--home-bar-blue)",
-];
+// 기록 캘린더 요일 헤더.
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 // 업적은 아직 백엔드 도메인 미연동 — 정적 유지.
 const ACHIEVEMENTS = [
@@ -52,6 +48,28 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     };
   }, []);
 
+  // 기록 캘린더 — 이번 달 가계부에서 기록이 있는 날짜(일) 집합. null = 로딩 중.
+  const [recordedDays, setRecordedDays] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    getMonthlyLedger(ym)
+      .then((rows) => {
+        if (alive)
+          setRecordedDays(
+            new Set(rows.map((r) => Number(r.date.split("-")[2]))),
+          );
+      })
+      .catch(() => {
+        if (alive) setRecordedDays(new Set());
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const today = new Date();
   const dateStr = new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
@@ -63,8 +81,10 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   const stats = summary?.stats;
   const spending = summary?.spending;
   const recent = summary?.recentExpenses ?? [];
-  const breakdown = summary?.categoryBreakdown ?? [];
-  const monthTotal = breakdown.reduce((s, c) => s + c.amount, 0);
+
+  // 기록 캘린더 그리드 계산 — 이번 달 1일의 요일만큼 앞을 비운다.
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const firstWeekday = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
 
   // 경험치바 — 프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
   // 백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체.
@@ -151,7 +171,6 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                           }}
                         />
                       </div>
-                      <span className="home-stat-num">{value}</span>
                     </li>
                   );
                 })}
@@ -243,29 +262,37 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           </section>
 
           <section className="home-card home-card-chart">
-            <h2 className="home-card-title home-card-title--sm">카테고리별 지출</h2>
-            <div className="home-cat-chart">
-              {loading ? (
-                <p className="home-cat-empty">불러오는 중…</p>
-              ) : breakdown.length === 0 ? (
-                <p className="home-cat-empty">이번 달 지출이 없어요.</p>
-              ) : (
-                breakdown.map((c, i) => (
-                  <div key={c.categoryName} className="home-cat-row">
-                    <span className="home-cat-label">{c.categoryName}</span>
-                    <div className="home-cat-track">
-                      <div
-                        className="home-cat-fill"
-                        style={{
-                          width: monthTotal > 0 ? `${(c.amount / monthTotal) * 100}%` : "0%",
-                          background: CAT_COLORS[i % CAT_COLORS.length],
-                        }}
-                      />
-                    </div>
-                    <span className="home-cat-amount">{won(c.amount)}</span>
-                  </div>
-                ))
-              )}
+            <h2 className="home-card-title home-card-title--sm">
+              {today.getMonth() + 1}월 기록 캘린더
+            </h2>
+            <div
+              className="home-cal"
+              role="img"
+              aria-label={`${today.getMonth() + 1}월 가계부 기록 캘린더`}
+            >
+              <div className="home-cal-grid">
+                {WEEKDAYS.map((d) => (
+                  <span key={d} className="home-cal-weekday">
+                    {d}
+                  </span>
+                ))}
+                {Array.from({ length: firstWeekday }, (_, i) => (
+                  <span key={`blank-${i}`} className="home-cal-cell home-cal-cell--blank" />
+                ))}
+                {Array.from({ length: daysInMonth }, (_, i) => {
+                  const day = i + 1;
+                  const marked = recordedDays?.has(day);
+                  const isToday = day === today.getDate();
+                  return (
+                    <span
+                      key={day}
+                      className={`home-cal-cell${marked ? " is-marked" : ""}${isToday ? " is-today" : ""}`}
+                    >
+                      {day}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
             <button
               type="button"
