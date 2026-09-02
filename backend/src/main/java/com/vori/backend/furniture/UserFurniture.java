@@ -62,4 +62,20 @@ public class UserFurniture {
 
     @Column(name = "acquired_at", nullable = false)
     private LocalDateTime acquiredAt;
+
+    /** 좌표가 둘 다 있어야 배치된 것으로 본다. */
+    public boolean isPlaced() {
+        return positionX != null && positionY != null;
+    }
+
+    public void placeAt(short x, short y) {
+        this.positionX = x;
+        this.positionY = y;
+    }
+
+    /** 인벤토리로 회수. 좌표를 비우면 분양가 보너스 계산에서도 빠진다. */
+    public void removeFromRoom() {
+        this.positionX = null;
+        this.positionY = null;
+    }
 }
