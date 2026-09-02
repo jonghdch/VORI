@@ -119,7 +119,9 @@ public class ExpenseService {
             user.addTotalSaved(savedAmount);
             // 절약분의 일부를 게임머니로 전환 — 알 구매(상점)의 유일한 수입원.
             user.addGameMoney(savedAmount / SAVED_PER_GAME_MONEY);
-            updateActiveGoals(userId, req.categoryId(), req.amount(), req.spentAt());
+            // 목표에 누적되는 건 지출액이 아니라 절약액이다 (db-spec.md: "saved_amount 양수 값 누적").
+            // 지출액을 넣으면 5만원 목표가 3만원짜리 지출 한 번에 60% 로 찍힌다.
+            updateActiveGoals(userId, req.categoryId(), savedAmount, req.spentAt());
         }
 
         if (statDelta > 0) {
@@ -162,12 +164,17 @@ public class ExpenseService {
         );
     }
 
-    private void updateActiveGoals(Long userId, Long categoryId, int amount, LocalDateTime spentAt) {
+    /**
+     * 이번 지출의 절약액을 해당 월의 ACTIVE 목표에 누적한다.
+     * category_id 가 NULL 인 목표는 그 달 전체가 대상이므로 카테고리와 무관하게 쌓인다.
+     * 목표치를 넘으면 Goal 이 스스로 DONE 으로 전이하고, 그 뒤로는 조회 대상에서 빠진다.
+     */
+    private void updateActiveGoals(Long userId, Long categoryId, int savedAmount, LocalDateTime spentAt) {
         String yearMonth = spentAt.format(DateTimeFormatter.ofPattern("yyyy-MM"));
         List<Goal> goals = goalRepository.findByUserIdAndYearMonthAndStatus(userId, yearMonth, GoalStatus.ACTIVE);
         for (Goal goal : goals) {
             if (goal.getCategoryId() == null || goal.getCategoryId().equals(categoryId)) {
-                goal.addCurrentAmount(amount);
+                goal.addCurrentAmount(savedAmount);
             }
         }
     }
