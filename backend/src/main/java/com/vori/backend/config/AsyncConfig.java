@@ -27,6 +27,22 @@ public class AsyncConfig {
                 .build();
     }
 
+    /**
+     * 영수증 OCR 전용 — 이미지 처리는 텍스트보다 훨씬 오래 걸린다(실측 4.9~25.9초).
+     * 위의 30초로는 정상 응답까지 타임아웃으로 잘라내므로 60초를 준다.
+     *
+     * 빈 이름과 주입받는 쪽 필드명을 맞춰두면 @Qualifier 없이 해결된다 —
+     * Lombok 의 @RequiredArgsConstructor 는 필드의 @Qualifier 를 생성자로 옮기지 않아서,
+     * 어노테이션에 기대면 주입이 모호해진다.
+     */
+    @Bean("geminiImageRestTemplate")
+    public RestTemplate geminiImageRestTemplate(RestTemplateBuilder builder) {
+        return builder
+                .setConnectTimeout(Duration.ofSeconds(3))
+                .setReadTimeout(Duration.ofSeconds(60))
+                .build();
+    }
+
     @Bean("aiExecutor")
     public Executor aiExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();

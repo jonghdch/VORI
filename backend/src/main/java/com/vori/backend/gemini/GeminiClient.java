@@ -14,6 +14,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -23,6 +24,8 @@ import java.util.Map;
 public class GeminiClient {
 
     private final RestTemplate restTemplate;
+    /** 이미지 OCR 전용(읽기 60초). 필드명이 곧 빈 이름 — AsyncConfig 참조. */
+    private final RestTemplate geminiImageRestTemplate;
 
     @Value("${gemini.api.key}")
     private String apiKey;
@@ -132,6 +135,52 @@ public class GeminiClient {
         }
     }
 
+    /**
+     * 영수증 이미지 → 가계부 등록용 구조화 JSON 문자열.
+     *
+     * responseMimeType 을 application/json 으로 지정해 마크다운 코드블록 없이 순수 JSON 만 받는다.
+     * 텍스트 추출 후 별도로 항목을 골라내는 단계(KIE)가 필요 없다 — 모델이 바로 구조를 만들어 준다.
+     *
+     * 반환값은 파싱하지 않은 원문이다. 호출부가 DTO 로 매핑하고, 원문은 그대로 저장해
+     * 나중에 값을 다시 확인할 수 있게 한다.
+     */
+    public String extractReceipt(byte[] image, String mimeType) {
+        String prompt = """
+                이 영수증 이미지에서 가계부 등록에 필요한 정보를 뽑아 JSON 으로만 출력하세요.
+
+                {
+                  "storeName": "상호명",
+                  "date": "YYYY-MM-DD",
+                  "time": "HH:MM",
+                  "totalAmount": 총결제금액(정수, 원),
+                  "items": [{"name": "품목명", "quantity": 수량(정수), "amount": 금액(정수)}],
+                  "paymentMethod": "CASH|CREDIT|DEBIT|TRANSFER|MOBILE_PAY|UNKNOWN",
+                  "representativeItem": "대표 품목 한 개(가장 비싸거나 대표적인 것)"
+                }
+
+                주의:
+                - 금액은 콤마 없이 정수로만. 읽을 수 없는 값은 null.
+                - 영수증이 아니거나 판독 불가능하면 모든 값을 null 로 두세요.
+                """;
+
+        Map<String, Object> body = Map.of(
+                "contents", List.of(Map.of("parts", List.of(
+                        Map.of("text", prompt),
+                        Map.of("inline_data", Map.of(
+                                "mime_type", mimeType,
+                                "data", Base64.getEncoder().encodeToString(image)))))),
+                "generationConfig", Map.of("responseMimeType", "application/json")
+        );
+
+        try {
+            return extractText(postWithRetry(
+                    BASE_URL + apiKey, body, "extractReceipt", geminiImageRestTemplate));
+        } catch (Exception e) {
+            log.error("Gemini 영수증 인식 실패", e);
+            throw new RuntimeException("영수증 인식에 실패했습니다.");
+        }
+    }
+
     // ───── 재시도 ─────
 
     private static final int MAX_ATTEMPTS = 3;
@@ -153,9 +202,13 @@ public class GeminiClient {
      * 카테고리 캐시 전체가 날아가던 위험을 없앤다.
      */
     private Map<?, ?> postWithRetry(String url, Object body, String label) {
+        return postWithRetry(url, body, label, restTemplate);
+    }
+
+    private Map<?, ?> postWithRetry(String url, Object body, String label, RestTemplate client) {
         for (int attempt = 1; ; attempt++) {
             try {
-                return restTemplate.postForObject(url, body, Map.class);
+                return client.postForObject(url, body, Map.class);
             } catch (HttpServerErrorException
                      | HttpClientErrorException.TooManyRequests
                      | ResourceAccessException e) {
