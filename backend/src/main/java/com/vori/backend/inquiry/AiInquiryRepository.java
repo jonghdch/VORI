@@ -21,6 +21,9 @@ public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
      */
     List<AiInquiry> findByExpenseIdIn(List<Long> expenseIds);
 
+    /** 답변을 마친 AI 질문 수 — 소통 관련 칭호 조건. */
+    long countByUserIdAndAnsweredAtIsNotNull(Long userId);
+
     // 어드민 AI 대사 로그 — 최근 질문순 페이지네이션 (+ reason 필터)
     Page<AiInquiry> findByReasonCategory(ReasonCategory reasonCategory, Pageable pageable);
 

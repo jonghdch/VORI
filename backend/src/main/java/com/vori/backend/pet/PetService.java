@@ -3,10 +3,12 @@ package com.vori.backend.pet;
 import com.vori.backend.furniture.UserFurniture;
 import com.vori.backend.furniture.UserFurnitureRepository;
 import com.vori.backend.pet.dto.PetResponse;
+import com.vori.backend.title.TitleCheckEvent;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,7 @@ public class PetService {
     private final PetSpeciesRepository petSpeciesRepository;
     private final UserRepository userRepository;
     private final UserFurnitureRepository userFurnitureRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 분양가 = 스탯총합 × 배수 × (1 + 배치가구 보너스합/100)
     private static final int RELEASE_VALUE_PER_STAT = 10;
@@ -82,6 +85,9 @@ public class PetService {
         pet.release(value, LocalDateTime.now());
         log.info("펫 분양 — userId={}, petId={}, statTotal={}, value={}",
                 userId, petId, pet.statTotal(), value);
+
+        // 분양 횟수가 바뀌었으므로 칭호 조건을 다시 본다
+        eventPublisher.publishEvent(new TitleCheckEvent(userId, "PET_RELEASED"));
 
         return PetResponse.of(pet, findSpecies(pet.getSpeciesId()));
     }

@@ -13,6 +13,7 @@ import com.vori.backend.pet.PetGrowthLog;
 import com.vori.backend.pet.PetGrowthLogRepository;
 import com.vori.backend.pet.PetRepository;
 import com.vori.backend.stats.UserStatStats;
+import com.vori.backend.title.TitleCheckEvent;
 import com.vori.backend.stats.UserStatStatsRepository;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
@@ -138,6 +139,10 @@ public class ExpenseService {
                     category.getStatType(), stats.getMeanEma(), signal
             ));
         }
+
+        // 지출 건수·누적 절약액·목표 달성이 모두 바뀌었으므로 칭호 조건을 다시 본다.
+        // 커밋 이후에 평가되므로 방금 저장한 지출까지 반영된다.
+        eventPublisher.publishEvent(new TitleCheckEvent(userId, "EXPENSE_CREATED"));
 
         return ExpenseResponse.from(expense);
     }

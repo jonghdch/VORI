@@ -15,6 +15,9 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     List<Expense> findByUserIdAndCategoryId(Long userId, Long categoryId);
 
+    /** 지출 등록 건수 — 기록 관련 칭호 조건. */
+    long countByUserId(Long userId);
+
     List<Expense> findByUserIdAndStatType(Long userId, StatType statType);
 
     /** statType 별 stat_delta 합계 + saved_amount 합계 — 홈 대시보드 스탯 위젯용. */

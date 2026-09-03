@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.receipt.dto.ExtractedReceipt;
 import com.vori.backend.receipt.dto.ReceiptOcrResponse;
+import com.vori.backend.title.TitleCheckEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +41,7 @@ public class ReceiptService {
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     private static final Set<String> ALLOWED_TYPES = Set.of("image/png", "image/jpeg");
     private static final long MAX_BYTES = 10L * 1024 * 1024; // 10MB
@@ -79,6 +82,8 @@ public class ReceiptService {
             ReceiptOcrJob fresh = receiptOcrJobRepository.findById(job.getId()).orElseThrow();
             fresh.markSuccess(raw, extracted.totalAmount(), parseDate(extracted.date()),
                     trim(extracted.itemLabel(), 100), LocalDateTime.now());
+            // 인식 성공 건수가 바뀌었으므로 칭호 조건을 다시 본다
+            eventPublisher.publishEvent(new TitleCheckEvent(userId, "RECEIPT_SCANNED"));
             return ReceiptOcrResponse.of(fresh, extracted);
         });
     }
