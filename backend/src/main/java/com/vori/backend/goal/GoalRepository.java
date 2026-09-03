@@ -12,6 +12,9 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
 
     List<Goal> findByUserIdAndYearMonthAndStatus(Long userId, String yearMonth, GoalStatus status);
 
+    /** 달성한 목표 수 — 목표 관련 칭호 조건. */
+    long countByUserIdAndStatus(Long userId, GoalStatus status);
+
     /**
      * 같은 달·같은 카테고리 목표가 이미 있는지.
      *

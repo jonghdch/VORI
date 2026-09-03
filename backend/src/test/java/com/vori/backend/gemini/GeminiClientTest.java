@@ -34,6 +34,11 @@ class GeminiClientTest {
             "candidates", List.of(Map.of(
                     "content", Map.of("parts", List.of(Map.of("text", "왜 이렇게 쓰셨나요?"))))));
 
+    /** 텍스트용·이미지용 두 RestTemplate 을 같은 목으로 채운다 — 재시도 정책은 공유된다. */
+    private static GeminiClient client(RestTemplate rt) {
+        return new GeminiClient(rt, rt);
+    }
+
     private static HttpServerErrorException serverError(HttpStatus status) {
         return (HttpServerErrorException) HttpServerErrorException.create(
                 status, status.getReasonPhrase(), HttpHeaders.EMPTY, new byte[0], null);
@@ -53,7 +58,7 @@ class GeminiClientTest {
                 .thenThrow(serverError(HttpStatus.SERVICE_UNAVAILABLE))
                 .thenReturn(OK_RESPONSE);
 
-        String result = new GeminiClient(rt)
+        String result = client(rt)
                 .generateQuestion("무신사 자켓", 89_000, BigDecimal.valueOf(20_000), null);
 
         assertThat(result).isEqualTo("왜 이렇게 쓰셨나요?");
@@ -68,7 +73,7 @@ class GeminiClientTest {
                 .thenThrow(clientError(HttpStatus.TOO_MANY_REQUESTS))
                 .thenReturn(OK_RESPONSE);
 
-        String result = new GeminiClient(rt)
+        String result = client(rt)
                 .generateQuestion("커피", 8_000, BigDecimal.valueOf(4_000), null);
 
         assertThat(result).isNotBlank();
@@ -83,7 +88,7 @@ class GeminiClientTest {
                 .thenThrow(new ResourceAccessException("Request timed out"))
                 .thenReturn(OK_RESPONSE);
 
-        String result = new GeminiClient(rt)
+        String result = client(rt)
                 .generateDailyComment("강아지", 303_000, 0, -3_000, 57);
 
         assertThat(result).isNotBlank();
@@ -97,7 +102,7 @@ class GeminiClientTest {
         when(rt.postForObject(anyString(), any(), eq(Map.class)))
                 .thenThrow(clientError(HttpStatus.NOT_FOUND));
 
-        GeminiClient client = new GeminiClient(rt);
+        GeminiClient client = client(rt);
 
         assertThatThrownBy(() -> client.generateQuestion("책", 15_000, BigDecimal.valueOf(9_000), null))
                 .isInstanceOf(RuntimeException.class)
@@ -114,7 +119,7 @@ class GeminiClientTest {
         when(rt.postForObject(anyString(), any(), eq(Map.class)))
                 .thenThrow(clientError(HttpStatus.FORBIDDEN));
 
-        GeminiClient client = new GeminiClient(rt);
+        GeminiClient client = client(rt);
 
         assertThatThrownBy(() -> client.embed("스타벅스 아메리카노"))
                 .isInstanceOf(RuntimeException.class);
@@ -129,12 +134,28 @@ class GeminiClientTest {
         when(rt.postForObject(anyString(), any(), eq(Map.class)))
                 .thenThrow(serverError(HttpStatus.SERVICE_UNAVAILABLE));
 
-        GeminiClient client = new GeminiClient(rt);
+        GeminiClient client = client(rt);
 
         assertThatThrownBy(() -> client.generateQuestion("옷", 50_000, BigDecimal.valueOf(20_000), null))
                 .isInstanceOf(RuntimeException.class);
 
         verify(rt, times(3)).postForObject(anyString(), any(), eq(Map.class));
+    }
+
+    @Test
+    @DisplayName("영수증 인식도 같은 재시도 정책을 탄다")
+    void receiptSharesRetryPolicy() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(anyString(), any(), eq(Map.class)))
+                .thenThrow(new ResourceAccessException("Request timed out"))
+                .thenReturn(Map.of("candidates", List.of(Map.of(
+                        "content", Map.of("parts", List.of(
+                                Map.of("text", "{\"storeName\":\"GS25\",\"totalAmount\":8000}")))))));
+
+        String json = client(rt).extractReceipt(new byte[]{1, 2, 3}, "image/png");
+
+        assertThat(json).contains("GS25");
+        verify(rt, times(2)).postForObject(anyString(), any(), eq(Map.class));
     }
 
     @Test
@@ -145,7 +166,7 @@ class GeminiClientTest {
                 .thenThrow(serverError(HttpStatus.BAD_GATEWAY))
                 .thenReturn(Map.of("embedding", Map.of("values", List.of(0.1, 0.2, 0.3))));
 
-        double[] vec = new GeminiClient(rt).embed("아메리카노");
+        double[] vec = client(rt).embed("아메리카노");
 
         assertThat(vec).containsExactly(0.1, 0.2, 0.3);
         verify(rt, times(2)).postForObject(anyString(), any(), eq(Map.class));

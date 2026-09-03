@@ -84,6 +84,11 @@ public class User {
         this.totalSaved = (this.totalSaved == null ? 0 : this.totalSaved) + amount;
     }
 
+    /** 칭호 장착. null 이면 해제. 소유 여부 검증은 호출부(TitleService)가 한다. */
+    public void setActiveTitle(Long titleId) {
+        this.activeTitleId = titleId;
+    }
+
     /** 게임머니 적립. 절약 전환·펫 분양 보상 등. */
     public void addGameMoney(int amount) {
         if (amount < 0) throw new IllegalArgumentException("적립액은 음수일 수 없습니다: " + amount);
