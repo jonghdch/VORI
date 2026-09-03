@@ -26,9 +26,18 @@ public class MonthlyBudget {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "year_month", nullable = false, columnDefinition = "CHAR(7)")
+    /**
+     * 백틱 필수 — year_month 는 MySQL 예약어(INTERVAL ... YEAR_MONTH)다.
+     * SELECT 는 Hibernate 가 별칭을 붙여 통과하지만 INSERT 의 컬럼 목록은 별칭 없이 나가
+     * 문법 오류가 난다. 백틱을 빼면 예산 등록이 500 으로 실패한다. (Goal 도 같은 이유)
+     */
+    @Column(name = "`year_month`", nullable = false, columnDefinition = "CHAR(7)")
     private String yearMonth;
 
     @Column(nullable = false, columnDefinition = "INT UNSIGNED")
     private Integer amount;
+
+    public void updateAmount(int amount) {
+        this.amount = amount;
+    }
 }
