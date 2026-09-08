@@ -28,10 +28,10 @@ public class FurnitureController {
 
     private final FurnitureService furnitureService;
 
-    /** GET /api/furniture/products — 상점 목록(가격 오름차순). */
+    /** GET /api/furniture/products — 상점 목록(가격 오름차순). 잠긴 테마 가구는 locked=true. */
     @GetMapping("/products")
-    public List<FurnitureProductResponse> products() {
-        return furnitureService.listProducts();
+    public List<FurnitureProductResponse> products(@AuthenticationPrincipal UserPrincipal principal) {
+        return furnitureService.listProducts(principal.getUser().getId());
     }
 
     /** GET /api/furniture — 내 보유 가구. 배치된 것부터. */

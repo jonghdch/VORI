@@ -9,6 +9,8 @@ import com.vori.backend.pet.PetRepository;
 import com.vori.backend.pet.PetTier;
 import com.vori.backend.receipt.OcrStatus;
 import com.vori.backend.receipt.ReceiptOcrJobRepository;
+import com.vori.backend.theme.ThemeMaster;
+import com.vori.backend.theme.ThemeMasterRepository;
 import com.vori.backend.title.dto.TitleResponse;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
@@ -53,6 +55,7 @@ public class TitleService {
     private final GachaPullRepository gachaPullRepository;
     private final AiInquiryRepository aiInquiryRepository;
     private final ReceiptOcrJobRepository receiptOcrJobRepository;
+    private final ThemeMasterRepository themeMasterRepository;
 
     /** 전체 칭호 목록. 조회 시점에 평가를 겸해 놓친 획득을 메운다. 획득 → 미획득 순. */
     @Transactional
@@ -126,6 +129,8 @@ public class TitleService {
             if (!c.isAchieved(progress)) continue;
             if (userTitleRepository.findByUserIdAndName(userId, c.displayName()).isPresent()) continue;
 
+            Long unlocksThemeId = unlockedThemeIdOf(c.displayName());
+
             userTitleRepository.save(UserTitle.builder()
                     .userId(userId)
                     .name(c.displayName())
@@ -133,11 +138,25 @@ public class TitleService {
                     .unlockCondition(String.format(
                             "{\"code\":\"%s\",\"threshold\":%d,\"value\":%d}",
                             c.name(), c.threshold(), c.currentOf(progress)))
+                    .unlocksThemeId(unlocksThemeId)
                     .acquiredAt(LocalDateTime.now())
                     .build());
 
-            log.info("칭호 획득 — userId={}, title={}", userId, c.displayName());
+            log.info("칭호 획득 — userId={}, title={}, unlocksThemeId={}",
+                    userId, c.displayName(), unlocksThemeId);
         }
+    }
+
+    /**
+     * 이 칭호가 해제하는 테마 id — 기록용이다.
+     *
+     * 해금 판정 자체는 ThemeService 가 theme_master.unlock_title_name 으로만 한다. 여기 값은
+     * 칭호 화면이 "🎁 코지 테마 해금" 을 띄우기 위한 것이라, 없어도 해금은 정상 동작한다.
+     * 그래서 조회 실패를 막지 않고 null 로 흘린다.
+     */
+    private Long unlockedThemeIdOf(String titleName) {
+        List<ThemeMaster> themes = themeMasterRepository.findByUnlockTitleName(titleName);
+        return themes.isEmpty() ? null : themes.get(0).getId();
     }
 
     /** 조건 판정에 쓰는 지표를 한 번에 모은다. 칭호를 추가할 때 여기와 TitleProgress 만 손대면 된다. */
