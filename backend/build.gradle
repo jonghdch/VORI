@@ -38,3 +38,11 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// .env 는 repo 루트에 있고 application.properties 의 spring.config.import 가
+// CWD 상대경로(./.env)라, bootRun 의 작업 디렉터리를 repo 루트로 고정한다.
+// 이게 없으면 어디서 실행하든 Gradle 이 CWD 를 backend/ 로 잡아 .env 를 못 읽는다
+// (DB 비밀번호·Gemini 키가 빈 값 → 로그인 실패·AI 호출 403).
+tasks.named('bootRun') {
+	workingDir = projectDir.parentFile
+}
