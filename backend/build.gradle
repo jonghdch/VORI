@@ -1,6 +1,8 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.5.0'
+	// 3.5 라인의 마지막 패치. 3.5 는 2026-06-30 로 지원이 끝나 더 이상 새 패치가 나오지 않는다.
+	// 4.x 로 올리는 건 별개 작업 — 중간발표(9/30) 전에 손댈 범위가 아니다.
+	id 'org.springframework.boot' version '3.5.16'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
