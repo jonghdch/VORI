@@ -85,6 +85,11 @@ public class EggService {
     /**
      * 알 개봉 — 추첨 → gacha_pulls + pets INSERT → eggs.opened_at 갱신.
      * 알을 행 잠금으로 읽으므로 동시 개봉 요청은 직렬화되어 뒤엣것이 409 를 받는다.
+     *
+     * 키우는 펫이 이미 있으면 개봉을 막는다. 화면과 성장 로직이 모두 활성 펫 한 마리만
+     * 다루기 때문에(PetService.getActive / ExpenseService.updateActivePet 둘 다 첫 번째만
+     * 본다), 그냥 두면 새로 깬 펫이 보이지도 자라지도 않고 코인만 사라진다.
+     * 구매는 막지 않는다 — 미리 사두고 분양 후에 까는 건 정상적인 플레이다.
      */
     @Transactional
     public GachaResultResponse open(Long userId, Long eggId) {
@@ -95,6 +100,10 @@ public class EggService {
         }
         if (egg.isOpened()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 개봉한 알입니다");
+        }
+        if (!petRepository.findByUserIdAndReleasedAtIsNull(userId).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "먼저 키우던 펫을 분양해주세요");
         }
 
         GachaService.Draw draw = gachaService.draw(readDistribution(egg));
