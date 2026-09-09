@@ -46,6 +46,9 @@ public class ExpenseService {
     private static final int N_MIN = 5;
     // Z_GREEN / Z_RED 임계값은 signal_config 테이블(관리자 조정) 에서 읽는다. SignalConfigService 참조.
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
+    // expenses.z_score 는 DECIMAL(6,3) — 담을 수 있는 한계. clampZScore 참조.
+    private static final BigDecimal Z_SCORE_MAX = new BigDecimal("999.999");
+    private static final BigDecimal Z_SCORE_MIN = new BigDecimal("-999.999");
     private static final double EMA_ALPHA = 0.2;
 
     // 절약액 → 게임머니 전환 비율 (N 원 절약당 1 코인).
@@ -93,9 +96,9 @@ public class ExpenseService {
         if (stats.getSampleCount() < N_MIN || stats.getStddevEma().compareTo(STDDEV_MIN) < 0) {
             signal = Signal.GREEN;
         } else {
-            zScore = BigDecimal.valueOf(req.amount())
+            zScore = clampZScore(BigDecimal.valueOf(req.amount())
                     .subtract(stats.getMeanEma())
-                    .divide(stats.getStddevEma(), 3, RoundingMode.HALF_UP);
+                    .divide(stats.getStddevEma(), 3, RoundingMode.HALF_UP));
             double z = zScore.doubleValue();
             SignalConfig cfg = signalConfigService.getConfig();
             double zGreen = cfg.getZGreen().doubleValue();
@@ -154,6 +157,24 @@ public class ExpenseService {
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "EXPENSE_CREATED"));
 
         return ExpenseResponse.from(expense);
+    }
+
+    /**
+     * z_score 를 컬럼이 담을 수 있는 범위로 자른다.
+     *
+     * expenses.z_score 가 DECIMAL(6,3) 이라 ±999.999 를 넘으면 저장 시 Data truncation 이
+     * 나고 지출 등록 자체가 500 으로 실패한다. 평소 소비가 일정해 stddev 가 작은 사용자가
+     * 큰 지출을 한 번 하면 z 가 네 자리로 나오는데, 그게 바로 VORI 가 잡으라고 만든
+     * 상황이라 하필 거기서 앱이 죽는다.
+     *
+     * z 가 1000 을 넘으면 어차피 RED 이고, 1300 인지 1500 인지는 판정에도 화면에도
+     * 의미가 없으므로 잘라 담는다. 컬럼을 넓히는 방법도 있지만 stddev 가 더 작아지면
+     * 같은 문제가 다시 생기므로 근본 대책이 못 된다.
+     */
+    private static BigDecimal clampZScore(BigDecimal z) {
+        if (z.compareTo(Z_SCORE_MAX) > 0) return Z_SCORE_MAX;
+        if (z.compareTo(Z_SCORE_MIN) < 0) return Z_SCORE_MIN;
+        return z;
     }
 
     private void updateEma(UserStatStats stats, int amount) {
