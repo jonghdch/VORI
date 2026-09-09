@@ -129,11 +129,20 @@ public class ExpenseService {
             updateActivePet(userId, category.getStatType(), statDelta, expense.getId(), savedAmount);
         }
 
-        // AI 질문 트리거 조건 (docs/domain.md §6):
-        //   signal != GREEN AND is_recurring == FALSE
-        // 반복 결제는 사용자의 의식적 결정이 아니므로 AI 질문 스킵 → signal_final = signal_initial (이미 set 됨)
+        // AI 질문 트리거 — RED 일 때만 묻는다.
+        //
+        // docs/domain.md 는 {RED, GRAY} 를 트리거로 적어 두었지만, 같은 문서의 용어집이
+        // "이례(Anomaly) = z-score 가 임계치를 **초과**한 지출" 이라고 정의한다. 신호등
+        // 임계값을 스펙값(z_green=-0.5)으로 되돌리자 GRAY 가 평균 이하 구간까지 품게 되어,
+        // 평소보다 적게 쓴 지출에도 "평균보다 높습니다" 라고 묻는 상황이 생겼다.
+        // (종전 z_green=1.00 에서는 GRAY 가 z>1.0 에서만 떠서 그 전제가 우연히 참이었다.)
+        //
+        // RED 로 좁히면 용어집 정의와 맞고, 질문 빈도도 69% → 7% 수준으로 내려간다.
+        // 두 건 중 한 번씩 이유를 캐묻는 앱은 쓰이지 않는다.
+        //
+        // 반복 결제는 사용자의 의식적 결정이 아니므로 여전히 스킵한다.
         boolean skipAiQuestion = Boolean.TRUE.equals(req.isRecurring());
-        if (signal != Signal.GREEN && !skipAiQuestion) {
+        if (signal == Signal.RED && !skipAiQuestion) {
             eventPublisher.publishEvent(new ExpenseAnomalyEvent(
                     expense.getId(), userId, req.item(), req.amount(),
                     category.getStatType(), stats.getMeanEma(), signal
