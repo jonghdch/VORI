@@ -14,13 +14,13 @@ const TOP_NAV = [
 const SIDE_MENU = [
   { id: "home", label: "홈 대시보드", page: "home" },
   { id: "wallet", label: "가계부", page: "wallet" },
-  { id: "report", label: "소비 리포트", page: null },
+  { id: "report", label: "소비 리포트", page: "report" },
 ];
 
 const GAME_MENU = [
   { id: "raise", label: "마이룸", page: "raise" },
   { id: "shop", label: "상점", page: "shop" },
-  { id: "achievement", label: "업적/칭호", page: null },
+  { id: "achievement", label: "업적/칭호", page: "titles" },
 ];
 
 function AppShell({

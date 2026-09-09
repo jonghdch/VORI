@@ -9,5 +9,5 @@ public interface UserTitleRepository extends JpaRepository<UserTitle, Long> {
 
     List<UserTitle> findByUserId(Long userId);
 
-    Optional<UserTitle> findByUserIdAndName(Long userId, String name);
+    Optional<UserTitle> findByUserIdAndTitleId(Long userId, Long titleId);
 }

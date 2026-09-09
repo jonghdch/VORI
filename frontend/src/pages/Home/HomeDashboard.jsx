@@ -7,6 +7,7 @@ import { getHomeSummary } from "../../api/home";
 import { getMonthlyLedger } from "../../api/ledger";
 import { getActivePet } from "../../api/pet";
 import { getLatestDailyReport, markDailyReportRead } from "../../api/report";
+import { listTitles } from "../../api/titles";
 import { PetArt } from "../../components/petVisual";
 import "./HomeDashboard.css";
 
@@ -16,14 +17,6 @@ const STAT_META = [
   { key: "charm", label: "매력", color: "var(--home-bar-red)" },
   { key: "iq", label: "지능", color: "var(--home-bar-orange)" },
   { key: "endurance", label: "지구력", color: "var(--home-bar-blue)" },
-];
-
-// 업적은 아직 백엔드 도메인 미연동 — 정적 유지.
-const ACHIEVEMENTS = [
-  { title: "첫 지출 기록", status: "완료", done: true },
-  { title: "한 주 예산 지키기", status: "진행중", done: false },
-  { title: "카페 지출 줄이기", status: "진행중", done: false },
-  { title: "업적 10개 달성", status: "완료", done: true },
 ];
 
 const won = (n) => `${(n ?? 0).toLocaleString("ko-KR")}원`;
@@ -51,6 +44,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   // 키우는 펫(이름·외형) + 최신 일일 리포트(펫 말풍선). 둘 다 실패해도 홈은 떠야 하므로 조용히 fallback.
   const [activePet, setActivePet] = useState(null);
   const [dailyReport, setDailyReport] = useState(null);
+  const [titles, setTitles] = useState([]);
+  const [titlesLoading, setTitlesLoading] = useState(true);
   useEffect(() => {
     let alive = true;
     getActivePet()
@@ -64,6 +59,16 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
         if (r && !r.readAt) markDailyReportRead(r.id).catch(() => {});
       })
       .catch(() => {});
+    listTitles()
+      .then((data) => {
+        if (alive) setTitles(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (alive) setTitles([]);
+      })
+      .finally(() => {
+        if (alive) setTitlesLoading(false);
+      });
     return () => {
       alive = false;
     };
@@ -107,7 +112,12 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   const stats = summary?.stats;
   const spending = summary?.spending;
   const recent = summary?.recentExpenses ?? [];
-
+  const activeTitle = titles.find((title) => title.active);
+  const achievementPreview = (
+    titles.some((title) => title.acquired)
+      ? titles.filter((title) => title.acquired)
+      : titles
+  ).slice(0, 4);
 
   // 경험치바 — 프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
   // 백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체.
@@ -186,8 +196,9 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                       emojiClassName="home-pet-emoji"
                     />
                   </div>
-                  {/* 칭호 — 게이지 하단 열린 틈에 배치. API 미구현, "칭호 없음" */}
-                  <span className="home-pet-title-badge">칭호 없음</span>
+                  <span className="home-pet-title-badge">
+                    {activeTitle?.name ?? "칭호 없음"}
+                  </span>
                 </div>
                 <div className="home-pet-name-line">
                   <h2 className="home-pet-name">{activePet?.speciesName ?? "보리"}</h2>
@@ -283,18 +294,28 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           <section className="home-card home-card-achieve">
             <h2 className="home-card-title home-card-title--sm">최근 업적</h2>
             <ul className="home-ach-list">
-              {ACHIEVEMENTS.map((a) => (
-                <li key={a.title} className="home-ach-row">
-                  <span className="home-ach-title">{a.title}</span>
-                  <span
-                    className={`home-badge ${a.done ? "home-badge--done" : "home-badge--prog"}`}
-                  >
-                    {a.status}
-                  </span>
+              {achievementPreview.length === 0 ? (
+                <li className="home-ach-row">
+                  {titlesLoading ? "칭호 정보를 불러오는 중..." : "아직 표시할 업적이 없어요."}
                 </li>
-              ))}
+              ) : (
+                achievementPreview.map((title) => (
+                  <li key={title.code} className="home-ach-row">
+                    <span className="home-ach-title">{title.name}</span>
+                    <span
+                      className={`home-badge ${title.acquired ? "home-badge--done" : "home-badge--prog"}`}
+                    >
+                      {title.acquired ? "완료" : `${title.progressPct}%`}
+                    </span>
+                  </li>
+                ))
+              )}
             </ul>
-            <button type="button" className="home-btn home-btn-primary home-btn-block">
+            <button
+              type="button"
+              className="home-btn home-btn-primary home-btn-block"
+              onClick={() => navigate("/titles")}
+            >
               ▶ 더 많은 업적 확인하기
             </button>
           </section>
@@ -313,7 +334,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             <button
               type="button"
               className="home-btn home-btn-primary home-btn-block"
-              onClick={() => navigate("/wallet")}
+              onClick={() => navigate("/report")}
             >
               ▶ 리포트 확인하기
             </button>

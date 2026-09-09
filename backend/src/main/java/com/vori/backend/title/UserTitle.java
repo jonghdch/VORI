@@ -10,12 +10,13 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 사용자가 획득한 칭호. UNIQUE(user_id, name) — 같은 칭호 중복 획득 X.
+ * 사용자가 획득한 칭호. UNIQUE(user_id, title_id) — 같은 칭호 중복 획득 X.
  * 일부 칭호는 unlocks_theme_id 로 특정 테마를 해제. users.active_title_id 가 현재 장착 칭호.
  * 획득 조건은 unlock_condition JSON 에 기록 (감사·표시용).
  */
 @Entity
-@Table(name = "user_titles")
+@Table(name = "user_titles",
+        uniqueConstraints = @UniqueConstraint(name = "uq_user_titles_user_title", columnNames = {"user_id", "title_id"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -29,8 +30,9 @@ public class UserTitle {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(nullable = false, length = 50)
-    private String name;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "title_id", nullable = false)
+    private Title title;
 
     @Column(name = "unlock_condition", columnDefinition = "JSON")
     private String unlockCondition;
