@@ -77,7 +77,8 @@ function ShopPage({ user, onLogout }) {
     } catch (e) {
       setNotice({
         kind: "err",
-        text: e.status === 400 ? "코인이 부족해요. 절약하면 10원당 1코인이 쌓여요." : e.message,
+        // 사유는 서버 문구를 그대로 쓰고, 코인 부족일 때만 모으는 방법을 덧붙인다.
+        text: e.status === 400 ? `${e.message} 절약하면 10원당 1코인이 쌓여요.` : e.message,
       });
     } finally {
       setBusy(null);
@@ -92,11 +93,12 @@ function ShopPage({ user, onLogout }) {
       setResult(res);
       await reload();
     } catch (e) {
-      setNotice({
-        kind: "err",
-        text: e.status === 409 ? "이미 개봉한 알이에요." : e.message,
-      });
-      // 409 면 목록이 낡은 것 — 다시 맞춘다
+      // 서버가 보여줄 문구를 message 로 준다(GlobalExceptionHandler). 상태 코드로 문구를
+      // 정하면 같은 코드에 사유가 추가될 때 틀린 안내가 나간다 — 실제로 그랬다.
+      // 개봉 409 는 "이미 개봉한 알" 뿐이었는데 "키우던 펫이 있음" 이 추가되면서,
+      // 펫 보유 중 개봉을 눌러도 "이미 개봉한 알이에요" 가 떴다.
+      setNotice({ kind: "err", text: e.message });
+      // 409 면 목록이 낡았을 수 있으므로 다시 맞춘다
       if (e.status === 409) reload().catch(() => {});
     } finally {
       setBusy(null);
