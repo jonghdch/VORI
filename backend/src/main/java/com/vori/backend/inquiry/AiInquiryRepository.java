@@ -1,8 +1,10 @@
 package com.vori.backend.inquiry;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -13,6 +15,19 @@ import java.util.Optional;
 public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
 
     Optional<AiInquiry> findByExpenseId(Long expenseId);
+
+    /**
+     * 답변 기록 전용 조회 (SELECT ... FOR UPDATE).
+     *
+     * answerInquiry 의 쓰기 트랜잭션은 answeredAt 을 다시 확인해 중복 답변을 걸러내는데,
+     * 일반 findById 로는 같은 질문에 동시에 온 두 요청이 둘 다 null 을 읽고 통과한다.
+     * 인정 보상(코인·스탯)이 여기 걸려 있으므로 두 번 지급될 수 있다.
+     * 행을 잠가 직렬화하면 뒤엣것은 앞엣것이 커밋한 answeredAt 을 보고 물러난다.
+     * (UserRepository.findByIdForUpdate 와 같은 원칙)
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM AiInquiry i WHERE i.id = :id")
+    Optional<AiInquiry> findByIdForUpdate(@Param("id") Long id);
 
     /**
      * 주어진 expense 들의 AI 질문(inquiry) 배치 조회.
