@@ -82,10 +82,11 @@ VORI 의 핵심 루프는 이거다.
 | 펫 · 분양 | `GET /api/pets/active` · `POST /api/pets/{id}/release` |
 | 알 · 가챠 | `GET /api/eggs/products` · `POST /api/eggs/buy` · `POST /api/eggs/{id}/open` |
 
-### 조건부 필수 — 영수증
+### 필수 — 영수증 *(2026-09-09 조건 해소)*
 
 `POST /api/receipts` · `GET /api/receipts`
-→ `f5a78ac` 가 main 에 들어오면 넣는다. 기술 점수에서 가장 강하다.
+
+`f5a78ac`(multipart 상한 10MB)가 PR #15 로 main 에 들어와 **조건이 풀렸다.** 4.4MB 휴대폰 사진이 main 기준으로 정상 인식되는 것을 실측했다. 기술 점수에서 가장 강한 카드이므로 넣는다.
 
 ### 여유 되면
 
