@@ -45,3 +45,6 @@ async function request(path, { method = "GET", body } = {}) {
 
 export const get = (path) => request(path);
 export const post = (path, body) => request(path, { method: "POST", body });
+export const put = (path, body) => request(path, { method: "PUT", body });
+// PATCH 는 본문 없이 부르는 경우가 있다(가구 회수). body 를 넘기지 않으면 Content-Type 도 안 붙는다.
+export const patch = (path, body) => request(path, { method: "PATCH", body });
