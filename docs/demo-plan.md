@@ -70,30 +70,57 @@ VORI 의 핵심 루프는 이거다.
 
 각본을 기준으로 자른 것이다. API 명세는 [`api-integration.md`](api-integration.md) 참조.
 
-### 필수 — 각본에 나온다 (9/30 전)
+### 현재 연동 상태 (2026-09-09 실측)
 
-| 화면 | 필요한 API |
+앱을 실제로 띄워 화면을 눌러 가며 네트워크 호출을 확인했다. 추정이 아니라 실측이다.
+
+**✅ 이미 붙어 있다 — 핵심 루프는 돌아간다**
+
+| 화면 | 실제로 호출하는 API |
 |---|---|
-| 가계부 지출 등록 | `POST /api/expenses` |
-| 칭호 | `GET /api/titles` · `PUT /api/titles/active` |
-| 가구 상점 | `GET /api/furniture/products` · `POST /api/furniture/buy` |
-| 마이룸 (배치) | `GET /api/furniture` · `PATCH /api/furniture/{id}/place` |
-| 테마 현황 | `GET /api/themes` |
-| 펫 · 분양 | `GET /api/pets/active` · `POST /api/pets/{id}/release` |
-| 알 · 가챠 | `GET /api/eggs/products` · `POST /api/eggs/buy` · `POST /api/eggs/{id}/open` |
+| 홈 대시보드 | `users/me/home` · `pets/active` · `daily-reports/today` · `ledger` |
+| 가계부 | `ledger` · **`inquiries`** (AI 질문·답변까지 연결됨) |
+| 상점 — 알 | `eggs/products` · `eggs` · `users/me` |
+| 마이룸 — 펫 | `pets` · `pets/active` |
 
-### 필수 — 영수증 *(2026-09-09 조건 해소)*
+지출 → 신호등 → AI 질문 → 펫 성장으로 이어지는 **핵심 루프는 화면에 이미 있다.** 알 확률도 `EggGrade` 값(S1/A5/B24/C70)이 그대로 나온다.
 
-`POST /api/receipts` · `GET /api/receipts`
+**❌ 아직 목업이거나 없다**
 
-`f5a78ac`(multipart 상한 10MB)가 PR #15 로 main 에 들어와 **조건이 풀렸다.** 4.4MB 휴대폰 사진이 main 기준으로 정상 인식되는 것을 실측했다. 기술 점수에서 가장 강한 카드이므로 넣는다.
+| | 실제 화면 상태 |
+|---|---|
+| **칭호** | 목업 — "첫 지출 기록 / 한 주 예산 지키기 / 카페 지출 줄이기". 우리 칭호 13개가 아니다. 사이드바 `업적/칭호` 버튼은 이동하지 않는다 |
+| **가구** | 목업 — "초록 소파 · 화분 · 스탠드 · 체크 러그". `FurnitureCatalog` 에 없는 항목들이고 `/api/furniture` 호출이 없다 |
+| **테마** | 없음. 마이룸의 "배경 변경(기본 방/노란 방…)" 은 우드·코지·스터디와 다른 개념이다 |
+| **예산** | 화면에 *"예산 설정 기능을 준비 중이에요"* 라고 표시된다 |
+| **목표 · 영수증** | 진입점 없음 |
 
-### 여유 되면
+### 🚨 지금 상태로는 각본 3·4번이 불가능하다
 
-| 화면 | API | 왜 뒤로 |
+| # | 무대 동작 | 가능? |
 |---|---|---|
-| 월 예산 | `GET`/`PUT /api/budgets` | 각본에 안 나옴. 화면은 단순함 |
-| 절약 목표 | `/api/goals` | 각본에 안 나옴. 진행률이 쌓이려면 시간이 필요 |
+| 1 | 지출 등록 → 칭호 획득 | △ 지출은 되지만 칭호 화면이 목업 |
+| 2 | 칭호 화면 | ❌ |
+| 3 | 상점에서 스터디 테마 해금 확인 | ❌ 가구 상점 자체가 없음 |
+| 4 | 액자 배치 → 세트 발동 | ❌ |
+| 5 | 펫 분양 | ✅ |
+| 6 | 알 개봉 | ✅ |
+
+**각본의 하이라이트인 "1번에서 딴 칭호가 3번에서 상점 잠금을 푼다" 가 통째로 안 된다.**
+
+### 그래서 이 순서로
+
+| 순위 | 대상 | 왜 |
+|---|---|---|
+| **1** | **칭호** `GET /api/titles` · `PUT /api/titles/active` | **화면을 새로 만들 필요가 없다.** 홈 대시보드에 "최근 업적" 자리가 이미 있으므로 목업 데이터를 응답으로 바꾸기만 하면 된다. 비용 대비 효과가 가장 크다 |
+| **2** | 가구 상점 `GET /api/furniture/products` · `POST /api/furniture/buy` | 화면 신규. 각본 3번 |
+| **3** | 마이룸 배치 `GET /api/furniture` · `PATCH /api/furniture/{id}/place` | 각본 4번 |
+| **4** | 테마 `GET /api/themes` | 가구 화면에 붙는 표시. 2·3 이 있어야 의미가 생긴다 |
+| **5** | 영수증 `POST`/`GET /api/receipts` | `f5a78ac` 가 main 에 들어와 조건이 풀렸다. 4.4MB 휴대폰 사진 실측 통과. **기술난이도 배점에서 가장 강한 카드** |
+| 6 | 월 예산 `GET`/`PUT /api/budgets` | 각본에 안 나옴. 화면은 단순함 |
+| 7 | 절약 목표 `/api/goals` | 각본에 안 나옴. 진행률이 쌓이려면 시간이 필요 |
+
+**1~4 는 9/30 전에 반드시**, 5 는 넣는 쪽이 강하고, 6~7 은 여유가 되면.
 
 ### 최종발표(11/4)로
 
@@ -168,6 +195,7 @@ python scripts/demo_seed.py --rehearse   세팅 + 무대 6단계를 실제로 �
 
 발표 3일 전(9/27)까지 한 번은 처음부터 끝까지 돌려볼 것.
 
+- [ ] **연동 우선순위 1~4 가 끝났는지 먼저 확인** — 안 끝났으면 각본 3·4번을 무대에서 보여줄 수 없다 (3장 참조)
 - [ ] `python scripts/demo_seed.py --rehearse` 로 API 단 각본이 성립하는지 확인
 - [ ] `python scripts/demo_seed.py` 로 발표용 계정을 새로 만들고, **화면에서** 1~6번을 눌러보기
 - [ ] 전체 소요 시간 측정 (목표 3분 이내, 설명 포함 5분)
