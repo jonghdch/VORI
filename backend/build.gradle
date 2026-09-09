@@ -47,4 +47,11 @@ tasks.named('test') {
 // (DB 비밀번호·Gemini 키가 빈 값 → 로그인 실패·AI 호출 403).
 tasks.named('bootRun') {
 	workingDir = projectDir.parentFile
+
+	// IPv4 를 먼저 쓴다. 네트워크에 따라 googleapis.com 이 IPv6 주소로만 해석되는데
+	// 그 경로가 열려 있지 않으면 JVM 이 UnresolvedAddressException 으로 죽는다.
+	// 브라우저·PowerShell 은 IPv4 로 폴백해서 멀쩡한데 서버만 실패하므로 원인을 찾기 어렵다.
+	// 실제로 학교 네트워크에서 Gemini 호출과 카테고리 임베딩 초기화가 전부 실패했다.
+	// 발표장 네트워크에서 같은 일이 나면 시연이 통째로 죽으므로 기본값으로 박아둔다.
+	jvmArgs = ['-Djava.net.preferIPv4Stack=true']
 }

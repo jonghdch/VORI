@@ -4,6 +4,7 @@ import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import { getMonthlyLedger } from "../../api/ledger";
 import { listInquiriesByDate } from "../../api/inquiries";
+import { AI_ACTIVE_FROM_HOUR, isAiJudgeOpen } from "../../config";
 import "../Home/HomeDashboard.css";
 import "./WalletPage.css";
 
@@ -120,11 +121,12 @@ function WalletPage({ user, onLogout }) {
   // 기본 선택 = 오늘 (이번 달 한정)
   const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
   const [selectedId, setSelectedId] = useState(null);
-  const [isAiActive, setIsAiActive] = useState(() => new Date().getHours() >= 20);
+  // 열리는 시각은 config 에서 온다(기본 20시). 시연 때 낮에도 열 수 있게 밖으로 뺐다.
+  const [isAiActive, setIsAiActive] = useState(isAiJudgeOpen);
 
   useEffect(() => {
     const id = setInterval(() => {
-      setIsAiActive(new Date().getHours() >= 20);
+      setIsAiActive(isAiJudgeOpen());
     }, 60_000);
     return () => clearInterval(id);
   }, []);
@@ -777,7 +779,9 @@ function WalletPage({ user, onLogout }) {
                 disabled={!isAiActive}
                 onClick={() => navigate("/wallet/analysis")}
               >
-                {isAiActive ? "판정 시작하기" : "대기 중 (오후 8시 활성화)"}
+                {isAiActive
+                  ? "판정 시작하기"
+                  : `대기 중 (${AI_ACTIVE_FROM_HOUR}시 활성화)`}
               </button>
               {pendingCount != null && (
                 <p className="ledger-ai-footnote">
