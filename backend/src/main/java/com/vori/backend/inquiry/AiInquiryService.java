@@ -150,7 +150,10 @@ public class AiInquiryService {
 
         // 3) 짧은 쓰기 트랜잭션
         transactionTemplate.executeWithoutResult(tx -> {
-            AiInquiry fresh = aiInquiryRepository.findById(inquiryId).orElseThrow();
+            // 행 잠금으로 읽는다 — 같은 질문에 동시에 온 답변은 여기서 직렬화되고,
+            // 뒤엣것은 앞엣것이 커밋한 answeredAt 을 보고 물러난다. 아래 인정 보상이
+            // 코인·스탯을 지급하므로 일반 findById 로는 두 번 지급될 수 있다.
+            AiInquiry fresh = aiInquiryRepository.findByIdForUpdate(inquiryId).orElseThrow();
             if (fresh.getAnsweredAt() != null) return; // 동시 답변 멱등 가드 재확인
 
             Expense expense = expenseRepository.findById(fresh.getExpenseId()).orElseThrow();
