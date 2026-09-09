@@ -46,6 +46,9 @@ public class ExpenseService {
     private static final int N_MIN = 5;
     // Z_GREEN / Z_RED 임계값은 signal_config 테이블(관리자 조정) 에서 읽는다. SignalConfigService 참조.
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
+    // expenses.z_score 는 DECIMAL(6,3) — 담을 수 있는 한계. clampZScore 참조.
+    private static final BigDecimal Z_SCORE_MAX = new BigDecimal("999.999");
+    private static final BigDecimal Z_SCORE_MIN = new BigDecimal("-999.999");
     private static final double EMA_ALPHA = 0.2;
 
     // 절약액 → 게임머니 전환 비율 (N 원 절약당 1 코인).
@@ -93,9 +96,9 @@ public class ExpenseService {
         if (stats.getSampleCount() < N_MIN || stats.getStddevEma().compareTo(STDDEV_MIN) < 0) {
             signal = Signal.GREEN;
         } else {
-            zScore = BigDecimal.valueOf(req.amount())
+            zScore = clampZScore(BigDecimal.valueOf(req.amount())
                     .subtract(stats.getMeanEma())
-                    .divide(stats.getStddevEma(), 3, RoundingMode.HALF_UP);
+                    .divide(stats.getStddevEma(), 3, RoundingMode.HALF_UP));
             double z = zScore.doubleValue();
             SignalConfig cfg = signalConfigService.getConfig();
             double zGreen = cfg.getZGreen().doubleValue();
@@ -129,11 +132,20 @@ public class ExpenseService {
             updateActivePet(userId, category.getStatType(), statDelta, expense.getId(), savedAmount);
         }
 
-        // AI 질문 트리거 조건 (docs/domain.md §6):
-        //   signal != GREEN AND is_recurring == FALSE
-        // 반복 결제는 사용자의 의식적 결정이 아니므로 AI 질문 스킵 → signal_final = signal_initial (이미 set 됨)
+        // AI 질문 트리거 — RED 일 때만 묻는다.
+        //
+        // docs/domain.md 는 {RED, GRAY} 를 트리거로 적어 두었지만, 같은 문서의 용어집이
+        // "이례(Anomaly) = z-score 가 임계치를 **초과**한 지출" 이라고 정의한다. 신호등
+        // 임계값을 스펙값(z_green=-0.5)으로 되돌리자 GRAY 가 평균 이하 구간까지 품게 되어,
+        // 평소보다 적게 쓴 지출에도 "평균보다 높습니다" 라고 묻는 상황이 생겼다.
+        // (종전 z_green=1.00 에서는 GRAY 가 z>1.0 에서만 떠서 그 전제가 우연히 참이었다.)
+        //
+        // RED 로 좁히면 용어집 정의와 맞고, 질문 빈도도 69% → 7% 수준으로 내려간다.
+        // 두 건 중 한 번씩 이유를 캐묻는 앱은 쓰이지 않는다.
+        //
+        // 반복 결제는 사용자의 의식적 결정이 아니므로 여전히 스킵한다.
         boolean skipAiQuestion = Boolean.TRUE.equals(req.isRecurring());
-        if (signal != Signal.GREEN && !skipAiQuestion) {
+        if (signal == Signal.RED && !skipAiQuestion) {
             eventPublisher.publishEvent(new ExpenseAnomalyEvent(
                     expense.getId(), userId, req.item(), req.amount(),
                     category.getStatType(), stats.getMeanEma(), signal
@@ -145,6 +157,24 @@ public class ExpenseService {
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "EXPENSE_CREATED"));
 
         return ExpenseResponse.from(expense);
+    }
+
+    /**
+     * z_score 를 컬럼이 담을 수 있는 범위로 자른다.
+     *
+     * expenses.z_score 가 DECIMAL(6,3) 이라 ±999.999 를 넘으면 저장 시 Data truncation 이
+     * 나고 지출 등록 자체가 500 으로 실패한다. 평소 소비가 일정해 stddev 가 작은 사용자가
+     * 큰 지출을 한 번 하면 z 가 네 자리로 나오는데, 그게 바로 VORI 가 잡으라고 만든
+     * 상황이라 하필 거기서 앱이 죽는다.
+     *
+     * z 가 1000 을 넘으면 어차피 RED 이고, 1300 인지 1500 인지는 판정에도 화면에도
+     * 의미가 없으므로 잘라 담는다. 컬럼을 넓히는 방법도 있지만 stddev 가 더 작아지면
+     * 같은 문제가 다시 생기므로 근본 대책이 못 된다.
+     */
+    private static BigDecimal clampZScore(BigDecimal z) {
+        if (z.compareTo(Z_SCORE_MAX) > 0) return Z_SCORE_MAX;
+        if (z.compareTo(Z_SCORE_MIN) < 0) return Z_SCORE_MIN;
+        return z;
     }
 
     private void updateEma(UserStatStats stats, int amount) {

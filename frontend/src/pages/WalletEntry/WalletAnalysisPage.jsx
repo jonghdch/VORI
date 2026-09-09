@@ -2,22 +2,24 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toIsoDate } from "./utils";
 import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
+import { isAiJudgeOpen } from "../../config";
 import "./WalletEntry.css";
 
-// 소비 분석 — /wallet 의 ledger-ai-card 에서 오후 8시~자정 이벤트로 진입하는 독립 페이지.
+// 소비 분석 — /wallet 의 ledger-ai-card 에서 저녁 이벤트로 진입하는 독립 페이지.
 // (더 이상 가계부 작성 위저드의 단계가 아니다.)
 // - 백엔드가 z-score 로 anomaly 감지한 expense 만 AI 질문 생성됨 (비동기).
 // - 질문이 없으면 안내 + "완료" 만 표시.
 // - 있으면 페이지네이션으로 한 건씩 답변. "다음에 할게요" 누르면 답변 안 한 채로 닫음.
-// - 오후 8시~자정 밖에서 직접 URL 로 들어오면 /wallet 로 돌려보낸다.
+// - 활성 시간대 밖에서 직접 URL 로 들어오면 /wallet 로 돌려보낸다.
+//   열리는 시각은 config.AI_ACTIVE_FROM_HOUR (기본 20시).
 function WalletAnalysisPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
-  // 이벤트 활성 시간대(오후 8시~자정) 가드. 카드 버튼과 동일 기준.
+  // 이벤트 활성 시간대 가드. 카드 버튼과 동일 기준(config.isAiJudgeOpen).
   // 진입 시점에 1회만 판정해 고정 — 매 렌더 재평가하면 23:59에 답변을
   // 타이핑하던 사용자가 자정을 넘는 순간 리다이렉트로 축출되고 작성 내용이 날아간다.
-  const [isEventOpen] = useState(() => new Date().getHours() >= 20);
+  const [isEventOpen] = useState(isAiJudgeOpen);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -68,7 +70,7 @@ function WalletAnalysisPage() {
     };
   }, [dateStr, isEventOpen, reloadKey]);
 
-  // 활성 시간대(오후 8시~자정) 밖이면 가계부로 돌려보낸다.
+  // 활성 시간대 밖이면 가계부로 돌려보낸다.
   if (!isEventOpen) {
     return <Navigate to="/wallet" replace />;
   }

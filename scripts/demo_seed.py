@@ -44,9 +44,22 @@ EXPENSES = [
     (2,   3_500, "김밥천국"),
 ]  # 총 9건 — 10번째가 무대용("기록의 시작" 조건이 10건)
 
-# 우드 테마 3종 중 2개만 미리 산다. 3번째(액자)를 무대에서 사서 배치하면 세트가 발동한다.
+# 우드 가구 2개를 미리 배치해 둔다. 2/3 라 발동하지 않는다 — 무대에서 발동하는
+# 스터디 세트와 대비를 만드는 용도다.
 FURNITURE_PRESET = ["BOOKSHELF", "DRAWER_CHEST"]
-FURNITURE_STAGE = "WALL_PICTURE"
+
+# 무대에서 살 가구. 스터디 테마는 '기록의 시작' 칭호로 잠금이 풀리므로, 무대 1번에서
+# 칭호를 딴 뒤에야 살 수 있다 — 칭호 → 해금 → 구매 → 세트 발동이 하나의 사슬이 된다.
+# 스터디는 required_count 가 2라 두 개면 발동한다.
+FURNITURE_STAGE = ["DESKTOP_PC", "CORK_BOARD"]
+
+# 무대 1번에서 등록할 지출. RED(z > 1.5)를 확실히 넘기면서 z_score 컬럼 범위 안이어야 한다.
+# 세팅 후 평균이 4만원대라 20만원이면 z ≈ 2.0 으로 RED 가 뜬다.
+STAGE_EXPENSE = 200_000
+
+# AiInquiryService 의 인정 보상 값과 맞춘다. 바뀌면 여기도 같이 고칠 것.
+RECOGNITION_STAT = 10
+RECOGNITION_COIN = 100
 
 
 class Session:
@@ -84,6 +97,15 @@ def check(label, cond, detail=""):
 
 def by_name(rows):
     return {r["name"]: r for r in rows} if isinstance(rows, list) else {}
+
+
+def wallet(user):
+    """현재 코인·펫 스탯. 인정 보상이 실제로 들어왔는지 보려면 둘 다 필요하다."""
+    _, me = user.call("GET", "/api/users/me")
+    _, pet = user.call("GET", "/api/pets/active")
+    coins = (me.get("gameMoney") or 0) if isinstance(me, dict) else 0
+    stat = pet.get("statTotal") if isinstance(pet, dict) else None
+    return coins, stat
 
 
 def msg(res):
@@ -188,24 +210,66 @@ def verify(user):
     return len(fail) == 0
 
 
+def wait_inquiry(user, today, seen_ids, timeout=90):
+    """AI 질문은 커밋 후 비동기로 생성되고 Gemini 응답까지 기다려야 한다."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        code, rows = user.call("GET", f"/api/inquiries?date={today}")
+        if isinstance(rows, list):
+            fresh = [r for r in rows if r["inquiryId"] not in seen_ids]
+            if fresh:
+                return fresh[0]
+        time.sleep(3)
+    return None
+
+
 def rehearse(user, user_id):
-    """무대 6단계를 실제로 눌러보고, 각 단계에서 무언가 터지는지 확인한다."""
+    """무대 각본을 실제로 눌러보고, 각 단계에서 무언가 터지는지 확인한다."""
     print("\n" + "=" * 62)
-    print("리허설 — 무대 6단계")
+    print("리허설 — 무대 각본")
     print("=" * 62)
     today = datetime.date.today().isoformat()
 
-    print("\n[1] 지출 10번째 등록")
+    coin0, stat0 = wallet(user)
+
+    print("\n[1] 큰 지출 등록 → RED → AI 가 이유를 묻는다")
     code, exp = user.call("POST", "/api/expenses", {
-        "categoryId": 6, "amount": 1_800, "item": "우유", "spentAt": f"{today}T18:00:00"})
-    check("지출 등록 200", code == 200)
-    print(f"     신호등 {exp.get('signalFinal')} · 절약 {max(exp.get('savedAmount') or 0, 0):,}원")
+        "categoryId": 2, "amount": STAGE_EXPENSE, "item": "축의금",
+        "spentAt": f"{today}T18:00:00"})
+    check("지출 등록 200", code == 200, msg(exp) if code != 200 else "")
+    check("RED 판정 ⭐", exp.get("signalFinal") == "RED",
+          f"signal={exp.get('signalFinal')}, z={exp.get('zScore')}")
+    check("과지출이라 절약액 음수", (exp.get("savedAmount") or 0) < 0,
+          f"{exp.get('savedAmount'):,}")
     time.sleep(1.5)
     _, titles = user.call("GET", "/api/titles")
     t = {x["name"]: x for x in titles}
-    check("'기록의 시작' 획득 ⭐", t.get("기록의 시작", {}).get("acquired") is True)
+    check("같은 동작으로 '기록의 시작' 획득 ⭐", t.get("기록의 시작", {}).get("acquired") is True)
 
-    print("\n[2] 칭호 화면")
+    inq = wait_inquiry(user, today, set())
+    check("AI 질문 생성됨 ⭐", inq is not None)
+    if inq is None:
+        print("\n질문이 오지 않아 중단합니다."); return
+    print(f"     질문: {inq['question'][:70]}")
+
+    print("\n[2] '경조사였다' 고 답변 → 판정 완화 + 인정 보상")
+    code, _ = user.call("POST", f"/api/inquiries/{inq['inquiryId']}/answer",
+                        {"answerText": "친구 결혼식 축의금이라 안 낼 수가 없었어요"})
+    check("답변 제출 200", code == 200, f"code={code}")
+    time.sleep(1.5)
+
+    coin1, stat1 = wallet(user)
+    print(f"     코인 {coin0:,} → {coin1:,}   펫 스탯 {stat0} → {stat1}")
+    check("코인 +100 ⭐", coin1 - coin0 == RECOGNITION_COIN, f"{coin1 - coin0:+}")
+    check("펫 스탯 +10 ⭐", stat1 - stat0 == RECOGNITION_STAT, f"{stat1 - stat0:+}")
+
+    code, ledger = user.call("GET", f"/api/expenses?date={today}")
+    target = next((x for x in ledger if x["id"] == exp["id"]), {})
+    check("신호등이 RED → GREEN 으로 완화 ⭐", target.get("signalFinal") == "GREEN",
+          str(target.get("signalFinal")))
+
+    print("\n[3] 칭호 화면")
+    _, titles = user.call("GET", "/api/titles")
     acquired = [x["name"] for x in titles if x["acquired"]]
     locked = [x for x in titles if not x["acquired"]]
     check("획득 칭호가 앞쪽에 정렬됨", titles[0]["acquired"] is True)
@@ -213,7 +277,7 @@ def rehearse(user, user_id):
     print(f"     획득 {len(acquired)}개 · 다음 목표 {locked[0]['name']} "
           f"{locked[0]['current']}/{locked[0]['threshold']}")
 
-    print("\n[3] 상점 — 스터디 테마 잠금 해제 확인")
+    print("\n[4] 상점 — 스터디 테마 잠금 해제 확인")
     _, themes = user.call("GET", "/api/themes")
     check("스터디 해금됨 ⭐ (1번 칭호의 결과)",
           by_name(themes).get("스터디", {}).get("unlocked") is True)
@@ -221,30 +285,38 @@ def rehearse(user, user_id):
     pc = {p["code"]: p for p in products}
     check("상점에서도 컴퓨터 잠금 풀림", pc["DESKTOP_PC"]["locked"] is False)
 
-    print("\n[4] 액자 구매 → 배치 → 우드 세트 발동")
-    code, f = user.call("POST", f"/api/furniture/buy?item={FURNITURE_STAGE}")
-    check("액자 구매 200", code == 200, msg(f) if code != 200 else "")
-    user.call("PATCH", f"/api/furniture/{f['id']}/place", {"positionX": 2, "positionY": 0})
+    print("\n[5] 해금된 스터디 가구 2종 구매·배치 → 세트 발동")
+    for i, item in enumerate(FURNITURE_STAGE):
+        code, f = user.call("POST", f"/api/furniture/buy?item={item}")
+        check(f"{item} 구매 200", code == 200, msg(f) if code != 200 else "")
+        if code == 200:
+            user.call("PATCH", f"/api/furniture/{f['id']}/place",
+                      {"positionX": 3 + i, "positionY": 0})
     _, themes = user.call("GET", "/api/themes")
+    study = by_name(themes).get("스터디", {})
+    check("스터디 세트 발동 ⭐", study.get("active") is True,
+          f"{study.get('placedCount')}/{study.get('requiredCount')}")
     wood = by_name(themes).get("우드", {})
-    check("우드 세트 발동 ⭐", wood.get("active") is True, f"{wood.get('placedCount')}/3")
+    check("우드는 2/3 라 미발동 (대비용)", wood.get("active") is False,
+          f"{wood.get('placedCount')}/3")
 
-    print("\n[5] 펫 분양 — 세트 보너스 반영")
+    print("\n[6] 펫 분양 — 세트 보너스 반영")
     _, pet = user.call("GET", "/api/pets/active")
     stat = pet["statTotal"]
     code, released = user.call("POST", f"/api/pets/{pet['id']}/release")
     check("분양 200", code == 200, msg(released) if code != 200 else "")
     value = released.get("releaseValue")
-    # 개별 2.00+2.00+1.50=5.50% + 우드 세트 8.00% = 13.50%
-    expected = int(stat * 10 * 1.135)
-    check("분양가에 세트 13.50% 반영 ⭐", value == expected,
+    # 개별: 책장2.00 + 서랍장2.00 + 컴퓨터4.00 + 코르크1.50 = 9.50
+    # 세트: 스터디 15.00 (우드는 2/3 라 미발동)  → 합계 24.50%
+    expected = int(stat * 10 * 1.245)
+    check("분양가에 개별 9.50% + 스터디 세트 15.00% 반영 ⭐", value == expected,
           f"스탯 {stat} → {value:,} 코인 (기대 {expected:,})")
     time.sleep(1.5)
     _, titles = user.call("GET", "/api/titles")
     check("'첫 분양' 획득 ⭐",
           {x["name"]: x for x in titles}.get("첫 분양", {}).get("acquired") is True)
 
-    print("\n[6] 알 구매 → 개봉")
+    print("\n[7] 알 구매 → 개봉")
     code, egg = user.call("POST", "/api/eggs/buy?grade=BASIC")
     check("알 구매 200", code == 200, msg(egg) if code != 200 else "")
     code, result = user.call("POST", f"/api/eggs/{egg['id']}/open")
