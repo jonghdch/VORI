@@ -182,9 +182,14 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 ```
 
 ```json
-// PATCH /api/furniture/11/place — 요청 (좌표 0~999)
-{ "positionX": 0, "positionY": 0 }
+// PATCH /api/furniture/11/place — 요청 (좌표는 방 크기 대비 %, 0~100)
+{ "positionX": 15, "positionY": 74 }
 ```
+
+**좌표는 픽셀이 아니라 백분율이다.** `PetPage` 의 배치 UI 가 이미 퍼센트로 좌표를 들고 있어
+(`INITIAL_FURNITURE_POSITIONS`) 그 단위를 그대로 받는다. 비율이라 방 이미지 크기나 화면 폭이
+바뀌어도 배치가 깨지지 않는다 — 반응형이라 픽셀로 저장하면 창 크기마다 가구가 다른 자리에 놓인다.
+범위를 벗어나면 400 (`좌표는 100 이하여야 합니다. (방 크기 대비 %)`).
 
 벽지·바닥(`PLAIN_WALLPAPER`, `WOOD_FLOOR`)은 `themeName` 이 `null` 이다. 좌표 처리가 아직 정해지지 않아 일부러 테마에서 뺐다.
 

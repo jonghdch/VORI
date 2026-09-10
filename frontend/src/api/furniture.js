@@ -69,14 +69,15 @@ export const buyFurniture = (code) =>
   post(`/furniture/buy?item=${encodeURIComponent(code)}`);
 
 /**
- * 마이룸에 배치. 좌표는 0~999 정수.
+ * 마이룸에 배치. 좌표는 **방 크기 대비 백분율**(0~100 정수)이다. 픽셀이 아니다.
  *
- * 격자 크기는 아직 안 정해졌다 — 백엔드는 음수와 999 초과만 막고 있으니
- * 실제 칸 수는 마이룸 UI 를 만들면서 정하고, 정해지면 알려줘. 서버 검증도 그때 맞춘다.
+ * PetPage 의 `INITIAL_FURNITURE_POSITIONS` 가 이미 퍼센트를 쓰고 있어 그 단위를 그대로 받는다.
+ * 비율이라 방 이미지나 화면 폭이 바뀌어도 배치가 안 깨진다 — 픽셀로 저장하면 창 크기마다
+ * 가구가 다른 자리에 놓인다.
  *
  * @param {number} id Furniture.id
- * @param {number} positionX
- * @param {number} positionY
+ * @param {number} positionX 0~100 (%)
+ * @param {number} positionY 0~100 (%)
  * @returns {Promise<Furniture>} 409 = 이미 다른 가구가 놓인 자리, 403 = 남의 가구, 400 = 좌표 범위 밖
  */
 export const placeFurniture = (id, positionX, positionY) =>
