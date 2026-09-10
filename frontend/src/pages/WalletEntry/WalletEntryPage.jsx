@@ -11,6 +11,7 @@ import {
   toIsoDate,
 } from "./utils";
 import { categorizeRemote } from "../../api/categorize";
+import { MAX_RECEIPT_BYTES, uploadReceipt } from "../../api/receipt";
 import {
   createExpense,
   createIncome,
@@ -177,6 +178,69 @@ function WalletEntryPage() {
   const addRow = (setter) => setter((rows) => [...rows, newRow()]);
   const removeRow = (setter, id) =>
     setter((rows) => rows.filter((r) => r.id !== id));
+
+  // ── 영수증 OCR ──────────────────────────────────────────────────────────
+  // 인식 결과를 바로 저장하지 않고 지출 행으로 채워만 준다. 흐린 영수증은 일부만
+  // 읽히므로(모든 필드가 null 일 수 있다) 사용자가 확인·수정하는 단계를 반드시 남긴다.
+  const receiptInput = useRef(null);
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  const [receiptNotice, setReceiptNotice] = useState(null);
+
+  const onReceiptPick = async (e) => {
+    const file = e.target.files?.[0];
+    // 같은 파일을 다시 골라도 change 가 발생하도록 값을 비운다.
+    e.target.value = "";
+    if (!file) return;
+
+    // 서버 상한을 넘으면 413 이 오는데 message 가 실리지 않는다. 미리 걸러야 안내가 된다.
+    if (file.size > MAX_RECEIPT_BYTES) {
+      const mb = (file.size / 1024 / 1024).toFixed(1);
+      setReceiptNotice({ kind: "err", text: `사진이 너무 커요 (${mb}MB). 10MB 이하로 올려주세요.` });
+      return;
+    }
+
+    setReceiptBusy(true);
+    setReceiptNotice({ kind: "info", text: "영수증을 읽는 중이에요. 20~30초쯤 걸려요." });
+    try {
+      const r = await uploadReceipt(file);
+
+      // 영수증이 아니거나 판독 불가여도 200 이 온다 — 값이 비었는지로 판단한다.
+      if (r.amount == null && !r.item) {
+        setReceiptNotice({
+          kind: "err",
+          text: r.errorMessage || "영수증을 읽지 못했어요. 더 밝은 곳에서 다시 찍어보세요.",
+        });
+        return;
+      }
+
+      setExpense((rows) => [
+        ...rows,
+        {
+          ...newRow(),
+          name: r.item || r.extracted?.storeName || "",
+          amount: r.amount != null ? String(r.amount) : "",
+          // 프롬프트가 결제수단을 우리 enum 으로 뽑으므로 그대로 쓴다. UNKNOWN·미인식이면 기본값 유지.
+          paymentMethod: PAYMENT_METHODS.some((p) => p.value === r.extracted?.paymentMethod)
+            ? r.extracted.paymentMethod
+            : defaultPayment,
+        },
+      ]);
+
+      // 영수증 날짜가 지금 보는 날짜와 다르면 알려만 준다. 날짜를 임의로 바꾸면
+      // 이미 입력한 다른 행들이 엉뚱한 날짜로 저장된다.
+      const other = r.date && r.date !== dateStr;
+      setReceiptNotice({
+        kind: other ? "warn" : "ok",
+        text: other
+          ? `영수증 날짜는 ${r.date} 예요. 지금은 ${dateStr} 을 작성 중이라 금액만 채웠어요.`
+          : "영수증을 읽었어요. 금액과 항목을 확인해주세요.",
+      });
+    } catch (err) {
+      setReceiptNotice({ kind: "err", text: err.message });
+    } finally {
+      setReceiptBusy(false);
+    }
+  };
   const updateRow = (setter, id, patch) =>
     setter((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
@@ -283,8 +347,31 @@ function WalletEntryPage() {
           </p>
         </div>
 
-        {/* 이미지 업로드(영수증 OCR 자동 입력)는 미구현 — 동작 없는 버튼과
-            "사진을 올리면 자동으로 채워져요" 약속을 함께 내렸다. 구현 시 복원. */}
+        {/* 영수증 OCR. 인식에 20~30초 걸려서 진행 표시가 필수다 —
+            아무 표시 없이 기다리게 하면 멈춘 것처럼 보인다. */}
+        <section className="ledger-receipt">
+          <input
+            ref={receiptInput}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={onReceiptPick}
+          />
+          {/* .ledger-upload 는 예전 업로드 버튼 스타일이 CSS 에 그대로 남아 있던 것을 다시 쓴다. */}
+          <button
+            type="button"
+            className="ledger-upload"
+            onClick={() => receiptInput.current?.click()}
+            disabled={receiptBusy}
+          >
+            {receiptBusy ? "영수증 읽는 중…" : "📷 영수증 사진으로 채우기"}
+          </button>
+          {receiptNotice && (
+            <p className={`ledger-receipt-notice ledger-receipt-notice--${receiptNotice.kind}`}>
+              {receiptNotice.text}
+            </p>
+          )}
+        </section>
 
         {income.length > 0 && (
           <section className="ledger-section">
