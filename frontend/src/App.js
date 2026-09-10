@@ -33,6 +33,7 @@ const ReportPage = lazy(() => import("./pages/Report/ReportPage"));
 const PetPage = lazy(() => import("./pages/Pet/PetPage"));
 const ShopPage = lazy(() => import("./pages/Shop/ShopPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
+const TitlesPage = lazy(() => import("./pages/Titles/TitlesPage"));
 // 이용약관·개인정보처리방침 — 공개(비인증) 페이지.
 const TermsPage = lazy(() => import("./pages/Legal/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/Legal/PrivacyPage"));
@@ -77,6 +78,7 @@ const ADMIN_PAGES = {
 //   /raise                  펫 키우기
 //   /shop                   상점
 //   /settings               환경설정
+//   /titles                 업적/칭호
 //   /admin/*                어드민 (ADMIN 전용)
 
 function ScrollToTop() {
@@ -220,6 +222,14 @@ function App() {
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <SettingsPage user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/titles"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <TitlesPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />

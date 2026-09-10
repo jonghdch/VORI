@@ -26,7 +26,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,7 +33,7 @@ import java.util.Objects;
 /**
  * 칭호 획득·장착.
  *
- * 평가는 멱등하다 — 이미 가진 칭호는 건너뛰고, UNIQUE(user_id, name) 가 최종 방어선이다.
+ * 평가는 멱등하다 — 이미 가진 칭호는 건너뛰고, UNIQUE(user_id, title_id) 가 최종 방어선이다.
  * 그래서 두 경로에서 안전하게 호출한다:
  *   1) 지표가 바뀌는 시점의 이벤트 — 획득 순간을 잡아 화면에 알릴 수 있다
  *   2) 목록 조회 — 이벤트를 놓쳤더라도 다음 조회에서 자동으로 복구된다
@@ -48,6 +47,7 @@ import java.util.Objects;
 public class TitleService {
 
     private final UserTitleRepository userTitleRepository;
+    private final TitleRepository titleRepository;
     private final UserRepository userRepository;
     private final ExpenseRepository expenseRepository;
     private final GoalRepository goalRepository;
@@ -63,19 +63,19 @@ public class TitleService {
         TitleProgress progress = collect(userId);
         grantNewlyAchieved(userId, progress);
 
-        Map<String, UserTitle> owned = userTitleRepository.findByUserId(userId).stream()
-                .collect(java.util.stream.Collectors.toMap(UserTitle::getName, t -> t, (a, b) -> a));
+        Map<Long, UserTitle> owned = userTitleRepository.findByUserId(userId).stream()
+                .collect(java.util.stream.Collectors.toMap(t -> t.getTitle().getId(), t -> t, (a, b) -> a));
         Long activeId = userRepository.findById(userId)
                 .map(User::getActiveTitleId).orElse(null);
 
         List<TitleResponse> acquired = new ArrayList<>();
         List<TitleResponse> locked = new ArrayList<>();
-        for (TitleCatalog c : TitleCatalog.values()) {
-            UserTitle t = owned.get(c.displayName());
+        for (Title title : titleRepository.findByEnabledTrueOrderBySortOrderAscIdAsc()) {
+            UserTitle t = owned.get(title.getId());
             if (t != null) {
-                acquired.add(TitleResponse.acquired(c, t, progress, Objects.equals(t.getId(), activeId)));
+                acquired.add(TitleResponse.acquired(title, t, progress, Objects.equals(t.getId(), activeId)));
             } else {
-                locked.add(TitleResponse.locked(c, progress));
+                locked.add(TitleResponse.locked(title, progress));
             }
         }
         // 미획득은 달성이 가까운 순으로 — 화면이 "다음 목표" 를 위에 보여줄 수 있다
@@ -125,25 +125,25 @@ public class TitleService {
 
     /** 조건을 만족했는데 아직 없는 칭호를 지급한다. 이미 가진 것은 건너뛴다(멱등). */
     private void grantNewlyAchieved(Long userId, TitleProgress progress) {
-        for (TitleCatalog c : TitleCatalog.values()) {
-            if (!c.isAchieved(progress)) continue;
-            if (userTitleRepository.findByUserIdAndName(userId, c.displayName()).isPresent()) continue;
+        for (Title title : titleRepository.findByEnabledTrueOrderBySortOrderAscIdAsc()) {
+            if (!title.isAchieved(progress)) continue;
+            if (userTitleRepository.findByUserIdAndTitleId(userId, title.getId()).isPresent()) continue;
 
-            Long unlocksThemeId = unlockedThemeIdOf(c.displayName());
+            Long unlocksThemeId = unlockedThemeIdOf(title.getName());
 
             userTitleRepository.save(UserTitle.builder()
                     .userId(userId)
-                    .name(c.displayName())
+                    .title(title)
                     // 획득 시점의 근거를 남긴다 — 나중에 "왜 이때 땄지" 를 설명할 수 있어야 한다
                     .unlockCondition(String.format(
                             "{\"code\":\"%s\",\"threshold\":%d,\"value\":%d}",
-                            c.name(), c.threshold(), c.currentOf(progress)))
+                            title.getCode(), title.getThreshold(), title.currentOf(progress)))
                     .unlocksThemeId(unlocksThemeId)
                     .acquiredAt(LocalDateTime.now())
                     .build());
 
             log.info("칭호 획득 — userId={}, title={}, unlocksThemeId={}",
-                    userId, c.displayName(), unlocksThemeId);
+                    userId, title.getName(), unlocksThemeId);
         }
     }
 
@@ -152,7 +152,8 @@ public class TitleService {
      *
      * 해금 판정 자체는 ThemeService 가 theme_master.unlock_title_name 으로만 한다. 여기 값은
      * 칭호 화면이 "🎁 코지 테마 해금" 을 띄우기 위한 것이라, 없어도 해금은 정상 동작한다.
-     * 그래서 조회 실패를 막지 않고 null 로 흘린다.
+     * 그래서 조회 실패를 막지 않고 null 로 흘린다. titles.name 과 theme_master.unlock_title_name 이
+     * 같은 표시 이름을 쓰므로 이름으로 잇는다.
      */
     private Long unlockedThemeIdOf(String titleName) {
         List<ThemeMaster> themes = themeMasterRepository.findByUnlockTitleName(titleName);
@@ -175,8 +176,8 @@ public class TitleService {
                 receiptOcrJobRepository.countByUserIdAndStatus(userId, OcrStatus.SUCCESS));
     }
 
-    /** 카탈로그 전체 — 어드민·문서용. */
-    public List<TitleCatalog> catalog() {
-        return Arrays.asList(TitleCatalog.values());
+    /** 칭호 마스터 전체 — 어드민·문서용. */
+    public List<Title> catalog() {
+        return titleRepository.findByEnabledTrueOrderBySortOrderAscIdAsc();
     }
 }

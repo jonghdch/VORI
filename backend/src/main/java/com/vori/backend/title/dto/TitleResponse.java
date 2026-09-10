@@ -1,6 +1,6 @@
 package com.vori.backend.title.dto;
 
-import com.vori.backend.title.TitleCatalog;
+import com.vori.backend.title.Title;
 import com.vori.backend.title.TitleProgress;
 import com.vori.backend.title.UserTitle;
 
@@ -22,16 +22,16 @@ public record TitleResponse(
         int progressPct,
         LocalDateTime acquiredAt
 ) {
-    public static TitleResponse acquired(TitleCatalog c, UserTitle owned,
+    public static TitleResponse acquired(Title title, UserTitle owned,
                                          TitleProgress p, boolean active) {
         return new TitleResponse(
-                owned.getId(), c.name(), c.displayName(), c.description(),
-                true, active, c.currentOf(p), c.threshold(), 100, owned.getAcquiredAt());
+                owned.getId(), title.getCode(), title.getName(), title.getDescription(),
+                true, active, title.currentOf(p), title.getThreshold(), 100, owned.getAcquiredAt());
     }
 
-    public static TitleResponse locked(TitleCatalog c, TitleProgress p) {
+    public static TitleResponse locked(Title title, TitleProgress p) {
         return new TitleResponse(
-                null, c.name(), c.displayName(), c.description(),
-                false, false, c.currentOf(p), c.threshold(), c.progressPct(p), null);
+                null, title.getCode(), title.getName(), title.getDescription(),
+                false, false, title.currentOf(p), title.getThreshold(), title.progressPct(p), null);
     }
 }

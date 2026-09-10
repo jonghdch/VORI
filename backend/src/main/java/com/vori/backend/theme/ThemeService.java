@@ -64,8 +64,9 @@ public class ThemeService {
      */
     @Transactional(readOnly = true)
     public Set<String> unlockedNames(Long userId) {
+        // 칭호 이름은 titles 마스터에 있다(V11). findByUserId 가 title 을 join fetch 하므로 N+1 은 없다.
         Set<String> ownedTitles = userTitleRepository.findByUserId(userId).stream()
-                .map(UserTitle::getName)
+                .map(ut -> ut.getTitle().getName())
                 .collect(Collectors.toSet());
 
         return themeMasterRepository.findAll().stream()
