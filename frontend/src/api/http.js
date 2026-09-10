@@ -18,14 +18,8 @@ const STATUS_MESSAGE = {
   409: "이미 처리된 요청이에요",
 };
 
-async function request(path, { method = "GET", body } = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    credentials: "include",
-    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-
+// 응답 → 값, 또는 status 를 실은 Error. JSON 요청과 multipart 업로드가 함께 쓴다.
+async function handle(res) {
   if (!res.ok) {
     let msg = STATUS_MESSAGE[res.status] || `요청 실패 (${res.status})`;
     try {
@@ -43,8 +37,38 @@ async function request(path, { method = "GET", body } = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+async function request(path, { method = "GET", body } = {}) {
+  return handle(
+    await fetch(`${API_BASE}${path}`, {
+      method,
+      credentials: "include",
+      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }),
+  );
+}
+
 export const get = (path) => request(path);
 export const post = (path, body) => request(path, { method: "POST", body });
 export const put = (path, body) => request(path, { method: "PUT", body });
 // PATCH 는 본문 없이 부르는 경우가 있다(가구 회수). body 를 넘기지 않으면 Content-Type 도 안 붙는다.
 export const patch = (path, body) => request(path, { method: "PATCH", body });
+
+/**
+ * multipart/form-data 파일 업로드 (영수증 OCR).
+ *
+ * Content-Type 을 직접 지정하지 않는다 — FormData 를 주면 브라우저가 boundary 를 포함해
+ * 알아서 붙인다. 손으로 "multipart/form-data" 를 넣으면 boundary 가 빠져 서버가 못 읽는다.
+ *
+ * 서버 상한은 10MB(f5a78ac). 넘기면 413 이 오고 message 는 없을 수 있다 — 호출부에서
+ * 미리 걸러 주는 편이 안내가 낫다.
+ */
+export const upload = (path, file, field = "file") => {
+  const form = new FormData();
+  form.append(field, file);
+  return fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  }).then(handle);
+};
