@@ -3,6 +3,8 @@ package com.vori.backend.pet;
 import com.vori.backend.furniture.UserFurniture;
 import com.vori.backend.furniture.UserFurnitureRepository;
 import com.vori.backend.pet.dto.PetResponse;
+import com.vori.backend.theme.ThemeMaster;
+import com.vori.backend.theme.ThemeMasterRepository;
 import com.vori.backend.title.TitleCheckEvent;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
@@ -33,9 +35,10 @@ public class PetService {
     private final PetSpeciesRepository petSpeciesRepository;
     private final UserRepository userRepository;
     private final UserFurnitureRepository userFurnitureRepository;
+    private final ThemeMasterRepository themeMasterRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    // 분양가 = 스탯총합 × 배수 × (1 + 배치가구 보너스합/100)
+    // 분양가 = 스탯총합 × 배수 × (1 + (개별 가구 보너스합 + 테마 세트 보너스합)/100)
     private static final int RELEASE_VALUE_PER_STAT = 10;
 
     /** 현재 키우는 펫. 없으면 null (신규 가입자·직전에 분양한 경우). */
@@ -93,21 +96,47 @@ public class PetService {
     }
 
     /**
-     * 분양가 산출. 마이룸에 **배치된** 가구의 release_bonus_pct 합만 반영한다
+     * 분양가 산출. 마이룸에 **배치된** 가구만 반영한다
      * (인벤토리에 쌓아둔 가구는 제외 — 꾸며야 이득이라는 게 보상 설계 의도).
+     *
+     * 보너스는 두 겹이다: 가구 개별 release_bonus_pct 합 + 같은 테마를 required_count 이상
+     * 배치했을 때의 세트 보너스 합. 세트 판정 기준은 ThemeService.list 가 화면에 내려주는
+     * 기준과 같아야 한다 — "발동 중"이라 표시됐는데 분양가에 안 얹히면 제일 나쁜 버그다.
      */
     private int calculateReleaseValue(Long userId, Pet pet) {
-        BigDecimal bonusPct = userFurnitureRepository
-                .findByUserIdAndPositionXIsNotNullAndPositionYIsNotNull(userId)
-                .stream()
+        List<UserFurniture> placed = userFurnitureRepository
+                .findByUserIdAndPositionXIsNotNullAndPositionYIsNotNull(userId);
+
+        BigDecimal bonusPct = placed.stream()
                 .map(UserFurniture::getReleaseBonusPct)
                 .filter(java.util.Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .add(setBonusPct(placed));
 
         BigDecimal base = BigDecimal.valueOf((long) pet.statTotal() * RELEASE_VALUE_PER_STAT);
         BigDecimal multiplier = BigDecimal.ONE.add(bonusPct.movePointLeft(2));
 
         return base.multiply(multiplier).setScale(0, RoundingMode.DOWN).intValue();
+    }
+
+    /** 배치된 가구를 테마별로 세어, 기준 개수를 채운 테마의 세트 보너스를 합산한다. */
+    private BigDecimal setBonusPct(List<UserFurniture> placed) {
+        Map<Long, Integer> countByTheme = new HashMap<>();
+        for (UserFurniture f : placed) {
+            if (f.getThemeId() == null) continue; // 벽지·바닥 등 테마 없는 가구
+            countByTheme.merge(f.getThemeId(), 1, Integer::sum);
+        }
+        if (countByTheme.isEmpty()) return BigDecimal.ZERO;
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (ThemeMaster theme : themeMasterRepository.findAllById(countByTheme.keySet())) {
+            // 둘 중 하나라도 비어 있으면 설정이 덜 된 테마 — 조용히 건너뛴다
+            if (theme.getRequiredCount() == null || theme.getSetBonusPct() == null) continue;
+            if (countByTheme.get(theme.getId()) >= theme.getRequiredCount()) {
+                total = total.add(theme.getSetBonusPct());
+            }
+        }
+        return total;
     }
 
     private PetSpecies findSpecies(Long speciesId) {

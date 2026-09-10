@@ -1,6 +1,8 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.5.0'
+	// 3.5 라인의 마지막 패치. 3.5 는 2026-06-30 로 지원이 끝나 더 이상 새 패치가 나오지 않는다.
+	// 4.x 로 올리는 건 별개 작업 — 중간발표(9/30) 전에 손댈 범위가 아니다.
+	id 'org.springframework.boot' version '3.5.16'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -37,4 +39,19 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+// .env 는 repo 루트에 있고 application.properties 의 spring.config.import 가
+// CWD 상대경로(./.env)라, bootRun 의 작업 디렉터리를 repo 루트로 고정한다.
+// 이게 없으면 어디서 실행하든 Gradle 이 CWD 를 backend/ 로 잡아 .env 를 못 읽는다
+// (DB 비밀번호·Gemini 키가 빈 값 → 로그인 실패·AI 호출 403).
+tasks.named('bootRun') {
+	workingDir = projectDir.parentFile
+
+	// IPv4 를 먼저 쓴다. 네트워크에 따라 googleapis.com 이 IPv6 주소로만 해석되는데
+	// 그 경로가 열려 있지 않으면 JVM 이 UnresolvedAddressException 으로 죽는다.
+	// 브라우저·PowerShell 은 IPv4 로 폴백해서 멀쩡한데 서버만 실패하므로 원인을 찾기 어렵다.
+	// 실제로 학교 네트워크에서 Gemini 호출과 카테고리 임베딩 초기화가 전부 실패했다.
+	// 발표장 네트워크에서 같은 일이 나면 시연이 통째로 죽으므로 기본값으로 박아둔다.
+	jvmArgs = ['-Djava.net.preferIPv4Stack=true']
 }

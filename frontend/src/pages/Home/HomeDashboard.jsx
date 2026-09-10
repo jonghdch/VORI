@@ -9,6 +9,7 @@ import { getActivePet } from "../../api/pet";
 import { getLatestDailyReport, markDailyReportRead } from "../../api/report";
 import { listTitles } from "../../api/titles";
 import { PetArt } from "../../components/petVisual";
+import { AI_ACTIVE_FROM_HOUR } from "../../config";
 import "./HomeDashboard.css";
 
 // 스탯 4종 표시 메타 (값은 백엔드 stats 에서).
@@ -341,7 +342,9 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           </section>
         </div>
 
-        <p className="home-footnote">매일 오후 8시에 보리가 소비 검사를 시작해요</p>
+        <p className="home-footnote">
+          매일 {AI_ACTIVE_FROM_HOUR}시에 보리가 소비 검사를 시작해요
+        </p>
       </main>
 
       <AppRightSidebar />

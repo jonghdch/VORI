@@ -162,6 +162,36 @@
 .ledger-upload:hover {
   background: #6b7a4f;
 }
+/* 인식에 20~30초 걸린다. 눌린 뒤 다시 눌리지 않는다는 게 보여야 한다. */
+.ledger-upload:disabled {
+  background: #b3bda0;
+  cursor: default;
+}
+
+/* 인식 결과 안내. 색으로만 구분하지 않고 문구 자체가 무엇을 해야 하는지 말한다. */
+.ledger-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ledger-receipt-notice {
+  margin: 0;
+  padding-left: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ledger-receipt-notice--info {
+  color: #6e6b65;
+}
+.ledger-receipt-notice--ok {
+  color: #5c7a4a;
+}
+.ledger-receipt-notice--warn {
+  color: #9a7b3f;
+}
+.ledger-receipt-notice--err {
+  color: #b4544a;
+}
 
 /* ───── 섹션 (수입 / 지출) ───── */
 .ledger-section {
