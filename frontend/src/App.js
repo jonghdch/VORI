@@ -33,7 +33,7 @@ const ReportPage = lazy(() => import("./pages/Report/ReportPage"));
 const PetPage = lazy(() => import("./pages/Pet/PetPage"));
 const ShopPage = lazy(() => import("./pages/Shop/ShopPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
-const TitlesPage = lazy(() => import("./pages/Titles/TitlesPage"));
+const AchievementPage = lazy(() => import("./pages/Achievement/AchievementPage"));
 // 이용약관·개인정보처리방침 — 공개(비인증) 페이지.
 const TermsPage = lazy(() => import("./pages/Legal/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/Legal/PrivacyPage"));
@@ -229,7 +229,7 @@ function App() {
             path="/titles"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <TitlesPage user={user} onLogout={handleLogout} />
+                <AchievementPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />

@@ -54,6 +54,11 @@ public class User {
     @Builder.Default
     private Integer totalSaved = 0;
 
+    // 누적 로그인 횟수 — "최초 1회 로그인" 칭호 판정용. AuthController.login() 성공 시 증가.
+    @Column(name = "login_count")
+    @Builder.Default
+    private Integer loginCount = 0;
+
     @Column(name = "game_money")
     @Builder.Default
     private Integer gameMoney = 0;
@@ -82,6 +87,11 @@ public class User {
 
     public void addTotalSaved(int amount) {
         this.totalSaved = (this.totalSaved == null ? 0 : this.totalSaved) + amount;
+    }
+
+    /** 로그인 성공 1회당 호출. UserService.recordLogin() 참조. */
+    public void incrementLoginCount() {
+        this.loginCount = (this.loginCount == null ? 0 : this.loginCount) + 1;
     }
 
     /** 칭호 장착. null 이면 해제. 소유 여부 검증은 호출부(TitleService)가 한다. */
