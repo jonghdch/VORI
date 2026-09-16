@@ -25,7 +25,7 @@ import { loadUserSettings } from "../Settings/SettingsPage";
 import "./WalletEntry.css";
 
 // Step 1 — 가계부 작성. 날짜는 다른 페이지에서 정해 ?date= 쿼리로 진입.
-function WalletEntryPage() {
+function WalletEntryPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
@@ -33,7 +33,12 @@ function WalletEntryPage() {
 
   // 같은 날짜의 입력값을 sessionStorage 에 보관 — Step 2/3 갔다 와도 유지.
   // 성공적으로 POST 한 뒤에는 clearDraft() 로 비움 (중복 저장 방지).
-  const storageKey = `ledger-entry-${dateStr}`;
+  //
+  // 키에 사용자 id 를 넣는다. 날짜만 쓰면 같은 브라우저에서 계정을 바꿔 로그인했을 때
+  // 앞 사람의 입력이 그대로 떠오르고, 그 행이 dbId 를 달고 있어 "저장됨" 으로까지 표시된다
+  // (실제로는 이 계정에 없는 지출이다). 시연 리허설을 다른 계정으로 해 본 뒤 무대 계정으로
+  // 로그인하면 바로 겪는다.
+  const storageKey = `ledger-entry-${user?.id ?? "anon"}-${dateStr}`;
   const loadDraft = () => {
     try {
       const raw = sessionStorage.getItem(storageKey);
