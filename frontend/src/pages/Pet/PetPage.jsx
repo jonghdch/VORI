@@ -9,16 +9,27 @@ import {
   nextStage,
 } from "../../components/petVisual";
 import { getActivePet, listPets, releasePet } from "../../api/pet";
+import { listMyFurniture, placeFurniture as apiPlaceFurniture, unplaceFurniture } from "../../api/furniture";
+import {
+  CATEGORY_LABEL,
+  DEFAULT_POSITION,
+  FurnitureArt,
+  SURFACE_POSITION,
+  STAT_LABEL,
+  isSurface,
+} from "../../components/furnitureVisual";
 import roomDefaultImage from "../../assets/backgrounds/room-default.png";
 import roomGreenImage from "../../assets/backgrounds/room-green.png";
 import roomPinkImage from "../../assets/backgrounds/room-pink.png";
 import roomYellowImage from "../../assets/backgrounds/room-yellow.png";
-import bedImage from "../../assets/furniture/bed.png";
 import "../Home/HomeDashboard.css";
 import "./PetPage.css";
 
-// 펫은 GET /api/pets/active 로 받는다. 배경·가구는 아직 백엔드 API 가 없어 목업 유지.
+// 펫은 GET /api/pets/active, 가구는 GET /api/furniture 로 받는다.
+// 방 색상(BACKGROUNDS)은 백엔드에 대응 개념이 없어 브라우저(localStorage)에만 저장하는 개인 취향값.
+// 벽지·바닥은 백엔드 가구(WALLPAPER/FLOOR)라 보유 가구 쪽에서 다룬다.
 const PET_ACCENT = "#f2c27b";
+const BACKGROUND_STORAGE_KEY = "vori.myroom.background";
 
 const BACKGROUNDS = [
   {
@@ -55,27 +66,15 @@ const BACKGROUNDS = [
   },
 ];
 
-const FURNITURE = [
-  { id: "bed", name: "포근한 침대", icon: "🛏️", image: bedImage, owned: true },
-  { id: "sofa", name: "초록 소파", icon: "🛋️", owned: true },
-  { id: "plant", name: "화분", icon: "🪴", owned: true },
-  { id: "lamp", name: "스탠드", icon: "💡", owned: true },
-  { id: "rug", name: "체크 러그", icon: "🧺", owned: true },
-  { id: "books", name: "책장", icon: "📚", owned: false },
-];
-
-const INITIAL_PLACED_FURNITURE = ["bed", "plant", "rug"];
-
 const INITIAL_PET_POSITION = { x: 50, y: 62 };
 
-const INITIAL_FURNITURE_POSITIONS = {
-  bed: { x: 15, y: 74 },
-  sofa: { x: 77, y: 73 },
-  plant: { x: 83, y: 64 },
-  lamp: { x: 18, y: 32 },
-  rug: { x: 36, y: 82 },
-  books: { x: 62, y: 38 },
-};
+function readStoredBackground() {
+  try {
+    return localStorage.getItem(BACKGROUND_STORAGE_KEY) || "default";
+  } catch {
+    return "default";
+  }
+}
 
 // 스탯 4종 표시 메타 — 값은 펫 본인의 스탯(PetResponse.stat*). 100 을 바 만점으로 본다.
 const STAT_META = [
@@ -161,13 +160,40 @@ function PetPage({ user, onLogout }) {
     }
   };
 
-  const [selectedBackgroundId, setSelectedBackgroundId] = useState("default");
-  const [placedFurnitureIds, setPlacedFurnitureIds] = useState(INITIAL_PLACED_FURNITURE);
+  const [selectedBackgroundId, setSelectedBackgroundId] = useState(readStoredBackground);
+  const chooseBackground = (id) => {
+    setSelectedBackgroundId(id);
+    try {
+      localStorage.setItem(BACKGROUND_STORAGE_KEY, id);
+    } catch {}
+  };
+
   const [petPosition, setPetPosition] = useState(INITIAL_PET_POSITION);
-  const [furniturePositions, setFurniturePositions] = useState(
-    INITIAL_FURNITURE_POSITIONS,
-  );
   const [dragTarget, setDragTarget] = useState(null);
+
+  // 보유 가구(서버) + 드래그 중 임시 좌표(로컬). 드래그가 끝나면 서버에 저장하고 임시 좌표를 지운다.
+  const [furniture, setFurniture] = useState([]);
+  const [furnitureLoading, setFurnitureLoading] = useState(true);
+  const [dragPositions, setDragPositions] = useState({}); // { [id]: {x,y} }
+  const [furnitureBusy, setFurnitureBusy] = useState(null); // 가구 id
+
+  const loadFurniture = useCallback(async () => {
+    setFurniture(await listMyFurniture());
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    loadFurniture()
+      .catch((e) => {
+        if (alive && e.status !== 401) setNotice({ kind: "err", text: e.message });
+      })
+      .finally(() => {
+        if (alive) setFurnitureLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [loadFurniture]);
 
   // 화면용 펫 표현 — 펫이 없으면 방은 비워 두고 안내만 보여준다.
   const selectedPet = pet
@@ -186,25 +212,68 @@ function PetPage({ user, onLogout }) {
     BACKGROUNDS.find((background) => background.id === selectedBackgroundId) ??
     BACKGROUNDS[0];
 
+  // 방에 그리는 가구: 배치된 것 중 벽지·바닥(면)은 칩으로, 나머지는 드래그 가능한 물건으로.
   const placedFurniture = useMemo(
-    () =>
-      placedFurnitureIds
-        .map((id) => FURNITURE.find((item) => item.id === id))
-        .filter(Boolean),
-    [placedFurnitureIds],
+    () => furniture.filter((f) => f.placed && !isSurface(f.category)),
+    [furniture],
   );
+  const placedSurfaces = useMemo(
+    () => furniture.filter((f) => f.placed && isSurface(f.category)),
+    [furniture],
+  );
+  const positionOf = (item) =>
+    dragPositions[item.id] ?? { x: item.positionX ?? 50, y: item.positionY ?? 72 };
 
-  const placeFurniture = (item) => {
-    if (!item.owned || placedFurnitureIds.includes(item.id)) return;
-    setPlacedFurnitureIds((ids) => [...ids, item.id]);
-    setFurniturePositions((positions) => ({
-      ...positions,
-      [item.id]: positions[item.id] ?? INITIAL_FURNITURE_POSITIONS[item.id] ?? { x: 50, y: 72 },
-    }));
+  // 같은 정수 좌표엔 가구 하나만 놓인다(서버 409). 기본 자리가 차 있으면 옆으로 민다.
+  const findFreeSpot = (start) => {
+    const taken = new Set(furniture.filter((f) => f.placed).map((f) => `${f.positionX},${f.positionY}`));
+    let { x, y } = start;
+    for (let i = 0; i < 12 && taken.has(`${x},${y}`); i++) {
+      x = x + 7 > 96 ? 8 : x + 7;
+      if (x === 8) y = Math.min(94, y + 6);
+    }
+    return { x, y };
   };
 
-  const removeFurniture = (itemId) => {
-    setPlacedFurnitureIds((ids) => ids.filter((id) => id !== itemId));
+  const savePlacement = async (item, point) => {
+    const x = clamp(Math.round(point.x), 0, 100);
+    const y = clamp(Math.round(point.y), 0, 100);
+    setFurnitureBusy(item.id);
+    try {
+      const saved = await apiPlaceFurniture(item.id, x, y);
+      setFurniture((list) => list.map((f) => (f.id === saved.id ? saved : f)));
+    } catch (e) {
+      // 409(자리 겹침)·400(범위 밖) 등 — 서버 좌표로 되돌린다
+      setNotice({ kind: "err", text: e.message });
+    } finally {
+      setDragPositions((pos) => {
+        const next = { ...pos };
+        delete next[item.id];
+        return next;
+      });
+      setFurnitureBusy(null);
+    }
+  };
+
+  const placeFurniture = (item) => {
+    if (item.placed || furnitureBusy) return;
+    const start = isSurface(item.category)
+      ? SURFACE_POSITION[item.category]
+      : DEFAULT_POSITION[item.category] ?? { x: 50, y: 72 };
+    savePlacement(item, isSurface(item.category) ? start : findFreeSpot(start));
+  };
+
+  const removeFurniture = async (item) => {
+    if (!item.placed || furnitureBusy) return;
+    setFurnitureBusy(item.id);
+    try {
+      const saved = await unplaceFurniture(item.id);
+      setFurniture((list) => list.map((f) => (f.id === saved.id ? saved : f)));
+    } catch (e) {
+      setNotice({ kind: "err", text: e.message });
+    } finally {
+      setFurnitureBusy(null);
+    }
   };
 
   const getRoomPoint = (event) => {
@@ -226,7 +295,7 @@ function PetPage({ user, onLogout }) {
       return;
     }
 
-    setFurniturePositions((positions) => ({
+    setDragPositions((positions) => ({
       ...positions,
       [target.id]: point,
     }));
@@ -254,6 +323,12 @@ function PetPage({ user, onLogout }) {
   const endDrag = (event) => {
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
       event.currentTarget.releasePointerCapture?.(event.pointerId);
+    }
+    // 가구 드래그가 끝나면 마지막 좌표를 서버에 저장한다(펫 위치는 로컬 전용)
+    if (dragTarget?.type === "furniture") {
+      const item = furniture.find((f) => f.id === dragTarget.id);
+      const point = dragPositions[dragTarget.id];
+      if (item && point) savePlacement(item, point);
     }
     setDragTarget(null);
   };
@@ -294,10 +369,18 @@ function PetPage({ user, onLogout }) {
         >
           <div className="pet-room-top">
             <div>
-              <span className="pet-room-label">현재 배경</span>
+              <span className="pet-room-label">방 색상</span>
               <h2>{selectedBackground.name}</h2>
             </div>
-
+            {placedSurfaces.length > 0 && (
+              <ul className="pet-surface-chips" aria-label="적용된 벽지·바닥">
+                {placedSurfaces.map((f) => (
+                  <li key={f.id}>
+                    {CATEGORY_LABEL[f.category]} · {f.name}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div
@@ -314,42 +397,41 @@ function PetPage({ user, onLogout }) {
               </>
             )}
 
-            {placedFurniture.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`pet-placed-item ${
-                  dragTarget?.type === "furniture" && dragTarget.id === item.id
-                    ? "is-dragging"
-                    : ""
-                } ${item.image ? "pet-placed-item--image" : ""}`}
-                style={{
-                  left: `${furniturePositions[item.id]?.x ?? 50}%`,
-                  top: `${furniturePositions[item.id]?.y ?? 72}%`,
-                }}
-                onPointerDown={(event) =>
-                  startDrag({ type: "furniture", id: item.id }, event)
-                }
-                onPointerMove={(event) =>
-                  continueDrag({ type: "furniture", id: item.id }, event)
-                }
-                onPointerUp={endDrag}
-                onPointerCancel={endDrag}
-                onDoubleClick={() => removeFurniture(item.id)}
-                aria-label={`${item.name} 이동`}
-                title={`${item.name} 드래그 이동, 더블클릭 삭제`}
-              >
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
+            {placedFurniture.map((item) => {
+              const pos = positionOf(item);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`pet-placed-item ${
+                    dragTarget?.type === "furniture" && dragTarget.id === item.id
+                      ? "is-dragging"
+                      : ""
+                  } ${item.category === "BED" ? "pet-placed-item--image" : ""} ${
+                    furnitureBusy === item.id ? "is-busy" : ""
+                  }`}
+                  style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                  onPointerDown={(event) =>
+                    startDrag({ type: "furniture", id: item.id }, event)
+                  }
+                  onPointerMove={(event) =>
+                    continueDrag({ type: "furniture", id: item.id }, event)
+                  }
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
+                  onDoubleClick={() => removeFurniture(item)}
+                  aria-label={`${item.name} 이동`}
+                  title={`${item.name} 드래그 이동, 더블클릭 회수`}
+                >
+                  <FurnitureArt
+                    category={item.category}
+                    name={item.name}
                     className="pet-placed-image"
+                    emojiClassName="pet-placed-emoji"
                   />
-                ) : (
-                  <span>{item.icon}</span>
-                )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
 
             {selectedPet ? (
               <div
@@ -400,7 +482,8 @@ function PetPage({ user, onLogout }) {
           </div>
 
           <p className="pet-room-help">
-            펫과 가구를 드래그해서 원하는 위치에 배치해요. 가구는 더블클릭하면 방에서 삭제돼요.
+            펫과 가구를 드래그해서 원하는 위치에 배치해요. 가구는 더블클릭하면 인벤토리로 회수돼요.
+            배치한 가구만 분양가 보너스에 반영돼요.
           </p>
         </section>
 
@@ -530,8 +613,8 @@ function PetPage({ user, onLogout }) {
 
           <section className="home-card pet-panel">
             <div className="pet-panel-head">
-              <h2 className="home-card-title home-card-title--sm">배경 변경</h2>
-              <span>상점 구매 항목</span>
+              <h2 className="home-card-title home-card-title--sm">방 색상</h2>
+              <span>이 브라우저에만 저장</span>
             </div>
             <div className="pet-background-list">
               {BACKGROUNDS.map((background) => (
@@ -546,15 +629,10 @@ function PetPage({ user, onLogout }) {
                       ? { backgroundImage: `url(${background.image})` }
                       : undefined
                   }
-                  disabled={!background.owned}
-                  onClick={() => setSelectedBackgroundId(background.id)}
+                  onClick={() => chooseBackground(background.id)}
                 >
                   <span>{background.name}</span>
-                  <strong>
-                    {background.owned
-                      ? `${background.slot} · 보유중`
-                      : `${background.slot} · 상점 구매 필요`}
-                  </strong>
+                  <strong>{background.slot}</strong>
                 </button>
               ))}
             </div>
@@ -563,44 +641,54 @@ function PetPage({ user, onLogout }) {
           <section className="home-card pet-panel">
             <div className="pet-panel-head">
               <h2 className="home-card-title home-card-title--sm">보유 가구</h2>
-              <span>{placedFurniture.length}개 배치중</span>
+              <span>
+                {furniture.filter((f) => f.placed).length}개 배치중 · {furniture.length}개 보유
+              </span>
             </div>
-            <div className="pet-furniture-grid">
-              {FURNITURE.map((item) => {
-                const isPlaced = placedFurnitureIds.includes(item.id);
-                return (
+            {!furnitureLoading && furniture.length === 0 ? (
+              <div className="pet-empty">
+                <p>아직 가구가 없어요. 상점에서 사서 배치하면 분양가가 올라가요.</p>
+                <button
+                  type="button"
+                  className="home-link-btn"
+                  onClick={() => navigate("/shop")}
+                >
+                  가구 상점 가기 →
+                </button>
+              </div>
+            ) : (
+              <div className="pet-furniture-grid">
+                {furniture.map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    className={`pet-furniture-card ${isPlaced ? "is-placed" : ""}`}
-                    disabled={!item.owned}
-                    onClick={() =>
-                      isPlaced ? removeFurniture(item.id) : placeFurniture(item)
-                    }
+                    className={`pet-furniture-card ${item.placed ? "is-placed" : ""}`}
+                    disabled={furnitureBusy !== null}
+                    onClick={() => (item.placed ? removeFurniture(item) : placeFurniture(item))}
+                    title={`${CATEGORY_LABEL[item.category] ?? ""} · ${
+                      STAT_LABEL[item.statTarget] ?? ""
+                    } · 분양가 +${item.releaseBonusPct}%`}
                   >
                     <span>
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="pet-furniture-image"
-                        />
-                      ) : (
-                        item.icon
-                      )}
+                      <FurnitureArt
+                        category={item.category}
+                        name={item.name}
+                        className="pet-furniture-image"
+                        emojiClassName="pet-furniture-emoji"
+                      />
                     </span>
                     <strong>{item.name}</strong>
                     <small>
-                      {!item.owned
-                        ? "미보유"
-                        : isPlaced
-                          ? "삭제하기"
+                      {furnitureBusy === item.id
+                        ? "저장 중…"
+                        : item.placed
+                          ? "회수하기"
                           : "배치하기"}
                     </small>
                   </button>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="home-card pet-panel">

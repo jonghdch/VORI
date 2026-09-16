@@ -367,3 +367,96 @@
 .shop-tag--a { background: #e6e3f7; color: #5b4bb5; }
 .shop-tag--b { background: var(--home-green-soft); color: var(--home-green-dark); }
 .shop-tag--variant { background: #fde8f3; color: #b0357a; }
+
+/* ── 가구 상점 ── */
+.shop-furniture {
+  margin-top: 20px;
+}
+.shop-furniture-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.shop-furniture-card {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--home-radius-sm);
+  background: #f6f8f3;
+  min-width: 0;
+}
+.shop-furniture-card.is-locked {
+  opacity: 0.72;
+}
+.shop-furniture-art {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--home-green-soft);
+  overflow: hidden;
+}
+.shop-furniture-image {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.shop-furniture-emoji {
+  font-size: 28px;
+  line-height: 1;
+}
+.shop-furniture-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.shop-furniture-info strong {
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.shop-furniture-owned {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+}
+.shop-furniture-info small {
+  font-size: 12px;
+  color: var(--home-muted);
+  font-weight: 600;
+}
+.shop-furniture-theme {
+  color: #5b4bb5 !important;
+}
+.shop-furniture-lock {
+  color: #9a6b12 !important;
+}
+.shop-furniture-buy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.shop-furniture-buy strong {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.shop-furniture-buy .shop-buy-btn {
+  margin-top: 0;
+  padding: 7px 14px;
+  font-size: 13px;
+}

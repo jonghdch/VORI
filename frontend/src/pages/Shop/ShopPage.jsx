@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import { PetArt, STAGE_LABEL, TIER_LABEL, VARIANT_LABEL } from "../../components/petVisual";
 import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
+import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
 import { getMe } from "../../api/user";
+import { CATEGORY_LABEL, FurnitureArt, STAT_LABEL } from "../../components/furnitureVisual";
 import eggImage from "../../assets/shop/egg.png";
 import shopBackgroundImage from "../../assets/shop/shop-background.png";
 import "../Home/HomeDashboard.css";
@@ -33,11 +35,33 @@ function ShopPage({ user, onLogout }) {
   const [notice, setNotice] = useState(null); // { kind: "ok"|"err", text }
   const [result, setResult] = useState(null); // 개봉 결과 { pet, remainGameMoney }
 
+  // 가구 상점 — 상품(잠긴 것 포함)과 내 보유 가구. 보유 수를 상품 카드에 표시한다.
+  const [furnitureProducts, setFurnitureProducts] = useState([]);
+  const [myFurniture, setMyFurniture] = useState([]);
+  const [furnitureError, setFurnitureError] = useState(null);
+
   const reload = useCallback(async () => {
     const [meRes, eggRes] = await Promise.all([getMe(), listMyEggs(true)]);
     setMe(meRes);
     setEggs(eggRes);
   }, []);
+
+  const reloadFurniture = useCallback(async () => {
+    const [prodRes, mineRes] = await Promise.all([listFurnitureProducts(), listMyFurniture()]);
+    setFurnitureProducts(prodRes);
+    setMyFurniture(mineRes);
+  }, []);
+
+  // 가구는 알과 별도로 불러 한쪽이 실패해도 다른 쪽은 뜨게 한다.
+  useEffect(() => {
+    let alive = true;
+    reloadFurniture().catch((e) => {
+      if (alive && e.status !== 401) setFurnitureError(e.message || "가구를 불러오지 못했어요");
+    });
+    return () => {
+      alive = false;
+    };
+  }, [reloadFurniture]);
 
   useEffect(() => {
     let alive = true;
@@ -104,6 +128,29 @@ function ShopPage({ user, onLogout }) {
       setBusy(null);
     }
   };
+
+  const handleBuyFurniture = async (product) => {
+    setNotice(null);
+    setBusy(`furniture:${product.code}`);
+    try {
+      await buyFurniture(product.code);
+      await Promise.all([reload(), reloadFurniture()]);
+      setNotice({
+        kind: "ok",
+        text: `${product.name}을(를) 샀어요. 마이룸의 보유 가구에서 배치해야 효과가 생겨요.`,
+      });
+    } catch (e) {
+      // 403 = 칭호로 잠긴 테마, 400 = 코인 부족 — 문구는 서버가 준다
+      setNotice({ kind: "err", text: e.message });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const ownedCountByName = myFurniture.reduce((acc, f) => {
+    acc[f.name] = (acc[f.name] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <AppShell
@@ -258,6 +305,72 @@ function ShopPage({ user, onLogout }) {
             )}
           </section>
         </div>
+
+        {/* 가구 상점 — 배치한 가구만 분양가 보너스·테마 세트에 반영된다 */}
+        <section className="home-card shop-furniture">
+          <div className="shop-section-head">
+            <h2 className="home-card-title home-card-title--sm">가구 상점</h2>
+            <span>배치해야 효과가 생겨요 · 보유 {myFurniture.length}개</span>
+          </div>
+          {furnitureError && <p className="shop-empty">{furnitureError}</p>}
+          {!furnitureError && furnitureProducts.length === 0 && (
+            <p className="shop-empty">가구를 불러오는 중…</p>
+          )}
+          <ul className="shop-furniture-grid">
+            {furnitureProducts.map((item) => {
+              const affordable = gameMoney >= item.price;
+              const isBusy = busy === `furniture:${item.code}`;
+              const owned = ownedCountByName[item.name] || 0;
+              return (
+                <li
+                  key={item.code}
+                  className={`shop-furniture-card ${item.locked ? "is-locked" : ""}`}
+                >
+                  <span className="shop-furniture-art">
+                    <FurnitureArt
+                      category={item.category}
+                      name={item.name}
+                      className="shop-furniture-image"
+                      emojiClassName="shop-furniture-emoji"
+                    />
+                  </span>
+                  <div className="shop-furniture-info">
+                    <strong>
+                      {item.name}
+                      {owned > 0 && <em className="shop-furniture-owned">보유 {owned}</em>}
+                    </strong>
+                    <small>
+                      {CATEGORY_LABEL[item.category] ?? item.category} ·{" "}
+                      {STAT_LABEL[item.statTarget] ?? item.statTarget} · 분양가 +{item.releaseBonusPct}%
+                    </small>
+                    {item.themeName && (
+                      <small className="shop-furniture-theme">
+                        {item.themeName} 테마
+                        {item.themeSetBonusPct != null && ` · 세트 +${item.themeSetBonusPct}%`}
+                      </small>
+                    )}
+                    {item.locked && (
+                      <small className="shop-furniture-lock">
+                        🔒 칭호 "{item.unlockTitleName ?? "?"}" 획득 시 해금
+                      </small>
+                    )}
+                  </div>
+                  <div className="shop-furniture-buy">
+                    <strong>{coin(item.price)}</strong>
+                    <button
+                      type="button"
+                      className="home-btn home-btn-primary shop-buy-btn"
+                      disabled={item.locked || !affordable || busy !== null}
+                      onClick={() => handleBuyFurniture(item)}
+                    >
+                      {isBusy ? "구매 중…" : item.locked ? "잠김" : affordable ? "구매" : "코인 부족"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       </main>
     </AppShell>
   );
