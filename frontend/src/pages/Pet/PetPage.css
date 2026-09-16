@@ -773,3 +773,40 @@
   color: var(--home-muted);
   white-space: nowrap;
 }
+
+/* ── 가구 API 연동 후 추가 ── */
+.pet-placed-emoji {
+  font-size: 44px;
+  line-height: 1;
+  pointer-events: none;
+}
+.pet-placed-item.is-busy {
+  opacity: 0.6;
+}
+.pet-furniture-emoji {
+  font-size: 30px;
+  line-height: 1;
+}
+.pet-surface-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pet-surface-chips li {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.9);
+  color: var(--home-green-dark);
+}
+.pet-empty .home-link-btn {
+  display: block;
+  margin: 8px auto 0;
+}
+.pet-empty p {
+  margin: 0;
+}
