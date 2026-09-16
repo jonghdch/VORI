@@ -233,8 +233,12 @@ def rehearse(user, user_id):
     coin0, stat0 = wallet(user)
 
     print("\n[1] 큰 지출 등록 → RED → AI 가 이유를 묻는다")
+    # 품목명을 "결혼식 축의금" 으로 쓴다. 무대에서 사람이 화면에 타이핑할 문구와 같아야 한다 —
+    # "축의금" 만 치면 자동분류가 고정비·공과금(ENDURANCE)으로 보내고, 그쪽은 표본이 0이라
+    # sample_count < 5 규칙에 걸려 무조건 GREEN 이 된다(RED 가 아니면 AI 질문도 칭호도 없다).
+    # 여기서는 categoryId 를 직접 주므로 그 문제가 드러나지 않는다. docs/demo-plan.md 참조.
     code, exp = user.call("POST", "/api/expenses", {
-        "categoryId": 2, "amount": STAGE_EXPENSE, "item": "축의금",
+        "categoryId": 2, "amount": STAGE_EXPENSE, "item": "결혼식 축의금",
         "spentAt": f"{today}T18:00:00"})
     check("지출 등록 200", code == 200, msg(exp) if code != 200 else "")
     check("RED 판정 ⭐", exp.get("signalFinal") == "RED",

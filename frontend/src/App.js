@@ -171,7 +171,9 @@ function App() {
             path="/wallet/new"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <WalletEntryPage />
+                {/* user 는 작성 중 임시저장(draft)을 계정별로 나누는 데 쓴다.
+                    ProtectedRoute 가 user 없이는 렌더하지 않으므로 항상 값이 있다. */}
+                <WalletEntryPage user={user} />
               </ProtectedRoute>
             }
           />
