@@ -803,6 +803,24 @@
   background: rgba(255, 253, 249, 0.9);
   color: var(--home-green-dark);
 }
+/* 테마 세트 현황 칩 — 벽지·바닥 칩과 같은 모양, 발동한 세트만 초록으로 */
+.pet-room-chips {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.pet-theme-chips li.is-active {
+  background: var(--home-green-soft);
+  color: var(--home-text);
+  box-shadow: inset 0 0 0 1.5px var(--home-green);
+}
+/* 좁은 화면에선 방 카드 위쪽이 세로로 쌓이므로 칩도 왼쪽 정렬 (위 720px 블록보다 뒤에 있어야 이긴다) */
+@media (max-width: 720px) {
+  .pet-room-chips {
+    align-items: flex-start;
+  }
+}
 .pet-empty .home-link-btn {
   display: block;
   margin: 8px auto 0;
