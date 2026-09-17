@@ -11,7 +11,7 @@ import {
   toIsoDate,
 } from "./utils";
 import { categorizeRemote } from "../../api/categorize";
-import { MAX_RECEIPT_BYTES, uploadReceipt } from "../../api/receipt";
+import { MAX_RECEIPT_BYTES, prepareReceiptImage, uploadReceipt } from "../../api/receipt";
 import {
   createExpense,
   createIncome,
@@ -197,17 +197,21 @@ function WalletEntryPage({ user }) {
     e.target.value = "";
     if (!file) return;
 
-    // 서버 상한을 넘으면 413 이 오는데 message 가 실리지 않는다. 미리 걸러야 안내가 된다.
-    if (file.size > MAX_RECEIPT_BYTES) {
-      const mb = (file.size / 1024 / 1024).toFixed(1);
-      setReceiptNotice({ kind: "err", text: `사진이 너무 커요 (${mb}MB). 10MB 이하로 올려주세요.` });
-      return;
-    }
-
     setReceiptBusy(true);
-    setReceiptNotice({ kind: "info", text: "영수증을 읽는 중이에요. 20~30초쯤 걸려요." });
+    setReceiptNotice({ kind: "info", text: "영수증을 읽는 중이에요. 10~15초쯤 걸려요." });
     try {
-      const r = await uploadReceipt(file);
+      // 업로드 전에 긴 변 2048px 로 줄인다. 용량이 큰 원본일수록 인식이 느려진다 — prepareReceiptImage 참조.
+      const photo = await prepareReceiptImage(file);
+
+      // 서버 상한을 넘으면 413 이 오는데 message 가 실리지 않는다. 미리 걸러야 안내가 된다.
+      // 축소한 뒤에 검사한다 — 10MB 가 넘는 원본도 줄이고 나면 대부분 올라간다.
+      if (photo.size > MAX_RECEIPT_BYTES) {
+        const mb = (photo.size / 1024 / 1024).toFixed(1);
+        setReceiptNotice({ kind: "err", text: `사진이 너무 커요 (${mb}MB). 10MB 이하로 올려주세요.` });
+        return;
+      }
+
+      const r = await uploadReceipt(photo);
 
       // 영수증이 아니거나 판독 불가여도 200 이 온다 — 값이 비었는지로 판단한다.
       if (r.amount == null && !r.item) {
@@ -352,7 +356,7 @@ function WalletEntryPage({ user }) {
           </p>
         </div>
 
-        {/* 영수증 OCR. 인식에 20~30초 걸려서 진행 표시가 필수다 —
+        {/* 영수증 OCR. 줄여서 보내도 인식에 6~13초 걸려서 진행 표시가 필수다 —
             아무 표시 없이 기다리게 하면 멈춘 것처럼 보인다. */}
         <section className="ledger-receipt">
           <input
