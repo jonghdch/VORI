@@ -162,9 +162,9 @@ public class TitleService {
 
     /** 조건 판정에 쓰는 지표를 한 번에 모은다. 칭호를 추가할 때 여기와 TitleProgress 만 손대면 된다. */
     private TitleProgress collect(Long userId) {
-        long totalSaved = userRepository.findById(userId)
-                .map(u -> u.getTotalSaved() == null ? 0 : u.getTotalSaved())
-                .orElse(0);
+        User user = userRepository.findById(userId).orElse(null);
+        long totalSaved = user == null || user.getTotalSaved() == null ? 0 : user.getTotalSaved();
+        long loginCount = user == null || user.getLoginCount() == null ? 0 : user.getLoginCount();
 
         return new TitleProgress(
                 totalSaved,
@@ -173,7 +173,8 @@ public class TitleService {
                 petRepository.countByUserIdAndReleasedAtIsNotNull(userId),
                 gachaPullRepository.countByUserIdAndTier(userId, PetTier.S),
                 aiInquiryRepository.countByUserIdAndAnsweredAtIsNotNull(userId),
-                receiptOcrJobRepository.countByUserIdAndStatus(userId, OcrStatus.SUCCESS));
+                receiptOcrJobRepository.countByUserIdAndStatus(userId, OcrStatus.SUCCESS),
+                loginCount);
     }
 
     /** 칭호 마스터 전체 — 어드민·문서용. */

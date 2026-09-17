@@ -61,6 +61,7 @@ public class AuthController {
             securityContextRepository.saveContext(context, request, response);
 
             UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+            userService.recordLogin(principal.getUser().getId());
             return AuthResponse.from(principal.getUser());
         } catch (BadCredentialsException e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다");
