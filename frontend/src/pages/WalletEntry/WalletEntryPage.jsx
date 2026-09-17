@@ -356,7 +356,7 @@ function WalletEntryPage({ user }) {
           </p>
         </div>
 
-        {/* 영수증 OCR. 줄여서 보내도 인식에 10초 넘게 걸려서 진행 표시가 필수다 —
+        {/* 영수증 OCR. 줄여서 보내도 인식에 6~13초 걸려서 진행 표시가 필수다 —
             아무 표시 없이 기다리게 하면 멈춘 것처럼 보인다. */}
         <section className="ledger-receipt">
           <input
