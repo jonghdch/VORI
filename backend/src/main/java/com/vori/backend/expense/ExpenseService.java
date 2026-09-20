@@ -4,9 +4,11 @@ import com.vori.backend.category.Category;
 import com.vori.backend.category.CategoryRepository;
 import com.vori.backend.expense.dto.ExpenseCreateRequest;
 import com.vori.backend.expense.dto.ExpenseResponse;
+import com.vori.backend.expense.dto.ExpenseUpdateRequest;
 import com.vori.backend.goal.Goal;
 import com.vori.backend.goal.GoalRepository;
 import com.vori.backend.goal.GoalStatus;
+import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.pet.GrowthReason;
 import com.vori.backend.pet.Pet;
 import com.vori.backend.pet.PetGrowthLog;
@@ -42,10 +44,13 @@ public class ExpenseService {
     private final PetGrowthLogRepository petGrowthLogRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final SignalConfigService signalConfigService;
+    private final AiInquiryRepository aiInquiryRepository;
 
-    private static final int N_MIN = 5;
     // Z_GREEN / Z_RED 임계값은 signal_config 테이블(관리자 조정) 에서 읽는다. SignalConfigService 참조.
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
+    // 표준편차가 아직 없는 초기 사용자도 판정하기 위한 평균 대비 비율.
+    private static final BigDecimal COLD_START_GREEN_RATIO = new BigDecimal("0.80");
+    private static final BigDecimal COLD_START_RED_RATIO = new BigDecimal("1.20");
     // expenses.z_score 는 DECIMAL(6,3) — 담을 수 있는 한계. clampZScore 참조.
     private static final BigDecimal Z_SCORE_MAX = new BigDecimal("999.999");
     private static final BigDecimal Z_SCORE_MIN = new BigDecimal("-999.999");
@@ -93,8 +98,18 @@ public class ExpenseService {
         BigDecimal zScore = null;
         Signal signal;
 
-        if (stats.getSampleCount() < N_MIN || stats.getStddevEma().compareTo(STDDEV_MIN) < 0) {
-            signal = Signal.GREEN;
+        if (stats.getSampleCount() == 0) {
+            // 비교할 기록이 전혀 없는 첫 지출은 좋고 나쁨을 단정하지 않는다.
+            signal = Signal.GRAY;
+        } else if (stats.getStddevEma().compareTo(STDDEV_MIN) < 0) {
+            // 초기 표본은 표준편차가 0이라 z-score를 만들 수 없다. 기존 평균의 ±20%로
+            // 임시 판정해 첫 5건도 결과를 받을 수 있게 하고, 통계가 쌓이면 z-score로 전환한다.
+            BigDecimal amount = BigDecimal.valueOf(req.amount());
+            BigDecimal greenCutoff = stats.getMeanEma().multiply(COLD_START_GREEN_RATIO);
+            BigDecimal redCutoff = stats.getMeanEma().multiply(COLD_START_RED_RATIO);
+            signal = amount.compareTo(greenCutoff) <= 0
+                    ? Signal.GREEN
+                    : (amount.compareTo(redCutoff) <= 0 ? Signal.GRAY : Signal.RED);
         } else {
             zScore = clampZScore(BigDecimal.valueOf(req.amount())
                     .subtract(stats.getMeanEma())
@@ -156,6 +171,59 @@ public class ExpenseService {
         // 커밋 이후에 평가되므로 방금 저장한 지출까지 반영된다.
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "EXPENSE_CREATED"));
 
+        return ExpenseResponse.from(expense);
+    }
+
+    /** 본인 지출의 내역명·금액 수정 후 현재 통계 기준으로 판정과 절약액을 다시 계산한다. */
+    @Transactional
+    public ExpenseResponse updateExpense(Long userId, Long expenseId, ExpenseUpdateRequest req) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new IllegalArgumentException("지출을 찾을 수 없습니다."));
+        if (!expense.getUserId().equals(userId)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "본인 지출만 수정할 수 있습니다.");
+        }
+
+        Category category = categoryRepository.findById(req.categoryId())
+                .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + req.categoryId()));
+        UserStatStats stats = userStatStatsRepository
+                .findByUserIdAndStatType(userId, category.getStatType())
+                .orElseThrow(() -> new IllegalStateException("user_stat_stats 초기화가 누락되었습니다."));
+
+        expense.updateDetails(req.item().trim(), req.amount(), req.categoryId(),
+                category.getStatType(), req.paymentMethod());
+        BigDecimal zScore = null;
+        Signal signal;
+        if (stats.getSampleCount() == 0) {
+            signal = Signal.GRAY;
+        } else if (stats.getStddevEma().compareTo(STDDEV_MIN) < 0) {
+            BigDecimal amount = BigDecimal.valueOf(req.amount());
+            BigDecimal greenCutoff = stats.getMeanEma().multiply(COLD_START_GREEN_RATIO);
+            BigDecimal redCutoff = stats.getMeanEma().multiply(COLD_START_RED_RATIO);
+            signal = amount.compareTo(greenCutoff) <= 0
+                    ? Signal.GREEN
+                    : (amount.compareTo(redCutoff) <= 0 ? Signal.GRAY : Signal.RED);
+        } else {
+            zScore = clampZScore(BigDecimal.valueOf(req.amount())
+                    .subtract(stats.getMeanEma())
+                    .divide(stats.getStddevEma(), 3, RoundingMode.HALF_UP));
+            SignalConfig cfg = signalConfigService.getConfig();
+            signal = zScore.compareTo(cfg.getZGreen()) <= 0 ? Signal.GREEN
+                    : (zScore.compareTo(cfg.getZRed()) <= 0 ? Signal.GRAY : Signal.RED);
+        }
+        if (Boolean.TRUE.equals(expense.getIsRecurring()) && signal == Signal.RED) signal = Signal.GRAY;
+
+        int savedAmount = stats.getMeanEma().subtract(BigDecimal.valueOf(req.amount())).intValue();
+        int statDelta = Math.max(savedAmount, 0) / 1000;
+        expense.updateCalculations(zScore, signal, savedAmount, statDelta);
+
+        // 수정 전 금액으로 만든 질문은 더 이상 유효하지 않다. 새 판정이 RED면 커밋 후 다시 생성한다.
+        aiInquiryRepository.findByExpenseId(expenseId).ifPresent(aiInquiryRepository::delete);
+        if (signal == Signal.RED && !Boolean.TRUE.equals(expense.getIsRecurring())) {
+            eventPublisher.publishEvent(new ExpenseAnomalyEvent(
+                    expense.getId(), userId, expense.getItem(), expense.getAmount(),
+                    expense.getStatType(), stats.getMeanEma(), signal));
+        }
         return ExpenseResponse.from(expense);
     }
 

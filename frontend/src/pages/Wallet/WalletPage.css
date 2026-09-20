@@ -400,6 +400,29 @@
   box-shadow: inset 0 0 0 2px rgba(124, 158, 107, 0.35);
 }
 
+/* 날짜별 최종 소비 판정. 하루에 여러 건이면 RED > GRAY > GREEN으로 집계한다. */
+.ledger-cal-cell--signal-green {
+  background: #dfeeda;
+  border-color: #a9ca9d;
+}
+.ledger-cal-cell--signal-gray {
+  background: #ffe5bd;
+  border-color: #e5a247;
+}
+.ledger-cal-cell--signal-red {
+  background: #f5d0d0;
+  border-color: #cf6666;
+}
+.ledger-cal-cell--selected.ledger-cal-cell--signal-green {
+  box-shadow: inset 0 0 0 2px #6d985d;
+}
+.ledger-cal-cell--selected.ledger-cal-cell--signal-gray {
+  box-shadow: inset 0 0 0 2px #c47823;
+}
+.ledger-cal-cell--selected.ledger-cal-cell--signal-red {
+  box-shadow: inset 0 0 0 2px #a94444;
+}
+
 .ledger-cal-day {
   font-size: 13px;
   font-weight: 700;
@@ -643,6 +666,35 @@
 .ledger-detail-note p:empty {
   background: rgba(232, 227, 216, 0.42);
   border-color: rgba(232, 227, 216, 0.42);
+}
+
+.ledger-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+.ledger-detail-actions button {
+  border: 1px solid var(--home-card-border);
+  border-radius: 9px;
+  padding: 8px 15px;
+  background: #fff;
+  color: var(--home-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ledger-detail-actions button:hover {
+  background: #f5f3ed;
+}
+.ledger-detail-actions button.is-danger {
+  border-color: #e6b4b4;
+  color: #a94444;
+}
+.ledger-detail-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .ledger-detail-ai {

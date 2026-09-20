@@ -11,11 +11,12 @@ import {
   toIsoDate,
 } from "./utils";
 import { categorizeRemote } from "../../api/categorize";
-import { MAX_RECEIPT_BYTES, prepareReceiptImage, uploadReceipt } from "../../api/receipt";
+import { MAX_RECEIPT_BYTES, uploadReceipt } from "../../api/receipt";
 import {
   createExpense,
   createIncome,
   createSaving,
+  updateExpense,
   listCategoryTree,
   listExpensesByDate,
   listIncomesByDate,
@@ -29,6 +30,8 @@ function WalletEntryPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
+  const editExpenseId = Number(params.get("editExpenseId")) || null;
+  const isEditMode = editExpenseId != null;
   const past = isPastDate(dateStr);
 
   // 같은 날짜의 입력값을 sessionStorage 에 보관 — Step 2/3 갔다 와도 유지.
@@ -38,7 +41,7 @@ function WalletEntryPage({ user }) {
   // 앞 사람의 입력이 그대로 떠오르고, 그 행이 dbId 를 달고 있어 "저장됨" 으로까지 표시된다
   // (실제로는 이 계정에 없는 지출이다). 시연 리허설을 다른 계정으로 해 본 뒤 무대 계정으로
   // 로그인하면 바로 겪는다.
-  const storageKey = `ledger-entry-${user?.id ?? "anon"}-${dateStr}`;
+  const storageKey = `ledger-entry-${user?.id ?? "anon"}-${dateStr}${isEditMode ? `-edit-${editExpenseId}` : ""}`;
   const loadDraft = () => {
     try {
       const raw = sessionStorage.getItem(storageKey);
@@ -132,14 +135,14 @@ function WalletEntryPage({ user }) {
       try {
         const [exps, incs, savs] = await Promise.all([
           listExpensesByDate(dateStr),
-          listIncomesByDate(dateStr),
-          listSavingsByDate(dateStr),
+          isEditMode ? Promise.resolve([]) : listIncomesByDate(dateStr),
+          isEditMode ? Promise.resolve([]) : listSavingsByDate(dateStr),
         ]);
         if (cancelled) return;
         if (exps.length + incs.length + savs.length === 0) return;
         const next = (e) => nextId.current++;
         setExpense(
-          exps.map((e) => ({
+          exps.filter((e) => !isEditMode || e.id === editExpenseId).map((e) => ({
             id: next(),
             dbId: e.id,
             paymentMethod: e.paymentMethod || "CREDIT",
@@ -147,6 +150,7 @@ function WalletEntryPage({ user }) {
             amount: String(e.amount),
             categoryId: e.categoryId,
             categoryTouched: true, // 저장된 카테고리 — 자동분류로 덮지 않음
+            isEditing: isEditMode && e.id === editExpenseId,
           })),
         );
         setIncome(
@@ -177,7 +181,7 @@ function WalletEntryPage({ user }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateStr]);
+  }, [dateStr, editExpenseId, isEditMode]);
 
 
   const addRow = (setter) => setter((rows) => [...rows, newRow()]);
@@ -197,21 +201,17 @@ function WalletEntryPage({ user }) {
     e.target.value = "";
     if (!file) return;
 
+    // 서버 상한을 넘으면 413 이 오는데 message 가 실리지 않는다. 미리 걸러야 안내가 된다.
+    if (file.size > MAX_RECEIPT_BYTES) {
+      const mb = (file.size / 1024 / 1024).toFixed(1);
+      setReceiptNotice({ kind: "err", text: `사진이 너무 커요 (${mb}MB). 10MB 이하로 올려주세요.` });
+      return;
+    }
+
     setReceiptBusy(true);
-    setReceiptNotice({ kind: "info", text: "영수증을 읽는 중이에요. 10~15초쯤 걸려요." });
+    setReceiptNotice({ kind: "info", text: "영수증을 읽는 중이에요. 20~30초쯤 걸려요." });
     try {
-      // 업로드 전에 긴 변 2048px 로 줄인다. 용량이 큰 원본일수록 인식이 느려진다 — prepareReceiptImage 참조.
-      const photo = await prepareReceiptImage(file);
-
-      // 서버 상한을 넘으면 413 이 오는데 message 가 실리지 않는다. 미리 걸러야 안내가 된다.
-      // 축소한 뒤에 검사한다 — 10MB 가 넘는 원본도 줄이고 나면 대부분 올라간다.
-      if (photo.size > MAX_RECEIPT_BYTES) {
-        const mb = (photo.size / 1024 / 1024).toFixed(1);
-        setReceiptNotice({ kind: "err", text: `사진이 너무 커요 (${mb}MB). 10MB 이하로 올려주세요.` });
-        return;
-      }
-
-      const r = await uploadReceipt(photo);
+      const r = await uploadReceipt(file);
 
       // 영수증이 아니거나 판독 불가여도 200 이 온다 — 값이 비었는지로 판단한다.
       if (r.amount == null && !r.item) {
@@ -277,17 +277,20 @@ function WalletEntryPage({ user }) {
     setSubmitError(null);
     try {
       for (const r of expense) {
-        if (r.dbId || isRowEmpty(r)) continue; // 이미 저장됐거나 빈 행 — skip
+        if ((r.dbId && !r.isEditing) || isRowEmpty(r)) continue;
         if (!r.categoryId) {
           throw new Error(`"${r.name}" 카테고리를 분류하지 못했어요. 잠시 후 다시 시도해주세요.`);
         }
-        const saved = await createExpense({
+        const payload = {
           item: r.name.trim(),
           amount: r.amount,
           categoryId: r.categoryId,
           paymentMethod: r.paymentMethod,
           spentAt: `${dateStr}T00:00:00`,
-        });
+        };
+        const saved = r.isEditing
+          ? await updateExpense(r.dbId, payload)
+          : await createExpense(payload);
         setExpense((rows) =>
           rows.map((rr) => (rr.id === r.id ? { ...rr, dbId: saved.id } : rr)),
         );
@@ -350,15 +353,17 @@ function WalletEntryPage({ user }) {
             {formatToday(parseIsoDate(dateStr))}
           </h1>
           <p className="ledger-subtitle">
-            {past
+            {isEditMode
+              ? "지출 내역을 수정해주세요. 내역을 바꾸면 카테고리도 다시 분류해요."
+              : past
               ? "이전 날짜의 지출과 수입을 입력해주세요."
               : "오늘의 지출과 수입을 입력해주세요."}
           </p>
         </div>
 
-        {/* 영수증 OCR. 줄여서 보내도 인식에 6~13초 걸려서 진행 표시가 필수다 —
+        {/* 영수증 OCR. 인식에 20~30초 걸려서 진행 표시가 필수다 —
             아무 표시 없이 기다리게 하면 멈춘 것처럼 보인다. */}
-        <section className="ledger-receipt">
+        {!isEditMode && <section className="ledger-receipt">
           <input
             ref={receiptInput}
             type="file"
@@ -380,7 +385,7 @@ function WalletEntryPage({ user }) {
               {receiptNotice.text}
             </p>
           )}
-        </section>
+        </section>}
 
         {income.length > 0 && (
           <section className="ledger-section">
@@ -431,7 +436,7 @@ function WalletEntryPage({ user }) {
           </section>
         )}
 
-        <div className="ledger-add-row">
+        {!isEditMode && <div className="ledger-add-row">
           <button
             type="button"
             className="ledger-entry-add-btn"
@@ -453,7 +458,7 @@ function WalletEntryPage({ user }) {
           >
             + 저축 추가하기
           </button>
-        </div>
+        </div>}
 
         <div className="ledger-actions">
           {!canProceed && (
@@ -468,7 +473,7 @@ function WalletEntryPage({ user }) {
             <button
               type="button"
               className="ledger-back"
-              onClick={() => navigate("/home")}
+              onClick={() => navigate(isEditMode ? "/wallet" : "/home")}
               disabled={submitting}
             >
               돌아가기
@@ -479,7 +484,7 @@ function WalletEntryPage({ user }) {
               onClick={goNext}
               disabled={!canProceed || submitting}
             >
-              {submitting ? "저장 중…" : "다음 단계"}
+              {submitting ? "저장 중…" : isEditMode ? "수정 완료" : "다음 단계"}
             </button>
           </div>
         </div>
@@ -492,11 +497,12 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
   // 이미 DB 에 저장된 행 — 수정/삭제 API 가 없어서 여기서 고쳐도 반영되지 않는다.
   // 수정 가능한 척하지 않도록 읽기 전용으로 잠그고 "저장됨" 표시.
   const saved = Boolean(row.dbId);
+  const locked = saved && !row.isEditing;
 
   // 이름이 바뀌면 자동 분류로 카테고리/출처를 "제안"한다.
   // 단, 사용자가 드롭다운에서 직접 고른 경우(*Touched)엔 그 선택을 덮지 않는다.
   useEffect(() => {
-    if (saved) return; // 저장된 행은 재분류 대상 아님
+    if (locked) return;
     const name = (row.name || "").trim();
     if (!name) {
       onChange({
@@ -547,7 +553,7 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
         onChange={(v) => onChange({ categoryId: v, categoryTouched: true })}
         placeholder={row.categorizing ? "분류 중…" : "카테고리"}
         align="right"
-        disabled={saved}
+        disabled={locked}
       />
     ) : (
       <Dropdown
@@ -556,7 +562,7 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
         onChange={(v) => onChange({ categoryEnum: v, sourceTouched: true })}
         placeholder={type === "income" ? "수입 출처" : "저축 유형"}
         align="right"
-        disabled={saved}
+        disabled={locked}
       />
     );
 
@@ -571,13 +577,13 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
             options={PAYMENT_METHODS}
             onChange={(v) => onChange({ paymentMethod: v })}
             placeholder="결제수단"
-            disabled={saved}
+            disabled={locked}
           />
         )}
         <span className="ledger-row-spacer" />
         {saved && (
           <span className="ledger-chip ledger-chip-readonly ledger-chip-saved">
-            저장됨
+            {row.isEditing ? "수정 중" : "저장됨"}
           </span>
         )}
         {categoryControl}
@@ -599,8 +605,11 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
           type="text"
           className="ledger-row-input"
           value={row.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          disabled={saved}
+          onChange={(e) => onChange({
+            name: e.target.value,
+            ...(type === "expense" ? { categoryTouched: false } : {}),
+          })}
+          disabled={locked}
           placeholder={
             type === "income"
               ? "예: 6월 월급, 엄마 용돈"
@@ -619,7 +628,7 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
             onChange={(e) =>
               onChange({ amount: e.target.value.replace(/[^\d]/g, "") })
             }
-            disabled={saved}
+            disabled={locked}
           />
           <span className="ledger-row-unit">원</span>
         </div>

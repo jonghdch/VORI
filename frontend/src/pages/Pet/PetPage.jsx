@@ -10,7 +10,6 @@ import {
 } from "../../components/petVisual";
 import { getActivePet, listPets, releasePet } from "../../api/pet";
 import { listMyFurniture, placeFurniture as apiPlaceFurniture, unplaceFurniture } from "../../api/furniture";
-import { listThemes } from "../../api/theme";
 import {
   CATEGORY_LABEL,
   DEFAULT_POSITION,
@@ -196,29 +195,6 @@ function PetPage({ user, onLogout }) {
     };
   }, [loadFurniture]);
 
-  // 테마 세트 현황 — 발동 여부는 서버가 판단한다(GET /api/themes). 배치·회수로 놓인 가구가
-  // 바뀔 때만 다시 받는다. 드래그로 자리만 옮기는 건 개수가 그대로라 부르지 않는다.
-  const [themes, setThemes] = useState([]);
-  const placedKey = furniture
-    .filter((f) => f.placed)
-    .map((f) => f.id)
-    .join(",");
-
-  useEffect(() => {
-    if (furnitureLoading) return;
-    let alive = true;
-    listThemes()
-      .then((list) => {
-        if (alive) setThemes(list);
-      })
-      .catch((e) => {
-        if (alive && e.status !== 401) setNotice({ kind: "err", text: e.message });
-      });
-    return () => {
-      alive = false;
-    };
-  }, [furnitureLoading, placedKey]);
-
   // 화면용 펫 표현 — 펫이 없으면 방은 비워 두고 안내만 보여준다.
   const selectedPet = pet
     ? {
@@ -245,8 +221,6 @@ function PetPage({ user, onLogout }) {
     () => furniture.filter((f) => f.placed && isSurface(f.category)),
     [furniture],
   );
-  // 한 개라도 놓인 테마만 칩으로 보여준다. 0/3 까지 늘어놓으면 발동한 세트가 묻힌다.
-  const setProgress = themes.filter((t) => t.placedCount > 0);
   const positionOf = (item) =>
     dragPositions[item.id] ?? { x: item.positionX ?? 50, y: item.positionY ?? 72 };
 
@@ -398,27 +372,15 @@ function PetPage({ user, onLogout }) {
               <span className="pet-room-label">방 색상</span>
               <h2>{selectedBackground.name}</h2>
             </div>
-            <div className="pet-room-chips">
-              {setProgress.length > 0 && (
-                <ul className="pet-surface-chips pet-theme-chips" aria-label="테마 세트 현황">
-                  {setProgress.map((t) => (
-                    <li key={t.id} className={t.active ? "is-active" : ""}>
-                      {t.name} {t.placedCount}/{t.requiredCount}
-                      {t.active && ` 발동 +${t.setBonusPct}%`}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {placedSurfaces.length > 0 && (
-                <ul className="pet-surface-chips" aria-label="적용된 벽지·바닥">
-                  {placedSurfaces.map((f) => (
-                    <li key={f.id}>
-                      {CATEGORY_LABEL[f.category]} · {f.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            {placedSurfaces.length > 0 && (
+              <ul className="pet-surface-chips" aria-label="적용된 벽지·바닥">
+                {placedSurfaces.map((f) => (
+                  <li key={f.id}>
+                    {CATEGORY_LABEL[f.category]} · {f.name}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div

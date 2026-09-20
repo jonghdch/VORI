@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
-import { getMonthlyLedger } from "../../api/ledger";
+import { deleteExpense, getMonthlyLedger } from "../../api/ledger";
 import { listInquiriesByDate } from "../../api/inquiries";
-import { AI_ACTIVE_FROM_HOUR, isAiJudgeOpen } from "../../config";
+import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
 import "../Home/HomeDashboard.css";
 import "./WalletPage.css";
 
@@ -79,6 +79,7 @@ function toRow(item) {
   const day = Number(item.date.split("-")[2]);
   return {
     id: `${item.type}-${item.id}`,
+    dbId: item.id,
     type: item.type, // "EXPENSE" | "INCOME"
     day,
     name: item.item || (item.type === "INCOME" ? "수입" : "지출"),
@@ -86,6 +87,7 @@ function toRow(item) {
     amountNum: item.amount,
     amount: formatWon(item.amount),
     date: formatDateDisplay(item.date),
+    dateIso: item.date,
     signal: item.signal, // GREEN | GRAY | RED | null
     // AI 판정은 예외적 지출(aiJudged)에만. 평소 지출은 배지 미표시.
     aiJudged: Boolean(item.aiJudged),
@@ -117,19 +119,20 @@ function WalletPage({ user, onLogout }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [mutating, setMutating] = useState(false);
 
   // 기본 선택 = 오늘 (이번 달 한정)
   const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
   const [selectedId, setSelectedId] = useState(null);
-  // 열리는 시각은 config 에서 온다(기본 20시). 시연 때 낮에도 열 수 있게 밖으로 뺐다.
-  const [isAiActive, setIsAiActive] = useState(isAiJudgeOpen);
+  // 일반 사용자는 20시부터, 관리자는 시연·검증을 위해 항상 사용할 수 있다.
+  const [isAiActive, setIsAiActive] = useState(() => canUseAiJudge(user));
 
   useEffect(() => {
     const id = setInterval(() => {
-      setIsAiActive(isAiJudgeOpen());
+      setIsAiActive(canUseAiJudge(user));
     }, 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [user]);
 
   // 달이 바뀌면 그 달 데이터를 다시 불러오고 선택 초기화.
   useEffect(() => {
@@ -184,6 +187,18 @@ function WalletPage({ user, onLogout }) {
     rows.forEach((row) => {
       if (!map.has(row.day)) map.set(row.day, []);
       map.get(row.day).push(row);
+    });
+    return map;
+  }, [rows]);
+
+  // 하루에 여러 지출이 있으면 가장 강한 최종 판정(RED > GRAY > GREEN)을 달력색으로 사용.
+  const signalByDay = useMemo(() => {
+    const rank = { GREEN: 1, GRAY: 2, RED: 3 };
+    const map = new Map();
+    rows.forEach((row) => {
+      if (row.type !== "EXPENSE" || !row.signal) return;
+      const current = map.get(row.day);
+      if (!current || rank[row.signal] > rank[current]) map.set(row.day, row.signal);
     });
     return map;
   }, [rows]);
@@ -252,6 +267,33 @@ function WalletPage({ user, onLogout }) {
   const selectedRow = selectedId
     ? rows.find((r) => r.id === selectedId) ?? null
     : null;
+
+  const reloadRows = async () => {
+    const data = await getMonthlyLedger(`${viewYear}-${pad2(viewMonth)}`);
+    const mapped = Array.isArray(data) ? data.map(toRow) : [];
+    setRows(mapped);
+    return mapped;
+  };
+
+  const handleDeleteExpense = async () => {
+    if (!selectedRow || selectedRow.type !== "EXPENSE" || mutating) return;
+    if (!window.confirm(`“${selectedRow.name}” 지출을 삭제할까요?`)) return;
+    setMutating(true);
+    try {
+      await deleteExpense(selectedRow.dbId);
+      await reloadRows();
+      setSelectedId(null);
+    } catch (e) {
+      window.alert(e.message || "삭제하지 못했어요.");
+    } finally {
+      setMutating(false);
+    }
+  };
+
+  const handleEditExpense = () => {
+    if (!selectedRow || selectedRow.type !== "EXPENSE" || mutating) return;
+    navigate(`/wallet/new?date=${selectedRow.dateIso}&editExpenseId=${selectedRow.dbId}`);
+  };
 
   // 보고 있는 달이 실제 이번 달일 때만 '오늘' 표시.
   const todayDay =
@@ -431,6 +473,7 @@ function WalletPage({ user, onLogout }) {
                   }
 
                   const dayRows = rowsByDay.get(day) ?? [];
+                  const daySignal = signalByDay.get(day)?.toLowerCase();
                   const isToday = day === todayDay;
                   return (
                     <button
@@ -439,6 +482,7 @@ function WalletPage({ user, onLogout }) {
                       className={[
                         "ledger-cal-cell",
                         dayRows.length > 0 ? "ledger-cal-cell--highlight" : "",
+                        daySignal ? `ledger-cal-cell--signal-${daySignal}` : "",
                         isToday ? "ledger-cal-cell--today" : "",
                         selectedDay === day ? "ledger-cal-cell--selected" : "",
                       ]
@@ -471,6 +515,7 @@ function WalletPage({ user, onLogout }) {
                   const day = d.getDate();
                   const isToday = isCurrentMonth && day === todayDay;
                   const dayRows = isCurrentMonth ? (rowsByDay.get(day) ?? []) : [];
+                  const daySignal = isCurrentMonth ? signalByDay.get(day)?.toLowerCase() : null;
                   const isSelected = isCurrentMonth && selectedDay === day;
 
                   if (!isCurrentMonth) {
@@ -493,6 +538,7 @@ function WalletPage({ user, onLogout }) {
                         "ledger-cal-cell",
                         "ledger-week-cell",
                         dayRows.length > 0 ? "ledger-cal-cell--highlight" : "",
+                        daySignal ? `ledger-cal-cell--signal-${daySignal}` : "",
                         isToday ? "ledger-cal-cell--today" : "",
                         isSelected ? "ledger-cal-cell--selected" : "",
                       ]
@@ -633,6 +679,16 @@ function WalletPage({ user, onLogout }) {
                     <span className="ledger-detail-ai-badge">
                       AI 판정 · {selectedRow.aiStatus}
                     </span>
+                  </div>
+                )}
+                {selectedRow.type === "EXPENSE" && (
+                  <div className="ledger-detail-actions">
+                    <button type="button" onClick={handleEditExpense} disabled={mutating}>
+                      수정
+                    </button>
+                    <button type="button" className="is-danger" onClick={handleDeleteExpense} disabled={mutating}>
+                      삭제
+                    </button>
                   </div>
                 )}
               </div>
@@ -780,7 +836,9 @@ function WalletPage({ user, onLogout }) {
                 onClick={() => navigate("/wallet/analysis")}
               >
                 {isAiActive
-                  ? "판정 시작하기"
+                  ? user?.role === "ADMIN"
+                    ? "판정 시작하기 (관리자)"
+                    : "판정 시작하기"
                   : `대기 중 (${AI_ACTIVE_FROM_HOUR}시 활성화)`}
               </button>
               {pendingCount != null && (

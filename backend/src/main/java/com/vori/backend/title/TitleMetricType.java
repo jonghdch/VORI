@@ -13,8 +13,7 @@ public enum TitleMetricType {
     PETS_RELEASED(TitleProgress::petsReleased),
     S_TIER_PETS(TitleProgress::sTierPets),
     AI_ANSWERS(TitleProgress::aiAnswers),
-    RECEIPT_SCANS(TitleProgress::receiptScans),
-    LOGIN_COUNT(TitleProgress::loginCount);
+    RECEIPT_SCANS(TitleProgress::receiptScans);
 
     private final ToLongFunction<TitleProgress> current;
 

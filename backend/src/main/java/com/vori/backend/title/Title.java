@@ -39,7 +39,7 @@ public class Title {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "metric_type", nullable = false, columnDefinition = "ENUM('TOTAL_SAVED','EXPENSE_COUNT','GOALS_ACHIEVED','PETS_RELEASED','S_TIER_PETS','AI_ANSWERS','RECEIPT_SCANS','LOGIN_COUNT')")
+    @Column(name = "metric_type", nullable = false, columnDefinition = "ENUM('TOTAL_SAVED','EXPENSE_COUNT','GOALS_ACHIEVED','PETS_RELEASED','S_TIER_PETS','AI_ANSWERS','RECEIPT_SCANS')")
     private TitleMetricType metricType;
 
     @Column(nullable = false)

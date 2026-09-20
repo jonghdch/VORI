@@ -43,7 +43,7 @@ public class UserStatStats {
     @Column(name = "stddev_ema", nullable = false, precision = 12, scale = 2)
     private BigDecimal stddevEma;
 
-    // EMA 에 반영된 총 건수. N_MIN 미만이면 통계 불안정 → z 계산 스킵 (TBD)
+    // EMA 에 반영된 총 건수. 표준편차가 아직 없을 때는 평균 대비 초기 판정에 사용.
     @Column(name = "sample_count", nullable = false)
     @Builder.Default
     private Integer sampleCount = 0;
