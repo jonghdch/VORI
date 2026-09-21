@@ -19,6 +19,7 @@ const SIDE_MENU = [
 
 const GAME_MENU = [
   { id: "raise", label: "마이룸", page: "raise" },
+  { id: "dex", label: "펫 도감", page: "dex" },
   { id: "shop", label: "상점", page: "shop" },
   { id: "achievement", label: "업적/칭호", page: "titles" },
 ];

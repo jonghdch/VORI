@@ -31,6 +31,7 @@ const WalletPage = lazy(() => import("./pages/Wallet/WalletPage"));
 // 소비 리포트 — 아직 플레이스홀더 (/wallet 보이는 리포트의 "자세히보기" 진입점).
 const ReportPage = lazy(() => import("./pages/Report/ReportPage"));
 const PetPage = lazy(() => import("./pages/Pet/PetPage"));
+const PetDexPage = lazy(() => import("./pages/PetDex/PetDexPage"));
 const ShopPage = lazy(() => import("./pages/Shop/ShopPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
 const AchievementPage = lazy(() => import("./pages/Achievement/AchievementPage"));
@@ -76,6 +77,7 @@ const ADMIN_PAGES = {
 //   /wallet/analysis        소비 분석 (오후 8시~자정 이벤트, ledger-ai-card 진입)
 //   /report                 소비 리포트 (플레이스홀더)
 //   /raise                  펫 키우기
+//   /dex                    펫 도감
 //   /shop                   상점
 //   /settings               환경설정
 //   /titles                 업적/칭호
@@ -208,6 +210,14 @@ function App() {
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <PetPage user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dex"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <PetDexPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
