@@ -162,7 +162,7 @@
 .ledger-upload:hover {
   background: #6b7a4f;
 }
-/* 인식에 20~30초 걸린다. 눌린 뒤 다시 눌리지 않는다는 게 보여야 한다. */
+/* 인식에 6~13초 걸린다. 눌린 뒤 다시 눌리지 않는다는 게 보여야 한다. */
 .ledger-upload:disabled {
   background: #b3bda0;
   cursor: default;
