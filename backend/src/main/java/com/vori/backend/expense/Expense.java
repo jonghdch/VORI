@@ -117,4 +117,13 @@ public class Expense {
     public void updateSignalFinal(Signal signalFinal) {
         this.signalFinal = signalFinal;
     }
+
+    public void updateDetails(String item, Integer amount, Long categoryId,
+                              StatType statType, PaymentMethod paymentMethod) {
+        this.item = item;
+        this.amount = amount;
+        this.categoryId = categoryId;
+        this.statType = statType;
+        this.paymentMethod = paymentMethod;
+    }
 }

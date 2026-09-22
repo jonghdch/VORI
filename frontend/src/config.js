@@ -23,3 +23,8 @@ export const AI_ACTIVE_FROM_HOUR = (() => {
 export function isAiJudgeOpen(now = new Date()) {
   return now.getHours() >= AI_ACTIVE_FROM_HOUR;
 }
+
+/** 관리자는 시연·검증을 위해 시간 제한 없이 AI 소비 판정을 사용할 수 있다. */
+export function canUseAiJudge(user, now = new Date()) {
+  return user?.role === "ADMIN" || isAiJudgeOpen(now);
+}

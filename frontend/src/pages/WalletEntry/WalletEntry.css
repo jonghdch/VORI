@@ -614,6 +614,33 @@
 .ledger-title-block-center {
   text-align: center;
 }
+.ledger-signal-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+.ledger-signal-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ledger-signal-result--green {
+  color: #55733d;
+  background: #e8f3df;
+}
+.ledger-signal-result--gray {
+  color: #a96518;
+  background: #fff0d8;
+}
+.ledger-signal-result--red {
+  color: #a94444;
+  background: #f8dfdf;
+}
 .ledger-pay-group {
   background: #fbfaf6;
   border: 1px solid #e2dfd7;

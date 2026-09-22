@@ -14,6 +14,7 @@ export function dateKey(year, month, day) {
  * @param {number} year
  * @param {number} month                1~12
  * @param {Set<string>|null} recordedKeys  기록 있는 날 키(dateKey) 집합. null = 로딩 중
+ * @param {Map<string,string>} [signalByKey] 날짜별 최종 판정(GREEN/GRAY/RED)
  * @param {Set<string>} [highlightKeys]    강조할 날 키 집합(리포트에서 보고 있는 기간)
  * @param {boolean} [showAdjacent]         앞뒤 빈 칸을 이웃 달 날짜로 채움(흐리게). 달을 걸치는 주를 끊김 없이 보여줄 때
  * @param {(date:Date)=>void} [onSelectDay] 있으면 셀이 버튼이 되어 클릭 가능
@@ -22,6 +23,7 @@ function RecordCalendar({
   year,
   month,
   recordedKeys,
+  signalByKey,
   highlightKeys,
   showAdjacent = false,
   onSelectDay,
@@ -64,10 +66,12 @@ function RecordCalendar({
         const m = date.getMonth() + 1;
         const d = date.getDate();
         const key = dateKey(y, m, d);
+        const signal = signalByKey?.get(key)?.toLowerCase();
         const cls = [
           "rc-cell",
           adjacent ? "rc-cell--adjacent" : "",
           recordedKeys?.has(key) ? "is-marked" : "",
+          signal ? `is-signal-${signal}` : "",
           key === todayKey ? "is-today" : "",
           highlightKeys?.has(key) ? "is-highlight" : "",
         ]

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toIsoDate } from "./utils";
 import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
-import { isAiJudgeOpen } from "../../config";
+import { listExpensesByDate } from "../../api/ledger";
+import { startTodayJudgment } from "../../api/dailyJudgment";
+import { canUseAiJudge } from "../../config";
 import "./WalletEntry.css";
 
 // 소비 분석 — /wallet 의 ledger-ai-card 에서 저녁 이벤트로 진입하는 독립 페이지.
@@ -12,18 +14,20 @@ import "./WalletEntry.css";
 // - 있으면 페이지네이션으로 한 건씩 답변. "다음에 할게요" 누르면 답변 안 한 채로 닫음.
 // - 활성 시간대 밖에서 직접 URL 로 들어오면 /wallet 로 돌려보낸다.
 //   열리는 시각은 config.AI_ACTIVE_FROM_HOUR (기본 20시).
-function WalletAnalysisPage() {
+function WalletAnalysisPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const dateStr = params.get("date") || toIsoDate();
   // 이벤트 활성 시간대 가드. 카드 버튼과 동일 기준(config.isAiJudgeOpen).
   // 진입 시점에 1회만 판정해 고정 — 매 렌더 재평가하면 23:59에 답변을
   // 타이핑하던 사용자가 자정을 넘는 순간 리다이렉트로 축출되고 작성 내용이 날아간다.
-  const [isEventOpen] = useState(isAiJudgeOpen);
+  const [isEventOpen] = useState(() => canUseAiJudge(user));
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [inquiries, setInquiries] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [judgment, setJudgment] = useState(null);
   const [page, setPage] = useState(1);
   const [answers, setAnswers] = useState({}); // inquiryId → text
   const [submitting, setSubmitting] = useState(false);
@@ -47,8 +51,12 @@ function WalletAnalysisPage() {
     const tryFetch = async () => {
       if (cancelled) return;
       try {
-        const data = await listInquiriesByDate(dateStr);
+        const [data, expenseData] = await Promise.all([
+          listInquiriesByDate(dateStr),
+          listExpensesByDate(dateStr),
+        ]);
         if (cancelled) return;
+        setExpenses(expenseData);
         if (data.length === 0 && attempts < MAX_RETRIES) {
           attempts++;
           setTimeout(tryFetch, RETRY_INTERVAL_MS);
@@ -64,7 +72,19 @@ function WalletAnalysisPage() {
         setLoading(false);
       }
     };
-    tryFetch();
+    const start = async () => {
+      try {
+        const result = await startTodayJudgment();
+        if (cancelled) return;
+        setJudgment(result);
+        tryFetch();
+      } catch {
+        if (cancelled) return;
+        setLoadError(true);
+        setLoading(false);
+      }
+    };
+    start();
     return () => {
       cancelled = true;
     };
@@ -76,6 +96,8 @@ function WalletAnalysisPage() {
   }
 
   const total = inquiries.length;
+  const dailySignal = judgment?.signal || getDailySignal(expenses);
+  const judgedExpenseCount = judgment?.expenseCount ?? expenses.length;
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () => setPage((p) => Math.min(total, p + 1));
 
@@ -152,12 +174,24 @@ function WalletAnalysisPage() {
             </div>
           </div>
         ) : total === 0 ? (
-          // ───── 분석할 항목 없음 — 안내 + 닫기만 ─────
+          // ───── AI 질문 없음 — 무지출 또는 오늘 소비의 최종 신호 안내 ─────
           <div className="ledger-center-y">
             <div className="ledger-title-block">
-              <h1 className="ledger-title">예외적인 지출이 없어요</h1>
+              <div className={`ledger-signal-result ledger-signal-result--${dailySignal.toLowerCase()}`}>
+                <span className="ledger-signal-dot" aria-hidden />
+                <strong>{signalLabel(dailySignal)}</strong>
+              </div>
+              <h1 className="ledger-title">
+                {judgedExpenseCount === 0 ? "오늘은 지출이 없습니다" : "오늘의 소비 판정이 완료됐어요"}
+              </h1>
               <p className="ledger-subtitle">
-                평소와 비슷한 패턴이라 오늘은 분석할 지출이 없어요.
+                {judgedExpenseCount === 0
+                  ? "돈을 쓰지 않은 오늘이 진정한 절약이에요. 초록색 판정을 받았어요!"
+                  : dailySignal === "GREEN"
+                    ? "오늘은 평소보다 알뜰하게 소비했어요."
+                    : dailySignal === "GRAY"
+                      ? "오늘은 평소와 비슷한 수준으로 소비했어요."
+                      : "평소보다 큰 지출이 있었지만 답변할 AI 질문은 없어요."}
               </p>
             </div>
             <div className="ledger-actions">
@@ -330,6 +364,21 @@ function paymentLabel(pm) {
     case "MOBILE_PAY": return "모바일페이";
     default: return "결제수단";
   }
+}
+
+function getDailySignal(expenses) {
+  if (!expenses || expenses.length === 0) return "GREEN";
+  const rank = { GREEN: 1, GRAY: 2, RED: 3 };
+  return expenses.reduce((worst, expense) => {
+    const signal = expense.signalFinal || expense.signalInitial || "GRAY";
+    return rank[signal] > rank[worst] ? signal : worst;
+  }, "GREEN");
+}
+
+function signalLabel(signal) {
+  if (signal === "GREEN") return "초록 · 절약";
+  if (signal === "RED") return "빨강 · 과소비";
+  return "주황 · 보통";
 }
 
 export default WalletAnalysisPage;

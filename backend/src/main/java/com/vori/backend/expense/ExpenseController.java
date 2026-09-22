@@ -3,6 +3,7 @@ package com.vori.backend.expense;
 import com.vori.backend.auth.UserPrincipal;
 import com.vori.backend.expense.dto.ExpenseCreateRequest;
 import com.vori.backend.expense.dto.ExpenseResponse;
+import com.vori.backend.expense.dto.ExpenseUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -10,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,6 +35,16 @@ public class ExpenseController {
     ) {
         ExpenseResponse response = expenseService.createExpense(principal.getUser().getId(), req);
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ExpenseResponse> updateExpense(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody ExpenseUpdateRequest req
+    ) {
+        return ResponseEntity.ok(expenseService.updateExpense(
+                principal.getUser().getId(), id, req));
     }
 
     /** ?date=YYYY-MM-DD 의 해당 날짜 지출 목록. 가계부 작성 화면 mount 용. */

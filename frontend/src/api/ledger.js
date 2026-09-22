@@ -47,6 +47,32 @@ export const listSavingsByDate = (date) => get(`/savings?date=${date}`);
 export const getMonthlyLedger = (yearMonth) =>
   get(`/ledger?yearMonth=${yearMonth}`);
 
+export async function deleteExpense(id) {
+  const res = await fetch(`${API_BASE}/ledger/expenses/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`삭제 실패 (${res.status})`);
+}
+
+export async function updateExpense(id, { item, amount, categoryId, paymentMethod }) {
+  const res = await fetch(`${API_BASE}/expenses/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ item, amount: Number(amount), categoryId, paymentMethod }),
+  });
+  if (!res.ok) {
+    let message = `수정 실패 (${res.status})`;
+    try {
+      const data = await res.json();
+      if (data?.message) message = data.message;
+    } catch {}
+    throw new Error(message);
+  }
+  return res.json();
+}
+
 // 카테고리 트리 (대분류 + 소분류). 가계부 확인 화면에서 categoryId → 이름 매핑용.
 export const listCategoryTree = () => get(`/categories`);
 
