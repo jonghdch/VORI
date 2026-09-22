@@ -62,9 +62,9 @@
   justify-self: start;
 }
 
-/* 햄버거 — 모바일 전용, 가로 세 줄 */
+/* 햄버거 — 왼쪽 사이드바 토글(데스크톱: 접기/펴기, 모바일: 드로어), 가로 세 줄 */
 .home-menu-toggle {
-  display: none;
+  display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 4px;
@@ -95,6 +95,34 @@
 @media (min-width: 1025px) {
   .home-sidebar-backdrop {
     display: none;
+  }
+
+  /* 데스크톱 왼쪽 사이드바 접기/펴기 */
+  .home-sidebar--left {
+    overflow-x: hidden;
+    transition:
+      width 0.22s ease,
+      padding 0.22s ease,
+      border-width 0.22s ease,
+      visibility 0s linear 0s;
+  }
+
+  /* 폭이 줄어드는 동안 글자가 줄바꿈되며 찌그러지지 않게 */
+  .home-sidebar--left > * {
+    min-width: 200px;
+  }
+
+  .home-shell--collapsed .home-sidebar--left {
+    width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    border-right-width: 0;
+    visibility: hidden; /* 접힌 메뉴가 탭 이동에 잡히지 않도록 */
+    transition:
+      width 0.22s ease,
+      padding 0.22s ease,
+      border-width 0.22s ease,
+      visibility 0s linear 0.22s;
   }
 }
 

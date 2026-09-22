@@ -19,9 +19,22 @@ const SIDE_MENU = [
 
 const GAME_MENU = [
   { id: "raise", label: "마이룸", page: "raise" },
+  { id: "dex", label: "펫 도감", page: "dex" },
   { id: "shop", label: "상점", page: "shop" },
   { id: "achievement", label: "업적/칭호", page: "titles" },
 ];
+
+// 데스크톱(1025px 이상)에서 왼쪽 사이드바를 접어 둔 상태를 기억한다. 모바일 드로어와는 별개.
+const SIDEBAR_COLLAPSED_KEY = "vori.sidebar.collapsed";
+const MOBILE_QUERY = "(max-width: 1024px)";
+
+function readSidebarCollapsed() {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 function AppShell({
   activeTop = "home",
@@ -31,7 +44,25 @@ function AppShell({
   children,
 }) {
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false); // 모바일: 슬라이드 드로어
+  const [collapsed, setCollapsed] = useState(readSidebarCollapsed); // 데스크톱: 사이드바 접힘
+
+  const isMobile = () =>
+    typeof window !== "undefined" && window.matchMedia(MOBILE_QUERY).matches;
+
+  const toggleSidebar = () => {
+    if (isMobile()) {
+      setMenuOpen((v) => !v);
+      return;
+    }
+    setCollapsed((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  };
 
   const go = (page) => {
     if (!page) return;
@@ -51,9 +82,9 @@ function AppShell({
             <button
               type="button"
               className="home-menu-toggle"
-              aria-label={menuOpen ? "메뉴 닫기" : "메뉴 열기"}
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((v) => !v)}
+              aria-label={menuOpen || !collapsed ? "메뉴 닫기" : "메뉴 열기"}
+              aria-expanded={isMobile() ? menuOpen : !collapsed}
+              onClick={toggleSidebar}
             >
               <span />
               <span />
@@ -93,7 +124,7 @@ function AppShell({
         </div>
       </header>
 
-      <div className="home-shell">
+      <div className={`home-shell ${collapsed ? "home-shell--collapsed" : ""}`}>
         {menuOpen && (
           <div
             className="home-sidebar-backdrop"
