@@ -131,13 +131,15 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 
 ### 영수증 스캔
 
-응답까지 **18~31초** 걸린다. 로딩 UI 없이 붙이면 멈춘 것처럼 보인다.
+응답까지 **6~13초** 걸린다(축소해 보낼 때. 원본을 그대로 보내면 9~31초). 로딩 UI 없이 붙이면 멈춘 것처럼 보인다.
 
-1. `POST /api/receipts` (multipart)
+1. **업로드 전에 `prepareReceiptImage()` 로 긴 변 2048px 로 줄인다** (`api/receipt.js`)
+   전송 용량이 76~89% 줄고 인식 결과는 같았다. 10MB 검사는 축소한 뒤에 한다.
+2. `POST /api/receipts` (multipart)
    PNG · JPEG, 10MB 이하. 헤더에 `Content-Type` 을 **넣지 않는다.**
-2. 응답의 `amount` · `date` · `item` 을 지출 폼에 채움
+3. 응답의 `amount` · `date` · `item` 을 지출 폼에 채움
    `status: "SUCCESS"` 여도 개별 값은 `null` 일 수 있다(흐린 영수증). 읽힌 값만 채우고 나머지는 사용자가 입력하게 둔다.
-3. `POST /api/expenses`
+4. `POST /api/expenses`
    사용자가 확인·수정한 뒤 등록. **OCR 이 지출을 자동 생성하지는 않는다.**
 
 ---
@@ -266,7 +268,7 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| POST | `/api/receipts` | multipart · 필드명 `file` · 18~31초 |
+| POST | `/api/receipts` | multipart · 필드명 `file` · 6~13초(축소 후) |
 | GET | `/api/receipts` | 내 인식 이력 |
 | GET | `/api/receipts/{id}` | 단건 + 품목 상세 |
 
@@ -339,9 +341,20 @@ const res = await fetch('http://localhost:8080/api/receipts', {
 
 > 같은 커밋으로 `bootRun.workingDir` 도 고쳐져서, 이제 `backend/` 에서 `gradlew bootRun` 이 그냥 된다. 예전처럼 repo 루트에서 띄우거나 환경변수를 손으로 넣을 필요가 없다.
 
-### 2. 영수증 응답까지 18~31초 걸린다
+### 2. 영수증 응답까지 6~13초 걸린다
 
-4.4MB 사진 실측이 30.5초였다. AI 가 이미지를 읽는 시간이라 줄이기 어렵다. **진행 표시가 반드시 필요**하고, `fetch` 에 타임아웃을 건다면 **60초 이상**으로 잡을 것.
+AI 가 이미지를 읽는 시간이라 크게 줄이기 어렵다. **진행 표시가 반드시 필요**하고, `fetch` 에 타임아웃을 건다면 **60초 이상**으로 잡을 것.
+
+실측(2026-09-17, 각 2회):
+
+| 이미지 | 원본 | 2048px 축소 |
+|---|---|---|
+| 실물 영수증 iPhone 1.99MB | 12.2초 | **6.0초** (전송 0.47MB) |
+| 합성 3.72MB | 13.8초 | 11.6초 (전송 0.40MB) |
+| 합성 노이즈 5.2MB | 25.5초 | 10.7초 |
+
+인식 결과는 크기와 무관하게 같았다. **단축 폭은 사진마다 다르고, 확실한 이득은 전송 용량이다.**
+그래서 화면은 업로드 전에 항상 줄여 보낸다(`prepareReceiptImage`, PR #26).
 
 ### 3. 목표는 만든 이후의 지출부터 쌓인다
 
