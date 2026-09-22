@@ -77,6 +77,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
 
   // 기록 캘린더 — 이번 달 가계부에서 기록이 있는 날짜(일) 집합. null = 로딩 중.
   const [recordedDays, setRecordedDays] = useState(null);
+  const [calendarSignals, setCalendarSignals] = useState(new Map());
 
   useEffect(() => {
     let alive = true;
@@ -84,7 +85,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     getMonthlyLedger(ym)
       .then((rows) => {
-        if (alive)
+        if (alive) {
           setRecordedDays(
             new Set(
               rows.map((r) => {
@@ -93,9 +94,14 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               }),
             ),
           );
+          setCalendarSignals(buildSignalMap(rows));
+        }
       })
       .catch(() => {
-        if (alive) setRecordedDays(new Set());
+        if (alive) {
+          setRecordedDays(new Set());
+          setCalendarSignals(new Map());
+        }
       });
     return () => {
       alive = false;
@@ -330,6 +336,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 year={today.getFullYear()}
                 month={today.getMonth() + 1}
                 recordedKeys={recordedDays}
+                signalByKey={calendarSignals}
               />
             </div>
             <button
@@ -343,13 +350,28 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
         </div>
 
         <p className="home-footnote">
-          매일 {AI_ACTIVE_FROM_HOUR}시에 보리가 소비 검사를 시작해요
+          {user?.role === "ADMIN"
+            ? "관리자는 언제든지 소비 판정을 확인할 수 있어요"
+            : `매일 ${AI_ACTIVE_FROM_HOUR}시에 보리가 소비 검사를 시작해요`}
         </p>
       </main>
 
       <AppRightSidebar />
     </AppShell>
   );
+}
+
+function buildSignalMap(rows) {
+  const rank = { GREEN: 1, GRAY: 2, RED: 3 };
+  const result = new Map();
+  rows.forEach((row) => {
+    if (row.type !== "EXPENSE" || !row.signal) return;
+    const [y, m, d] = row.date.split("-").map(Number);
+    const key = dateKey(y, m, d);
+    const current = result.get(key);
+    if (!current || rank[row.signal] > rank[current]) result.set(key, row.signal);
+  });
+  return result;
 }
 
 export default HomeDashboard;

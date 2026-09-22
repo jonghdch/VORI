@@ -183,7 +183,7 @@ function App() {
             path="/wallet/analysis"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <WalletAnalysisPage />
+                <WalletAnalysisPage user={user} />
               </ProtectedRoute>
             }
           />
