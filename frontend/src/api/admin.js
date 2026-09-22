@@ -151,3 +151,59 @@ export async function updateRationalityRules({ zRed, zGreen }) {
   if (!res.ok) throw new AdminApiError(`룰 저장 실패 (${res.status})`, res.status);
   return res.json();
 }
+
+// ───── 칭호 관리 ─────
+
+// 공통 쓰기 — JSON 본문(선택). 400/404/409 는 서버 message 를 그대로 올린다.
+async function adminSend(method, path, body, label) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    credentials: "include",
+    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) throw new AdminApiError("로그인이 필요합니다", 401);
+  if (res.status === 403) throw new AdminApiError("관리자 권한이 필요합니다", 403);
+  if (res.status === 400 || res.status === 404 || res.status === 409) {
+    const msg = await res
+      .json()
+      .then((b) => b.message)
+      .catch(() => null);
+    throw new AdminApiError(msg || `${label} 실패 (${res.status})`, res.status);
+  }
+  if (!res.ok) throw new AdminApiError(`${label} 실패 (${res.status})`, res.status);
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+/**
+ * 칭호 마스터 전체(비활성 포함, 정렬 순서대로).
+ * @returns {Promise<Array<{
+ *   id:number, code:string, name:string, description:string,
+ *   metricType:string, threshold:number, enabled:boolean, sortOrder:number,
+ *   holderCount:number, unlocksThemeName:string|null, createdAt:string, updatedAt:string
+ * }>>}
+ */
+export function listAdminTitles() {
+  return adminGet("/admin/titles", "칭호 목록 조회");
+}
+
+/** 칭호 생성. code 중복이면 409. */
+export function createTitle(body) {
+  return adminSend("POST", "/admin/titles", body, "칭호 생성");
+}
+
+/** 칭호 수정. code 는 서버가 무시한다(생성 후 변경 불가). */
+export function updateTitle(id, body) {
+  return adminSend("PUT", `/admin/titles/${id}`, body, "칭호 수정");
+}
+
+/** 활성/비활성. 운영 중 칭호를 내리는 기본 경로 — 보유자 기록은 남는다. */
+export function setTitleEnabled(id, enabled) {
+  return adminSend("PATCH", `/admin/titles/${id}/enabled?value=${enabled ? "true" : "false"}`, undefined, "칭호 상태 변경");
+}
+
+/** 삭제. 보유자가 있거나 테마 해금 조건이면 409 (서버 message 에 이유). */
+export function deleteTitle(id) {
+  return adminSend("DELETE", `/admin/titles/${id}`, undefined, "칭호 삭제");
+}

@@ -1,0 +1,125 @@
+/* 업적/칭호 관리 — 생성·수정 폼 + 목록. 색 토큰은 .admin 스코프 상속(제재 관리와 같은 결). */
+.title-form {
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.title-form-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--admin-text);
+}
+.title-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  color: var(--admin-muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.title-form-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.title-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 160px;
+  font-size: 13px;
+  color: var(--admin-muted);
+}
+.title-field--sm {
+  flex: 0 0 150px;
+  min-width: 0;
+}
+.title-field--check {
+  flex: 0 0 60px;
+  min-width: 0;
+}
+.title-field--check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 9px;
+}
+.title-field select,
+.title-field input[type="text"],
+.title-field input[type="number"] {
+  padding: 9px 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: var(--admin-surface);
+  font-size: 14px;
+  color: var(--admin-text);
+}
+.title-field input:disabled {
+  opacity: 0.6;
+}
+.title-field select:focus,
+.title-field input:focus {
+  outline: none;
+  border-color: var(--admin-green);
+}
+.title-submit {
+  align-self: flex-start;
+  border: 0;
+  background: var(--admin-green);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.title-submit:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+.title-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.title-form-error {
+  margin: 0;
+  font-size: 13px;
+  color: #b4524a;
+}
+.title-form-notice {
+  margin: 0;
+  font-size: 13px;
+  color: var(--admin-green);
+}
+.title-row--off td {
+  opacity: 0.55;
+}
+.title-actions {
+  white-space: nowrap;
+}
+.title-action {
+  border: 1px solid var(--admin-border);
+  background: var(--admin-card);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--admin-muted);
+  cursor: pointer;
+  margin-right: 6px;
+}
+.title-action:hover:not(:disabled) {
+  color: var(--admin-green);
+  border-color: var(--admin-green);
+}
+.title-action--danger:hover:not(:disabled) {
+  color: #b4524a;
+  border-color: #b4524a;
+}
+.title-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

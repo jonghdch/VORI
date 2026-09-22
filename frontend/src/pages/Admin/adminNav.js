@@ -39,7 +39,7 @@ export const ADMIN_NAV = [
   {
     label: "시스템 및 컨텐츠 운영",
     items: [
-      { to: "/admin/achievements", label: "업적 / 이벤트 관리" },
+      { to: "/admin/achievements", label: "업적 / 칭호 관리" },
       { to: "/admin/notices", label: "공지사항 및 푸시 알림" },
       { to: "/admin/audit-log", label: "운영 감사 로그" },
     ],

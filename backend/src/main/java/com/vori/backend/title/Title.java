@@ -57,6 +57,30 @@ public class Title {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    /** 어드민 생성용. created/updated 는 지금 시각. */
+    public static Title create(String code, String name, String description,
+                               TitleMetricType metricType, long threshold,
+                               boolean enabled, int sortOrder) {
+        LocalDateTime now = LocalDateTime.now();
+        return new Title(null, code, name, description, metricType, threshold,
+                enabled, sortOrder, now, now);
+    }
+
+    /**
+     * 어드민 수정. code 는 바꾸지 않는다 — user_titles.unlock_condition JSON 과 로그가
+     * code 로 기록돼 있어, 바꾸면 과거 획득 근거를 추적할 수 없다.
+     */
+    public void update(String name, String description, TitleMetricType metricType,
+                       long threshold, boolean enabled, int sortOrder) {
+        this.name = name;
+        this.description = description;
+        this.metricType = metricType;
+        this.threshold = threshold;
+        this.enabled = enabled;
+        this.sortOrder = sortOrder;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public long currentOf(TitleProgress progress) {
         return metricType.currentOf(progress);
     }

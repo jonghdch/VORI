@@ -17,4 +17,7 @@ public interface UserTitleRepository extends JpaRepository<UserTitle, Long> {
     List<UserTitle> findByUserId(@Param("userId") Long userId);
 
     Optional<UserTitle> findByUserIdAndTitleId(Long userId, Long titleId);
+
+    /** 이 칭호를 가진 사용자 수 — 어드민 삭제 가드·표시용. */
+    long countByTitleId(Long titleId);
 }
