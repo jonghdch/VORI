@@ -129,7 +129,7 @@ public class TitleService {
             if (!title.isAchieved(progress)) continue;
             if (userTitleRepository.findByUserIdAndTitleId(userId, title.getId()).isPresent()) continue;
 
-            Long unlocksThemeId = unlockedThemeIdOf(title.getName());
+            Long unlocksThemeId = unlockedThemeIdOf(title.getId());
 
             userTitleRepository.save(UserTitle.builder()
                     .userId(userId)
@@ -150,13 +150,12 @@ public class TitleService {
     /**
      * 이 칭호가 해제하는 테마 id — 기록용이다.
      *
-     * 해금 판정 자체는 ThemeService 가 theme_master.unlock_title_name 으로만 한다. 여기 값은
+     * 해금 판정 자체는 ThemeService 가 theme_master.unlock_title_id 로만 한다. 여기 값은
      * 칭호 화면이 "🎁 코지 테마 해금" 을 띄우기 위한 것이라, 없어도 해금은 정상 동작한다.
-     * 그래서 조회 실패를 막지 않고 null 로 흘린다. titles.name 과 theme_master.unlock_title_name 이
-     * 같은 표시 이름을 쓰므로 이름으로 잇는다.
+     * 그래서 조회 실패를 막지 않고 null 로 흘린다. 칭호 id 로 잇는다(V15).
      */
-    private Long unlockedThemeIdOf(String titleName) {
-        List<ThemeMaster> themes = themeMasterRepository.findByUnlockTitleName(titleName);
+    private Long unlockedThemeIdOf(Long titleId) {
+        List<ThemeMaster> themes = themeMasterRepository.findByUnlockTitleId(titleId);
         return themes.isEmpty() ? null : themes.get(0).getId();
     }
 

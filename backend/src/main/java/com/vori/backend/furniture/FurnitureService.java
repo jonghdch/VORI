@@ -28,7 +28,7 @@ import java.util.Set;
  * 인벤토리에 쌓아둔 가구는 계산에서 빠진다 — 꾸며야 이득이라는 게 보상 설계 의도.
  *
  * 같은 테마 가구를 required_count 이상 **배치**하면 세트 보너스가 추가된다. 테마 해금은
- * 칭호로 하며(theme_master.unlock_title_name), 판정은 ThemeService 한 곳에서만 한다.
+ * 칭호로 하며(theme_master.unlock_title_id), 판정은 ThemeService 한 곳에서만 한다.
  */
 @Slf4j
 @Service
@@ -145,7 +145,7 @@ public class FurnitureService {
     /** 해금 조건이 걸린 테마인데 그 칭호가 없으면 잠김. 테마가 없거나 조건이 없으면 항상 열림. */
     private boolean isLocked(ThemeMaster theme, Set<String> unlockedNames) {
         return theme != null
-                && theme.getUnlockTitleName() != null
+                && theme.getUnlockTitleId() != null
                 && !unlockedNames.contains(theme.getName());
     }
 

@@ -407,7 +407,7 @@ INDEX(user_id, released_at)
 | 테마 이름 | `name` | UQ | `VARCHAR(50) NOT NULL` | 테마 이름 |
 | 세트 보너스율 | `set_bonus_pct` |  | `DECIMAL(5,2) DEFAULT 0` | 세트 효과 보너스율 |
 | 세트 필요 개수 | `required_count` |  | `TINYINT DEFAULT 3` | 세트 효과 필요 개수 |
-| 잠금 해제 칭호 이름 | `unlock_title_name` |  | `VARCHAR(50) NULL` | 이 칭호가 있으면 테마 해제 |
+| 잠금 해제 칭호 | `unlock_title_id` | FK → `titles.id` | `BIGINT NULL` | 이 칭호가 있으면 테마 해제. V15 에서 이름(`unlock_title_name`) 연결을 id 로 교체 |
 
 ---
 
