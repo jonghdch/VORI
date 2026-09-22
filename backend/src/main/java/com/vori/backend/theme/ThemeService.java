@@ -3,7 +3,6 @@ package com.vori.backend.theme;
 import com.vori.backend.furniture.UserFurniture;
 import com.vori.backend.furniture.UserFurnitureRepository;
 import com.vori.backend.theme.dto.ThemeResponse;
-import com.vori.backend.title.UserTitle;
 import com.vori.backend.title.UserTitleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,7 +19,7 @@ import java.util.stream.Collectors;
 /**
  * 마이룸 테마 — 해금 판정과 세트 발동 현황.
  *
- * 해금의 단일 진실은 theme_master.unlock_title_name 이다. "그 이름의 칭호를 가졌는가" 하나만 본다.
+ * 해금의 단일 진실은 theme_master.unlock_title_id 이다. "그 id 의 칭호를 가졌는가" 하나만 본다.
  * user_titles.unlocks_theme_id 는 칭호 획득 시점에 남기는 기록일 뿐 판정에 쓰지 않는다 —
  * 판정을 두 군데서 하면 둘이 어긋났을 때 어느 쪽이 맞는지 알 수 없다.
  *
@@ -60,17 +59,17 @@ public class ThemeService {
 
     /**
      * 사용자가 쓸 수 있는 테마 이름.
-     * unlock_title_name 이 null 인 테마는 조건이 없다는 뜻이므로 누구나 해금 상태다.
+     * unlock_title_id 가 null 인 테마는 조건이 없다는 뜻이므로 누구나 해금 상태다.
      */
     @Transactional(readOnly = true)
     public Set<String> unlockedNames(Long userId) {
-        // 칭호 이름은 titles 마스터에 있다(V11). findByUserId 가 title 을 join fetch 하므로 N+1 은 없다.
-        Set<String> ownedTitles = userTitleRepository.findByUserId(userId).stream()
-                .map(ut -> ut.getTitle().getName())
+        // 칭호는 id 로 비교한다. 이름으로 비교하면 칭호 이름을 고치는 순간 해금이 끊긴다(V15).
+        Set<Long> ownedTitleIds = userTitleRepository.findByUserId(userId).stream()
+                .map(ut -> ut.getTitle().getId())
                 .collect(Collectors.toSet());
 
         return themeMasterRepository.findAll().stream()
-                .filter(t -> t.getUnlockTitleName() == null || ownedTitles.contains(t.getUnlockTitleName()))
+                .filter(t -> t.getUnlockTitleId() == null || ownedTitleIds.contains(t.getUnlockTitleId()))
                 .map(ThemeMaster::getName)
                 .collect(Collectors.toSet());
     }
