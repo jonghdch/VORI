@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
-import { deleteExpense, getMonthlyLedger } from "../../api/ledger";
+import { getMonthlyLedger } from "../../api/ledger";
 import { listInquiriesByDate } from "../../api/inquiries";
 import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
 import "../Home/HomeDashboard.css";
@@ -74,6 +74,10 @@ function dayLabel(year, month, day) {
   return `${month}월 ${day}일 (${weekday})`;
 }
 
+function toIsoDate(year, month, day) {
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
 // 백엔드 LedgerResponse → 화면이 쓰는 행 형태로 변환.
 function toRow(item) {
   const day = Number(item.date.split("-")[2]);
@@ -112,7 +116,12 @@ function WalletPage({ user, onLogout }) {
     }
     const [y, m, d] = selectedDateParam.split("-").map(Number);
     const parsed = new Date(y, m - 1, d);
-    return Number.isNaN(parsed.getTime()) ? today : parsed;
+    const isValid =
+      !Number.isNaN(parsed.getTime()) &&
+      parsed.getFullYear() === y &&
+      parsed.getMonth() === m - 1 &&
+      parsed.getDate() === d;
+    return isValid && parsed <= today ? parsed : today;
   }, [selectedDateParam, today]);
   const [viewYear, setViewYear] = useState(initialDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth() + 1);
@@ -129,7 +138,6 @@ function WalletPage({ user, onLogout }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [mutating, setMutating] = useState(false);
 
   // 기본 선택 = 오늘 (이번 달 한정)
   const [selectedDay, setSelectedDay] = useState(() => initialDate.getDate());
@@ -276,38 +284,31 @@ function WalletPage({ user, onLogout }) {
   }, [today]);
 
   const selectedDayRows = selectedDay ? rowsByDay.get(selectedDay) ?? [] : [];
-  const selectedDayTotal = selectedDayRows
-    .filter((r) => r.type === "EXPENSE")
-    .reduce((sum, r) => sum + r.amountNum, 0);
+  const selectedDayExpenses = selectedDayRows.filter((r) => r.type === "EXPENSE");
   const selectedRow = selectedId
     ? rows.find((r) => r.id === selectedId) ?? null
     : null;
 
-  const reloadRows = async () => {
-    const data = await getMonthlyLedger(`${viewYear}-${pad2(viewMonth)}`);
-    const mapped = Array.isArray(data) ? data.map(toRow) : [];
-    setRows(mapped);
-    return mapped;
-  };
+  const selectedDateIso = selectedDay
+    ? toIsoDate(viewYear, viewMonth, selectedDay)
+    : null;
+  const todayIso = toIsoDate(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    today.getDate(),
+  );
+  const selectedDateIsFuture = selectedDateIso && selectedDateIso > todayIso;
+  const expenseToEdit =
+    selectedRow?.type === "EXPENSE" && selectedRow.day === selectedDay
+      ? selectedRow
+      : selectedDayExpenses[0] ?? null;
 
-  const handleDeleteExpense = async () => {
-    if (!selectedRow || selectedRow.type !== "EXPENSE" || mutating) return;
-    if (!window.confirm(`“${selectedRow.name}” 지출을 삭제할까요?`)) return;
-    setMutating(true);
-    try {
-      await deleteExpense(selectedRow.dbId);
-      await reloadRows();
-      setSelectedId(null);
-    } catch (e) {
-      window.alert(e.message || "삭제하지 못했어요.");
-    } finally {
-      setMutating(false);
-    }
-  };
-
-  const handleEditExpense = () => {
-    if (!selectedRow || selectedRow.type !== "EXPENSE" || mutating) return;
-    navigate(`/wallet/new?date=${selectedRow.dateIso}&editExpenseId=${selectedRow.dbId}`);
+  const handleAddOrEditExpense = () => {
+    if (!selectedDateIso || selectedDateIsFuture) return;
+    const editQuery = expenseToEdit
+      ? `&editExpenseId=${expenseToEdit.dbId}`
+      : "";
+    navigate(`/wallet/new?date=${selectedDateIso}${editQuery}`);
   };
 
   // 보고 있는 달이 실제 이번 달일 때만 '오늘' 표시.
@@ -326,6 +327,9 @@ function WalletPage({ user, onLogout }) {
       m = 1;
       y += 1;
     }
+    if (y > today.getFullYear() || (y === today.getFullYear() && m > today.getMonth() + 1)) {
+      return;
+    }
     setViewYear(y);
     setViewMonth(m);
   };
@@ -336,6 +340,7 @@ function WalletPage({ user, onLogout }) {
     const y = cur.getFullYear();
     const m = cur.getMonth() + 1;
     const d = cur.getDate();
+    if (cur > today) return;
     if (y === viewYear && m === viewMonth) {
       selectDay(d);
       return;
@@ -346,6 +351,7 @@ function WalletPage({ user, onLogout }) {
   };
 
   const selectDay = (day) => {
+    if (toIsoDate(viewYear, viewMonth, day) > todayIso) return;
     setSelectedDay(day);
     const dayRows = rowsByDay.get(day) ?? [];
     setSelectedId(dayRows[0]?.id ?? null);
@@ -451,17 +457,19 @@ function WalletPage({ user, onLogout }) {
                 className="ledger-date-arrow"
                 aria-label={viewMode === "week" ? "다음 주" : "다음 달"}
                 onClick={() => viewMode === "week" ? changeWeek(1) : changeMonth(1)}
+                disabled={
+                  viewMode === "month"
+                    ? viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1
+                    : (() => {
+                        const next = new Date(viewYear, viewMonth - 1, selectedDay ?? 1);
+                        next.setDate(next.getDate() + 7);
+                        return next > today;
+                      })()
+                }
               >
                 ›
               </button>
             </div>
-            <button
-              type="button"
-              className="home-btn home-btn-primary ledger-add-btn"
-              onClick={() => navigate("/wallet/new")}
-            >
-              + 지출 추가
-            </button>
           </div>
         </div>
 
@@ -490,6 +498,7 @@ function WalletPage({ user, onLogout }) {
                   const dayRows = rowsByDay.get(day) ?? [];
                   const daySignal = signalByDay.get(day)?.toLowerCase();
                   const isToday = day === todayDay;
+                  const isFuture = toIsoDate(viewYear, viewMonth, day) > todayIso;
                   return (
                     <button
                       key={day}
@@ -500,10 +509,12 @@ function WalletPage({ user, onLogout }) {
                         daySignal ? `ledger-cal-cell--signal-${daySignal}` : "",
                         isToday ? "ledger-cal-cell--today" : "",
                         selectedDay === day ? "ledger-cal-cell--selected" : "",
+                        isFuture ? "ledger-cal-cell--future" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
                       aria-pressed={selectedDay === day}
+                      disabled={isFuture}
                       onClick={() => selectDay(day)}
                     >
                       <span className="ledger-cal-day">{day}</span>
@@ -532,6 +543,7 @@ function WalletPage({ user, onLogout }) {
                   const dayRows = isCurrentMonth ? (rowsByDay.get(day) ?? []) : [];
                   const daySignal = isCurrentMonth ? signalByDay.get(day)?.toLowerCase() : null;
                   const isSelected = isCurrentMonth && selectedDay === day;
+                  const isFuture = toIsoDate(d.getFullYear(), d.getMonth() + 1, day) > todayIso;
 
                   if (!isCurrentMonth) {
                     return (
@@ -556,10 +568,12 @@ function WalletPage({ user, onLogout }) {
                         daySignal ? `ledger-cal-cell--signal-${daySignal}` : "",
                         isToday ? "ledger-cal-cell--today" : "",
                         isSelected ? "ledger-cal-cell--selected" : "",
+                        isFuture ? "ledger-cal-cell--future" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
                       aria-pressed={isSelected}
+                      disabled={isFuture}
                       onClick={() => selectDay(day)}
                     >
                       <span className="ledger-cal-day">{day}</span>
@@ -599,9 +613,14 @@ function WalletPage({ user, onLogout }) {
                   : "날짜를 선택하세요"}
               </h2>
               {selectedDay && (
-                <span className="ledger-day-total">
-                  {formatWon(selectedDayTotal)}
-                </span>
+                <button
+                  type="button"
+                  className="home-btn home-btn-primary ledger-add-btn"
+                  onClick={handleAddOrEditExpense}
+                  disabled={selectedDateIsFuture}
+                >
+                  {selectedDayExpenses.length > 0 ? "지출 수정" : "+ 지출 추가"}
+                </button>
               )}
             </div>
 
@@ -694,16 +713,6 @@ function WalletPage({ user, onLogout }) {
                     <span className="ledger-detail-ai-badge">
                       AI 판정 · {selectedRow.aiStatus}
                     </span>
-                  </div>
-                )}
-                {selectedRow.type === "EXPENSE" && (
-                  <div className="ledger-detail-actions">
-                    <button type="button" onClick={handleEditExpense} disabled={mutating}>
-                      수정
-                    </button>
-                    <button type="button" className="is-danger" onClick={handleDeleteExpense} disabled={mutating}>
-                      삭제
-                    </button>
                   </div>
                 )}
               </div>

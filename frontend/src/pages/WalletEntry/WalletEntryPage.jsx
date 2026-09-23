@@ -29,7 +29,16 @@ import "./WalletEntry.css";
 function WalletEntryPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const dateStr = params.get("date") || toIsoDate();
+  const todayStr = toIsoDate();
+  const requestedDate = params.get("date");
+  const requestedDateValue = parseIsoDate(requestedDate);
+  const requestedDateIsValid =
+    requestedDate &&
+    /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
+    toIsoDate(requestedDateValue) === requestedDate;
+  // 쿼리를 직접 수정해도 미래 날짜에는 가계부를 작성할 수 없다.
+  const dateStr =
+    requestedDateIsValid && requestedDate <= todayStr ? requestedDate : todayStr;
   const editExpenseId = Number(params.get("editExpenseId")) || null;
   const isEditMode = editExpenseId != null;
   const past = isPastDate(dateStr);
