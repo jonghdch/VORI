@@ -46,7 +46,11 @@ EXPENSES = [
 
 # 우드 가구 2개를 미리 배치해 둔다. 2/3 라 발동하지 않는다 — 무대에서 발동하는
 # 스터디 세트와 대비를 만드는 용도다.
-FURNITURE_PRESET = ["BOOKSHELF", "DRAWER_CHEST"]
+#
+# 좌표는 방 크기 대비 백분율(0~100)이다. 예전에는 (0,0)·(1,0) 을 줬는데 그러면
+# 방 왼쪽 위 구석에 딱 붙어 화면에서 거의 안 보였다. 무대에서 "우드는 2/3 라 아직
+# 발동하지 않았다" 를 눈으로 짚어야 하므로 방 안쪽, 펫(50,62)과 겹치지 않는 자리에 둔다.
+FURNITURE_PRESET = [("BOOKSHELF", 15, 58), ("DRAWER_CHEST", 32, 62)]
 
 # 무대에서 살 가구. 스터디 테마는 '기록의 시작' 칭호로 잠금이 풀리므로, 무대 1번에서
 # 칭호를 딴 뒤에야 살 수 있다 — 칭호 → 해금 → 구매 → 세트 발동이 하나의 사슬이 된다.
@@ -144,13 +148,13 @@ def seed(email):
 
     # ── 가구 2개 구매·배치 ──
     print("\n우드 가구 2종 구매·배치 (3번째는 무대에서)")
-    for i, item in enumerate(FURNITURE_PRESET):
+    for item, x, y in FURNITURE_PRESET:
         code, f = user.call("POST", f"/api/furniture/buy?item={item}")
         if code != 200:
             print(f"  구매 실패({item}): {code} {msg(f)}")
             sys.exit(1)
         user.call("PATCH", f"/api/furniture/{f['id']}/place",
-                  {"positionX": i, "positionY": 0})
+                  {"positionX": x, "positionY": y})
         print(f"  {f['name']} 구매·배치 ({f['price']:,} 코인)")
 
     # ── 펫이 성체가 아니면 어드민 치트로 보정 ──
@@ -295,7 +299,7 @@ def rehearse(user, user_id):
         check(f"{item} 구매 200", code == 200, msg(f) if code != 200 else "")
         if code == 200:
             user.call("PATCH", f"/api/furniture/{f['id']}/place",
-                      {"positionX": 3 + i, "positionY": 0})
+                      {"positionX": 68 + i * 12, "positionY": 40 + i * 20})
     _, themes = user.call("GET", "/api/themes")
     study = by_name(themes).get("스터디", {})
     check("스터디 세트 발동 ⭐", study.get("active") is True,
