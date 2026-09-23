@@ -24,6 +24,7 @@ function WalletAnalysisPage({ user }) {
   const [isEventOpen] = useState(() => canUseAiJudge(user));
 
   const [loading, setLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(8);
   const [loadError, setLoadError] = useState(false);
   const [inquiries, setInquiries] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -47,6 +48,7 @@ function WalletAnalysisPage({ user }) {
     const MAX_RETRIES = 5;
     const RETRY_INTERVAL_MS = 2000;
     setLoading(true);
+    setLoadProgress(8);
     setLoadError(false);
     const tryFetch = async () => {
       if (cancelled) return;
@@ -59,10 +61,12 @@ function WalletAnalysisPage({ user }) {
         setExpenses(expenseData);
         if (data.length === 0 && attempts < MAX_RETRIES) {
           attempts++;
+          setLoadProgress(45 + attempts * 8);
           setTimeout(tryFetch, RETRY_INTERVAL_MS);
           return;
         }
         setInquiries(data);
+        setLoadProgress(100);
         setLoading(false);
       } catch {
         // 네트워크 단절 등 fetch 자체 실패 — "분석 중" 화면에 영원히 갇히지 않게
@@ -74,9 +78,11 @@ function WalletAnalysisPage({ user }) {
     };
     const start = async () => {
       try {
+        setLoadProgress(20);
         const result = await startTodayJudgment();
         if (cancelled) return;
         setJudgment(result);
+        setLoadProgress(45);
         tryFetch();
       } catch {
         if (cancelled) return;
@@ -105,7 +111,7 @@ function WalletAnalysisPage({ user }) {
   const goDone = () => navigate("/wallet");
   const goBack = () => navigate("/wallet");
 
-  // 답변 입력된 inquiry 들만 POST. 끝나면 Step 3 로 이동.
+  // 답변 입력된 inquiry 들만 POST. 완료 뒤 갱신된 소비별 판정 결과를 보여준다.
   const submitAll = async () => {
     if (submitting) return;
     setSubmitting(true);
@@ -118,7 +124,11 @@ function WalletAnalysisPage({ user }) {
         await answerInquiry(inq.inquiryId, text);
         submittedRef.current.add(inq.inquiryId);
       }
-      goDone();
+      const refreshedExpenses = await listExpensesByDate(dateStr);
+      setExpenses(refreshedExpenses);
+      setJudgment(null);
+      setInquiries([]);
+      setPage(1);
     } catch (e) {
       setSubmitError(e.message || "답변 저장 중 오류가 발생했어요");
     } finally {
@@ -147,6 +157,17 @@ function WalletAnalysisPage({ user }) {
               <p className="ledger-subtitle">
                 AI가 예외적인 지출을 살펴보고 있어요. 잠시만 기다려주세요.
               </p>
+              <div
+                className="ledger-judgment-progress"
+                role="progressbar"
+                aria-label="소비 판정 진행률"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow={loadProgress}
+              >
+                <span style={{ width: `${loadProgress}%` }} />
+              </div>
+              <span className="ledger-judgment-progress-label">{loadProgress}%</span>
             </div>
           </div>
         ) : loadError ? (
@@ -158,6 +179,31 @@ function WalletAnalysisPage({ user }) {
                 네트워크 상태를 확인하고 다시 시도해주세요.
               </p>
             </div>
+            {expenses.length > 0 && (
+              <div className="ledger-judgment-list" aria-label="소비별 판정 결과">
+                {expenses.map((expense) => {
+                  const signal = expense.signalFinal || expense.signalInitial || "GRAY";
+                  return (
+                    <article key={expense.id} className="ledger-judgment-card">
+                      <div className="ledger-judgment-card-head">
+                        <div>
+                          <strong>{expense.item || "지출"}</strong>
+                          <span>{Number(expense.amount || 0).toLocaleString("ko-KR")}원</span>
+                        </div>
+                        <span className={`ledger-signal-result ledger-signal-result--${signal.toLowerCase()}`}>
+                          <span className="ledger-signal-dot" aria-hidden />
+                          {signalLabel(signal)}
+                        </span>
+                      </div>
+                      <div className="ledger-judgment-reason">
+                        <span>판정 이유</span>
+                        <p>{judgmentReason(expense, signal)}</p>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
             <div className="ledger-actions">
               <div className="ledger-actions-row">
                 <button type="button" className="ledger-back" onClick={goBack}>
@@ -379,6 +425,26 @@ function signalLabel(signal) {
   if (signal === "GREEN") return "초록 · 절약";
   if (signal === "RED") return "빨강 · 과소비";
   return "주황 · 보통";
+}
+
+function judgmentReason(expense, signal) {
+  const savedAmount = Number(expense.savedAmount);
+  if (signal === "GREEN") {
+    if (Number.isFinite(savedAmount) && savedAmount > 0) {
+      return `평소 소비 기준보다 ${savedAmount.toLocaleString("ko-KR")}원 절약한 소비예요.`;
+    }
+    if (expense.signalInitial && expense.signalInitial !== "GREEN") {
+      return "작성한 소비 사유가 반영되어 합리적인 지출로 판정됐어요.";
+    }
+    return "평소 소비 범위보다 알뜰하게 사용한 합리적인 지출이에요.";
+  }
+  if (signal === "RED") {
+    return "평소 소비 범위보다 금액이 커서 한 번 더 확인이 필요한 지출이에요.";
+  }
+  if (expense.signalInitial && expense.signalInitial !== expense.signalFinal) {
+    return "작성한 소비 사유를 반영해 일반적인 소비 범위로 조정됐어요.";
+  }
+  return "평소와 비슷한 범위의 소비로 판정됐어요.";
 }
 
 export default WalletAnalysisPage;
