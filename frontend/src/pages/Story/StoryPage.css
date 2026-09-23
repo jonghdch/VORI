@@ -313,6 +313,23 @@
   transform: translateZ(0);
   contain: strict;
 }
+/* WebGL 을 못 쓸 때 캔버스 대신 보여주는 CSS 달. 같은 자리·같은 크기. */
+.story-moon-fallback {
+  position: absolute;
+  top: calc(var(--moon-size) / -2);
+  left: calc(var(--moon-size) / -2);
+  width: var(--moon-size);
+  height: var(--moon-size);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 30%, rgba(0, 0, 0, 0.16) 0 7%, transparent 8%),
+    radial-gradient(circle at 62% 58%, rgba(0, 0, 0, 0.14) 0 5%, transparent 6%),
+    radial-gradient(circle at 48% 74%, rgba(0, 0, 0, 0.12) 0 4%, transparent 5%),
+    radial-gradient(circle at 30% 34%, #f1ebd9 0%, #cfc6ad 46%, #8d8570 78%, #3a3730 100%);
+  box-shadow:
+    0 0 48px rgba(255, 245, 200, 0.2),
+    0 0 120px rgba(255, 245, 200, 0.12);
+}
 
 /* ── 공통 구간 (챕터를 감싸는 큰 영역) ────────────────────── */
 .story-section {
@@ -570,6 +587,12 @@
   line-height: 1;
   filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.1));
 }
+.story-character-img {
+  max-width: 68%;
+  max-height: 78%;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.1));
+}
 .story-character-info {
   padding: 16px 16px 20px;
   text-align: center;
@@ -629,6 +652,12 @@
 .story-evolution-emoji {
   font-size: 54px;
   line-height: 1;
+  filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.1));
+}
+.story-evolution-img {
+  max-width: 66%;
+  max-height: 66%;
+  object-fit: contain;
   filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.1));
 }
 .story-evolution-label {
@@ -843,5 +872,49 @@
   .story-character-detail {
     grid-template-columns: 1fr;
     gap: 24px;
+  }
+}
+
+/* ── 좁은 화면(1100px 미만) — 달과 본문 분리 ─────────────────
+   지그재그 배치가 풀리면 달과 챕터가 둘 다 화면 정중앙에 sticky 로 겹친다.
+   달만 위쪽(22vh)에 작게 고정하고, 본문은 고정하지 않고 그 아래로 흐르게 한다.
+   (긴 챕터를 화면 중앙에 고정하면 작은 화면에선 위아래가 잘린다.)
+   본문이 달 자리를 지나가는 순간을 위해 뒤에 옅은 스크림을 깐다.
+   달의 세로 위치(top)는 JS 의 MOON_TOP_OUTPUT_COMPACT 와 짝. */
+@media (max-width: 1099px) {
+  .story {
+    --moon-size: min(200px, 22vh);
+  }
+  .story-section--chapter {
+    min-height: auto;
+    padding: 30vh 20px 44vh;
+  }
+  .story-section--dark {
+    padding-top: 62vh;
+  }
+  .story-section--light:not(.story-section--pets) {
+    padding-top: 30vh;
+    padding-bottom: 64vh;
+  }
+  .story-chapter {
+    position: relative;
+    top: auto;
+    transform: none;
+  }
+  .story-chapter-reveal {
+    padding: 14px 16px;
+    margin: 0 -16px;
+    border-radius: 16px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .story-section--dark .story-chapter-reveal {
+    background: rgba(7, 9, 31, 0.55);
+  }
+  .story-section--twilight .story-chapter-reveal {
+    background: rgba(29, 34, 69, 0.5);
+  }
+  .story-section--light .story-chapter-reveal {
+    background: rgba(245, 243, 238, 0.6);
   }
 }

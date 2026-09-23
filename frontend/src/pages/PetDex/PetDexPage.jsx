@@ -9,7 +9,7 @@ import {
   PET_CATALOG,
   STAGE_ORDER,
 } from "../../components/petCatalog";
-import { PetArt, STAGE_LABEL } from "../../components/petVisual";
+import { PetArt } from "../../components/petVisual";
 import "../Home/HomeDashboard.css";
 import "./PetDexPage.css";
 
@@ -191,16 +191,16 @@ function PetDexPage({ onLogout }) {
                         .filter(Boolean)
                         .join(" ")}
                     >
-                      {STAGE_LABEL[stage]}
+                      {i + 1}차
                     </li>
                   ))}
                 </ol>
 
                 <p className="dex-status">
                   {raising
-                    ? `지금 ${STAGE_LABEL[raising]} 단계예요`
+                    ? `지금 ${STAGE_ORDER.indexOf(raising) + 1}차 단계예요`
                     : doneCount > 0
-                      ? "성체까지 키워 분양했어요"
+                      ? "3차까지 키워 분양했어요"
                       : "아직 키워보지 않았어요"}
                 </p>
               </li>

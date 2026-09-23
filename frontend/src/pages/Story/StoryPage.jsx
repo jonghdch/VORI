@@ -2,79 +2,88 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import SiteHeader from "../../components/SiteHeader";
+import { PET_CATALOG, DEX_TIER_LABEL, STAGE_ORDER } from "../../components/petCatalog";
+import { PetArt, STAGE_LABEL, STAGE_THRESHOLD } from "../../components/petVisual";
+import { FurnitureArt, CATEGORY_LABEL, STAT_LABEL } from "../../components/furnitureVisual";
 // SiteHeader 가 .landing-header 등 랜딩 페이지의 헤더 클래스를 그대로 쓰기
 // 때문에, 이 페이지에서도 LandingPage.css 를 함께 import 합니다.
 import "../Landing/LandingPage.css";
 import "./StoryPage.css";
 
-// 캐릭터 데이터 (placeholder).
-// 확정되면 emoji 자리에 <img src="/images/pets/xxx.png" /> 로 교체하고,
-// name·desc 만 수정하면 됩니다.
-const CHARACTERS = [
-  { id: "dragon", emoji: "🐲", name: "용",     desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "lion",   emoji: "🦁", name: "사자",   desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "snake",  emoji: "🐍", name: "뱀",     desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "fox",    emoji: "🦊", name: "여우",   desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "deer",   emoji: "🦌", name: "사슴",   desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "penguin",emoji: "🐧", name: "펭귄",   desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "wolf",   emoji: "🐺", name: "늑대",   desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "turtle", emoji: "🐢", name: "거북이", desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "dog",    emoji: "🐶", name: "강아지", desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "cat",    emoji: "🐱", name: "고양이", desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "rabbit", emoji: "🐰", name: "토끼",   desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "sheep",  emoji: "🐑", name: "양",     desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "frog",   emoji: "🐸", name: "개구리", desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "squirrel",emoji: "🐿️", name: "다람쥐", desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "monkey", emoji: "🐵", name: "원숭이", desc: "한 줄 소개가 들어갈 자리예요." },
-  { id: "panda",  emoji: "🐼", name: "팬더",   desc: "한 줄 소개가 들어갈 자리예요." },
-];
+// 루미나 친구들 한 줄 소개 — 도감(petCatalog)의 appearanceKey 기준.
+// 이름·등급·외형은 도감 데이터를 그대로 쓰고, 여기엔 스토리용 소개문만 둔다.
+// 종족을 추가하면 petCatalog·petVisual 과 함께 여기도 한 줄 추가.
+const PET_BLURB = {
+  dragon: "가장 오래 잠든 알. 깨어나면 루미나의 하늘을 다시 밝혀요.",
+  lion: "소원의 파수꾼. 화성의 파장 앞에서도 물러서지 않았어요.",
+  snake: "달의 그림자 속을 지키던 친구. 조용하지만 눈이 밝아요.",
+  fox: "소원을 가장 먼저 알아채는 친구. 꾀가 많고 발이 빨라요.",
+  deer: "달빛 초원을 지키던 친구. 걸음이 조용하고 마음이 넓어요.",
+  penguin: "얼음 바다의 소원을 모으던 친구. 서두르지 않지만 꾸준해요.",
+  wolf: "밤마다 달을 향해 노래하던 친구. 의리가 깊어요.",
+  turtle: "루미나에서 가장 오래 산 친구. 급할 것 없다는 게 신조예요.",
+  puppy: "토끼와 함께 지구에 먼저 내려온 친구. 당신의 첫 동료가 돼요.",
+  kitten: "창가에서 소원을 듣던 친구. 변덕스럽지만 정이 많아요.",
+  rabbit: "튜토리얼 토끼의 동생. 소원 배달을 도와요.",
+  sheep: "구름을 닮은 친구. 곁에 있으면 걱정이 조금 가벼워져요.",
+  frog: "달의 연못에 살던 친구. 작은 소원도 놓치지 않아요.",
+  squirrel: "도토리처럼 소원을 모아 두던 친구. 알뜰한 게 장점이에요.",
+  monkey: "장난기 많은 친구. 지루한 기록도 놀이로 만들어요.",
+  panda: "느긋한 친구. 하루에 한 번만 기록해도 반겨 줘요.",
+};
 
-// 아이템 데이터 (placeholder). 마이룸 가구·소품 같은 항목이 들어갑니다.
-// 추가/수정 시 같은 형식으로 한 줄 추가.
-const ITEMS = [
-  {
-    id: "item-1",
-    emoji: "🛏️",
-    name: "아이템 #1",
-    tag: "마이룸 · 가구",
-    desc: "한 줄 소개가 들어갈 자리예요. 어떤 효과를 주는지.",
-    thumb: "energy",
-  },
-  {
-    id: "item-2",
-    emoji: "🪴",
-    name: "아이템 #2",
-    tag: "마이룸 · 소품",
-    desc: "한 줄 소개가 들어갈 자리예요. 분위기·보너스 등.",
-    thumb: "smart",
-  },
-  {
-    id: "item-3",
-    emoji: "🎀",
-    name: "아이템 #3",
-    tag: "마이룸 · 장식",
-    desc: "한 줄 소개가 들어갈 자리예요.",
-    thumb: "charm",
-  },
-  {
-    id: "item-4",
-    emoji: "🎨",
-    name: "아이템 #4",
-    tag: "마이룸 · 장식",
-    desc: "한 줄 소개가 들어갈 자리예요.",
-    thumb: "endure",
-  },
-];
+// 캐릭터 목록 — 도감과 같은 16종. 등급 표기도 도감 이름(일반~레전드)을 따른다.
+// 이미지 에셋은 petVisual 의 PET_IMAGE 에 등록하면 여기에도 같이 반영된다.
+const CHARACTERS = PET_CATALOG.map((species) => ({
+  id: species.appearanceKey,
+  appearanceKey: species.appearanceKey,
+  name: species.name,
+  tag: DEX_TIER_LABEL[species.tier] ?? species.tier,
+  desc:
+    PET_BLURB[species.appearanceKey] ??
+    "잠든 알에서 깨어날 날을 기다리고 있어요.",
+}));
+
+// 마이룸 가구 — 백엔드 FurnitureCatalog 의 카테고리·보너스 스탯과 같게 유지한다.
+// 배치한 가구만 분양가 보너스에 들어간다 (docs/domain.md 분양가 계산 참조).
+const ITEM_STAT = {
+  BED: "ENERGY",
+  MIRROR: "CHARM",
+  VANITY: "CHARM",
+  SHELF: "IQ",
+  COMPUTER: "IQ",
+  BOARD: "IQ",
+  DRAWER: "ENDURANCE",
+  PICTURE: "ENDURANCE",
+  WALLPAPER: "CHARM",
+  FLOOR: "ENDURANCE",
+};
+const ITEMS = Object.entries(ITEM_STAT).map(([category, stat]) => ({
+  id: category,
+  category,
+  name: CATEGORY_LABEL[category] ?? category,
+  tag: `마이룸 · ${STAT_LABEL[stat] ?? stat}`,
+  desc: "마이룸에 배치해 두면 친구를 분양할 때 보너스가 붙어요.",
+}));
 
 const STORY_TABS = [
   { id: "characters", label: "캐릭터 소개" },
   { id: "items", label: "아이템" },
 ];
 
-const EVOLUTION_STAGES = ["유년기", "청소년기", "성체"];
+// 성장 단계 — 펫 화면과 같은 이름(아기 → 청소년 → 성체)과 임계값을 쓴다.
+const EVOLUTION_STAGES = STAGE_ORDER.map((stage) => ({
+  id: stage,
+  label: STAGE_LABEL[stage] ?? stage,
+  threshold: STAGE_THRESHOLD[stage] ?? 0,
+}));
 
 const MOON_TOP_INPUT = [0, 0.58, 1];
 const MOON_TOP_OUTPUT = ["50vh", "50vh", "-20vh"];
+// 좁은 화면(지그재그 배치가 풀리는 1100px 미만)에선 달을 위쪽에 작게 두고
+// 본문은 그 아래에 오게 해서 둘이 겹치지 않게 한다. CSS 의 compact 규칙과 짝.
+const COMPACT_QUERY = "(max-width: 1099px)";
+const MOON_TOP_OUTPUT_COMPACT = ["22vh", "22vh", "-30vh"];
 const MOON_MODEL_PATH = `${process.env.PUBLIC_URL}/models/moon.glb`;
 
 const STORY_CHAPTERS = [
@@ -138,9 +147,31 @@ const STORY_CHAPTERS = [
         토끼는 방향을 돌려 당신에게 다가옵니다. 이제 당신의 기록은
         <strong> 잠든 루미나 친구들을 깨우는 힘</strong>이 됩니다.
       </>,
+      <>
+        그래서 토끼는 당신에게 한 가지를 부탁합니다. 무엇을 샀는지가
+        아니라 <em>왜 샀는지</em>를 남겨 달라고. 지출에 붙인 이유는
+        소원처럼 모여 알을 깨우고, 그 선택이 합리적이었는지는 친구의
+        <strong> 스탯</strong>이 되어 남습니다. VORI 가 기록마다 사유를
+        묻는 이유가 여기에 있어요.
+      </>,
     ],
   },
 ];
+
+// matchMedia 를 React 상태로. SSR 없음(CRA)이라 첫 렌더에서 바로 읽어도 된다.
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = (event) => setMatches(event.matches);
+    setMatches(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}
 
 const chapterReveal = {
   hidden: { opacity: 1 },
@@ -232,6 +263,9 @@ function createCrateredMoonGeometry(THREE) {
 
 function Moon3D({ scrollProgress }) {
   const canvasRef = useRef(null);
+  // WebGL 컨텍스트를 못 만들면(GPU 가속 꺼짐·헤드리스 등) 캔버스 대신 CSS 달을 보여준다.
+  // 예전엔 여기서 throw 가 나면 페이지 전체가 죽었다.
+  const [webglFailed, setWebglFailed] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -245,21 +279,30 @@ function Moon3D({ scrollProgress }) {
       if (initialized) return;
       initialized = true;
 
-      const [THREE, { GLTFLoader }] = await Promise.all([
-        import("three"),
-        import("three/examples/jsm/loaders/GLTFLoader.js"),
-      ]);
-      if (cancelled) return;
+      let THREE;
+      let GLTFLoader;
+      let renderer;
+      try {
+        [THREE, { GLTFLoader }] = await Promise.all([
+          import("three"),
+          import("three/examples/jsm/loaders/GLTFLoader.js"),
+        ]);
+        if (cancelled) return;
 
-      // powerPreference: "low-power" — MacBook 의 integrated GPU 사용을 요청.
-      // 기본값 "high-performance" 는 dedicated GPU 를 깨워서 macOS 데스크탑 전환·페이지 닫기 시 GPU 전환(200~500ms) 끊김 유발.
-      // 달 회전 정도면 integrated 로 충분.
-      const renderer = new THREE.WebGLRenderer({
-        canvas,
-        antialias: true,
-        alpha: true,
-        powerPreference: "low-power",
-      });
+        // powerPreference: "low-power" — MacBook 의 integrated GPU 사용을 요청.
+        // 기본값 "high-performance" 는 dedicated GPU 를 깨워서 macOS 데스크탑 전환·페이지 닫기 시 GPU 전환(200~500ms) 끊김 유발.
+        // 달 회전 정도면 integrated 로 충분.
+        renderer = new THREE.WebGLRenderer({
+          canvas,
+          antialias: true,
+          alpha: true,
+          powerPreference: "low-power",
+        });
+      } catch (error) {
+        // three 청크 로드 실패 또는 "Error creating WebGL context." — CSS 달로 대체.
+        if (!cancelled) setWebglFailed(true);
+        return;
+      }
       renderer.setClearColor(0x000000, 0);
       renderer.outputColorSpace = THREE.SRGBColorSpace;
 
@@ -396,6 +439,9 @@ function Moon3D({ scrollProgress }) {
     };
   }, [scrollProgress]);
 
+  if (webglFailed) {
+    return <div className="story-moon-fallback" aria-hidden />;
+  }
   return <canvas ref={canvasRef} className="story-moon-canvas" aria-hidden />;
 }
 
@@ -464,10 +510,11 @@ function StoryPage({ user, onLogout }) {
     target: ch3ArticleRef,
     offset: ["start end", "end start"],
   });
+  const isCompact = useMediaQuery(COMPACT_QUERY);
   const moonTop = useTransform(
     ch3Progress,
     MOON_TOP_INPUT,
-    MOON_TOP_OUTPUT
+    isCompact ? MOON_TOP_OUTPUT_COMPACT : MOON_TOP_OUTPUT
   );
 
   const goLanding = () => navigate("/");
@@ -535,9 +582,8 @@ function StoryPage({ user, onLogout }) {
       </div>{/* /.story-chapters */}
 
       {/* ───────── 펫 안내 (메이플 직업 페이지 스타일 그리드) ──────── */}
-      {/* 캐릭터는 placeholder 4종(스탯 4종 대응). 캐릭터 확정 시 emoji /
-          이름 / tag / desc 만 수정하면 됩니다. 이미지가 준비되면 thumb 의
-          이모지를 <img src=... /> 로 교체. */}
+      {/* 캐릭터는 도감(petCatalog) 16종, 아이템은 가구 카테고리 10종.
+          소개문은 위 PET_BLURB, 이미지는 petVisual / furnitureVisual 에서 관리. */}
       <section
         id="lumina-guide"
         className="story-section story-section--light story-section--pets"
@@ -576,19 +622,24 @@ function StoryPage({ user, onLogout }) {
               <div className="story-evolution">
                 {EVOLUTION_STAGES.map((stage, index) => (
                   <div
-                    key={`${selectedCharacter.id}-${stage}`}
+                    key={`${selectedCharacter.id}-${stage.id}`}
                     className="story-evolution-step"
                   >
                     <div className="story-evolution-thumb">
-                      <span className="story-evolution-emoji" aria-hidden>
-                        {selectedCharacter.emoji}
-                      </span>
+                      <PetArt
+                        appearanceKey={selectedCharacter.appearanceKey}
+                        name={selectedCharacter.name}
+                        className="story-evolution-img"
+                        emojiClassName="story-evolution-emoji"
+                      />
                     </div>
-                    <div className="story-evolution-label">{stage}</div>
+                    <div className="story-evolution-label">{stage.label}</div>
                     <div className="story-evolution-note">
                       {index === 0 && "작은 떡을 기다리는 첫 모습"}
-                      {index === 1 && "습관이 쌓이며 성격이 드러나는 시기"}
-                      {index === 2 && "스탯의 흔적을 품고 완성된 모습"}
+                      {index === 1 &&
+                        `스탯 합계 ${stage.threshold}부터. 습관이 쌓이며 성격이 드러나는 시기`}
+                      {index === 2 &&
+                        `스탯 합계 ${stage.threshold}부터. 스탯의 흔적을 품고 완성된 모습`}
                     </div>
                   </div>
                 ))}
@@ -604,7 +655,11 @@ function StoryPage({ user, onLogout }) {
                 <dl className="story-character-detail-list">
                   <div>
                     <dt>성장 방식</dt>
-                    <dd>합리적인 소비 기록이 쌓일수록 진화 단계가 열립니다.</dd>
+                    <dd>
+                      합리적인 소비 기록이 쌓일수록 진화 단계가 열립니다. 스탯
+                      합계 {EVOLUTION_STAGES[1].threshold}에 {EVOLUTION_STAGES[1].label},{" "}
+                      {EVOLUTION_STAGES[2].threshold}에 {EVOLUTION_STAGES[2].label}가 됩니다.
+                    </dd>
                   </div>
                   <div>
                     <dt>마이룸 흔적</dt>
@@ -651,9 +706,21 @@ function StoryPage({ user, onLogout }) {
                     }
                   >
                     <div className="story-character-thumb">
-                      <span className="story-character-emoji" aria-hidden>
-                        {c.emoji}
-                      </span>
+                      {isCharacter ? (
+                        <PetArt
+                          appearanceKey={c.appearanceKey}
+                          name={c.name}
+                          className="story-character-img"
+                          emojiClassName="story-character-emoji"
+                        />
+                      ) : (
+                        <FurnitureArt
+                          category={c.category}
+                          name={c.name}
+                          className="story-character-img"
+                          emojiClassName="story-character-emoji"
+                        />
+                      )}
                     </div>
                     <div className="story-character-info">
                       {c.tag && <div className="story-character-tag">{c.tag}</div>}
