@@ -144,6 +144,7 @@ function WalletConfirmPage({ user }) {
 
   // 확인 직전 단계는 항상 입력(Step 1). 소비 분석은 작성 흐름에서 빠졌다.
   const goBack = () => navigate(`/wallet/new?date=${dateStr}`);
+  const goDone = () => navigate(`/wallet?date=${dateStr}`);
 
   return (
     <div className="ledger">
@@ -241,7 +242,7 @@ function WalletConfirmPage({ user }) {
             <button
               type="button"
               className="ledger-next"
-              onClick={() => navigate("/home")}
+              onClick={goDone}
             >
               완료하기
             </button>

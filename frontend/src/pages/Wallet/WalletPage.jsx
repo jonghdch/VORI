@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import { deleteExpense, getMonthlyLedger } from "../../api/ledger";
@@ -101,11 +101,21 @@ function toRow(item) {
 
 function WalletPage({ user, onLogout }) {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const selectedDateParam = params.get("date");
 
   // 보고 있는 달 (1-based month). 처음엔 실제 이번 달부터.
   const today = useMemo(() => new Date(), []);
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
+  const initialDate = useMemo(() => {
+    if (!selectedDateParam || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDateParam)) {
+      return today;
+    }
+    const [y, m, d] = selectedDateParam.split("-").map(Number);
+    const parsed = new Date(y, m - 1, d);
+    return Number.isNaN(parsed.getTime()) ? today : parsed;
+  }, [selectedDateParam, today]);
+  const [viewYear, setViewYear] = useState(initialDate.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initialDate.getMonth() + 1);
 
   // 주/월 보기 전환
   const [viewMode, setViewMode] = useState("month");
@@ -122,7 +132,7 @@ function WalletPage({ user, onLogout }) {
   const [mutating, setMutating] = useState(false);
 
   // 기본 선택 = 오늘 (이번 달 한정)
-  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
+  const [selectedDay, setSelectedDay] = useState(() => initialDate.getDate());
   const [selectedId, setSelectedId] = useState(null);
   // 일반 사용자는 20시부터, 관리자는 시연·검증을 위해 항상 사용할 수 있다.
   const [isAiActive, setIsAiActive] = useState(() => canUseAiJudge(user));
@@ -141,10 +151,15 @@ function WalletPage({ user, onLogout }) {
     setError(null);
     const isCurrentMonth =
       viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1;
+    const isInitialParamMonth =
+      selectedDateParam &&
+      viewYear === initialDate.getFullYear() &&
+      viewMonth === initialDate.getMonth() + 1;
     // 주 이동으로 달 경계를 넘은 경우 pendingDayRef 에 저장된 날짜 우선 사용
     const pending = pendingDayRef.current;
     pendingDayRef.current = null;
-    const defaultDay = pending ?? (isCurrentMonth ? today.getDate() : 1);
+    const defaultDay =
+      pending ?? (isInitialParamMonth ? initialDate.getDate() : isCurrentMonth ? today.getDate() : 1);
     setSelectedDay(defaultDay);
     setSelectedId(null);
     getMonthlyLedger(`${viewYear}-${pad2(viewMonth)}`)
@@ -171,7 +186,7 @@ function WalletPage({ user, onLogout }) {
     return () => {
       alive = false;
     };
-  }, [viewYear, viewMonth, navigate, today]);
+  }, [viewYear, viewMonth, navigate, today, selectedDateParam, initialDate]);
 
   // 달력 셀 구성 (선행 빈칸 + 1일~말일).
   const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();

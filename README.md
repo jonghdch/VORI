@@ -246,3 +246,4 @@ navigate("/login");
 | [`docs/backend-flow.md`](docs/backend-flow.md) | 요청·응답 흐름·레이어 책임·신규 기능 추가 체크리스트 |
 | [`docs/domain.md`](docs/domain.md) | 비즈 룰·계산식·상태머신·용어집 (Service 짤 때 SSOT) |
 | [`docs/db-spec.md`](docs/db-spec.md) | 테이블 18종 명세 + 변경 이력 |
+| [`docs/tutorial-flow.md`](docs/tutorial-flow.md) | 신규 사용자 온보딩·인앱 튜토리얼 사용자 흐름 설계 |
