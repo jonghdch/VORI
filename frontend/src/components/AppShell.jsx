@@ -59,9 +59,11 @@ function AppShell({
         .catch(() => {});
     load();
     window.addEventListener(ME_CHANGED_EVENT, load);
+    window.addEventListener("vori:account-updated", load); // http.js 가 쓰기 요청 뒤에 쏜다(프로필 수정 등)
     return () => {
       alive = false;
       window.removeEventListener(ME_CHANGED_EVENT, load);
+      window.removeEventListener("vori:account-updated", load);
     };
   }, []);
   const isAdmin = me?.role === "ADMIN";
@@ -224,6 +226,16 @@ function AppShell({
                   onClick={() => go("settings")}
                 >
                   환경설정
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  className={`home-side-link ${activeSide === "profile" ? "is-active" : ""}`}
+                  aria-current={activeSide === "profile" ? "page" : undefined}
+                  onClick={() => go("settings/profile")}
+                >
+                  프로필 설정
                 </button>
               </li>
               <li>

@@ -32,18 +32,18 @@ public class FurnitureController {
     /** GET /api/furniture/products — 상점 목록(가격 오름차순). 잠긴 테마 가구는 locked=true. */
     @GetMapping("/products")
     public List<FurnitureProductResponse> products(@AuthenticationPrincipal UserPrincipal principal) {
-        return furnitureService.listProducts(principal.getUser().getId(), isAdmin(principal));
+        return furnitureService.listProducts(principal.getId(), isAdmin(principal));
     }
 
     /** 관리자는 잠긴 테마 가구도 사서 배치해 볼 수 있다(사용자 화면 검증용). */
     private static boolean isAdmin(UserPrincipal principal) {
-        return principal.getUser().getRole() == Role.ADMIN;
+        return principal.getRole() == Role.ADMIN;
     }
 
     /** GET /api/furniture — 내 보유 가구. 배치된 것부터. */
     @GetMapping
     public List<FurnitureResponse> mine(@AuthenticationPrincipal UserPrincipal principal) {
-        return furnitureService.listMine(principal.getUser().getId());
+        return furnitureService.listMine(principal.getId());
     }
 
     /** POST /api/furniture/buy?item=BOOKSHELF — 구매. 구매 직후엔 인벤토리 상태. */
@@ -52,7 +52,7 @@ public class FurnitureController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam FurnitureCatalog item
     ) {
-        return furnitureService.buy(principal.getUser().getId(), item, isAdmin(principal));
+        return furnitureService.buy(principal.getId(), item, isAdmin(principal));
     }
 
     /** PATCH /api/furniture/{id}/place — 마이룸에 배치. 자리가 겹치면 409. */
@@ -62,7 +62,7 @@ public class FurnitureController {
             @PathVariable Long id,
             @Valid @RequestBody FurniturePlaceRequest req
     ) {
-        return furnitureService.place(principal.getUser().getId(), id, req);
+        return furnitureService.place(principal.getId(), id, req);
     }
 
     /** PATCH /api/furniture/{id}/unplace — 인벤토리로 회수. */
@@ -71,6 +71,6 @@ public class FurnitureController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id
     ) {
-        return furnitureService.unplace(principal.getUser().getId(), id);
+        return furnitureService.unplace(principal.getId(), id);
     }
 }

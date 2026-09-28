@@ -37,7 +37,7 @@ public class EggController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(defaultValue = "true") boolean unopenedOnly
     ) {
-        return eggService.listMyEggs(principal.getUser().getId(), unopenedOnly);
+        return eggService.listMyEggs(principal.getId(), unopenedOnly);
     }
 
     /** POST /api/eggs/buy?grade=BASIC — 게임머니 차감 후 알 지급. */
@@ -46,7 +46,7 @@ public class EggController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam EggGrade grade
     ) {
-        return eggService.buy(principal.getUser().getId(), grade);
+        return eggService.buy(principal.getId(), grade);
     }
 
     /** POST /api/eggs/{id}/open — 가챠 추첨 후 펫 지급. 이미 깐 알이면 409. */
@@ -55,6 +55,6 @@ public class EggController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id
     ) {
-        return eggService.open(principal.getUser().getId(), id);
+        return eggService.open(principal.getId(), id);
     }
 }

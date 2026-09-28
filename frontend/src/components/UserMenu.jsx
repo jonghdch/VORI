@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME_CHANGED_EVENT, getMe } from "../api/user";
+import { listTitles } from "../api/titles";
 
 const coin = (n) => (n ?? 0).toLocaleString("ko-KR");
 
@@ -16,6 +17,7 @@ const coin = (n) => (n ?? 0).toLocaleString("ko-KR");
 function UserMenu({ me: meProp, onLogout }) {
   const navigate = useNavigate();
   const [me, setMe] = useState(meProp ?? null);
+  const [title, setTitle] = useState(null); // 장착 칭호 이름. null = 아직 모름
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
 
@@ -37,6 +39,18 @@ function UserMenu({ me: meProp, onLogout }) {
     if (meProp) setMe(meProp);
   }, [meProp]);
 
+  // 장착 칭호는 팝오버를 열 때만 읽는다 — 헤더마다 칭호 목록을 부르지 않게
+  useEffect(() => {
+    if (!open) return;
+    listTitles()
+      // 응답이 { all, acquired, active } 이거나(현재) 배열(구버전)일 수 있어 둘 다 받는다
+      .then((res) => {
+        const active = Array.isArray(res) ? res.find((t) => t.active) : res?.active;
+        setTitle(active?.name || "칭호 없음");
+      })
+      .catch(() => setTitle("칭호 없음"));
+  }, [open]);
+
   // 바깥 클릭·Esc 로 닫기
   useEffect(() => {
     if (!open) return undefined;
@@ -57,6 +71,8 @@ function UserMenu({ me: meProp, onLogout }) {
   const nickname = me?.nickname || "사용자";
   const initial = nickname.trim().charAt(0).toUpperCase() || "V";
   const isAdmin = me?.role === "ADMIN";
+  // 관리자는 코인이 차감되지 않는다(User.spendGameMoney) — 숫자 대신 ∞
+  const coinText = me ? (isAdmin ? "∞" : coin(me.gameMoney)) : "…";
 
   return (
     <div className="user-menu" ref={rootRef}>
@@ -65,12 +81,12 @@ function UserMenu({ me: meProp, onLogout }) {
         className="user-menu-coins"
         onClick={() => navigate("/shop")}
         title="상점으로"
-        aria-label={`보유 코인 ${coin(me?.gameMoney)}`}
+        aria-label={`보유 코인 ${coinText}`}
       >
         <span className="user-menu-coin-icon" aria-hidden>
           ●
         </span>
-        <span className="user-menu-coin-value">{me ? coin(me.gameMoney) : "…"}</span>
+        <span className="user-menu-coin-value">{coinText}</span>
       </button>
 
       <button
@@ -96,13 +112,14 @@ function UserMenu({ me: meProp, onLogout }) {
                 {isAdmin && <em className="user-menu-role">관리자</em>}
               </strong>
               <small>{me?.email ?? ""}</small>
+              {title && <small className="user-menu-title">🏅 {title}</small>}
             </div>
           </div>
 
           <dl className="user-menu-stats">
             <div>
               <dt>보유 코인</dt>
-              <dd>{coin(me?.gameMoney)}</dd>
+              <dd>{coinText}</dd>
             </div>
             <div>
               <dt>누적 절약</dt>
@@ -116,7 +133,7 @@ function UserMenu({ me: meProp, onLogout }) {
               className="home-btn home-btn-primary"
               onClick={() => {
                 setOpen(false);
-                navigate("/settings");
+                navigate("/settings/profile");
               }}
             >
               프로필 수정

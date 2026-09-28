@@ -166,7 +166,7 @@ public class AdminController {
     @PostMapping("/me/coins")
     public MeResponse addMyCoins(@AuthenticationPrincipal UserPrincipal principal,
                                  @RequestParam(defaultValue = "10000") int amount) {
-        return MeResponse.from(userService.addGameMoney(principal.getUser().getId(), amount));
+        return MeResponse.from(userService.addGameMoney(principal.getId(), amount));
     }
 
     /** PUT /api/admin/me/pet/appearance?speciesId=&variant= — 활성 펫 종족·변종 변경(없으면 생성). */
@@ -174,20 +174,20 @@ public class AdminController {
     public PetResponse setMyPetAppearance(@AuthenticationPrincipal UserPrincipal principal,
                                           @RequestParam Long speciesId,
                                           @RequestParam(defaultValue = "NORMAL") PetVariant variant) {
-        return adminPetService.setActivePetAppearance(principal.getUser().getId(), speciesId, variant);
+        return adminPetService.setActivePetAppearance(principal.getId(), speciesId, variant);
     }
 
     /** PUT /api/admin/me/pet/stage?stage=JUVENILE — 활성 펫 단계 강제(내려가기 포함). */
     @PutMapping("/me/pet/stage")
     public PetResponse setMyPetStage(@AuthenticationPrincipal UserPrincipal principal,
                                      @RequestParam PetStage stage) {
-        return adminPetService.setActivePetStage(principal.getUser().getId(), stage);
+        return adminPetService.setActivePetStage(principal.getId(), stage);
     }
 
     /** DELETE /api/admin/me/pet — 활성 펫 비우기(보상 0 분양). 알 개봉 흐름을 다시 보려고. */
     @DeleteMapping("/me/pet")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void clearMyPet(@AuthenticationPrincipal UserPrincipal principal) {
-        adminPetService.clearActivePet(principal.getUser().getId());
+        adminPetService.clearActivePet(principal.getId());
     }
 }

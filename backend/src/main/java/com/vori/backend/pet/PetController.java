@@ -25,13 +25,13 @@ public class PetController {
     /** GET /api/pets/active — 현재 키우는 펫. 없으면 본문 null(200). */
     @GetMapping("/active")
     public PetResponse active(@AuthenticationPrincipal UserPrincipal principal) {
-        return petService.getActive(principal.getUser().getId());
+        return petService.getActive(principal.getId());
     }
 
     /** GET /api/pets — 보유·분양 이력 전체 (최신순). */
     @GetMapping
     public List<PetResponse> all(@AuthenticationPrincipal UserPrincipal principal) {
-        return petService.listAll(principal.getUser().getId());
+        return petService.listAll(principal.getId());
     }
 
     /** POST /api/pets/{id}/release — 성체 펫 분양 → 게임머니 획득. */
@@ -40,6 +40,6 @@ public class PetController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id
     ) {
-        return petService.release(principal.getUser().getId(), id);
+        return petService.release(principal.getId(), id);
     }
 }

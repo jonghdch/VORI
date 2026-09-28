@@ -31,4 +31,9 @@ public record SignupRequest(
 
     Boolean marketingAgreed
 ) {
+    /** 공백을 먼저 잘라 둔다. 길이 검사와 저장이 같은 값을 본다 (ProfileUpdateRequest 와 같은 규칙). */
+    public SignupRequest {
+        nickname = nickname == null ? null : nickname.trim();
+        name = name == null ? null : name.trim();
+    }
 }

@@ -96,6 +96,27 @@
   align-items: center;
   gap: 8px;
 }
+.settings-divider {
+  height: 1px;
+  background: #e8e4db;
+}
+.settings-link-btn {
+  border: 0;
+  background: transparent;
+  color: #56524c;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 2px;
+}
+.settings-link-btn:hover {
+  color: #7c8b5c;
+}
+.settings-link-btn span {
+  font-size: 20px;
+  line-height: 0;
+  vertical-align: -2px;
+}
 .settings-select {
   padding: 8px 12px;
   border: 1px solid #d8d4ca;

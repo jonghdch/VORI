@@ -101,6 +101,7 @@ function ShopPage({ user, onLogout }) {
   }, [navigate]);
 
   const gameMoney = me?.gameMoney ?? 0;
+  const unlimitedCoins = me?.role === "ADMIN";
 
   const handleBuy = async (product) => {
     setNotice(null);
@@ -185,7 +186,7 @@ function ShopPage({ user, onLogout }) {
           </div>
 
           <div className="shop-coin-badge" aria-live="polite">
-            보유 코인 {loading ? "…" : gameMoney.toLocaleString("ko-KR")}
+            보유 코인 {loading ? "…" : unlimitedCoins ? "∞" : gameMoney.toLocaleString("ko-KR")}
           </div>
 
           <div className="shop-display-shelf" aria-label="판매 상품">
@@ -194,7 +195,7 @@ function ShopPage({ user, onLogout }) {
             )}
             {error && <p className="shop-shelf-state shop-shelf-state--error">{error}</p>}
             {products.map((item) => {
-              const affordable = gameMoney >= item.price;
+              const affordable = unlimitedCoins || gameMoney >= item.price;
               const isBusy = busy === `buy:${item.grade}`;
               return (
                 <article key={item.grade} className="shop-display-item">
@@ -276,7 +277,7 @@ function ShopPage({ user, onLogout }) {
           <section className="home-card shop-result" aria-live="polite">
             <div className="shop-section-head">
               <h2 className="home-card-title home-card-title--sm">새로 태어난 친구</h2>
-              {result && <span>잔여 {coin(result.remainGameMoney)}</span>}
+              {result && <span>잔여 {unlimitedCoins ? "∞ 코인" : coin(result.remainGameMoney)}</span>}
             </div>
             {result ? (
               <div className="shop-result-body">
@@ -329,7 +330,7 @@ function ShopPage({ user, onLogout }) {
           )}
           <ul className="shop-furniture-grid">
             {furnitureProducts.map((item) => {
-              const affordable = gameMoney >= item.price;
+              const affordable = unlimitedCoins || gameMoney >= item.price;
               const isBusy = busy === `furniture:${item.code}`;
               const owned = ownedCountByName[item.name] || 0;
               return (
