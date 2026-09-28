@@ -87,7 +87,7 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException e, HttpServletRequest request) {
         return ResponseEntity.badRequest().body(
                 ErrorResponse.of(HttpStatus.BAD_REQUEST,
-                        "입력 형식이 올바르지 않아요. 숫자 칸과 값의 범위를 확인해 주세요.",
+                        "입력 형식이 올바르지 않아요. 입력값을 확인해 주세요.",
                         request.getRequestURI()));
     }
 

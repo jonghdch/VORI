@@ -24,7 +24,7 @@ class GlobalExceptionHandlerTest {
                 .handleUnreadable(e, new MockHttpServletRequest("PUT", "/api/users/me"));
 
         assertEquals(400, res.getStatusCode().value());
-        assertEquals("입력 형식이 올바르지 않아요. 숫자 칸과 값의 범위를 확인해 주세요.", res.getBody().message());
+        assertEquals("입력 형식이 올바르지 않아요. 입력값을 확인해 주세요.", res.getBody().message());
         assertFalse(res.getBody().message().contains("JSON"), "내부 파싱 메시지를 내보내지 않는다");
     }
 }
