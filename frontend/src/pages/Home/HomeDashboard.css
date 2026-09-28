@@ -194,9 +194,157 @@
   flex-wrap: wrap;
   justify-content: center;
 }
-/* 우측 셀의 UserAvatarMenu 를 끝쪽으로 정렬 */
+/* ── 헤더 우측: 코인 캡슐 + 프로필 아바타 + 팝오버 ─────────── */
 .home-topbar-inner > .user-menu {
   justify-self: end;
+}
+.user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.user-menu-coins {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px 7px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--home-card-border);
+  background: var(--home-card-surface);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--home-green-dark);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.user-menu-coins:hover {
+  background: var(--home-green-soft);
+}
+.user-menu-coin-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #f5d36b, #e0a83a);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
+  color: transparent;
+  font-size: 0;
+}
+.user-menu-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid var(--home-card-border);
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: box-shadow 0.15s ease;
+}
+.user-menu-avatar:hover,
+.user-menu-avatar.is-open {
+  box-shadow: 0 0 0 3px var(--home-green-soft);
+}
+.user-menu-avatar.is-admin {
+  border-color: #e0a83a;
+}
+.user-menu-avatar--lg {
+  width: 48px;
+  height: 48px;
+  font-size: 19px;
+  cursor: default;
+}
+.user-menu-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 280px;
+  padding: 16px;
+  border-radius: var(--home-radius);
+  border: 1px solid var(--home-card-border);
+  background: var(--home-card-surface);
+  box-shadow: 0 16px 40px rgba(45, 51, 40, 0.16);
+  z-index: 30;
+}
+.user-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.user-menu-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.user-menu-who strong {
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.user-menu-who small {
+  font-size: 12px;
+  color: var(--home-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-menu-title {
+  color: var(--home-green-dark) !important;
+  font-weight: 700;
+}
+.user-menu-role {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #fbe9c9;
+  color: #9a6b12;
+}
+.user-menu-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0;
+}
+.user-menu-stats > div {
+  padding: 10px 12px;
+  border-radius: var(--home-radius-sm);
+  background: #f6f8f3;
+}
+.user-menu-stats dt {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--home-muted);
+  margin-bottom: 2px;
+}
+.user-menu-stats dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.user-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.user-menu-actions .home-btn {
+  width: 100%;
+}
+.user-menu-logout {
+  align-self: center;
+  margin-top: 4px;
+  color: var(--home-muted);
 }
 
 .home-topnav-item {
@@ -1085,6 +1233,14 @@
     justify-self: auto;
   }
 
+  .user-menu-coins {
+    padding: 6px 10px 6px 8px;
+    font-size: 13px;
+  }
+  .user-menu-popover {
+    width: min(280px, calc(100vw - 32px));
+  }
+
   .home-main {
     padding: 20px 16px 32px;
   }
@@ -1102,4 +1258,124 @@
   font-weight: 800;
   color: var(--home-green-dark);
   letter-spacing: 0.02em;
+}
+
+/* ── 관리자 도구 (우하단 플로팅) ─────────────────────────── */
+.admin-tools {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.admin-tools-toggle {
+  border: 1px solid #e0a83a;
+  border-radius: 999px;
+  background: #fbe9c9;
+  color: #9a6b12;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 9px 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(45, 51, 40, 0.14);
+}
+.admin-tools-panel {
+  width: 320px;
+  max-width: calc(100vw - 40px);
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  padding: 14px 16px;
+  border-radius: var(--home-radius);
+  border: 1px solid #e0a83a;
+  background: var(--home-card-surface);
+  box-shadow: 0 16px 40px rgba(45, 51, 40, 0.18);
+}
+.admin-tools-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--home-muted);
+}
+.admin-tools-section {
+  padding: 10px 0;
+  border-top: 1px solid var(--home-card-border);
+}
+.admin-tools-section h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.admin-tools-section small {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--home-muted);
+}
+.admin-tools-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.admin-tools-row .home-btn {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+.admin-tools-row select {
+  flex: 1;
+  min-width: 110px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--home-card-border);
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+}
+.admin-tools-msg {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--home-radius-sm);
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-tools-msg.is-err {
+  background: #fbe5e5;
+  color: #b23b3b;
+}
+
+/* ── /coins 주소창 치트 결과 화면 ────────────────────────── */
+.coin-topup {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--home-bg, #f6f8f3);
+  padding: 24px;
+}
+.coin-topup-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 32px;
+  border-radius: var(--home-radius);
+  border: 1px solid var(--home-card-border);
+  background: var(--home-card-surface);
+  box-shadow: 0 16px 40px rgba(45, 51, 40, 0.12);
+  font-weight: 800;
+  text-align: center;
+}
+.coin-topup-card p {
+  margin: 0;
+}
+.coin-topup-card.is-err {
+  border-color: #e07a7a;
+  color: #b23b3b;
+}
+.coin-topup-icon {
+  font-size: 40px;
+  line-height: 1;
 }

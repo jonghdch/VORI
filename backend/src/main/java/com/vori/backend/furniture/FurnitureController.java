@@ -1,6 +1,7 @@
 package com.vori.backend.furniture;
 
 import com.vori.backend.auth.UserPrincipal;
+import com.vori.backend.user.Role;
 import com.vori.backend.furniture.dto.FurniturePlaceRequest;
 import com.vori.backend.furniture.dto.FurnitureProductResponse;
 import com.vori.backend.furniture.dto.FurnitureResponse;
@@ -31,7 +32,12 @@ public class FurnitureController {
     /** GET /api/furniture/products — 상점 목록(가격 오름차순). 잠긴 테마 가구는 locked=true. */
     @GetMapping("/products")
     public List<FurnitureProductResponse> products(@AuthenticationPrincipal UserPrincipal principal) {
-        return furnitureService.listProducts(principal.getId());
+        return furnitureService.listProducts(principal.getId(), isAdmin(principal));
+    }
+
+    /** 관리자는 잠긴 테마 가구도 사서 배치해 볼 수 있다(사용자 화면 검증용). */
+    private static boolean isAdmin(UserPrincipal principal) {
+        return principal.getRole() == Role.ADMIN;
     }
 
     /** GET /api/furniture — 내 보유 가구. 배치된 것부터. */
@@ -46,7 +52,7 @@ public class FurnitureController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam FurnitureCatalog item
     ) {
-        return furnitureService.buy(principal.getId(), item);
+        return furnitureService.buy(principal.getId(), item, isAdmin(principal));
     }
 
     /** PATCH /api/furniture/{id}/place — 마이룸에 배치. 자리가 겹치면 409. */

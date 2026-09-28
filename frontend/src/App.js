@@ -17,6 +17,7 @@ import { ADMIN_NAV } from "./pages/Admin/adminNav";
 // Story 페이지는 three.js + GLTFLoader 를 포함해서 무거움 (~100+ KB).
 // 랜딩만 보는 사용자가 다운로드 안 하도록 별도 chunk 로 분리.
 const StoryPage = lazy(() => import("./pages/Story/StoryPage"));
+const CoinTopUpPage = lazy(() => import("./pages/Admin/CoinTopUpPage"));
 const WalletEntryPage = lazy(() =>
   import("./pages/WalletEntry/WalletEntryPage"),
 );
@@ -235,6 +236,15 @@ function App() {
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <ShopPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
+            }
+          />
+          {/* 주소창 치트 — 관리자만. /coins 또는 /coins?amount=50000 → 본인 코인 충전 후 상점으로 */}
+          <Route
+            path="/coins"
+            element={
+              <AdminRoute user={user} authLoading={authLoading}>
+                <CoinTopUpPage />
+              </AdminRoute>
             }
           />
           <Route

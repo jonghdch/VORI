@@ -11,9 +11,14 @@ import com.vori.backend.admin.dto.SignalRuleUpdateRequest;
 import com.vori.backend.admin.dto.TitleUpsertRequest;
 import com.vori.backend.expense.SignalConfigService;
 import com.vori.backend.inquiry.ReasonCategory;
+import com.vori.backend.auth.UserPrincipal;
 import com.vori.backend.pet.PetStage;
+import com.vori.backend.pet.PetVariant;
 import com.vori.backend.pet.dto.PetResponse;
 import com.vori.backend.user.Role;
+import com.vori.backend.user.UserService;
+import com.vori.backend.user.dto.MeResponse;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +53,7 @@ public class AdminController {
     private final SignalConfigService signalConfigService;
     private final AdminPetService adminPetService;
     private final AdminTitleService adminTitleService;
+    private final UserService userService;
 
     @GetMapping("/users")
     public ResponseEntity<PageResponse<AdminUserResponse>> listUsers(
@@ -144,5 +150,44 @@ public class AdminController {
             @RequestParam(defaultValue = "ADULT") PetStage stage
     ) {
         return ResponseEntity.ok(adminPetService.growActivePet(userId, stage));
+    }
+
+    // ───── 관리자 본인 계정 도구 (/api/admin/me/**) ─────
+    // 관리자가 사용자 화면(상점·마이룸·도감·홈)에서 모든 종족·단계·구매·배치를 직접 확인하기 위한
+    // 셀프 조작. 대상은 항상 로그인한 관리자 자신이라 userId 를 받지 않는다.
+
+    /** GET /api/admin/pet-species — 종족 목록(id·이름·등급·외형 키). */
+    @GetMapping("/pet-species")
+    public List<AdminPetService.PetSpeciesSummary> petSpecies() {
+        return adminPetService.listSpecies();
+    }
+
+    /** POST /api/admin/me/coins?amount=10000 — 본인 코인 충전. */
+    @PostMapping("/me/coins")
+    public MeResponse addMyCoins(@AuthenticationPrincipal UserPrincipal principal,
+                                 @RequestParam(defaultValue = "10000") int amount) {
+        return MeResponse.from(userService.addGameMoney(principal.getId(), amount));
+    }
+
+    /** PUT /api/admin/me/pet/appearance?speciesId=&variant= — 활성 펫 종족·변종 변경(없으면 생성). */
+    @PutMapping("/me/pet/appearance")
+    public PetResponse setMyPetAppearance(@AuthenticationPrincipal UserPrincipal principal,
+                                          @RequestParam Long speciesId,
+                                          @RequestParam(defaultValue = "NORMAL") PetVariant variant) {
+        return adminPetService.setActivePetAppearance(principal.getId(), speciesId, variant);
+    }
+
+    /** PUT /api/admin/me/pet/stage?stage=JUVENILE — 활성 펫 단계 강제(내려가기 포함). */
+    @PutMapping("/me/pet/stage")
+    public PetResponse setMyPetStage(@AuthenticationPrincipal UserPrincipal principal,
+                                     @RequestParam PetStage stage) {
+        return adminPetService.setActivePetStage(principal.getId(), stage);
+    }
+
+    /** DELETE /api/admin/me/pet — 활성 펫 비우기(보상 0 분양). 알 개봉 흐름을 다시 보려고. */
+    @DeleteMapping("/me/pet")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void clearMyPet(@AuthenticationPrincipal UserPrincipal principal) {
+        adminPetService.clearActivePet(principal.getId());
     }
 }

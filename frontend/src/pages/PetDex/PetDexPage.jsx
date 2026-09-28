@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import { listPets } from "../../api/pet";
+import { PET_CHANGED_EVENT } from "../../api/user";
 import {
   DEX_TIER_LABEL,
   DEX_TIERS,
@@ -45,10 +46,13 @@ function PetDexPage({ onLogout }) {
 
   useEffect(() => {
     let alive = true;
-    listPets()
+    const load = () => listPets()
       .then((data) => {
         if (alive) setPets(Array.isArray(data) ? data : []);
-      })
+      });
+    const onPetChanged = () => load().catch(() => {});
+    window.addEventListener(PET_CHANGED_EVENT, onPetChanged);
+    load()
       .catch((e) => {
         if (!alive) return;
         if (e.status === 401) {
@@ -62,6 +66,7 @@ function PetDexPage({ onLogout }) {
       });
     return () => {
       alive = false;
+      window.removeEventListener(PET_CHANGED_EVENT, onPetChanged);
     };
   }, [navigate]);
 

@@ -6,6 +6,7 @@ import RecordCalendar, { dateKey } from "../../components/RecordCalendar";
 import { getHomeSummary } from "../../api/home";
 import { getMonthlyLedger } from "../../api/ledger";
 import { getActivePet } from "../../api/pet";
+import { PET_CHANGED_EVENT } from "../../api/user";
 import { getLatestDailyReport, markDailyReportRead } from "../../api/report";
 import { listTitles } from "../../api/titles";
 import { PetArt } from "../../components/petVisual";
@@ -49,9 +50,12 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   const [titlesLoading, setTitlesLoading] = useState(true);
   useEffect(() => {
     let alive = true;
-    getActivePet()
-      .then((p) => alive && setActivePet(p))
-      .catch(() => {});
+    const loadPet = () =>
+      getActivePet()
+        .then((p) => alive && setActivePet(p))
+        .catch(() => {});
+    loadPet();
+    window.addEventListener(PET_CHANGED_EVENT, loadPet);
     getLatestDailyReport()
       .then((r) => {
         if (!alive) return;
@@ -72,6 +76,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
       });
     return () => {
       alive = false;
+      window.removeEventListener(PET_CHANGED_EVENT, loadPet);
     };
   }, []);
 
