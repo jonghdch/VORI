@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AccountSummary from "./AccountSummary";
+import AccountMenu from "./AccountMenu";
 import AdminTools from "./AdminTools";
 import { getMe } from "../api/user";
 import "../pages/Home/HomeDashboard.css";
@@ -48,7 +48,7 @@ function AppShell({
 }) {
   const navigate = useNavigate();
 
-  // 사이드바 "관리" 섹션·관리자 도구 노출용 역할 확인. 헤더 계정 정보는 AccountSummary 가 따로 읽는다.
+  // 사이드바 "관리" 섹션·관리자 도구 노출용 역할 확인. 헤더 계정 정보는 AccountMenu/AccountSummary 가 따로 읽는다.
   const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => {
     let alive = true;
@@ -136,7 +136,7 @@ function AppShell({
               </button>
             ))}
           </nav>
-          <AccountSummary />
+          <AccountMenu onLogout={onLogout} />
         </div>
       </header>
 
