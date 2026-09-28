@@ -243,6 +243,7 @@ function PetPage({ user, onLogout }) {
           .filter(Boolean)
           .join(" · "),
         appearanceKey: pet.appearanceKey,
+        stage: pet.stage,
         color: PET_ACCENT,
       }
     : null;
@@ -514,6 +515,7 @@ function PetPage({ user, onLogout }) {
                     <span className="pet-current-icon" aria-label={selectedPet.name}>
                       <PetArt
                         appearanceKey={selectedPet.appearanceKey}
+                        stage={selectedPet.stage}
                         name={selectedPet.name}
                         className="pet-current-image"
                         emojiClassName="pet-current-emoji"
@@ -575,6 +577,7 @@ function PetPage({ user, onLogout }) {
                         <span className="pet-profile-icon">
                           <PetArt
                             appearanceKey={selectedPet.appearanceKey}
+                            stage={selectedPet.stage}
                             name={selectedPet.name}
                             className="pet-profile-image"
                             emojiClassName="pet-profile-emoji"
@@ -651,6 +654,7 @@ function PetPage({ user, onLogout }) {
                     {selectedPet && (
                       <PetArt
                         appearanceKey={selectedPet.appearanceKey}
+                        stage={selectedPet.stage}
                         name={selectedPet.name}
                         className="pet-status-image"
                         emojiClassName="pet-status-emoji"
@@ -776,6 +780,7 @@ function PetPage({ user, onLogout }) {
                           <span className="pet-history-art">
                             <PetArt
                               appearanceKey={p.appearanceKey}
+                              stage={p.stage}
                               name={p.speciesName}
                               className="pet-history-image"
                               emojiClassName="pet-history-emoji"

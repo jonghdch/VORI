@@ -318,7 +318,7 @@ const res = await fetch('http://localhost:8080/api/receipts', {
 
 ```json
 // GET /api/pets/active
-{ "id": 22, "speciesName": "강아지", "tier": "B", "appearanceKey": "puppy",
+{ "id": 22, "speciesName": "강아지", "tier": "C", "appearanceKey": "puppy",
   "variant": "NORMAL", "stage": "ADULT",
   "statEnergy": 2156, "statCharm": 0, "statIq": 0, "statEndurance": 0,
   "statTotal": 2156, "releasedAt": null, "releaseValue": null }
