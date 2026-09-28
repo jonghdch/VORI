@@ -28,8 +28,13 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
+    // NULL = 구글로만 가입한 계정(비밀번호 없음). V17 참조.
+    @Column(name = "password_hash", length = 255)
     private String passwordHash;
+
+    // 구글 계정 고유 식별자(ID 토큰의 sub). NULL = 구글 미연결. 이메일이 아니라 이걸로 매칭한다.
+    @Column(name = "google_sub", unique = true, length = 64)
+    private String googleSub;
 
     @Column(nullable = false, length = 30)
     private String nickname;
@@ -87,6 +92,11 @@ public class User {
 
     public void addTotalSaved(int amount) {
         this.totalSaved = (this.totalSaved == null ? 0 : this.totalSaved) + amount;
+    }
+
+    /** 기존 이메일 계정에 구글 계정을 연결한다. 이후 두 방식 모두로 로그인할 수 있다. */
+    public void linkGoogle(String googleSub) {
+        this.googleSub = googleSub;
     }
 
     /** 로그인 성공 1회당 호출. UserService.recordLogin() 참조. */

@@ -15,7 +15,8 @@
 |---|---|---|---|---|
 | 사용자 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 사용자 고유 번호 |
 | 이메일 | `email` | UQ | `VARCHAR(100) NOT NULL` | 로그인 이메일 |
-| 비밀번호 해시 | `password_hash` |  | `VARCHAR(255) NOT NULL` | bcrypt 등 해시 결과 |
+| 비밀번호 해시 | `password_hash` |  | `VARCHAR(255) NULL` | bcrypt 등 해시 결과. NULL = 구글로만 가입한 계정 (V17) |
+| 구글 계정 식별자 | `google_sub` |  | `VARCHAR(64) NULL UNIQUE` | 구글 ID 토큰의 `sub`. NULL = 구글 미연결. 이메일이 아니라 이 값으로 매칭 (V17) |
 | 닉네임 | `nickname` |  | `VARCHAR(30) NOT NULL` | 화면 표시 이름 |
 | 이름 | `name` |  | `VARCHAR(30)` | 튜토리얼 수집값 |
 | 나이 | `age` |  | `TINYINT UNSIGNED` | 튜토리얼 수집값 |

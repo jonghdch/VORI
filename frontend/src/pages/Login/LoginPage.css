@@ -253,6 +253,36 @@
   color: var(--text);
 }
 
+/* ── 구글 로그인 (GIS 가 그리는 버튼) ─────────────────────── */
+.login-google {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.login-google-slot {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  justify-content: center;
+}
+.login-google-status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.login-google-consent {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-3);
+  text-align: center;
+}
+.login-google-consent a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* ── 회원가입 안내 ────────────────────────────────────────── */
 .login-signup {
   text-align: center;

@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -57,6 +58,56 @@ public class UserService {
     }
 
     /**
+     * 구글 로그인으로 들어온 계정을 찾거나 만든다. 호출 전에 ID 토큰 검증이 끝나 있어야 한다.
+     *
+     * 1) google_sub 가 같은 계정이 있으면 그 계정 (이메일이 바뀌어도 같은 사람).
+     * 2) 없고 이메일이 같은 기존 계정이 있으면 그 계정에 구글을 연결한다 — 구글이 소유를
+     *    확인한 이메일(email_verified)만 여기까지 오므로 남의 계정에 붙을 수 없다.
+     * 3) 둘 다 없으면 새로 만든다. 비밀번호는 없고(password_hash NULL), 약관은 구글 버튼
+     *    아래 안내 문구로 동의한 것으로 본다. 일반 가입과 같은 초기화(스탯·시작 펫)를 거친다.
+     */
+    @Transactional
+    public User findOrCreateGoogleUser(String googleSub, String email, String displayName) {
+        Optional<User> bySub = userRepository.findByGoogleSub(googleSub);
+        if (bySub.isPresent()) return bySub.get();
+
+        Optional<User> byEmail = userRepository.findByEmail(email);
+        if (byEmail.isPresent()) {
+            byEmail.get().linkGoogle(googleSub);
+            return byEmail.get();
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        User user = User.builder()
+            .email(email)
+            .googleSub(googleSub)
+            .nickname(nicknameFrom(displayName, email))
+            .name(displayName == null || displayName.isBlank() ? null : truncate(displayName, 30))
+            .role(Role.USER)
+            .termsAgreedAt(now)
+            .privacyAgreedAt(now)
+            .createdAt(now)
+            .build();
+
+        User saved = userRepository.save(user);
+        initializeStatStats(saved.getId());
+        grantStarterPet(saved.getId(), now);
+        return saved;
+    }
+
+    /** 구글 표시 이름이 없으면 이메일 앞부분을 닉네임으로. nickname 은 NOT NULL·30자. */
+    private static String nicknameFrom(String displayName, String email) {
+        String base = displayName != null && !displayName.isBlank()
+            ? displayName
+            : email.substring(0, email.indexOf('@'));
+        return truncate(base.trim(), 30);
+    }
+
+    private static String truncate(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max);
+    }
+
+    /**
      * 시작 펫 지급 — 가입 직후 키우기 화면이 비어 있지 않도록.
      * egg_id 는 NULL (가챠로 얻은 게 아님).
      *
@@ -85,6 +136,7 @@ public class UserService {
      * AuthController.login() 이 인증 성공 직후 호출한다. "최초 1회 로그인" 같은
      * 조건은 커밋 이후 이벤트로 평가돼야 하므로 지출 등록 등과 같은 패턴을 따른다.
      */
+
     @Transactional
     public void recordLogin(Long userId) {
         User user = userRepository.findById(userId)

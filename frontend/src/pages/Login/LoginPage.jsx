@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 import { login } from "../../api/auth";
+import GoogleSignInButton from "../../components/GoogleSignInButton";
 
 // 로그인 페이지.
 // - POST /api/auth/login 호출, 세션 쿠키(JSESSIONID)로 인증 유지.
@@ -122,8 +123,19 @@ function LoginPage({ onLogin }) {
             </button>
           </form>
 
-          {/* 소셜 로그인 — 백엔드 OAuth 미구현. 동작 없는 버튼을 노출하지 않고,
-              구현되면 이 자리에 되살린다. */}
+          {/* 구글 로그인 — REACT_APP_GOOGLE_CLIENT_ID 가 있을 때만 버튼이 그려진다 */}
+          {process.env.REACT_APP_GOOGLE_CLIENT_ID && (
+            <>
+              <div className="login-divider">또는</div>
+              <GoogleSignInButton
+                onLogin={(user) => {
+                  if (typeof onLogin === "function") onLogin(user);
+                  navigate("/home");
+                }}
+                onError={(msg) => setError(msg)}
+              />
+            </>
+          )}
 
           {/* ───────── 회원가입 안내 ───────── */}
           <p className="login-signup">

@@ -53,6 +53,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/signup",
                     "/api/auth/login",
+                    "/api/auth/google",
                     "/api/auth/logout",
                     "/error"
                 ).permitAll()
