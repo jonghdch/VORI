@@ -113,7 +113,7 @@ public class UserService {
 
         user.updateProfile(
             req.nickname().trim(),
-            blankToNull(req.name()),
+            req.name().trim(),
             req.age(),
             blankToNull(req.job()),
             req.monthlyIncome());

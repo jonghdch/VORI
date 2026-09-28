@@ -82,16 +82,23 @@ function ProfileSettingsPage({ user, onLogout, onUserUpdate }) {
 
   const handleSave = async (event) => {
     event.preventDefault();
-    if (!form.nickname.trim()) {
-      setError("닉네임을 입력해 주세요.");
+    // 가입과 같은 규칙 — 서버(ProfileUpdateRequest)도 같은 기준으로 거절한다.
+    const nickname = form.nickname.trim();
+    const name = form.name.trim();
+    if (nickname.length < 2 || nickname.length > 12) {
+      setError("닉네임은 2~12자로 입력해 주세요.");
+      return;
+    }
+    if (name.length < 2) {
+      setError("이름은 2~30자로 입력해 주세요.");
       return;
     }
     setSaving(true);
     setError("");
     try {
       const updated = await updateMe({
-        nickname: form.nickname.trim(),
-        name: form.name.trim() || null,
+        nickname,
+        name,
         age: form.age === "" ? null : Number(form.age),
         job: form.job.trim() || null,
         monthlyIncome: form.monthlyIncome === "" ? null : Number(form.monthlyIncome),
@@ -145,10 +152,10 @@ function ProfileSettingsPage({ user, onLogout, onUserUpdate }) {
           </label>
           <label>
             <span>닉네임 <b>필수</b></span>
-            <input value={form.nickname} maxLength="30" onChange={setField("nickname")} placeholder="표시할 닉네임" />
+            <input value={form.nickname} maxLength="12" onChange={setField("nickname")} placeholder="표시할 닉네임" />
           </label>
           <label>
-            <span>이름</span>
+            <span>이름 <b>필수</b></span>
             <input value={form.name} maxLength="30" onChange={setField("name")} placeholder="이름을 입력하세요" />
           </label>
           <div className="profile-form-grid">
