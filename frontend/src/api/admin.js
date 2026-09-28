@@ -216,11 +216,6 @@ export function listPetSpecies() {
   return adminGet("/admin/pet-species", "종족 목록 조회");
 }
 
-/** 내 계정에 코인 적립(1~1,000,000). @returns {Promise<object>} MeResponse */
-export function adminAddMyCoins(amount = 10000) {
-  return adminSend("POST", `/admin/me/coins?amount=${amount}`, undefined, "코인 충전");
-}
-
 /** 활성 펫 종족·변종 변경. 활성 펫이 없으면 그 종족으로 새 펫 생성. */
 export function adminSetMyPetAppearance(speciesId, variant = "NORMAL") {
   return adminSend(

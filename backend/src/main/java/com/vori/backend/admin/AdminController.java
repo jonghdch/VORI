@@ -16,8 +16,6 @@ import com.vori.backend.pet.PetStage;
 import com.vori.backend.pet.PetVariant;
 import com.vori.backend.pet.dto.PetResponse;
 import com.vori.backend.user.Role;
-import com.vori.backend.user.UserService;
-import com.vori.backend.user.dto.MeResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +51,6 @@ public class AdminController {
     private final SignalConfigService signalConfigService;
     private final AdminPetService adminPetService;
     private final AdminTitleService adminTitleService;
-    private final UserService userService;
 
     @GetMapping("/users")
     public ResponseEntity<PageResponse<AdminUserResponse>> listUsers(
@@ -160,13 +157,6 @@ public class AdminController {
     @GetMapping("/pet-species")
     public List<AdminPetService.PetSpeciesSummary> petSpecies() {
         return adminPetService.listSpecies();
-    }
-
-    /** POST /api/admin/me/coins?amount=10000 — 본인 코인 충전. */
-    @PostMapping("/me/coins")
-    public MeResponse addMyCoins(@AuthenticationPrincipal UserPrincipal principal,
-                                 @RequestParam(defaultValue = "10000") int amount) {
-        return MeResponse.from(userService.addGameMoney(principal.getId(), amount));
     }
 
     /** PUT /api/admin/me/pet/appearance?speciesId=&variant= — 활성 펫 종족·변종 변경(없으면 생성). */
