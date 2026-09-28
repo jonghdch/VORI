@@ -43,6 +43,8 @@ function PetDexPage({ onLogout }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tier, setTier] = useState("ALL");
+  // 도감 카드에서 보고 있는 단계(종족별 STAGE_ORDER 인덱스). 없으면 도달한 가장 높은 단계를 보여준다.
+  const [viewingStage, setViewingStage] = useState({});
 
   useEffect(() => {
     let alive = true;
@@ -144,6 +146,10 @@ function PetDexPage({ onLogout }) {
             const doneCount = st?.doneCount ?? 0;
             const reached = st?.reached ?? -1;
             const owned = reached >= 0;
+            // 도달한 단계 안에서만 골라 볼 수 있다. 고른 적 없으면 가장 높은 단계.
+            const shownIndex = owned
+              ? Math.min(viewingStage[sp.appearanceKey] ?? reached, reached)
+              : -1;
 
             return (
               <li
@@ -171,7 +177,7 @@ function PetDexPage({ onLogout }) {
                 <div className="dex-art">
                   <PetArt
                     appearanceKey={sp.appearanceKey}
-                    stage={owned ? STAGE_ORDER[reached] : undefined}
+                    stage={owned ? STAGE_ORDER[shownIndex] : undefined}
                     name={sp.name}
                     className="dex-art-img"
                     emojiClassName="dex-art-emoji"
@@ -185,21 +191,37 @@ function PetDexPage({ onLogout }) {
                   </span>
                 </div>
 
-                <ol className="dex-stages" aria-label="성장 단계">
-                  {STAGE_ORDER.map((stage, i) => (
-                    <li
-                      key={stage}
-                      className={[
-                        "dex-stage",
-                        i <= reached ? "is-reached" : "",
-                        raising === stage ? "is-current" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      {i + 1}차
-                    </li>
-                  ))}
+                <ol className="dex-stages" aria-label="성장 단계 — 도달한 단계를 누르면 그 모습을 볼 수 있어요">
+                  {STAGE_ORDER.map((stage, i) => {
+                    const isReached = i <= reached;
+                    const isViewing = i === shownIndex;
+                    return (
+                      <li
+                        key={stage}
+                        className={[
+                          "dex-stage",
+                          isReached ? "is-reached" : "",
+                          raising === stage ? "is-current" : "",
+                          isViewing ? "is-viewing" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        <button
+                          type="button"
+                          className="dex-stage-btn"
+                          disabled={!isReached}
+                          aria-pressed={isViewing}
+                          aria-label={`${sp.name} ${i + 1}차 모습 보기`}
+                          onClick={() =>
+                            setViewingStage((prev) => ({ ...prev, [sp.appearanceKey]: i }))
+                          }
+                        >
+                          {i + 1}차
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ol>
 
                 <p className="dex-status">
