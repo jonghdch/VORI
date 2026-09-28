@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -75,6 +76,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(
                 ErrorResponse.of(HttpStatus.PAYLOAD_TOO_LARGE,
                         "이미지는 10MB 이하만 업로드할 수 있습니다", request.getRequestURI()));
+    }
+
+    /**
+     * 본문을 읽지 못함 — 숫자 칸에 문자열, int 범위를 넘는 값, 깨진 JSON 등.
+     * 지금까지는 message 없는 400 이었다. 파싱 예외 문구는 내부 사정이라 내보내지 않는다.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadable(
+            HttpMessageNotReadableException e, HttpServletRequest request) {
+        return ResponseEntity.badRequest().body(
+                ErrorResponse.of(HttpStatus.BAD_REQUEST,
+                        "입력 형식이 올바르지 않아요. 숫자 칸과 값의 범위를 확인해 주세요.",
+                        request.getRequestURI()));
     }
 
     /** 잘못된 인자(존재하지 않는 카테고리 등). 지금까지는 message 없는 500 이었다. */
