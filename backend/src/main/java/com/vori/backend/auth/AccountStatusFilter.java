@@ -51,6 +51,12 @@ public class AccountStatusFilter extends OncePerRequestFilter {
         this.objectMapper = objectMapper;
     }
 
+    /** 로그아웃은 세션을 끝내는 요청이라 막지 않는다. 막으면 제재된 사용자의 로그아웃이 403 에러가 된다. */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "/api/auth/logout".equals(request.getServletPath());
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {

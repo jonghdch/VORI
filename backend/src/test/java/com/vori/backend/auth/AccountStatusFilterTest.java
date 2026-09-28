@@ -112,6 +112,19 @@ class AccountStatusFilterTest {
     }
 
     @Test
+    void sanctionedUserCanStillLogOut() throws Exception {
+        loginAs(Role.USER);
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/auth/logout");
+        req.setServletPath("/api/auth/logout");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        filter.doFilter(req, res, chain);
+
+        verifyNoInteractions(userRepository, sanctionPolicy);
+        verify(chain).doFilter(eq(req), eq(res));
+    }
+
+    @Test
     void anonymousRequestSkipsDbLookup() throws Exception {
         filter.doFilter(request(), new MockHttpServletResponse(), chain);
 
