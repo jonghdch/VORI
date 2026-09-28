@@ -27,4 +27,11 @@ public record ProfileUpdateRequest(
 
         @Min(value = 0, message = "월 수입은 0 이상으로 입력해 주세요")
         Integer monthlyIncome
-) {}
+) {
+    /** 공백을 먼저 잘라 둔다. 검사(@Size)와 저장이 같은 값을 봐야 "a " 가 2자로 통과한 뒤 1자로 저장되지 않는다. */
+    public ProfileUpdateRequest {
+        nickname = nickname == null ? null : nickname.trim();
+        name = name == null ? null : name.trim();
+        job = job == null || job.isBlank() ? null : job.trim();
+    }
+}

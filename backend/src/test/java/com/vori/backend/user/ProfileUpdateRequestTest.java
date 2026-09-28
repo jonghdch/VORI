@@ -27,6 +27,16 @@ class ProfileUpdateRequestTest {
         assertFalse(valid("가".repeat(13), "홍길동"));
     }
 
+    /** 검사는 공백을 뺀 값으로 해야 한다. "a " 가 2자로 통과한 뒤 "a" 로 저장되면 안 된다. */
+    @Test
+    void lengthIsCheckedAfterTrimming() {
+        assertFalse(valid("a ", "홍길동"));
+        assertFalse(valid("닉네임", " 홍"));
+        assertEquals("닉네임", new ProfileUpdateRequest("  닉네임 ", "홍길동", null, null, null).nickname());
+        assertEquals("대학생", new ProfileUpdateRequest("닉네임", "홍길동", null, " 대학생 ", null).job());
+        assertNull(new ProfileUpdateRequest("닉네임", "홍길동", null, "  ", null).job());
+    }
+
     @Test
     void nameIsRequiredLikeSignup() {
         assertFalse(valid("닉네임", null));

@@ -111,19 +111,9 @@ public class UserService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
 
-        user.updateProfile(
-            req.nickname().trim(),
-            req.name().trim(),
-            req.age(),
-            blankToNull(req.job()),
-            req.monthlyIncome());
+        // 공백 정리는 ProfileUpdateRequest 가 검사 전에 끝냈다.
+        user.updateProfile(req.nickname(), req.name(), req.age(), req.job(), req.monthlyIncome());
         return user;
-    }
-
-    private String blankToNull(String value) {
-        if (value == null) return null;
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void initializeStatStats(Long userId) {
