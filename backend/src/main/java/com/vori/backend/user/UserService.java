@@ -56,6 +56,7 @@ public class UserService {
         return saved;
     }
 
+
     /**
      * 시작 펫 지급 — 가입 직후 키우기 화면이 비어 있지 않도록.
      * egg_id 는 NULL (가챠로 얻은 게 아님).
@@ -85,6 +86,19 @@ public class UserService {
      * AuthController.login() 이 인증 성공 직후 호출한다. "최초 1회 로그인" 같은
      * 조건은 커밋 이후 이벤트로 평가돼야 하므로 지출 등록 등과 같은 패턴을 따른다.
      */
+    /** 관리자 도구 — 본인 계정에 코인 적립. 상점·마이룸 흐름을 잔액 걱정 없이 확인하기 위한 것. */
+    @Transactional
+    public User addGameMoney(Long userId, int amount) {
+        if (amount <= 0 || amount > 1_000_000) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "적립액은 1~1,000,000 사이여야 합니다");
+        }
+        User user = userRepository.findByIdForUpdate(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+        user.addGameMoney(amount);
+        log.warn("[ADMIN] 코인 충전(시연용) — userId={}, +{} → {}", userId, amount, user.getGameMoney());
+        return user;
+    }
+
     @Transactional
     public void recordLogin(Long userId) {
         User user = userRepository.findById(userId)

@@ -9,6 +9,7 @@ import {
   nextStage,
 } from "../../components/petVisual";
 import { getActivePet, listPets, releasePet } from "../../api/pet";
+import { PET_CHANGED_EVENT, notifyMeChanged } from "../../api/user";
 import { listMyFurniture, placeFurniture as apiPlaceFurniture, unplaceFurniture } from "../../api/furniture";
 import { listThemes } from "../../api/theme";
 import {
@@ -135,8 +136,12 @@ function PetPage({ user, onLogout }) {
       .finally(() => {
         if (alive) setPetLoading(false);
       });
+    // 관리자 도구가 펫을 바꾸면 다시 읽는다
+    const onPetChanged = () => loadPets().catch(() => {});
+    window.addEventListener(PET_CHANGED_EVENT, onPetChanged);
     return () => {
       alive = false;
+      window.removeEventListener(PET_CHANGED_EVENT, onPetChanged);
     };
   }, [loadPets, navigate]);
 
@@ -151,6 +156,7 @@ function PetPage({ user, onLogout }) {
     try {
       const released = await releasePet(pet.id);
       await loadPets();
+      notifyMeChanged(); // 분양 보상으로 코인이 늘었다 — 헤더 갱신
       setNotice({
         kind: "ok",
         text: `${released.speciesName}을(를) 분양하고 ${coin(released.releaseValue)}을 받았어요.`,

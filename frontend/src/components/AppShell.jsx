@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import UserMenu from "./UserMenu";
+import AdminTools from "./AdminTools";
+import { ME_CHANGED_EVENT, getMe } from "../api/user";
 import "../pages/Home/HomeDashboard.css";
 
 const TOP_NAV = [
@@ -44,6 +47,24 @@ function AppShell({
   children,
 }) {
   const navigate = useNavigate();
+
+  // 헤더 코인·프로필과 사이드바의 관리자 섹션이 같이 쓰는 내 정보.
+  // 세션 user 대신 /api/users/me — 코인은 로그인 이후 계속 바뀌기 때문(UserMenu 참조).
+  const [me, setMe] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      getMe()
+        .then((m) => alive && setMe(m))
+        .catch(() => {});
+    load();
+    window.addEventListener(ME_CHANGED_EVENT, load);
+    return () => {
+      alive = false;
+      window.removeEventListener(ME_CHANGED_EVENT, load);
+    };
+  }, []);
+  const isAdmin = me?.role === "ADMIN";
   const [menuOpen, setMenuOpen] = useState(false); // 모바일: 슬라이드 드로어
   const [collapsed, setCollapsed] = useState(readSidebarCollapsed); // 데스크톱: 사이드바 접힘
 
@@ -121,6 +142,7 @@ function AppShell({
               </button>
             ))}
           </nav>
+          <UserMenu me={me} onLogout={onLogout} />
         </div>
       </header>
 
@@ -176,6 +198,22 @@ function AppShell({
               ))}
             </ul>
           </div>
+          {isAdmin && (
+            <div className="home-side-block">
+              <div className="home-side-title">관리</div>
+              <ul className="home-side-list">
+                <li>
+                  <button
+                    type="button"
+                    className={`home-side-link ${activeSide === "admin" ? "is-active" : ""}`}
+                    onClick={() => go("/admin")}
+                  >
+                    관리자 페이지
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
           <div className="home-side-block">
             <div className="home-side-title">설정</div>
             <ul className="home-side-list">
@@ -206,6 +244,8 @@ function AppShell({
 
         {children}
       </div>
+
+      {isAdmin && <AdminTools />}
     </div>
   );
 }

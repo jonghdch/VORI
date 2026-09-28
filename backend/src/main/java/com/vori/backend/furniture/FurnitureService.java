@@ -45,6 +45,15 @@ public class FurnitureService {
      */
     @Transactional(readOnly = true)
     public List<FurnitureProductResponse> listProducts(Long userId) {
+        return listProducts(userId, false);
+    }
+
+    /**
+     * @param bypassLock true 면 잠긴 테마도 locked=false 로 내려준다 — 관리자가 사용자 화면에서
+     *                   모든 가구를 사서 배치해 볼 수 있게. 컨트롤러가 역할을 보고 정한다.
+     */
+    @Transactional(readOnly = true)
+    public List<FurnitureProductResponse> listProducts(Long userId, boolean bypassLock) {
         Map<String, ThemeMaster> themes = themeService.loadByName();
         Set<String> unlocked = themeService.unlockedNames(userId);
 
@@ -52,7 +61,8 @@ public class FurnitureService {
                 .sorted(Comparator.comparingInt(FurnitureCatalog::price))
                 .map(c -> {
                     ThemeMaster theme = resolveTheme(c, themes);
-                    return FurnitureProductResponse.from(c, theme, isLocked(theme, unlocked));
+                    boolean locked = !bypassLock && isLocked(theme, unlocked);
+                    return FurnitureProductResponse.from(c, theme, locked);
                 })
                 .toList();
     }
@@ -77,8 +87,14 @@ public class FurnitureService {
      */
     @Transactional
     public FurnitureResponse buy(Long userId, FurnitureCatalog item) {
+        return buy(userId, item, false);
+    }
+
+    /** @param bypassLock 관리자 — 잠긴 테마 검사를 건너뛴다(listProducts 와 같은 기준). */
+    @Transactional
+    public FurnitureResponse buy(Long userId, FurnitureCatalog item, boolean bypassLock) {
         ThemeMaster theme = resolveTheme(item, themeService.loadByName());
-        if (isLocked(theme, themeService.unlockedNames(userId))) {
+        if (!bypassLock && isLocked(theme, themeService.unlockedNames(userId))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "'" + theme.getUnlockTitleName() + "' 칭호를 획득해야 살 수 있습니다");
         }

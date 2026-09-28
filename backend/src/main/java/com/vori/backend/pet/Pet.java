@@ -109,6 +109,31 @@ public class Pet {
         }
     }
 
+    // ───── 관리자 도구 전용 (AdminPetService) ─────
+    // 일반 흐름에서는 종족·변종은 부화 때 정해지고 단계는 상향만 한다. 아래 둘은 시연·QA 에서
+    // 모든 종족·단계를 화면에서 확인하려고 관리자에게만 연 경로다. 호출부가 권한을 보장한다.
+
+    /** 종족·변종을 바꾼다. 스탯·단계는 그대로. */
+    public void changeAppearance(Long speciesId, PetVariant variant) {
+        this.speciesId = speciesId;
+        this.variant = variant == null ? PetVariant.NORMAL : variant;
+    }
+
+    /**
+     * 단계를 강제로 맞춘다. 스탯 합을 그 단계의 최소값으로 4등분해 채우므로
+     * evaluateStage() 를 다시 돌려도 같은 단계가 나온다(내려가는 전이도 허용).
+     */
+    public void forceStage(PetStage target) {
+        int total = minStatTotalFor(target);
+        int base = total / 4;
+        int rem = total % 4;
+        this.statEnergy = base + (rem > 0 ? 1 : 0);
+        this.statCharm = base + (rem > 1 ? 1 : 0);
+        this.statIq = base + (rem > 2 ? 1 : 0);
+        this.statEndurance = base;
+        this.stage = target;
+    }
+
     public boolean isReleased() {
         return releasedAt != null;
     }

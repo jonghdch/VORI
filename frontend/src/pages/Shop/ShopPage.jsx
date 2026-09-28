@@ -4,7 +4,7 @@ import AppShell from "../../components/AppShell";
 import { PetArt, STAGE_LABEL, TIER_LABEL, VARIANT_LABEL } from "../../components/petVisual";
 import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
-import { getMe } from "../../api/user";
+import { ME_CHANGED_EVENT, getMe, notifyMeChanged } from "../../api/user";
 import { CATEGORY_LABEL, FurnitureArt, STAT_LABEL } from "../../components/furnitureVisual";
 import eggImage from "../../assets/shop/egg.png";
 import shopBackgroundImage from "../../assets/shop/shop-background.png";
@@ -45,6 +45,17 @@ function ShopPage({ user, onLogout }) {
     setMe(meRes);
     setEggs(eggRes);
   }, []);
+
+  // 구매 뒤엔 헤더 코인도 갱신. 반대로 관리자 도구가 코인을 충전하면 이 화면이 다시 읽는다.
+  const reloadAndNotify = useCallback(async () => {
+    await reload();
+    notifyMeChanged();
+  }, [reload]);
+  useEffect(() => {
+    const onMeChanged = () => reload().catch(() => {});
+    window.addEventListener(ME_CHANGED_EVENT, onMeChanged);
+    return () => window.removeEventListener(ME_CHANGED_EVENT, onMeChanged);
+  }, [reload]);
 
   const reloadFurniture = useCallback(async () => {
     const [prodRes, mineRes] = await Promise.all([listFurnitureProducts(), listMyFurniture()]);
@@ -96,7 +107,7 @@ function ShopPage({ user, onLogout }) {
     setBusy(`buy:${product.grade}`);
     try {
       await buyEgg(product.grade);
-      await reload();
+      await reloadAndNotify();
       setNotice({ kind: "ok", text: `${product.name}을 데려왔어요. 아래 보유 알에서 개봉해 보세요!` });
     } catch (e) {
       setNotice({
@@ -115,7 +126,7 @@ function ShopPage({ user, onLogout }) {
     try {
       const res = await openEgg(egg.id);
       setResult(res);
-      await reload();
+      await reloadAndNotify();
     } catch (e) {
       // 서버가 보여줄 문구를 message 로 준다(GlobalExceptionHandler). 상태 코드로 문구를
       // 정하면 같은 코드에 사유가 추가될 때 틀린 안내가 나간다 — 실제로 그랬다.
@@ -134,7 +145,7 @@ function ShopPage({ user, onLogout }) {
     setBusy(`furniture:${product.code}`);
     try {
       await buyFurniture(product.code);
-      await Promise.all([reload(), reloadFurniture()]);
+      await Promise.all([reloadAndNotify(), reloadFurniture()]);
       setNotice({
         kind: "ok",
         text: `${product.name}을(를) 샀어요. 마이룸의 보유 가구에서 배치해야 효과가 생겨요.`,
