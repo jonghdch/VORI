@@ -16,7 +16,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -41,14 +40,14 @@ public class AccountStatusFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final SanctionPolicy sanctionPolicy;
     private final ObjectMapper objectMapper;
-    private final SecurityContextRepository securityContextRepository =
-        new HttpSessionSecurityContextRepository();
+    private final SecurityContextRepository securityContextRepository;
 
     public AccountStatusFilter(UserRepository userRepository, SanctionPolicy sanctionPolicy,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper, SecurityContextRepository securityContextRepository) {
         this.userRepository = userRepository;
         this.sanctionPolicy = sanctionPolicy;
         this.objectMapper = objectMapper;
+        this.securityContextRepository = securityContextRepository;
     }
 
     /** 로그아웃은 세션을 끝내는 요청이라 막지 않는다. 막으면 제재된 사용자의 로그아웃이 403 에러가 된다. */

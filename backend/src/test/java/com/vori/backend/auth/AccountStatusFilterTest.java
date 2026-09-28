@@ -14,6 +14,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 
 import java.util.Optional;
 
@@ -29,7 +30,8 @@ class AccountStatusFilterTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final SanctionPolicy sanctionPolicy = mock(SanctionPolicy.class);
     private final AccountStatusFilter filter =
-            new AccountStatusFilter(userRepository, sanctionPolicy, new ObjectMapper().findAndRegisterModules());
+            new AccountStatusFilter(userRepository, sanctionPolicy, new ObjectMapper().findAndRegisterModules(),
+                    new HttpSessionSecurityContextRepository());
     private final FilterChain chain = mock(FilterChain.class);
 
     @AfterEach
