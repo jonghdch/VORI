@@ -38,7 +38,7 @@ async function handle(res) {
 }
 
 async function request(path, { method = "GET", body } = {}) {
-  return handle(
+  const result = await handle(
     await fetch(`${API_BASE}${path}`, {
       method,
       credentials: "include",
@@ -46,6 +46,8 @@ async function request(path, { method = "GET", body } = {}) {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
   );
+  if (method !== "GET") window.dispatchEvent(new Event("vori:account-updated"));
+  return result;
 }
 
 export const get = (path) => request(path);
