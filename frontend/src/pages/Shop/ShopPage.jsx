@@ -5,11 +5,12 @@ import { PetArt, STAGE_LABEL, TIER_LABEL, VARIANT_LABEL } from "../../components
 import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
 import { getMe } from "../../api/user";
-import { CATEGORY_LABEL, FurnitureArt, STAT_LABEL } from "../../components/furnitureVisual";
+import { CATEGORY_LABEL, FurnitureArt, STAT_LABEL, isSurface } from "../../components/furnitureVisual";
 import eggBasicImage from "../../assets/shop/egg-basic.png";
 import eggPremiumImage from "../../assets/shop/egg-premium.png";
 import eggSupremeImage from "../../assets/shop/egg-supreme.png";
 import shopBackgroundImage from "../../assets/shop/shop-background.png";
+import furnitureIconImage from "../../assets/shop/furniture-icon.png";
 import "../Home/HomeDashboard.css";
 import "./ShopPage.css";
 
@@ -37,6 +38,9 @@ const eggImageFor = (grade, gradeName) => {
 
 const TIER_ORDER = ["S", "A", "B", "C"];
 
+// 가구 진열대는 알 진열대처럼 한 번에 3개씩 보여주고, 화살표로 넘긴다.
+const FURNITURE_PER_PAGE = 3;
+
 const coin = (n) => `${(n ?? 0).toLocaleString("ko-KR")} 코인`;
 
 function ShopPage({ user, onLogout }) {
@@ -56,6 +60,10 @@ function ShopPage({ user, onLogout }) {
   const [furnitureProducts, setFurnitureProducts] = useState([]);
   const [myFurniture, setMyFurniture] = useState([]);
   const [furnitureError, setFurnitureError] = useState(null);
+
+  // 상점 이미지 안 진열대에 무엇을 보여줄지 — "egg"(알 상점) | "furniture"(가구 상점)
+  const [shopTab, setShopTab] = useState("egg");
+  const [furniturePage, setFurniturePage] = useState(0);
 
   const reload = useCallback(async () => {
     const [meRes, eggRes] = await Promise.all([getMe(), listMyEggs(true)]);
@@ -165,6 +173,16 @@ function ShopPage({ user, onLogout }) {
     }
   };
 
+  // 벽지·바닥(방 전체에 깔리는 면)은 상점 진열대에 올리지 않는다
+  const shelfFurniture = furnitureProducts.filter((item) => !isSurface(item.category));
+  const furniturePageCount = Math.max(1, Math.ceil(shelfFurniture.length / FURNITURE_PER_PAGE));
+  // 상품 수가 줄어 현재 쪽이 사라져도 마지막 쪽을 보여준다
+  const currentFurniturePage = Math.min(furniturePage, furniturePageCount - 1);
+  const visibleFurniture = shelfFurniture.slice(
+    currentFurniturePage * FURNITURE_PER_PAGE,
+    (currentFurniturePage + 1) * FURNITURE_PER_PAGE
+  );
+
   const ownedCountByName = myFurniture.reduce((acc, f) => {
     acc[f.name] = (acc[f.name] || 0) + 1;
     return acc;
@@ -185,17 +203,62 @@ function ShopPage({ user, onLogout }) {
         >
           <div className="shop-hero-panel">
             <p className="shop-eyebrow">VORI SHOP</p>
-            <h1>{nickname}님, 어떤 알을 데려갈까요?</h1>
-            <p>
-              절약한 돈이 코인이 되고, 코인으로 새 친구가 태어날 알을 살 수 있어요.
-            </p>
+            {shopTab === "egg" ? (
+              <>
+                <h1>{nickname}님, 어떤 알을 데려갈까요?</h1>
+                <p>
+                  절약한 돈이 코인이 되고, 코인으로 새 친구가 태어날 알을 살 수 있어요.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1>{nickname}님, 어떤 가구를 들여볼까요?</h1>
+                <p>
+                  마이룸에 배치해야 효과가 생겨요 · 보유 가구 {myFurniture.length}개
+                </p>
+              </>
+            )}
           </div>
 
           <div className="shop-coin-badge" aria-live="polite">
             보유 코인 {loading ? "…" : unlimitedCoins ? "∞" : gameMoney.toLocaleString("ko-KR")}
           </div>
 
-          <div className="shop-display-shelf" aria-label="판매 상품">
+          {/* 알 / 가구 상점 전환 — 아이콘을 누르면 진열대가 바뀐다 */}
+          <div className="shop-tabs" role="tablist" aria-label="상점 종류">
+            <button
+              type="button"
+              role="tab"
+              id="shop-tab-egg"
+              aria-selected={shopTab === "egg"}
+              aria-controls="shop-panel-egg"
+              className={`shop-tab ${shopTab === "egg" ? "is-active" : ""}`}
+              onClick={() => setShopTab("egg")}
+            >
+              <img src={eggBasicImage} alt="" />
+              <span>알</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="shop-tab-furniture"
+              aria-selected={shopTab === "furniture"}
+              aria-controls="shop-panel-furniture"
+              className={`shop-tab ${shopTab === "furniture" ? "is-active" : ""}`}
+              onClick={() => setShopTab("furniture")}
+            >
+              <img src={furnitureIconImage} alt="" />
+              <span>가구</span>
+            </button>
+          </div>
+
+          {shopTab === "egg" && (
+          <div
+            className="shop-display-shelf"
+            id="shop-panel-egg"
+            role="tabpanel"
+            aria-labelledby="shop-tab-egg"
+          >
             {loading && products.length === 0 && (
               <p className="shop-shelf-state">상품을 불러오는 중…</p>
             )}
@@ -233,6 +296,100 @@ function ShopPage({ user, onLogout }) {
               );
             })}
           </div>
+          )}
+
+          {shopTab === "furniture" && (
+            <div
+              className="shop-furniture-stage"
+              id="shop-panel-furniture"
+              role="tabpanel"
+              aria-labelledby="shop-tab-furniture"
+            >
+              <button
+                type="button"
+                className="shop-page-arrow"
+                aria-label="이전 가구 보기"
+                disabled={currentFurniturePage === 0}
+                onClick={() => setFurniturePage(currentFurniturePage - 1)}
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                  <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <div className="shop-furniture-shelf" aria-live="polite">
+              {furnitureError && (
+                <p className="shop-shelf-state shop-shelf-state--error">{furnitureError}</p>
+              )}
+              {!furnitureError && furnitureProducts.length === 0 && (
+                <p className="shop-shelf-state">가구를 불러오는 중…</p>
+              )}
+              {visibleFurniture.map((item) => {
+                const affordable = unlimitedCoins || gameMoney >= item.price;
+                const isBusy = busy === `furniture:${item.code}`;
+                const owned = ownedCountByName[item.name] || 0;
+                return (
+                  <article
+                    key={item.code}
+                    className={`shop-display-item shop-furniture-item ${item.locked ? "is-locked" : ""}`}
+                  >
+                    <div className="shop-display-image-wrap">
+                      <FurnitureArt
+                        category={item.category}
+                        name={item.name}
+                        className="shop-display-image"
+                        emojiClassName="shop-furniture-emoji"
+                      />
+                    </div>
+                    <div className="shop-display-info">
+                      <h2>{item.name}</h2>
+                      {owned > 0 && <em className="shop-furniture-owned">보유 {owned}</em>}
+                      <p>
+                        {CATEGORY_LABEL[item.category] ?? item.category} ·{" "}
+                        {STAT_LABEL[item.statTarget] ?? item.statTarget} · 분양가 +{item.releaseBonusPct}%
+                      </p>
+                      {item.themeName && (
+                        <small className="shop-furniture-theme">
+                          {item.themeName} 테마
+                          {item.themeSetBonusPct != null && ` · 세트 +${item.themeSetBonusPct}%`}
+                        </small>
+                      )}
+                      {item.locked && (
+                        <small className="shop-furniture-lock">
+                          🔒 칭호 "{item.unlockTitleName ?? "?"}" 획득 시 해금
+                        </small>
+                      )}
+                      <strong>{coin(item.price)}</strong>
+                      <button
+                        type="button"
+                        className="home-btn home-btn-primary shop-buy-btn"
+                        disabled={item.locked || !affordable || busy !== null}
+                        onClick={() => handleBuyFurniture(item)}
+                      >
+                        {isBusy ? "구매 중…" : item.locked ? "잠김" : affordable ? "구매하기" : "코인 부족"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+              </div>
+              <button
+                type="button"
+                className="shop-page-arrow"
+                aria-label="다음 가구 보기"
+                disabled={currentFurniturePage >= furniturePageCount - 1}
+                onClick={() => setFurniturePage(currentFurniturePage + 1)}
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                  <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {shelfFurniture.length > 0 && (
+                <p className="shop-page-indicator">
+                  {currentFurniturePage + 1} / {furniturePageCount}
+                </p>
+              )}
+            </div>
+          )}
         </section>
 
         {notice && (
@@ -325,71 +482,6 @@ function ShopPage({ user, onLogout }) {
           </section>
         </div>
 
-        {/* 가구 상점 — 배치한 가구만 분양가 보너스·테마 세트에 반영된다 */}
-        <section className="home-card shop-furniture">
-          <div className="shop-section-head">
-            <h2 className="home-card-title home-card-title--sm">가구 상점</h2>
-            <span>배치해야 효과가 생겨요 · 보유 {myFurniture.length}개</span>
-          </div>
-          {furnitureError && <p className="shop-empty">{furnitureError}</p>}
-          {!furnitureError && furnitureProducts.length === 0 && (
-            <p className="shop-empty">가구를 불러오는 중…</p>
-          )}
-          <ul className="shop-furniture-grid">
-            {furnitureProducts.map((item) => {
-              const affordable = unlimitedCoins || gameMoney >= item.price;
-              const isBusy = busy === `furniture:${item.code}`;
-              const owned = ownedCountByName[item.name] || 0;
-              return (
-                <li
-                  key={item.code}
-                  className={`shop-furniture-card ${item.locked ? "is-locked" : ""}`}
-                >
-                  <span className="shop-furniture-art">
-                    <FurnitureArt
-                      category={item.category}
-                      name={item.name}
-                      className="shop-furniture-image"
-                      emojiClassName="shop-furniture-emoji"
-                    />
-                  </span>
-                  <div className="shop-furniture-info">
-                    <strong>
-                      {item.name}
-                      {owned > 0 && <em className="shop-furniture-owned">보유 {owned}</em>}
-                    </strong>
-                    <small>
-                      {CATEGORY_LABEL[item.category] ?? item.category} ·{" "}
-                      {STAT_LABEL[item.statTarget] ?? item.statTarget} · 분양가 +{item.releaseBonusPct}%
-                    </small>
-                    {item.themeName && (
-                      <small className="shop-furniture-theme">
-                        {item.themeName} 테마
-                        {item.themeSetBonusPct != null && ` · 세트 +${item.themeSetBonusPct}%`}
-                      </small>
-                    )}
-                    {item.locked && (
-                      <small className="shop-furniture-lock">
-                        🔒 칭호 "{item.unlockTitleName ?? "?"}" 획득 시 해금
-                      </small>
-                    )}
-                  </div>
-                  <div className="shop-furniture-buy">
-                    <strong>{coin(item.price)}</strong>
-                    <button
-                      type="button"
-                      className="home-btn home-btn-primary shop-buy-btn"
-                      disabled={item.locked || !affordable || busy !== null}
-                      onClick={() => handleBuyFurniture(item)}
-                    >
-                      {isBusy ? "구매 중…" : item.locked ? "잠김" : affordable ? "구매" : "코인 부족"}
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
       </main>
     </AppShell>
   );

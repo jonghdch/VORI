@@ -1,10 +1,22 @@
 // 가구 외형·라벨 매핑 — 백엔드 FurnitureCatalog(category·statTarget) → 화면 표현.
-// 이미지 에셋은 bed.png 하나뿐이라 나머지 카테고리는 이모지로 대신한다.
+// 이미지 에셋이 없는 카테고리는 이모지로 대신한다.
 // 에셋이 추가되면 CATEGORY_IMAGE 에 카테고리 키만 등록하면 된다.
 import bedImage from "../assets/furniture/bed.png";
+import mirrorImage from "../assets/furniture/mirror-wall.png";
+import corkBoardImage from "../assets/furniture/cork-board.png";
+import bookshelfImage from "../assets/furniture/bookshelf.png";
+import drawerChestImage from "../assets/furniture/drawer-chest.png";
+import wallPictureImage from "../assets/furniture/wall-picture.png";
+import vanityImage from "../assets/furniture/vanity.png";
 
 const CATEGORY_IMAGE = {
   BED: bedImage,
+  MIRROR: mirrorImage,
+  BOARD: corkBoardImage,
+  SHELF: bookshelfImage,
+  DRAWER: drawerChestImage,
+  PICTURE: wallPictureImage,
+  VANITY: vanityImage,
 };
 
 const CATEGORY_EMOJI = {
