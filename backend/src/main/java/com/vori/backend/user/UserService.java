@@ -1,6 +1,7 @@
 package com.vori.backend.user;
 
 import com.vori.backend.auth.dto.SignupRequest;
+import com.vori.backend.user.dto.ProfileUpdateRequest;
 import com.vori.backend.pet.Pet;
 import com.vori.backend.pet.PetRepository;
 import com.vori.backend.pet.PetSpecies;
@@ -91,6 +92,26 @@ public class UserService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
         user.incrementLoginCount();
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "LOGIN"));
+    }
+
+    @Transactional
+    public User updateProfile(Long userId, ProfileUpdateRequest req) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+
+        user.updateProfile(
+            req.nickname().trim(),
+            blankToNull(req.name()),
+            req.age(),
+            blankToNull(req.job()),
+            req.monthlyIncome());
+        return user;
+    }
+
+    private String blankToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void initializeStatStats(Long userId) {

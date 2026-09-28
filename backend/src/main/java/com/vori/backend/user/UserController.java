@@ -2,10 +2,14 @@ package com.vori.backend.user;
 
 import com.vori.backend.auth.UserPrincipal;
 import com.vori.backend.user.dto.MeResponse;
+import com.vori.backend.user.dto.ProfileUpdateRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final UserService userService;
 
     /**
      * GET /api/users/me — 본인 정보 + 보유 게임머니.
@@ -34,5 +39,12 @@ public class UserController {
                 .map(MeResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+    }
+
+    /** PUT /api/users/me — 환경설정의 프로필 수정. */
+    @PutMapping
+    public MeResponse updateProfile(@AuthenticationPrincipal UserPrincipal principal,
+                                    @Valid @RequestBody ProfileUpdateRequest req) {
+        return MeResponse.from(userService.updateProfile(principal.getUser().getId(), req));
     }
 }

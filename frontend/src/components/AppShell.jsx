@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../pages/Home/HomeDashboard.css";
+import AccountSummary from "./AccountSummary";
 
 const TOP_NAV = [
   { id: "home", label: "홈" },
@@ -121,6 +122,7 @@ function AppShell({
               </button>
             ))}
           </nav>
+          <AccountSummary />
         </div>
       </header>
 
@@ -186,6 +188,16 @@ function AppShell({
                   onClick={() => go("settings")}
                 >
                   환경설정
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  className={`home-side-link ${activeSide === "profile" ? "is-active" : ""}`}
+                  aria-current={activeSide === "profile" ? "page" : undefined}
+                  onClick={() => go("settings/profile")}
+                >
+                  프로필 설정
                 </button>
               </li>
               <li>

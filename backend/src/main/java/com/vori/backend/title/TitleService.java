@@ -125,8 +125,12 @@ public class TitleService {
 
     /** 조건을 만족했는데 아직 없는 칭호를 지급한다. 이미 가진 것은 건너뛴다(멱등). */
     private void grantNewlyAchieved(Long userId, TitleProgress progress) {
+        // 헤더와 칭호 화면의 동시 조회에서도 중복 지급을 막는다.
+        User owner = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+        boolean admin = owner.getRole() == com.vori.backend.user.Role.ADMIN;
         for (Title title : titleRepository.findByEnabledTrueOrderBySortOrderAscIdAsc()) {
-            if (!title.isAchieved(progress)) continue;
+            if (!admin && !title.isAchieved(progress)) continue;
             if (userTitleRepository.findByUserIdAndTitleId(userId, title.getId()).isPresent()) continue;
 
             Long unlocksThemeId = unlockedThemeIdOf(title.getId());

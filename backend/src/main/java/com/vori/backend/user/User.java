@@ -94,6 +94,15 @@ public class User {
         this.loginCount = (this.loginCount == null ? 0 : this.loginCount) + 1;
     }
 
+    /** 사용자가 환경설정에서 변경하는 공개 프로필 정보. */
+    public void updateProfile(String nickname, String name, Integer age, String job, Integer monthlyIncome) {
+        this.nickname = nickname;
+        this.name = name;
+        this.age = age;
+        this.job = job;
+        this.monthlyIncome = monthlyIncome;
+    }
+
     /** 칭호 장착. null 이면 해제. 소유 여부 검증은 호출부(TitleService)가 한다. */
     public void setActiveTitle(Long titleId) {
         this.activeTitleId = titleId;
@@ -112,6 +121,7 @@ public class User {
      */
     public void spendGameMoney(int amount) {
         if (amount < 0) throw new IllegalArgumentException("차감액은 음수일 수 없습니다: " + amount);
+        if (role == Role.ADMIN) return;
         int current = this.gameMoney == null ? 0 : this.gameMoney;
         if (current < amount) {
             throw new IllegalStateException("게임머니 부족: 보유 " + current + ", 필요 " + amount);

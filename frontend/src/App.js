@@ -34,6 +34,9 @@ const PetPage = lazy(() => import("./pages/Pet/PetPage"));
 const PetDexPage = lazy(() => import("./pages/PetDex/PetDexPage"));
 const ShopPage = lazy(() => import("./pages/Shop/ShopPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
+const ProfileSettingsPage = lazy(() =>
+  import("./pages/Settings/ProfileSettingsPage"),
+);
 const AchievementPage = lazy(() => import("./pages/Achievement/AchievementPage"));
 // 이용약관·개인정보처리방침 — 공개(비인증) 페이지.
 const TermsPage = lazy(() => import("./pages/Legal/TermsPage"));
@@ -84,6 +87,7 @@ const ADMIN_PAGES = {
 //   /dex                    펫 도감
 //   /shop                   상점
 //   /settings               환경설정
+//   /settings/profile       프로필 설정
 //   /titles                 업적/칭호
 //   /admin/*                어드민 (ADMIN 전용)
 
@@ -238,6 +242,18 @@ function App() {
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <SettingsPage user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings/profile"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <ProfileSettingsPage
+                  user={user}
+                  onLogout={handleLogout}
+                  onUserUpdate={setUser}
+                />
               </ProtectedRoute>
             }
           />
