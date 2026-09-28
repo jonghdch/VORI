@@ -33,7 +33,7 @@ public class ExpenseController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody ExpenseCreateRequest req
     ) {
-        ExpenseResponse response = expenseService.createExpense(principal.getUser().getId(), req);
+        ExpenseResponse response = expenseService.createExpense(principal.getId(), req);
         return ResponseEntity.ok(response);
     }
 
@@ -44,7 +44,7 @@ public class ExpenseController {
             @Valid @RequestBody ExpenseUpdateRequest req
     ) {
         return ResponseEntity.ok(expenseService.updateExpense(
-                principal.getUser().getId(), id, req));
+                principal.getId(), id, req));
     }
 
     /** ?date=YYYY-MM-DD 의 해당 날짜 지출 목록. 가계부 작성 화면 mount 용. */
@@ -53,6 +53,6 @@ public class ExpenseController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        return ResponseEntity.ok(expenseService.listByDate(principal.getUser().getId(), date));
+        return ResponseEntity.ok(expenseService.listByDate(principal.getId(), date));
     }
 }

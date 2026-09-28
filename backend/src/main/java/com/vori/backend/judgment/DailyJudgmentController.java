@@ -18,13 +18,13 @@ public class DailyJudgmentController {
     @GetMapping("/today")
     public ResponseEntity<DailyJudgmentResponse> today(
             @AuthenticationPrincipal UserPrincipal principal) {
-        return dailyJudgmentService.getToday(principal.getUser().getId())
+        return dailyJudgmentService.getToday(principal.getId())
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PostMapping("/today")
     public DailyJudgmentResponse judgeToday(@AuthenticationPrincipal UserPrincipal principal) {
-        return dailyJudgmentService.judgeToday(principal.getUser());
+        return dailyJudgmentService.judgeToday(principal.getId(), principal.getRole());
     }
 }

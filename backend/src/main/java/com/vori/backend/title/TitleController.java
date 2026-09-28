@@ -32,7 +32,7 @@ public class TitleController {
      */
     @GetMapping
     public List<TitleResponse> list(@AuthenticationPrincipal UserPrincipal principal) {
-        return titleService.list(principal.getUser().getId());
+        return titleService.list(principal.getId());
     }
 
     /** PUT /api/titles/active — 칭호 장착. titleId 를 null 로 보내면 해제. */
@@ -42,6 +42,6 @@ public class TitleController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody TitleActivateRequest req
     ) {
-        titleService.setActive(principal.getUser().getId(), req.titleId());
+        titleService.setActive(principal.getId(), req.titleId());
     }
 }

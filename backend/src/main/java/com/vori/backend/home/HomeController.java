@@ -22,6 +22,6 @@ public class HomeController {
     public ResponseEntity<HomeSummaryResponse> home(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ResponseEntity.ok(homeService.getSummary(principal.getUser().getId()));
+        return ResponseEntity.ok(homeService.getSummary(principal.getId()));
     }
 }

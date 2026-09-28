@@ -30,7 +30,7 @@ public class IncomeController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody IncomeCreateRequest req
     ) {
-        IncomeResponse response = incomeService.createIncome(principal.getUser().getId(), req);
+        IncomeResponse response = incomeService.createIncome(principal.getId(), req);
         return ResponseEntity.ok(response);
     }
 
@@ -39,6 +39,6 @@ public class IncomeController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        return ResponseEntity.ok(incomeService.listByDate(principal.getUser().getId(), date));
+        return ResponseEntity.ok(incomeService.listByDate(principal.getId(), date));
     }
 }
