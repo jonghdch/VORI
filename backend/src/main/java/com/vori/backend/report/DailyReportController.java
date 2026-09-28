@@ -29,7 +29,7 @@ public class DailyReportController {
     /** GET /api/daily-reports/today — 가장 최근 리포트. 없으면 본문 null(200). */
     @GetMapping("/today")
     public DailyReportResponse today(@AuthenticationPrincipal UserPrincipal principal) {
-        return dailyReportService.getLatest(principal.getUser().getId());
+        return dailyReportService.getLatest(principal.getId());
     }
 
     /** GET /api/daily-reports/2026-08-26 — 특정 날짜. */
@@ -38,7 +38,7 @@ public class DailyReportController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        return dailyReportService.getByDate(principal.getUser().getId(), date);
+        return dailyReportService.getByDate(principal.getId(), date);
     }
 
     /** GET /api/daily-reports?from=2026-08-01&to=2026-08-31 — 기간 목록(최신순). */
@@ -48,7 +48,7 @@ public class DailyReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
-        return dailyReportService.listRange(principal.getUser().getId(), from, to);
+        return dailyReportService.listRange(principal.getId(), from, to);
     }
 
     /** POST /api/daily-reports/{id}/read — 읽음 처리. */
@@ -58,7 +58,7 @@ public class DailyReportController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id
     ) {
-        dailyReportService.markRead(principal.getUser().getId(), id);
+        dailyReportService.markRead(principal.getId(), id);
     }
 
     /**
@@ -73,6 +73,6 @@ public class DailyReportController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         LocalDate target = date != null ? date : LocalDate.now().minusDays(1);
-        return dailyReportService.generateNow(principal.getUser().getId(), target);
+        return dailyReportService.generateNow(principal.getId(), target);
     }
 }

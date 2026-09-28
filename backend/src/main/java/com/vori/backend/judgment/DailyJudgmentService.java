@@ -48,12 +48,12 @@ public class DailyJudgmentService {
     }
 
     @Transactional
-    public DailyJudgmentResponse judgeToday(User principalUser) {
+    public DailyJudgmentResponse judgeToday(Long userId, Role role) {
         LocalDateTime now = LocalDateTime.now();
         LocalDate today = now.toLocalDate();
 
-        if (principalUser.getRole() == Role.ADMIN) {
-            return evaluate(principalUser.getId(), today, now, false);
+        if (role == Role.ADMIN) {
+            return evaluate(userId, today, now, false);
         }
         if (now.getHour() < openHour) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -61,7 +61,7 @@ public class DailyJudgmentService {
         }
 
         // 같은 사용자의 동시 클릭을 직렬화해 UNIQUE 충돌과 중복 판정을 함께 막는다.
-        User locked = userRepository.findByIdForUpdate(principalUser.getId()).orElseThrow();
+        User locked = userRepository.findByIdForUpdate(userId).orElseThrow();
         Optional<DailyJudgment> existing = dailyJudgmentRepository
                 .findByUserIdAndJudgmentDate(locked.getId(), today);
         if (existing.isPresent()) return DailyJudgmentResponse.from(existing.get(), true);

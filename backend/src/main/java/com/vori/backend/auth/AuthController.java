@@ -5,6 +5,7 @@ import com.vori.backend.auth.dto.LoginRequest;
 import com.vori.backend.auth.dto.SignupRequest;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserService;
+import com.vori.backend.user.dto.MeResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -42,7 +43,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest req,
+    public MeResponse login(@Valid @RequestBody LoginRequest req,
                               HttpServletRequest request,
                               HttpServletResponse response) {
         try {
@@ -61,8 +62,8 @@ public class AuthController {
             securityContextRepository.saveContext(context, request, response);
 
             UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
-            userService.recordLogin(principal.getUser().getId());
-            return AuthResponse.from(principal.getUser());
+            userService.recordLogin(principal.getId());
+            return userService.getMe(principal.getId());
         } catch (BadCredentialsException e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다");
         } catch (LockedException e) {
@@ -80,12 +81,13 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    /** 세션 확인 + 본인 정보. 세션에는 신원만 있으므로 값은 DB 에서 읽는다(프로필 수정이 바로 반영). */
     @GetMapping("/me")
-    public AuthResponse me() {
+    public MeResponse me() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다");
         }
-        return AuthResponse.from(principal.getUser());
+        return userService.getMe(principal.getId());
     }
 }

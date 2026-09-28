@@ -37,7 +37,7 @@ public class GoalController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam String yearMonth
     ) {
-        return goalService.list(principal.getUser().getId(), yearMonth);
+        return goalService.list(principal.getId(), yearMonth);
     }
 
     /** POST /api/goals — 목표 생성. 같은 달·같은 대상이 이미 있으면 409. */
@@ -47,7 +47,7 @@ public class GoalController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody GoalCreateRequest req
     ) {
-        return goalService.create(principal.getUser().getId(), req);
+        return goalService.create(principal.getId(), req);
     }
 
     /** PATCH /api/goals/{id} — 목표 금액 수정 / 포기 처리. */
@@ -57,7 +57,7 @@ public class GoalController {
             @PathVariable Long id,
             @Valid @RequestBody GoalUpdateRequest req
     ) {
-        return goalService.update(principal.getUser().getId(), id, req);
+        return goalService.update(principal.getId(), id, req);
     }
 
     /** DELETE /api/goals/{id} */
@@ -67,6 +67,6 @@ public class GoalController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id
     ) {
-        goalService.delete(principal.getUser().getId(), id);
+        goalService.delete(principal.getId(), id);
     }
 }

@@ -1,6 +1,7 @@
 package com.vori.backend.user;
 
 import com.vori.backend.auth.dto.SignupRequest;
+import com.vori.backend.user.dto.MeResponse;
 import com.vori.backend.user.dto.ProfileUpdateRequest;
 import com.vori.backend.pet.Pet;
 import com.vori.backend.pet.PetRepository;
@@ -79,6 +80,17 @@ public class UserService {
             .hatchedAt(now)
             .createdAt(now)
             .build());
+    }
+
+    /**
+     * 본인 정보 — 매번 DB 에서 읽는다. 세션(UserPrincipal)에는 신원만 있으므로
+     * 닉네임·잔액처럼 바뀌는 값은 여기서만 나간다. /api/auth/me·/api/users/me·로그인 응답이 같이 쓴다.
+     */
+    @Transactional(readOnly = true)
+    public MeResponse getMe(Long userId) {
+        return userRepository.findById(userId)
+            .map(MeResponse::from)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
     }
 
     /**

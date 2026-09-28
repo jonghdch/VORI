@@ -20,6 +20,6 @@ public class StatsController {
     public ResponseEntity<StatsResponse> getMyStats(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ResponseEntity.ok(statsService.getMyStats(principal.getUser().getId()));
+        return ResponseEntity.ok(statsService.getMyStats(principal.getId()));
     }
 }
