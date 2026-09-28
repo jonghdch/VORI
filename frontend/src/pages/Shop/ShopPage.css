@@ -107,6 +107,10 @@
 }
 
 .shop-display-info {
+  /* 세 등급 카드의 폭·높이를 문구 길이와 상관없이 똑같이 맞춘다 */
+  flex: 1;
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -135,7 +139,9 @@
 }
 
 .shop-display-info strong {
-  margin-top: 10px;
+  /* 가격·구매 버튼을 카드 아래쪽에 붙여 세 카드의 줄을 맞춘다 */
+  margin-top: auto;
+  padding-top: 10px;
   color: var(--home-text);
   font-size: 18px;
   font-weight: 900;

@@ -6,16 +6,33 @@ import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
 import { getMe } from "../../api/user";
 import { CATEGORY_LABEL, FurnitureArt, STAT_LABEL } from "../../components/furnitureVisual";
-import eggImage from "../../assets/shop/egg.png";
+import eggBasicImage from "../../assets/shop/egg-basic.png";
+import eggPremiumImage from "../../assets/shop/egg-premium.png";
+import eggSupremeImage from "../../assets/shop/egg-supreme.png";
 import shopBackgroundImage from "../../assets/shop/shop-background.png";
 import "../Home/HomeDashboard.css";
 import "./ShopPage.css";
 
 // 등급별 소개 문구 — 가격·확률은 백엔드(EggGrade)가 단일 출처, 문구만 프론트.
 const GRADE_COPY = {
-  BASIC: "어떤 펫이 태어날지 모르는 특별한 알이에요.",
-  PREMIUM: "희귀한 친구를 만날 확률이 높아진 알이에요.",
-  SUPREME: "S등급 펫이 가장 잘 나오는 최고급 알이에요.",
+  BASIC: "어떤 친구가 태어날지 두근두근한 기본 알이에요.",
+  PREMIUM: "희귀한 친구를 만날 확률이 높아진 고급 알이에요.",
+  LEGENDARY: "S등급 친구가 가장 잘 나오는 최고급 알이에요.",
+};
+
+// 등급별 알 이미지 — 등급 코드가 없으면 등급 이름으로 판별하고, 그래도 모르면 기본 알.
+const EGG_IMAGE = {
+  BASIC: eggBasicImage,
+  PREMIUM: eggPremiumImage,
+  LEGENDARY: eggSupremeImage,
+};
+
+const eggImageFor = (grade, gradeName) => {
+  if (EGG_IMAGE[grade]) return EGG_IMAGE[grade];
+  const name = gradeName || "";
+  if (name.includes("최고급")) return eggSupremeImage;
+  if (name.includes("고급")) return eggPremiumImage;
+  return eggBasicImage;
 };
 
 const TIER_ORDER = ["S", "A", "B", "C"];
@@ -189,7 +206,7 @@ function ShopPage({ user, onLogout }) {
               return (
                 <article key={item.grade} className="shop-display-item">
                   <div className="shop-display-image-wrap">
-                    <img src={eggImage} alt={item.name} className="shop-display-image" />
+                    <img src={eggImageFor(item.grade, item.name)} alt={item.name} className="shop-display-image" />
                   </div>
                   <div className="shop-display-info">
                     <h2>{item.name}</h2>
@@ -242,7 +259,7 @@ function ShopPage({ user, onLogout }) {
                   const isBusy = busy === `open:${egg.id}`;
                   return (
                     <li key={egg.id} className="shop-egg-item">
-                      <img src={eggImage} alt="" className="shop-egg-thumb" />
+                      <img src={eggImageFor(egg.grade, egg.gradeName)} alt="" className="shop-egg-thumb" />
                       <div className="shop-egg-info">
                         <strong>{egg.gradeName}</strong>
                         <small>{coin(egg.price)} · {egg.purchasedAt?.slice(0, 10)} 구매</small>
