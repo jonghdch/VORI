@@ -22,6 +22,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 로그인한 요청마다 계정 상태를 DB 로 다시 확인한다.
@@ -50,10 +51,18 @@ public class AccountStatusFilter extends OncePerRequestFilter {
         this.securityContextRepository = securityContextRepository;
     }
 
-    /** 로그아웃은 세션을 끝내는 요청이라 막지 않는다. 막으면 제재된 사용자의 로그아웃이 403 에러가 된다. */
+    /**
+     * 세션을 끝내거나 새로 만드는 요청은 옛 세션 상태로 막지 않는다.
+     * - 로그아웃: 막으면 제재된 사용자의 로그아웃이 403 에러가 된다
+     * - 로그인·가입: 막으면 제재된 옛 세션이 남은 브라우저에서 다른 계정 로그인이 첫 시도에 막힌다.
+     *   로그인 자체의 제재 확인은 CustomUserDetailsService 가 한다
+     */
+    private static final Set<String> SESSION_ENDPOINTS =
+        Set.of("/api/auth/logout", "/api/auth/login", "/api/auth/signup");
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return "/api/auth/logout".equals(request.getServletPath());
+        return SESSION_ENDPOINTS.contains(request.getServletPath());
     }
 
     @Override

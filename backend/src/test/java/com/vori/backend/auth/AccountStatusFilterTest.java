@@ -113,11 +113,16 @@ class AccountStatusFilterTest {
         verify(chain).doFilter(any(), any());
     }
 
-    @Test
-    void sanctionedUserCanStillLogOut() throws Exception {
+    /**
+     * 로그아웃·로그인·가입은 세션을 끝내거나 새로 만드는 요청이라 옛 세션 상태로 막지 않는다.
+     * 막으면 제재된 옛 세션이 남은 브라우저에서 다른 계정 로그인이 첫 시도에 403 이 된다.
+     */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"/api/auth/logout", "/api/auth/login", "/api/auth/signup"})
+    void authEndpointsAreNotBlockedByOldSession(String path) throws Exception {
         loginAs(Role.USER);
-        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/auth/logout");
-        req.setServletPath("/api/auth/logout");
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", path);
+        req.setServletPath(path);
         MockHttpServletResponse res = new MockHttpServletResponse();
 
         filter.doFilter(req, res, chain);
