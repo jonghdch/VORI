@@ -203,6 +203,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   <div className="home-pet-art" aria-hidden>
                     <PetArt
                       appearanceKey={activePet?.appearanceKey ?? "puppy"}
+                      stage={activePet?.stage}
                       name=""
                       className="home-pet-image"
                       emojiClassName="home-pet-emoji"

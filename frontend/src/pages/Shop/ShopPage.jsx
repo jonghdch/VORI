@@ -273,6 +273,7 @@ function ShopPage({ user, onLogout }) {
                 <span className="shop-result-art">
                   <PetArt
                     appearanceKey={result.pet.appearanceKey}
+                    stage={result.pet.stage}
                     name={result.pet.speciesName}
                     className="shop-result-image"
                     emojiClassName="shop-result-emoji"

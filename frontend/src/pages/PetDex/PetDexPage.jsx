@@ -171,6 +171,7 @@ function PetDexPage({ onLogout }) {
                 <div className="dex-art">
                   <PetArt
                     appearanceKey={sp.appearanceKey}
+                    stage={owned ? STAGE_ORDER[reached] : undefined}
                     name={sp.name}
                     className="dex-art-img"
                     emojiClassName="dex-art-emoji"

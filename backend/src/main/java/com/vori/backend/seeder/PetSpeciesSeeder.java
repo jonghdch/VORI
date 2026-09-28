@@ -20,23 +20,24 @@ public class PetSpeciesSeeder implements CommandLineRunner {
 
     private record Species(String name, String tier, String appearanceKey) {}
 
+    // 등급 표기: S=레전드, A=에픽, B=희귀, C=일반 (프론트 petCatalog.js 와 동일하게 유지)
     private static final List<Species> SPECIES = List.of(
         new Species("용",     "S", "dragon"),
-        new Species("사자",   "S", "lion"),
+        new Species("늑대",   "S", "wolf"),
         new Species("뱀",     "S", "snake"),
-        new Species("여우",   "S", "fox"),
-        new Species("사슴",   "A", "deer"),
+        new Species("판다",   "A", "panda"),
+        new Species("너구리", "A", "raccoon"),
         new Species("펭귄",   "A", "penguin"),
-        new Species("늑대",   "A", "wolf"),
-        new Species("거북이", "A", "turtle"),
-        new Species("강아지", "B", "puppy"),
-        new Species("고양이", "B", "kitten"),
-        new Species("토끼",   "B", "rabbit"),
+        new Species("사자",   "A", "lion"),
+        new Species("사슴",   "B", "deer"),
+        new Species("여우",   "B", "fox"),
         new Species("양",     "B", "sheep"),
-        new Species("개구리", "C", "frog"),
-        new Species("다람쥐", "C", "squirrel"),
-        new Species("원숭이", "C", "monkey"),
-        new Species("팬더",   "C", "panda")
+        new Species("원숭이", "B", "monkey"),
+        new Species("다람쥐", "B", "squirrel"),
+        new Species("고양이", "C", "kitten"),
+        new Species("강아지", "C", "puppy"),
+        new Species("토끼",   "C", "rabbit"),
+        new Species("거북이", "C", "turtle")
     );
 
     @Override
