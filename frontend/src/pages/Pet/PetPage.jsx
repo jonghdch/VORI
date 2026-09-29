@@ -166,7 +166,7 @@ function PetPage({ user, onLogout }) {
         kind: "err",
         text:
           e.status === 400
-            ? "성체가 된 펫만 분양할 수 있어요."
+            ? `${STAGE_LABEL.ADULT}까지 키운 펫만 분양할 수 있어요.`
             : e.status === 409
               ? "이미 분양한 펫이에요."
               : e.message,
@@ -606,7 +606,7 @@ function PetPage({ user, onLogout }) {
                           <strong>
                             {evolution
                               ? `${Math.min(pet.statTotal, evolution.threshold)} / ${evolution.threshold}`
-                              : "성체 완료"}
+                              : `${STAGE_LABEL.ADULT} 완료`}
                           </strong>
                         </div>
                         <div className="pet-status-track">
