@@ -1,7 +1,7 @@
 // 펫 외형·라벨 매핑 — 백엔드 PetResponse(appearanceKey·stage·variant·tier) → 화면 표현.
 // 이미지 에셋은 종족별·성장 단계별로 PET_IMAGE 에 등록한다. 파일명은 `<appearanceKey>-<단계번호>.png`
 // (1 = 아기 INFANT, 2 = 청소년 JUVENILE, 3 = 성체 ADULT). 지금은 16종 모두 1·2차 이미지까지 있어서
-// 성체(ADULT)는 1차 이미지로 대신 표시한다. 3차 이미지가 생기면 ADULT 키만 추가하면 된다.
+// 성체(ADULT)는 가장 가까운 2차 이미지로 대신 표시한다. 3차 이미지가 생기면 ADULT 키만 추가하면 된다.
 // 이미지가 없는 종족은 PET_EMOJI 로 대신한다.
 import dragonStage1 from "../assets/pets/dragon-1.png";
 import dragonStage2 from "../assets/pets/dragon-2.png";
@@ -106,13 +106,16 @@ export function nextStage(stage) {
 
 /**
  * @param {string} appearanceKey
- * @param {string} [stage] INFANT | JUVENILE | ADULT. 해당 단계 이미지가 없으면 1차(INFANT) 이미지로 대신한다.
+ * @param {string} [stage] INFANT | JUVENILE | ADULT. 해당 단계 이미지가 없으면 바로 아래 단계로 대신한다
+ *   (성체 → 2차 → 1차).
  * @returns {{ image:string|null, emoji:string }}
  */
 export function petVisual(appearanceKey, stage = "INFANT") {
   const images = PET_IMAGE[appearanceKey];
   return {
-    image: images ? images[stage] ?? images.INFANT ?? null : null,
+    image: images
+      ? images[stage] ?? (stage === "ADULT" ? images.JUVENILE : undefined) ?? images.INFANT ?? null
+      : null,
     emoji: PET_EMOJI[appearanceKey] ?? "🐾",
   };
 }
