@@ -17,6 +17,7 @@ import {
   DEFAULT_POSITION,
   FurnitureArt,
   SURFACE_POSITION,
+  furnitureVisual,
   STAT_LABEL,
   isSurface,
 } from "../../components/furnitureVisual";
@@ -464,7 +465,11 @@ function PetPage({ user, onLogout }) {
                         dragTarget?.type === "furniture" && dragTarget.id === item.id
                           ? "is-dragging"
                           : ""
-                      } ${item.category === "BED" ? "pet-placed-item--image" : ""} ${
+                      } ${
+                        // 이미지가 있는 가구는 침대처럼 방 크기에 맞춘 그림으로 놓는다.
+                        // 종류별 클래스는 이미지·이모지 모두에 붙여 크기를 따로 정할 수 있게 한다.
+                        furnitureVisual(item.category).image ? "pet-placed-item--image" : ""
+                      } pet-placed-item--${item.category.toLowerCase()} ${
                         furnitureBusy === item.id ? "is-busy" : ""
                       }`}
                       style={{ left: `${pos.x}%`, top: `${pos.y}%` }}

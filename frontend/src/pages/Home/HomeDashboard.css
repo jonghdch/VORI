@@ -375,9 +375,16 @@
   border: 1px solid var(--home-card-border);
 }
 
+/* 펫 카드 — 랜딩 페이지 톤(베이지 바탕 + 세이지·하늘·살구 빛)에 맞춘 배경.
+   펫 뒤에 세이지 빛이 모이고, 모서리에 하늘·살구색이 옅게 번진다. 점 무늬는 아주 은은하게. */
 .home-card-pet {
-  background: linear-gradient(145deg, #eef6ea 0%, #e4efd9 100%);
-  border-color: #d8e8cc;
+  background:
+    radial-gradient(circle at 50% 56%, rgba(212, 232, 194, 0.8) 0%, rgba(212, 232, 194, 0) 40%),
+    radial-gradient(circle at 92% 6%, rgba(220, 238, 244, 0.95) 0%, rgba(220, 238, 244, 0) 42%),
+    radial-gradient(circle at 4% 100%, rgba(251, 235, 205, 0.8) 0%, rgba(251, 235, 205, 0) 40%),
+    radial-gradient(rgba(124, 158, 107, 0.12) 1px, transparent 1.6px) 0 0 / 18px 18px,
+    linear-gradient(180deg, #fffdf9 0%, #f5f3ee 100%);
+  border-color: var(--home-card-border);
   display: flex;
   flex-direction: column;
 }
@@ -474,16 +481,18 @@
   stroke-width: 11;
   stroke-linecap: round;
 }
-.home-pet-gauge-track { stroke: var(--home-white); }
+/* 게이지 빈 부분 — 카드 배경(베이지)보다 한 톤 진한 베이지, 살짝 투명하게 */
+.home-pet-gauge-track { stroke: rgba(214, 205, 186, 0.55); }
 .home-pet-gauge-fill {
-  stroke: var(--home-green);
+  stroke: url(#home-pet-gauge-gradient);
+  filter: drop-shadow(0 1px 2px rgba(124, 158, 107, 0.25));
   transition: stroke-dasharray 0.9s ease;
 }
 
 /* 펫 카드 안 스탯 블록 — 우측 정렬, 하단 붙임, 열 폭에 맞춰 줄어듦 */
 .home-pet-stats {
   width: 100%;
-  max-width: 300px;
+  max-width: 320px;
   min-width: 0;
   justify-self: end;   /* 우측 열 안에서 오른쪽 붙임 */
   align-self: center;  /* 우측 열 세로 중앙 */
@@ -555,8 +564,8 @@
 
 .home-pet-image {
   display: block;
-  width: 150px;
-  height: 150px;
+  width: 250px;
+  height: 250px;
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -581,10 +590,10 @@
 
 .home-stat-row {
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 58px 1fr 44px;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .home-stat-row:last-child {
@@ -593,33 +602,86 @@
 
 .home-stat-label {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--home-muted);
+  font-weight: 800;
+  color: var(--home-text);
+  white-space: nowrap;
 }
 
+/* 스탯별 색 점 — 막대 색과 같게 */
 .home-stat-label::before {
   content: "";
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--stat-color, currentColor);
   margin-right: 6px;
   vertical-align: middle;
 }
 
 .home-stat-track {
-  height: 16px;
+  height: 14px;
   border-radius: 999px;
-  background: #eef1ea;
+  background: #e9ece4;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
   overflow: hidden;
   min-width: 0;
 }
 
 .home-stat-fill {
   height: 100%;
+  min-width: 4px;
   border-radius: 999px;
+  background: var(--stat-color);
   transition: width 0.4s ease;
+}
+
+.home-stat-value {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--home-text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 펫 카드 안 스탯 카드 — 초록 배경 위 흰 카드로 분리 */
+.home-statcard {
+  padding: 18px 20px;
+  background: var(--home-white);
+  border: 1px solid #d8e8cc;
+  border-radius: var(--home-radius-sm);
+  box-shadow: 0 6px 18px rgba(94, 140, 78, 0.12);
+}
+
+.home-statcard-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--home-border);
+}
+
+.home-statcard-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--home-green-dark);
+}
+
+.home-statcard-total {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+}
+
+.home-statcard-total strong {
+  margin-left: 2px;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--home-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .home-kpi-title {
@@ -754,6 +816,7 @@
 .home-btn {
   border: none;
   font-family: inherit;
+  word-break: keep-all; /* 좁은 카드에서 "확인하/기"처럼 글자 단위로 끊기지 않게 */
   font-size: 14px;
   font-weight: 700;
   padding: 12px 16px;
@@ -831,12 +894,13 @@
   color: #b86a1a;
 }
 
-/* 기록 캘린더: 제목·캘린더·버튼 분리, 캘린더 가운데·버튼 하단 */
+/* 기록 캘린더: 제목·캘린더·버튼 분리, 캘린더 가운데·버튼 하단.
+   카드 높이를 행에 고정(height:100%)하고 캘린더를 줄어들게(min-height:0) 두면
+   칸이 정사각형이라 줄어들지 못하고 넘쳐서 하단 버튼과 겹쳤다.
+   → 카드는 행 높이만큼 늘어나되(stretch) 내용보다 작아지지 않게 한다. */
 .home-card-chart {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  height: 100%;
   align-self: stretch;
 }
 
@@ -845,29 +909,24 @@
 }
 
 .home-card-chart > .home-cal {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 0;
   width: 100%;
   max-width: 360px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto 16px;
 }
 
 .home-card-chart > .home-btn-block {
   margin-top: auto;
-  padding-top: 8px;
   flex-shrink: 0;
 }
 
-/* 최근 업적: 하단 버튼을 카테고리별 지출 카드와 같은 높이에 맞춤 */
+/* 최근 업적: 하단 버튼을 옆 카드와 같은 높이(카드 바닥)에 맞춤. 목록이 길어도 버튼과 겹치지 않게 */
 .home-card-achieve {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  height: 100%;
   align-self: stretch;
 }
 
@@ -876,13 +935,12 @@
 }
 
 .home-card-achieve > .home-ach-list {
-  flex: 1;
-  min-height: 0;
+  flex: 1 0 auto;
+  margin-bottom: 16px;
 }
 
 .home-card-achieve > .home-btn-block {
   margin-top: auto;
-  padding-top: 8px;
   flex-shrink: 0;
 }
 
@@ -1088,7 +1146,7 @@
 
 /* 펫 이미지 에셋이 없는 종족 — 이모지로 대체 (이미지와 같은 자리) */
 .home-pet-emoji {
-  font-size: 96px;
+  font-size: 140px;
   line-height: 1;
 }
 .home-pet-bubble-date {
