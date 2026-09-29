@@ -9,8 +9,9 @@ import lombok.NoArgsConstructor;
 
 /**
  * 펫 종족 도감 (마스터 데이터). 시드로 16개 INSERT (PetSpeciesSeeder).
- * 등급: S(용·사자·뱀·여우) / A(사슴·펭귄·늑대·거북이) / B(강아지·고양이·토끼·양) / C(개구리·다람쥐·원숭이·팬더).
- * is_starter = TRUE 인 행은 회원가입 시 자동 부여 (TBD — 현재 전부 FALSE).
+ * 등급: S·레전드(용·늑대·뱀) / A·에픽(판다·너구리·펭귄·사자)
+ *       / B·희귀(사슴·여우·양·원숭이·다람쥐) / C·일반(고양이·강아지·토끼·거북이).
+ * is_starter = TRUE 인 행(강아지)은 회원가입 시 자동 부여.
  */
 @Entity
 @Table(name = "pet_species")

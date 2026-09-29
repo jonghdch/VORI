@@ -17,6 +17,7 @@ import {
   DEFAULT_POSITION,
   FurnitureArt,
   SURFACE_POSITION,
+  furnitureVisual,
   STAT_LABEL,
   isSurface,
 } from "../../components/furnitureVisual";
@@ -243,6 +244,7 @@ function PetPage({ user, onLogout }) {
           .filter(Boolean)
           .join(" · "),
         appearanceKey: pet.appearanceKey,
+        stage: pet.stage,
         color: PET_ACCENT,
       }
     : null;
@@ -463,7 +465,11 @@ function PetPage({ user, onLogout }) {
                         dragTarget?.type === "furniture" && dragTarget.id === item.id
                           ? "is-dragging"
                           : ""
-                      } ${item.category === "BED" ? "pet-placed-item--image" : ""} ${
+                      } ${
+                        // 이미지가 있는 가구는 침대처럼 방 크기에 맞춘 그림으로 놓는다.
+                        // 종류별 클래스는 이미지·이모지 모두에 붙여 크기를 따로 정할 수 있게 한다.
+                        furnitureVisual(item.category).image ? "pet-placed-item--image" : ""
+                      } pet-placed-item--${item.category.toLowerCase()} ${
                         furnitureBusy === item.id ? "is-busy" : ""
                       }`}
                       style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
@@ -514,6 +520,7 @@ function PetPage({ user, onLogout }) {
                     <span className="pet-current-icon" aria-label={selectedPet.name}>
                       <PetArt
                         appearanceKey={selectedPet.appearanceKey}
+                        stage={selectedPet.stage}
                         name={selectedPet.name}
                         className="pet-current-image"
                         emojiClassName="pet-current-emoji"
@@ -575,6 +582,7 @@ function PetPage({ user, onLogout }) {
                         <span className="pet-profile-icon">
                           <PetArt
                             appearanceKey={selectedPet.appearanceKey}
+                            stage={selectedPet.stage}
                             name={selectedPet.name}
                             className="pet-profile-image"
                             emojiClassName="pet-profile-emoji"
@@ -651,6 +659,7 @@ function PetPage({ user, onLogout }) {
                     {selectedPet && (
                       <PetArt
                         appearanceKey={selectedPet.appearanceKey}
+                        stage={selectedPet.stage}
                         name={selectedPet.name}
                         className="pet-status-image"
                         emojiClassName="pet-status-emoji"
@@ -776,6 +785,7 @@ function PetPage({ user, onLogout }) {
                           <span className="pet-history-art">
                             <PetArt
                               appearanceKey={p.appearanceKey}
+                              stage={p.stage}
                               name={p.speciesName}
                               className="pet-history-image"
                               emojiClassName="pet-history-emoji"

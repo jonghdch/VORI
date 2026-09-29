@@ -26,7 +26,7 @@ public enum FurnitureCatalog {
     COZY_BED("포근한 침대", FurnitureCategory.BED, StatType.ENERGY, "3.00", 8_000, "코지"),
 
     // 거울·화장대 — 매력
-    SMALL_MIRROR("작은 거울", FurnitureCategory.MIRROR, StatType.CHARM, "1.50", 3_000, "코지"),
+    SMALL_MIRROR("거울", FurnitureCategory.MIRROR, StatType.CHARM, "1.50", 3_000, "코지"),
     VANITY_TABLE("화장대", FurnitureCategory.VANITY, StatType.CHARM, "3.00", 8_000, "코지"),
 
     // 책장·컴퓨터 — 지능
