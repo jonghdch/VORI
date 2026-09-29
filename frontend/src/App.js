@@ -17,6 +17,10 @@ import { ADMIN_NAV } from "./pages/Admin/adminNav";
 // Story 페이지는 three.js + GLTFLoader 를 포함해서 무거움 (~100+ KB).
 // 랜딩만 보는 사용자가 다운로드 안 하도록 별도 chunk 로 분리.
 const StoryPage = lazy(() => import("./pages/Story/StoryPage"));
+const SignupProfilePage = lazy(() =>
+  import("./pages/Signup/SignupProfilePage"),
+);
+const OnboardingPage = lazy(() => import("./pages/Onboarding/OnboardingPage"));
 const WalletEntryPage = lazy(() =>
   import("./pages/WalletEntry/WalletEntryPage"),
 );
@@ -74,6 +78,8 @@ const ADMIN_PAGES = {
 //   /                       랜딩
 //   /login                  로그인
 //   /signup                 회원가입
+//   /signup/profile         회원가입 후 소비 프로필 5단계
+//   /onboarding             가입 직후 온보딩
 //   /story                  스토리 (서비스 소개)
 //   /terms                  이용약관 (공개)
 //   /privacy                개인정보처리방침 (공개)
@@ -154,6 +160,22 @@ function App() {
           <Route
             path="/signup"
             element={<SignupPage onLogin={handleLogin} />}
+          />
+          <Route
+            path="/signup/profile"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <SignupProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <OnboardingPage />
+              </ProtectedRoute>
+            }
           />
           <Route
             path="/story"

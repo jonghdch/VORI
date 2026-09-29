@@ -103,6 +103,11 @@ public class User {
         this.monthlyIncome = monthlyIncome;
     }
 
+    /** 온보딩 튜토리얼 완료. */
+    public void markTutorialDone() {
+        this.tutorialDone = true;
+    }
+
     /** 칭호 장착. null 이면 해제. 소유 여부 검증은 호출부(TitleService)가 한다. */
     public void setActiveTitle(Long titleId) {
         this.activeTitleId = titleId;
