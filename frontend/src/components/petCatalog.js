@@ -35,5 +35,5 @@ export const DEX_TIER_LABEL = {
   LEGEND: "레전드",
 };
 
-// 성장 단계 순서 (아기 → 청소년 → 성체). 진화 단계 인덱스 계산에 쓴다.
+// 성장 단계 순서 (1차 INFANT → 2차 JUVENILE → 3차 ADULT). 진화 단계 인덱스 계산에 쓴다.
 export const STAGE_ORDER = ["INFANT", "JUVENILE", "ADULT"];

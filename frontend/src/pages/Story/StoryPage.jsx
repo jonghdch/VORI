@@ -71,7 +71,7 @@ const STORY_TABS = [
   { id: "items", label: "아이템" },
 ];
 
-// 성장 단계 — 펫 화면과 같은 이름(아기 → 청소년 → 성체)과 임계값을 쓴다.
+// 성장 단계 — 펫·도감 화면과 같은 이름(1차 → 2차 → 3차)과 임계값을 쓴다.
 const EVOLUTION_STAGES = STAGE_ORDER.map((stage) => ({
   id: stage,
   label: STAGE_LABEL[stage] ?? stage,
@@ -664,7 +664,7 @@ function StoryPage({ user, onLogout }) {
                   </div>
                   <div>
                     <dt>마이룸 흔적</dt>
-                    <dd>성체가 된 뒤에도 방 안에 작은 기념품과 보너스를 남깁니다.</dd>
+                    <dd>{STAGE_LABEL.ADULT}가 된 뒤에도 방 안에 작은 기념품과 보너스를 남깁니다.</dd>
                   </div>
                   <div>
                     <dt>성격 메모</dt>

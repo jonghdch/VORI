@@ -74,10 +74,11 @@ const PET_EMOJI = {
   turtle: "🐢",
 };
 
+// 성장 단계 표시 이름 — 도감·펫·상점·스토리 모두 이 표를 쓴다 (도감의 "N차" 표기와 통일).
 export const STAGE_LABEL = {
-  INFANT: "아기",
-  JUVENILE: "청소년",
-  ADULT: "성체",
+  INFANT: "1차",
+  JUVENILE: "2차",
+  ADULT: "3차",
 };
 
 export const VARIANT_LABEL = {

@@ -149,6 +149,11 @@
   border: 1px solid #c8ddb8;
 }
 
+.dex-badge--admin {
+  background: #fbe9c9;
+  color: #9a6b12;
+}
+
 .dex-art {
   width: 112px;
   height: 112px;

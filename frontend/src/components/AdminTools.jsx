@@ -113,15 +113,15 @@ function AdminTools() {
           <section className="admin-tools-section">
             <h3>성장 단계</h3>
             <div className="admin-tools-row">
-              {STAGES.map((st, i) => (
+              {STAGES.map((st) => (
                 <button
                   key={st}
                   type="button"
                   className="home-btn"
                   disabled={busy}
-                  onClick={() => run(`${i + 1}차(${STAGE_LABEL[st]})`, () => adminSetMyPetStage(st), { pet: true })}
+                  onClick={() => run(`${STAGE_LABEL[st]}(${st})`, () => adminSetMyPetStage(st), { pet: true })}
                 >
-                  {i + 1}차 · {STAGE_LABEL[st]}
+                  {STAGE_LABEL[st]}
                 </button>
               ))}
             </div>
