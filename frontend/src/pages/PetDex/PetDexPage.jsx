@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import { listPets } from "../../api/pet";
-import { PET_CHANGED_EVENT } from "../../api/user";
+import { PET_CHANGED_EVENT, getMe } from "../../api/user";
 import {
   DEX_TIER_LABEL,
   DEX_TIERS,
@@ -43,6 +43,18 @@ function PetDexPage({ onLogout }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tier, setTier] = useState("ALL");
+  // 관리자는 도감이 전부 열린 상태로 본다 — 관리자 혜택(코인 무제한·칭호 전부)과 같은 기조.
+  // 실제로 키운 기록(키우는 중·다 키움 배지)은 그대로 보여 주고, 잠금 표시만 걷는다.
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    getMe()
+      .then((me) => alive && setIsAdmin(me?.role === "ADMIN"))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -111,7 +123,11 @@ function PetDexPage({ onLogout }) {
           <article className="dex-summary-card">
             <p className="dex-summary-label">다 키운 펫</p>
             <p className="dex-summary-value">
-              {loading ? "…" : `${doneKinds} / ${PET_CATALOG.length}종`}
+              {loading
+                ? "…"
+                : isAdmin
+                  ? `${PET_CATALOG.length} / ${PET_CATALOG.length}종 (관리자)`
+                  : `${doneKinds} / ${PET_CATALOG.length}종`}
             </p>
           </article>
         </div>
@@ -142,7 +158,8 @@ function PetDexPage({ onLogout }) {
             const st = statusByKey[sp.appearanceKey];
             const raising = st?.raising ?? null;
             const doneCount = st?.doneCount ?? 0;
-            const reached = st?.reached ?? -1;
+            // 관리자: 전 단계 도달로 보고 잠금(흐림)을 걷는다. 배지는 실제 기록 그대로.
+            const reached = isAdmin ? STAGE_ORDER.length - 1 : (st?.reached ?? -1);
             const owned = reached >= 0;
 
             return (
@@ -165,6 +182,9 @@ function PetDexPage({ onLogout }) {
                     <span className="dex-badge dex-badge--done">
                       다 키움{doneCount > 1 ? ` ×${doneCount}` : ""}
                     </span>
+                  )}
+                  {isAdmin && !raising && doneCount === 0 && (
+                    <span className="dex-badge dex-badge--admin">관리자 열람</span>
                   )}
                 </div>
 
@@ -206,7 +226,9 @@ function PetDexPage({ onLogout }) {
                     ? `지금 ${STAGE_ORDER.indexOf(raising) + 1}차 단계예요`
                     : doneCount > 0
                       ? "3차까지 키워 분양했어요"
-                      : "아직 키워보지 않았어요"}
+                      : isAdmin
+                        ? "관리자 — 전 단계 열람 가능"
+                        : "아직 키워보지 않았어요"}
                 </p>
               </li>
             );
