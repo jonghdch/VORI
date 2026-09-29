@@ -23,6 +23,7 @@ const GAME_MENU = [
   { id: "dex", label: "펫 도감", page: "dex" },
   { id: "shop", label: "상점", page: "shop" },
   { id: "achievement", label: "업적/칭호", page: "titles" },
+  { id: "attendance", label: "출석", page: "attendance" },
 ];
 
 // 데스크톱(1025px 이상)에서 왼쪽 사이드바를 접어 둔 상태를 기억한다. 모바일 드로어와는 별개.
