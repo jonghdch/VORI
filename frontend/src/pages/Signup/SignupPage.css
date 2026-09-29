@@ -433,3 +433,23 @@
     min-height: 48px;
   }
 }
+
+/* ── 온보딩 설문: 월 수입 입력 ── */
+.signup-income-field {
+  margin: 8px 0 4px;
+}
+.signup-income-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.signup-income-input .signup-input {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.signup-income-unit {
+  font-weight: 700;
+  color: var(--text-2, #5f6b57);
+}

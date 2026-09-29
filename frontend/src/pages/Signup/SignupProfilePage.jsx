@@ -5,6 +5,14 @@ import "./SignupPage.css";
 
 const STEPS = [
   {
+    key: "monthlyIncome",
+    type: "number",
+    title: "한 달 수입은 얼마 정도인가요?",
+    caption: "필수예요. 쇼핑·문화·생활비 지출을 처음 판정할 때 '내 수입 대비 큰 지출인지'의 기준이 돼요. 나중에 프로필 설정에서 바꿀 수 있어요.",
+    placeholder: "예: 800000",
+    unit: "원",
+  },
+  {
     key: "monthlyBudgetBand",
     title: "한 달에 자유롭게 쓸 수 있는 돈은 어느 정도인가요?",
     caption: "처음 판정할 때 소비 규모를 너무 크게 오해하지 않게 도와줘요.",
@@ -77,6 +85,10 @@ function SignupProfilePage() {
 
   const step = STEPS[stepIndex];
   const selected = profile[step.key];
+  const isNumberStep = step.type === "number";
+  // 숫자 단계는 0 이상 정수만 통과. 빈 값·음수·소수는 막는다.
+  const numberValid = isNumberStep && /^\d+$/.test(String(selected));
+  const canProceed = isNumberStep ? numberValid : Boolean(selected);
   const isLast = stepIndex === STEPS.length - 1;
   const progressPct = useMemo(
     () => Math.round(((stepIndex + 1) / STEPS.length) * 100),
@@ -87,8 +99,11 @@ function SignupProfilePage() {
     setProfile((current) => ({ ...current, [step.key]: value }));
   };
 
+  // 서버에 보낼 형태 — 월 수입은 숫자, 나머지는 enum 문자열
+  const toRequest = (p) => ({ ...p, monthlyIncome: Number(p.monthlyIncome) });
+
   const goNext = async () => {
-    if (!selected || loading) return;
+    if (!canProceed || loading) return;
     if (!isLast) {
       setStepIndex((idx) => idx + 1);
       return;
@@ -97,7 +112,8 @@ function SignupProfilePage() {
     setError("");
     setLoading(true);
     try {
-      await saveSpendingProfile(profile);
+      await saveSpendingProfile(toRequest(profile));
+      window.dispatchEvent(new Event("vori:onboarding-done"));
       navigate("/onboarding");
     } catch (err) {
       setError(err.message || "소비 기준 저장 중 오류가 발생했어요");
@@ -106,12 +122,22 @@ function SignupProfilePage() {
     }
   };
 
+  // "나중에 하기" — 선택형 문항만 UNKNOWN 으로 채운다. 월 수입은 필수라 건너뛸 수 없다.
   const skip = async () => {
-    const skipped = STEPS.reduce((acc, item) => ({ ...acc, [item.key]: profile[item.key] || "UNKNOWN" }), {});
+    if (!/^\d+$/.test(String(profile.monthlyIncome))) {
+      setStepIndex(0);
+      setError("월 수입은 꼭 입력해 주세요. 나머지는 나중에 해도 돼요.");
+      return;
+    }
+    const skipped = STEPS.reduce(
+      (acc, item) => ({ ...acc, [item.key]: item.type === "number" ? profile[item.key] : profile[item.key] || "UNKNOWN" }),
+      {},
+    );
     setError("");
     setLoading(true);
     try {
-      await saveSpendingProfile(skipped);
+      await saveSpendingProfile(toRequest(skipped));
+      window.dispatchEvent(new Event("vori:onboarding-done"));
       navigate("/onboarding");
     } catch (err) {
       setError(err.message || "소비 기준 저장 중 오류가 발생했어요");
@@ -144,6 +170,34 @@ function SignupProfilePage() {
             <p className="signup-subtitle">{step.caption}</p>
           </div>
 
+          {isNumberStep ? (
+            <label className="signup-field signup-income-field">
+              <span className="signup-label">월 수입</span>
+              <div className="signup-income-input">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  step="10000"
+                  className="signup-input"
+                  placeholder={step.placeholder}
+                  value={selected}
+                  onChange={(e) => select(e.target.value.replace(/[^\d]/g, ""))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      goNext();
+                    }
+                  }}
+                  autoFocus
+                />
+                <span className="signup-income-unit">{step.unit}</span>
+              </div>
+              {numberValid && Number(selected) > 0 && (
+                <span className="signup-hint">{Number(selected).toLocaleString("ko-KR")}원</span>
+              )}
+            </label>
+          ) : (
           <div className="signup-option-list" role="radiogroup" aria-label={step.title}>
             {step.options.map(([value, label]) => (
               <button
@@ -157,6 +211,7 @@ function SignupProfilePage() {
               </button>
             ))}
           </div>
+          )}
 
           {error && (
             <p className="signup-hint signup-hint-error" role="alert">
@@ -177,7 +232,7 @@ function SignupProfilePage() {
               type="button"
               className="signup-submit signup-action-primary"
               onClick={goNext}
-              disabled={!selected || loading}
+              disabled={!canProceed || loading}
             >
               {loading ? "저장 중…" : isLast ? "기준 설정 완료" : "다음"}
             </button>

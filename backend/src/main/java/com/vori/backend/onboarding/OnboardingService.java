@@ -1,11 +1,8 @@
 package com.vori.backend.onboarding;
 
-import com.vori.backend.common.StatType;
 import com.vori.backend.onboarding.dto.OnboardingStatusResponse;
 import com.vori.backend.onboarding.dto.SpendingProfileRequest;
 import com.vori.backend.onboarding.dto.SpendingProfileResponse;
-import com.vori.backend.stats.UserStatStats;
-import com.vori.backend.stats.UserStatStatsRepository;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,18 +11,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
 public class OnboardingService {
 
-    private static final int INITIAL_PROFILE_SAMPLE_COUNT = 3;
-
     private final UserRepository userRepository;
     private final UserSpendingProfileRepository profileRepository;
-    private final UserStatStatsRepository userStatStatsRepository;
+    private final BaselineSeeder baselineSeeder;
 
     @Transactional(readOnly = true)
     public OnboardingStatusResponse status(Long userId) {
@@ -37,8 +31,10 @@ public class OnboardingService {
 
     @Transactional
     public SpendingProfileResponse saveProfile(Long userId, SpendingProfileRequest req) {
-        userRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+        // 월 수입은 프로필 설정과 같은 컬럼(users.monthly_income)에 둔다 — 거기서 나중에 고칠 수 있게.
+        user.updateMonthlyIncome(req.monthlyIncome());
 
         LocalDateTime now = LocalDateTime.now();
         UserSpendingProfile profile = profileRepository.findById(userId)
@@ -63,10 +59,11 @@ public class OnboardingService {
                 now
         );
 
-        if (!Boolean.TRUE.equals(profile.getBaselineApplied())) {
-            applyMealBaseline(userId, req.mealCostBand(), profile);
+        // 초기 판정 기준선 — 식비는 한 끼 식비 답, 나머지 세 타입은 월 수입에서 유도한다.
+        // 실제 지출이 아직 없는 타입만 채우므로 설문을 다시 해도 쌓인 기록은 지워지지 않는다.
+        if (baselineSeeder.seed(userId, req.monthlyIncome(), req.mealCostBand())) {
+            profile.markBaselineApplied();
         }
-
         UserSpendingProfile saved = profileRepository.save(profile);
         return SpendingProfileResponse.from(saved);
     }
@@ -76,24 +73,5 @@ public class OnboardingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
         user.markTutorialDone();
-    }
-
-    private void applyMealBaseline(Long userId, MealCostBand mealCostBand, UserSpendingProfile profile) {
-        Integer midpoint = mealCostBand.midpoint();
-        Integer stddev = mealCostBand.initialStddev();
-        if (midpoint == null || stddev == null) return;
-
-        UserStatStats stats = userStatStatsRepository
-                .findByUserIdAndStatType(userId, StatType.ENERGY)
-                .orElseThrow(() -> new IllegalStateException("user_stat_stats 초기화가 누락되었습니다."));
-
-        if (stats.getSampleCount() >= 5) return;
-
-        stats.updateEma(
-                BigDecimal.valueOf(midpoint),
-                BigDecimal.valueOf(stddev),
-                Math.max(stats.getSampleCount(), INITIAL_PROFILE_SAMPLE_COUNT)
-        );
-        profile.markBaselineApplied();
     }
 }

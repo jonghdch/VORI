@@ -11,12 +11,14 @@ import com.vori.backend.user.User;
 public record OnboardingStatusResponse(
         boolean profileCompleted,
         boolean tutorialDone,
+        Integer monthlyIncome,
         ProfileSummary profile
 ) {
     public static OnboardingStatusResponse of(User user, UserSpendingProfile profile) {
         return new OnboardingStatusResponse(
                 profile != null,
                 Boolean.TRUE.equals(user.getTutorialDone()),
+                user.getMonthlyIncome(),
                 profile == null ? null : ProfileSummary.from(profile)
         );
     }

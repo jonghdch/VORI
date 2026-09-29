@@ -103,6 +103,11 @@ public class User {
         this.monthlyIncome = monthlyIncome;
     }
 
+    /** 온보딩 설문에서 받은 월 수입. 프로필 설정의 updateProfile 과 같은 컬럼을 쓴다. */
+    public void updateMonthlyIncome(Integer monthlyIncome) {
+        this.monthlyIncome = monthlyIncome;
+    }
+
     /** 온보딩 튜토리얼 완료. */
     public void markTutorialDone() {
         this.tutorialDone = true;

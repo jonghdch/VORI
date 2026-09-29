@@ -56,6 +56,7 @@ function OnboardingPage() {
     try {
       await completeOnboarding();
     } finally {
+      window.dispatchEvent(new Event("vori:onboarding-done"));
       navigate(path);
     }
   };
@@ -86,6 +87,14 @@ function OnboardingPage() {
           </div>
 
           <div className="signup-summary-grid">
+            <div>
+              <span>월 수입</span>
+              <strong>
+                {status?.monthlyIncome != null
+                  ? `${Number(status.monthlyIncome).toLocaleString("ko-KR")}원`
+                  : "아직 모름"}
+              </strong>
+            </div>
             <div>
               <span>평소 한 끼</span>
               <strong>{MEAL_LABEL[profile?.mealCostBand] || "아직 모름"}</strong>

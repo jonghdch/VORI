@@ -32,6 +32,7 @@ public class UserService {
     private final PetRepository petRepository;
     private final PetSpeciesRepository petSpeciesRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.vori.backend.onboarding.BaselineSeeder baselineSeeder;
 
     @Transactional
     public User signup(SignupRequest req) {
@@ -113,6 +114,8 @@ public class UserService {
 
         // 공백 정리는 ProfileUpdateRequest 가 검사 전에 끝냈다.
         user.updateProfile(req.nickname(), req.name(), req.age(), req.job(), req.monthlyIncome());
+        // 월 수입이 바뀌면 실제 지출이 없는 타입의 초기 기준선을 다시 잡는다(온보딩 씨딩과 같은 규칙).
+        baselineSeeder.reseedFromIncome(userId, req.monthlyIncome());
         return user;
     }
 
