@@ -12,11 +12,16 @@ import LoginPage from "./pages/Login/LoginPage";
 import SignupPage from "./pages/Signup/SignupPage";
 import HomeDashboard from "./pages/Home/HomeDashboard";
 import { me, logout } from "./api/auth";
+import { getOnboardingStatus } from "./api/onboarding";
 import { ADMIN_NAV } from "./pages/Admin/adminNav";
 
 // Story 페이지는 three.js + GLTFLoader 를 포함해서 무거움 (~100+ KB).
 // 랜딩만 보는 사용자가 다운로드 안 하도록 별도 chunk 로 분리.
 const StoryPage = lazy(() => import("./pages/Story/StoryPage"));
+const SignupProfilePage = lazy(() =>
+  import("./pages/Signup/SignupProfilePage"),
+);
+const OnboardingPage = lazy(() => import("./pages/Onboarding/OnboardingPage"));
 const WalletEntryPage = lazy(() =>
   import("./pages/WalletEntry/WalletEntryPage"),
 );
@@ -75,6 +80,8 @@ const ADMIN_PAGES = {
 //   /                       랜딩
 //   /login                  로그인
 //   /signup                 회원가입
+//   /signup/profile         회원가입 후 소비 프로필 5단계
+//   /onboarding             가입 직후 온보딩
 //   /story                  스토리 (서비스 소개)
 //   /terms                  이용약관 (공개)
 //   /privacy                개인정보처리방침 (공개)
@@ -105,6 +112,32 @@ function ScrollToTop() {
 function ProtectedRoute({ user, authLoading, children }) {
   if (authLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
+// 온보딩 게이트 — 소비 프로필(월 수입 포함)을 아직 안 적은 계정은 일반 화면 대신 설문으로 보낸다.
+// 온보딩 이전에 만든 계정도 다음 접속 때 한 번 타게 된다. 관리자는 시연·검증 계정이라 제외.
+// 상태는 세션당 한 번만 읽고, 설문을 마치면 vori:onboarding-done 이벤트로 풀린다.
+function OnboardingGate({ user, children }) {
+  const [needsProfile, setNeedsProfile] = useState(null); // null = 아직 모름
+  useEffect(() => {
+    if (!user || user.role === "ADMIN") {
+      setNeedsProfile(false);
+      return undefined;
+    }
+    let alive = true;
+    getOnboardingStatus()
+      .then((s) => alive && setNeedsProfile(!s?.profileCompleted))
+      .catch(() => alive && setNeedsProfile(false)); // 상태를 못 읽으면 막지 않는다
+    const done = () => setNeedsProfile(false);
+    window.addEventListener("vori:onboarding-done", done);
+    return () => {
+      alive = false;
+      window.removeEventListener("vori:onboarding-done", done);
+    };
+  }, [user]);
+  if (needsProfile === null) return null;
+  if (needsProfile) return <Navigate to="/signup/profile" replace />;
   return children;
 }
 
@@ -157,6 +190,22 @@ function App() {
             element={<SignupPage onLogin={handleLogin} />}
           />
           <Route
+            path="/signup/profile"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <SignupProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/story"
             element={<StoryPage user={user} onLogout={handleLogout} />}
           />
@@ -166,7 +215,7 @@ function App() {
             path="/home"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <HomeDashboard user={user} onLogout={handleLogout} />
+                <OnboardingGate user={user}><HomeDashboard user={user} onLogout={handleLogout} /></OnboardingGate>
               </ProtectedRoute>
             }
           />
@@ -174,7 +223,7 @@ function App() {
             path="/wallet"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <WalletPage user={user} onLogout={handleLogout} />
+                <OnboardingGate user={user}><WalletPage user={user} onLogout={handleLogout} /></OnboardingGate>
               </ProtectedRoute>
             }
           />
@@ -194,7 +243,7 @@ function App() {
             path="/wallet/analysis"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <WalletAnalysisPage user={user} />
+                <OnboardingGate user={user}><WalletAnalysisPage user={user} /></OnboardingGate>
               </ProtectedRoute>
             }
           />
@@ -202,7 +251,7 @@ function App() {
             path="/wallet/new/confirm"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <WalletConfirmPage user={user} />
+                <OnboardingGate user={user}><WalletConfirmPage user={user} /></OnboardingGate>
               </ProtectedRoute>
             }
           />
@@ -210,7 +259,7 @@ function App() {
             path="/report"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <ReportPage user={user} onLogout={handleLogout} />
+                <OnboardingGate user={user}><ReportPage user={user} onLogout={handleLogout} /></OnboardingGate>
               </ProtectedRoute>
             }
           />
@@ -218,7 +267,7 @@ function App() {
             path="/raise"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <PetPage user={user} onLogout={handleLogout} />
+                <OnboardingGate user={user}><PetPage user={user} onLogout={handleLogout} /></OnboardingGate>
               </ProtectedRoute>
             }
           />
@@ -226,7 +275,7 @@ function App() {
             path="/dex"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <PetDexPage user={user} onLogout={handleLogout} />
+                <OnboardingGate user={user}><PetDexPage user={user} onLogout={handleLogout} /></OnboardingGate>
               </ProtectedRoute>
             }
           />
@@ -234,7 +283,7 @@ function App() {
             path="/shop"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <ShopPage user={user} onLogout={handleLogout} />
+                <OnboardingGate user={user}><ShopPage user={user} onLogout={handleLogout} /></OnboardingGate>
               </ProtectedRoute>
             }
           />
@@ -242,7 +291,7 @@ function App() {
             path="/settings"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <SettingsPage user={user} onLogout={handleLogout} />
+                <OnboardingGate user={user}><SettingsPage user={user} onLogout={handleLogout} /></OnboardingGate>
               </ProtectedRoute>
             }
           />
@@ -250,11 +299,11 @@ function App() {
             path="/settings/profile"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <ProfileSettingsPage
+                <OnboardingGate user={user}><ProfileSettingsPage
                   user={user}
                   onLogout={handleLogout}
                   onUserUpdate={setUser}
-                />
+                /></OnboardingGate>
               </ProtectedRoute>
             }
           />
@@ -262,7 +311,7 @@ function App() {
             path="/titles"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <AchievementPage user={user} onLogout={handleLogout} />
+                <OnboardingGate user={user}><AchievementPage user={user} onLogout={handleLogout} /></OnboardingGate>
               </ProtectedRoute>
             }
           />

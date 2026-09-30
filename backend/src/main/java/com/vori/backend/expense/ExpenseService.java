@@ -46,7 +46,11 @@ public class ExpenseService {
     private final SignalConfigService signalConfigService;
     private final AiInquiryRepository aiInquiryRepository;
 
-    private static final int N_MIN = 5;
+    /**
+     * 판정에 필요한 최소 표본 수. 이보다 적으면 z 를 계산하지 않고 GREEN.
+     * 온보딩 씨딩(BaselineSeeder)이 초기값을 넣을 때 표본 수를 이 값으로 두어 첫 지출부터 판정이 돌게 한다.
+     */
+    public static final int N_MIN = 5;
     // Z_GREEN / Z_RED 임계값은 signal_config 테이블(관리자 조정) 에서 읽는다. SignalConfigService 참조.
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
     // expenses.z_score 는 DECIMAL(6,3) — 담을 수 있는 한계. clampZScore 참조.

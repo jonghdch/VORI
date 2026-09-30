@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 import { login } from "../../api/auth";
+import { getOnboardingStatus } from "../../api/onboarding";
 
 // 로그인 페이지.
 // - POST /api/auth/login 호출, 세션 쿠키(JSESSIONID)로 인증 유지.
-// - 성공 시 /home 으로 이동.
+// - 성공 시 온보딩 상태를 보고 이어 할 화면으로 이동.
 function LoginPage({ onLogin }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -21,7 +22,14 @@ function LoginPage({ onLogin }) {
     try {
       const user = await login(email, password);
       if (typeof onLogin === "function") onLogin(user);
-      navigate("/home");
+      const status = await getOnboardingStatus().catch(() => null);
+      if (status && !status.profileCompleted) {
+        navigate("/signup/profile");
+      } else if (status && !status.tutorialDone) {
+        navigate("/onboarding");
+      } else {
+        navigate("/home");
+      }
     } catch (err) {
       setError(err.message || "로그인 중 오류가 발생했어요");
     } finally {
