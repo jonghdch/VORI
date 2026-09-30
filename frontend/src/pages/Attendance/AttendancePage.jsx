@@ -3,7 +3,6 @@ import AppShell from "../../components/AppShell";
 import { checkInAttendance, getAttendance, getAttendanceMonth } from "../../api/attendance";
 import "./AttendancePage.css";
 
-const STAT = { ENERGY: "에너지", CHARM: "매력", IQ: "지능", ENDURANCE: "지구력" };
 const pad = (n) => String(n).padStart(2, "0");
 
 export default function AttendancePage({ user, onLogout }) {

@@ -79,16 +79,16 @@ public class DailyJudgmentService {
     }
 
     @Transactional
-    public DailyJudgmentResponse judgeToday(User principalUser) {
-        return judgeDate(principalUser, LocalDate.now());
+    public DailyJudgmentResponse judgeToday(Long userId, Role role) {
+        return judgeDate(userId, role, LocalDate.now());
     }
 
     @Transactional
-    public DailyJudgmentResponse judgeDate(User principalUser, LocalDate requestedDate) {
+    public DailyJudgmentResponse judgeDate(Long userId, Role role, LocalDate requestedDate) {
         LocalDateTime now = LocalDateTime.now();
         LocalDate today = now.toLocalDate();
 
-        if (principalUser.getRole() != Role.ADMIN && !requestedDate.equals(today)) {
+        if (role != Role.ADMIN && !requestedDate.equals(today)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "다른 날짜의 판정은 관리자만 사용할 수 있어요.");
         }
         if (now.getHour() < openHour) {
@@ -97,7 +97,7 @@ public class DailyJudgmentService {
         }
 
         // 같은 사용자의 동시 클릭을 직렬화해 UNIQUE 충돌과 중복 보상을 함께 막는다.
-        User locked = userRepository.findByIdForUpdate(principalUser.getId()).orElseThrow();
+        User locked = userRepository.findByIdForUpdate(userId).orElseThrow();
         Optional<DailyJudgment> existing = dailyJudgmentRepository
                 .findByUserIdAndJudgmentDate(locked.getId(), requestedDate);
         if (existing.isPresent()) return DailyJudgmentResponse.from(existing.get(), true);

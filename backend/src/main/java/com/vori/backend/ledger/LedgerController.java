@@ -30,7 +30,7 @@ public class LedgerController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam String yearMonth
     ) {
-        return ledgerService.getMonthly(principal.getUser().getId(), yearMonth);
+        return ledgerService.getMonthly(principal.getId(), yearMonth);
     }
 
     /** DELETE /api/ledger/expenses/{id} — 본인 지출 삭제. */
@@ -40,6 +40,6 @@ public class LedgerController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id
     ) {
-        ledgerService.deleteExpense(principal.getUser().getId(), id);
+        ledgerService.deleteExpense(principal.getId(), id);
     }
 }

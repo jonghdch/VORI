@@ -276,6 +276,37 @@
   box-shadow: none;
 }
 
+/* 이미지 가구별 방 안 크기 — 침대(기본 240×181) 대비 실제 크기감에 맞춘다 */
+.pet-placed-item--mirror {
+  width: 136px;
+  height: 136px;
+}
+
+.pet-placed-item--board {
+  width: 120px;
+  height: 120px;
+}
+
+.pet-placed-item--shelf {
+  width: 208px;
+  height: 208px;
+}
+
+.pet-placed-item--drawer {
+  width: 184px;
+  height: 184px;
+}
+
+.pet-placed-item--picture {
+  width: 120px;
+  height: 120px;
+}
+
+.pet-placed-item--vanity {
+  width: 184px;
+  height: 184px;
+}
+
 .pet-placed-item.is-dragging {
   cursor: grabbing;
   z-index: 9;

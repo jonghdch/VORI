@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import AccountMenu from "./AccountMenu";
+import AdminTools from "./AdminTools";
+import { getMe } from "../api/user";
 import "../pages/Home/HomeDashboard.css";
-import AccountSummary from "./AccountSummary";
 
 const TOP_NAV = [
   { id: "home", label: "홈" },
@@ -46,6 +48,18 @@ function AppShell({
   children,
 }) {
   const navigate = useNavigate();
+
+  // 사이드바 "관리" 섹션·관리자 도구 노출용 역할 확인. 헤더 계정 정보는 AccountMenu/AccountSummary 가 따로 읽는다.
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    getMe()
+      .then((m) => alive && setIsAdmin(m?.role === "ADMIN"))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [menuOpen, setMenuOpen] = useState(false); // 모바일: 슬라이드 드로어
   const [collapsed, setCollapsed] = useState(readSidebarCollapsed); // 데스크톱: 사이드바 접힘
 
@@ -123,7 +137,7 @@ function AppShell({
               </button>
             ))}
           </nav>
-          <AccountSummary />
+          <AccountMenu onLogout={onLogout} />
         </div>
       </header>
 
@@ -179,6 +193,22 @@ function AppShell({
               ))}
             </ul>
           </div>
+          {isAdmin && (
+            <div className="home-side-block">
+              <div className="home-side-title">관리</div>
+              <ul className="home-side-list">
+                <li>
+                  <button
+                    type="button"
+                    className={`home-side-link ${activeSide === "admin" ? "is-active" : ""}`}
+                    onClick={() => go("/admin")}
+                  >
+                    관리자 페이지
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
           <div className="home-side-block">
             <div className="home-side-title">설정</div>
             <ul className="home-side-list">
@@ -219,6 +249,8 @@ function AppShell({
 
         {children}
       </div>
+
+      {isAdmin && <AdminTools />}
     </div>
   );
 }

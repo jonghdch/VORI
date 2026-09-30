@@ -6,6 +6,7 @@ import RecordCalendar, { dateKey } from "../../components/RecordCalendar";
 import { getHomeSummary } from "../../api/home";
 import { getMonthlyLedger } from "../../api/ledger";
 import { getActivePet } from "../../api/pet";
+import { PET_CHANGED_EVENT } from "../../api/user";
 import { getLatestDailyReport, markDailyReportRead } from "../../api/report";
 import { listTitles } from "../../api/titles";
 import { PetArt } from "../../components/petVisual";
@@ -49,9 +50,12 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   const [titlesLoading, setTitlesLoading] = useState(true);
   useEffect(() => {
     let alive = true;
-    getActivePet()
-      .then((p) => alive && setActivePet(p))
-      .catch(() => {});
+    const loadPet = () =>
+      getActivePet()
+        .then((p) => alive && setActivePet(p))
+        .catch(() => {});
+    loadPet();
+    window.addEventListener(PET_CHANGED_EVENT, loadPet);
     getLatestDailyReport()
       .then((r) => {
         if (!alive) return;
@@ -72,6 +76,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
       });
     return () => {
       alive = false;
+      window.removeEventListener(PET_CHANGED_EVENT, loadPet);
     };
   }, []);
 
@@ -131,6 +136,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   const statTotal = STAT_META.reduce((s, m) => s + (stats?.[m.key] ?? 0), 0);
   const petLevel = Math.floor(statTotal / 100) + 1;
   const petExp = statTotal % 100;
+  // 스탯 막대 기준값 — 가장 큰 스탯(최소 100). 스탯이 100을 넘어도 막대끼리 비교가 된다.
+  const statScale = Math.max(100, ...STAT_META.map((m) => stats?.[m.key] ?? 0));
 
   return (
     <AppShell
@@ -182,6 +189,18 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   aria-label={`경험치 ${petExp}/100 (Lv. ${petLevel})`}
                 >
                   <svg className="home-pet-gauge-ring" viewBox="0 0 120 120" aria-hidden>
+                    {/* 채움 색 — 화면 왼쪽(시작) 연한 세이지 → 오른쪽 짙은 세이지. 랜딩 톤과 맞춤.
+                        원이 135° 회전돼 있어 좌표도 회전 전 기준(대각선)으로 잡았다. */}
+                    <defs>
+                      <linearGradient
+                        id="home-pet-gauge-gradient"
+                        gradientUnits="userSpaceOnUse"
+                        x1="102" y1="102" x2="18" y2="18"
+                      >
+                        <stop offset="0%" stopColor="#c8dfaa" />
+                        <stop offset="100%" stopColor="#7c9e6b" />
+                      </linearGradient>
+                    </defs>
                     <circle
                       className="home-pet-gauge-track"
                       cx="60" cy="60" r="52"
@@ -198,6 +217,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   <div className="home-pet-art" aria-hidden>
                     <PetArt
                       appearanceKey={activePet?.appearanceKey ?? "puppy"}
+                      stage={activePet?.stage}
                       name=""
                       className="home-pet-image"
                       emojiClassName="home-pet-emoji"
@@ -212,25 +232,37 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   <span className="home-pet-level-label">Lv. {petLevel}</span>
                 </div>
               </div>
-              <ul className="home-stat-list home-pet-stats">
-                {STAT_META.map((m) => {
-                  const value = stats?.[m.key] ?? 0;
-                  return (
-                    <li key={m.key} className="home-stat-row">
-                      <span className="home-stat-label">{m.label}</span>
-                      <div className="home-stat-track">
-                        <div
-                          className="home-stat-fill"
-                          style={{
-                            width: `${Math.min(Math.max(value, 0), 100)}%`,
-                            background: m.color,
-                          }}
-                        />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              {/* 스탯 카드 — 흰 카드 + 수치 표시로 초록 배경 위에서도 눈에 띄게.
+                  막대 길이는 네 스탯 중 가장 큰 값(최소 100) 기준 상대 비율. */}
+              <section className="home-pet-stats home-statcard" aria-label="펫 스탯">
+                <div className="home-statcard-head">
+                  <h3 className="home-statcard-title">펫 스탯</h3>
+                  <span className="home-statcard-total">
+                    합계 <strong>{statTotal.toLocaleString("ko-KR")}</strong>
+                  </span>
+                </div>
+                <ul className="home-stat-list">
+                  {STAT_META.map((m) => {
+                    const value = stats?.[m.key] ?? 0;
+                    return (
+                      <li
+                        key={m.key}
+                        className="home-stat-row"
+                        style={{ "--stat-color": m.color }}
+                      >
+                        <span className="home-stat-label">{m.label}</span>
+                        <div className="home-stat-track">
+                          <div
+                            className="home-stat-fill"
+                            style={{ width: `${(Math.max(value, 0) / statScale) * 100}%` }}
+                          />
+                        </div>
+                        <span className="home-stat-value">{value.toLocaleString("ko-KR")}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
             </div>
           </section>
         </div>

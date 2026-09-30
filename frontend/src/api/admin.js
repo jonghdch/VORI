@@ -207,3 +207,31 @@ export function setTitleEnabled(id, enabled) {
 export function deleteTitle(id) {
   return adminSend("DELETE", `/admin/titles/${id}`, undefined, "칭호 삭제");
 }
+
+// ───── 관리자 본인 계정 도구 (/api/admin/me/**) ─────
+// 사용자 화면에서 모든 종족·단계·구매·배치를 확인하기 위한 셀프 조작. AdminTools 컴포넌트가 쓴다.
+
+/** 종족 목록. @returns {Promise<{id:number,name:string,tier:string,appearanceKey:string}[]>} */
+export function listPetSpecies() {
+  return adminGet("/admin/pet-species", "종족 목록 조회");
+}
+
+/** 활성 펫 종족·변종 변경. 활성 펫이 없으면 그 종족으로 새 펫 생성. */
+export function adminSetMyPetAppearance(speciesId, variant = "NORMAL") {
+  return adminSend(
+    "PUT",
+    `/admin/me/pet/appearance?speciesId=${speciesId}&variant=${encodeURIComponent(variant)}`,
+    undefined,
+    "펫 종족 변경",
+  );
+}
+
+/** 활성 펫 단계 강제(INFANT|JUVENILE|ADULT). 내려가기도 허용. */
+export function adminSetMyPetStage(stage) {
+  return adminSend("PUT", `/admin/me/pet/stage?stage=${encodeURIComponent(stage)}`, undefined, "펫 단계 변경");
+}
+
+/** 활성 펫 비우기(보상 0 분양). */
+export function adminClearMyPet() {
+  return adminSend("DELETE", "/admin/me/pet", undefined, "펫 비우기");
+}

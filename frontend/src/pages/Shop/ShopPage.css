@@ -107,6 +107,10 @@
 }
 
 .shop-display-info {
+  /* 세 등급 카드의 폭·높이를 문구 길이와 상관없이 똑같이 맞춘다 */
+  flex: 1;
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -135,7 +139,9 @@
 }
 
 .shop-display-info strong {
-  margin-top: 10px;
+  /* 가격·구매 버튼을 카드 아래쪽에 붙여 세 카드의 줄을 맞춘다 */
+  margin-top: auto;
+  padding-top: 10px;
   color: var(--home-text);
   font-size: 18px;
   font-weight: 900;
@@ -368,95 +374,199 @@
 .shop-tag--b { background: var(--home-green-soft); color: var(--home-green-dark); }
 .shop-tag--variant { background: #fde8f3; color: #b0357a; }
 
-/* ── 가구 상점 ── */
-.shop-furniture {
-  margin-top: 20px;
+/* ── 알 / 가구 상점 전환 탭 (상점 이미지 오른쪽 위, 코인 배지 아래) ── */
+.shop-tabs {
+  position: absolute;
+  top: 84px;
+  right: 24px;
+  z-index: 2;
+  display: flex;
+  gap: 10px;
 }
-.shop-furniture-grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
-}
-.shop-furniture-card {
-  display: grid;
-  grid-template-columns: 56px 1fr auto;
+
+.shop-tab {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: var(--home-radius-sm);
-  background: #f6f8f3;
-  min-width: 0;
+  justify-content: center;
+  gap: 2px;
+  width: 76px;
+  height: 76px;
+  padding: 6px;
+  border: 2px solid rgba(255, 253, 249, 0.7);
+  border-radius: 18px;
+  background: rgba(255, 253, 249, 0.82);
+  color: var(--home-muted);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(45, 35, 28, 0.14);
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
-.shop-furniture-card.is-locked {
-  opacity: 0.72;
-}
-.shop-furniture-art {
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: var(--home-green-soft);
-  overflow: hidden;
-}
-.shop-furniture-image {
-  width: 90%;
-  height: 90%;
+
+.shop-tab img {
+  width: 42px;
+  height: 42px;
   object-fit: contain;
   image-rendering: pixelated;
 }
+
+.shop-tab:hover {
+  transform: translateY(-2px);
+}
+
+.shop-tab.is-active {
+  border-color: var(--home-green-dark);
+  background: #fffdf9;
+  color: var(--home-green-dark);
+}
+
+.shop-tab:focus-visible {
+  outline: 3px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
+/* ── 가구 진열대 — 알처럼 3개씩, 양옆 화살표로 넘긴다 ── */
+.shop-furniture-stage {
+  position: absolute;
+  left: 50%;
+  /* 알 진열대(.shop-display-shelf)와 같은 높이에 카드 아랫단을 맞춘다 */
+  bottom: 155px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  align-items: center;
+  column-gap: 16px;
+  width: min(940px, calc(100% - 32px));
+  transform: translateX(-50%);
+}
+
+.shop-furniture-shelf {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+}
+
+.shop-page-arrow {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 2px solid rgba(255, 253, 249, 0.7);
+  border-radius: 50%;
+  background: rgba(255, 253, 249, 0.92);
+  color: var(--home-green-dark);
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(45, 35, 28, 0.16);
+  transition: transform 0.15s ease;
+}
+
+.shop-page-arrow:hover:not(:disabled) {
+  transform: scale(1.08);
+}
+
+.shop-page-arrow:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.shop-page-arrow:focus-visible {
+  outline: 3px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
+/* 쪽 표시는 카드 아래에 띄워 둔다 — 진열대 높이 계산에서 빠지도록 */
+.shop-page-indicator {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  white-space: nowrap;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.9);
+  color: var(--home-muted);
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.shop-furniture-item .shop-display-info h2 {
+  font-size: 18px;
+}
+
+.shop-furniture-item .shop-display-info p {
+  font-size: 13px;
+}
+
+.shop-furniture-item .shop-display-info small {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.shop-furniture-item.is-locked .shop-display-image-wrap {
+  opacity: 0.6;
+}
+
 .shop-furniture-emoji {
-  font-size: 28px;
+  font-size: 84px;
   line-height: 1;
 }
-.shop-furniture-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.shop-furniture-info strong {
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+
 .shop-furniture-owned {
+  margin: -2px 0 6px;
   font-style: normal;
   font-size: 11px;
   font-weight: 800;
-  padding: 1px 7px;
+  padding: 1px 8px;
   border-radius: 999px;
   background: var(--home-green-soft);
   color: var(--home-green-dark);
 }
-.shop-furniture-info small {
-  font-size: 12px;
-  color: var(--home-muted);
-  font-weight: 600;
-}
+
 .shop-furniture-theme {
-  color: #5b4bb5 !important;
+  color: #5b4bb5;
 }
+
 .shop-furniture-lock {
-  color: #9a6b12 !important;
+  color: #9a6b12;
 }
-.shop-furniture-buy {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-.shop-furniture-buy strong {
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.shop-furniture-buy .shop-buy-btn {
-  margin-top: 0;
-  padding: 7px 14px;
-  font-size: 13px;
+
+@media (max-width: 720px) {
+  .shop-tabs {
+    top: auto;
+    right: auto;
+    left: 18px;
+    bottom: 14px;
+  }
+
+  .shop-tab {
+    width: 60px;
+    height: 60px;
+    font-size: 12px;
+  }
+
+  .shop-tab img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .shop-furniture-stage {
+    bottom: 86px;
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    column-gap: 8px;
+  }
+
+  .shop-furniture-shelf {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-page-arrow {
+    width: 40px;
+    height: 40px;
+  }
 }

@@ -32,7 +32,7 @@ public class AiInquiryController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        return ResponseEntity.ok(aiInquiryService.listPendingByDate(principal.getUser().getId(), date));
+        return ResponseEntity.ok(aiInquiryService.listPendingByDate(principal.getId(), date));
     }
 
     @PostMapping("/{id}/answer")
@@ -41,7 +41,7 @@ public class AiInquiryController {
             @PathVariable Long id,
             @Valid @RequestBody AnswerRequest req
     ) {
-        aiInquiryService.answerInquiry(id, principal.getUser().getId(), req);
+        aiInquiryService.answerInquiry(id, principal.getId(), req);
         return ResponseEntity.ok().build();
     }
 }

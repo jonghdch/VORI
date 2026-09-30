@@ -23,13 +23,13 @@ public class DailyJudgmentController {
             @org.springframework.web.bind.annotation.RequestParam
             @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
             java.time.LocalDate date) {
-        return dailyJudgmentService.judgeDate(principal.getUser(), date);
+        return dailyJudgmentService.judgeDate(principal.getId(), principal.getRole(), date);
     }
 
     @GetMapping("/today")
     public ResponseEntity<DailyJudgmentResponse> today(
             @AuthenticationPrincipal UserPrincipal principal) {
-        return dailyJudgmentService.getToday(principal.getUser().getId())
+        return dailyJudgmentService.getToday(principal.getId())
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
@@ -40,7 +40,7 @@ public class DailyJudgmentController {
             @org.springframework.web.bind.annotation.RequestParam
             @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
             java.time.LocalDate date) {
-        return dailyJudgmentService.getByDate(principal.getUser().getId(), date)
+        return dailyJudgmentService.getByDate(principal.getId(), date)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
@@ -49,11 +49,11 @@ public class DailyJudgmentController {
     public List<DailyJudgmentResponse> getByMonth(
             @AuthenticationPrincipal UserPrincipal principal,
             @org.springframework.web.bind.annotation.RequestParam String month) {
-        return dailyJudgmentService.getByMonth(principal.getUser().getId(), YearMonth.parse(month));
+        return dailyJudgmentService.getByMonth(principal.getId(), YearMonth.parse(month));
     }
 
     @PostMapping("/today")
     public DailyJudgmentResponse judgeToday(@AuthenticationPrincipal UserPrincipal principal) {
-        return dailyJudgmentService.judgeToday(principal.getUser());
+        return dailyJudgmentService.judgeToday(principal.getId(), principal.getRole());
     }
 }

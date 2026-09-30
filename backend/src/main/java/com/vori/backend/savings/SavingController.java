@@ -30,7 +30,7 @@ public class SavingController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody SavingCreateRequest req
     ) {
-        SavingResponse response = savingService.createSaving(principal.getUser().getId(), req);
+        SavingResponse response = savingService.createSaving(principal.getId(), req);
         return ResponseEntity.ok(response);
     }
 
@@ -39,6 +39,6 @@ public class SavingController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        return ResponseEntity.ok(savingService.listByDate(principal.getUser().getId(), date));
+        return ResponseEntity.ok(savingService.listByDate(principal.getId(), date));
     }
 }

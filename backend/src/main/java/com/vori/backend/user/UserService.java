@@ -1,6 +1,7 @@
 package com.vori.backend.user;
 
 import com.vori.backend.auth.dto.SignupRequest;
+import com.vori.backend.user.dto.MeResponse;
 import com.vori.backend.user.dto.ProfileUpdateRequest;
 import com.vori.backend.pet.Pet;
 import com.vori.backend.pet.PetRepository;
@@ -82,6 +83,17 @@ public class UserService {
     }
 
     /**
+     * 본인 정보 — 매번 DB 에서 읽는다. 세션(UserPrincipal)에는 신원만 있으므로
+     * 닉네임·잔액처럼 바뀌는 값은 여기서만 나간다. /api/auth/me·/api/users/me·로그인 응답이 같이 쓴다.
+     */
+    @Transactional(readOnly = true)
+    public MeResponse getMe(Long userId) {
+        return userRepository.findById(userId)
+            .map(MeResponse::from)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+    }
+
+    /**
      * 로그인 성공 시 호출 — 누적 로그인 횟수를 올리고 칭호 조건을 다시 본다.
      * AuthController.login() 이 인증 성공 직후 호출한다. "최초 1회 로그인" 같은
      * 조건은 커밋 이후 이벤트로 평가돼야 하므로 지출 등록 등과 같은 패턴을 따른다.
@@ -99,19 +111,9 @@ public class UserService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
 
-        user.updateProfile(
-            req.nickname().trim(),
-            blankToNull(req.name()),
-            req.age(),
-            blankToNull(req.job()),
-            req.monthlyIncome());
+        // 공백 정리는 ProfileUpdateRequest 가 검사 전에 끝냈다.
+        user.updateProfile(req.nickname(), req.name(), req.age(), req.job(), req.monthlyIncome());
         return user;
-    }
-
-    private String blankToNull(String value) {
-        if (value == null) return null;
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void initializeStatStats(Long userId) {

@@ -36,7 +36,7 @@ public class BudgetController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam String yearMonth
     ) {
-        return budgetService.get(principal.getUser().getId(), yearMonth);
+        return budgetService.get(principal.getId(), yearMonth);
     }
 
     /**
@@ -48,7 +48,7 @@ public class BudgetController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody BudgetUpsertRequest req
     ) {
-        return budgetService.upsert(principal.getUser().getId(), req);
+        return budgetService.upsert(principal.getId(), req);
     }
 
     /** DELETE /api/budgets/2026-09 — 예산 해제. 없어도 204(멱등). */
@@ -58,6 +58,6 @@ public class BudgetController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable String yearMonth
     ) {
-        budgetService.delete(principal.getUser().getId(), yearMonth);
+        budgetService.delete(principal.getId(), yearMonth);
     }
 }

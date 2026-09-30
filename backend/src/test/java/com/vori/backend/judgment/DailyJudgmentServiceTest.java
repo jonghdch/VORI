@@ -44,7 +44,7 @@ class DailyJudgmentServiceTest {
         when(furniture.findByUserIdAndPositionXIsNotNullAndPositionYIsNotNull(1L)).thenReturn(List.of());
         when(judgments.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        DailyJudgmentResponse result = service.judgeDate(user, date);
+        DailyJudgmentResponse result = service.judgeDate(user.getId(), user.getRole(), date);
 
         assertEquals(500, result.coinReward());
         assertEquals(11, result.statRewardPerType());
@@ -63,7 +63,7 @@ class DailyJudgmentServiceTest {
         when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
         when(judgments.findByUserIdAndJudgmentDate(1L, date)).thenReturn(Optional.of(existing));
 
-        DailyJudgmentResponse result = service.judgeDate(user, date);
+        DailyJudgmentResponse result = service.judgeDate(user.getId(), user.getRole(), date);
 
         assertTrue(result.alreadyJudged());
         assertEquals(0, user.getGameMoney());
@@ -75,7 +75,7 @@ class DailyJudgmentServiceTest {
     void regularUserCannotJudgeAnotherDate() {
         User user = User.builder().id(2L).role(Role.USER).build();
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
-                () -> service.judgeDate(user, LocalDate.now().minusDays(1)));
+                () -> service.judgeDate(user.getId(), user.getRole(), LocalDate.now().minusDays(1)));
         assertEquals(403, error.getStatusCode().value());
         verifyNoInteractions(expenses, judgments, users, pets, growthLogs, furniture);
     }
