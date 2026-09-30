@@ -696,6 +696,20 @@
   font-weight: 800;
 }
 
+/* 판정별 색 — 표 배지(.ledger-history-badge--*)와 같은 팔레트 */
+.ledger-detail-ai--gray {
+  background: #eef0ec;
+}
+.ledger-detail-ai--gray .ledger-detail-ai-badge {
+  color: var(--home-muted);
+}
+.ledger-detail-ai--red {
+  background: #fbe8e8;
+}
+.ledger-detail-ai--red .ledger-detail-ai-badge {
+  color: #c0504a;
+}
+
 .ledger-detail-ai p {
   margin: 0;
   font-size: 13px;
