@@ -49,6 +49,23 @@
   color: var(--text);
 }
 
+.signup-logo-static {
+  cursor: default;
+}
+.signup-logout {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--text-muted, var(--text));
+  cursor: pointer;
+}
+.signup-logout:hover {
+  border-color: var(--text);
+}
+
 /* ── 본문 ─────────────────────────────────────────────────── */
 .signup-main {
   flex: 1;

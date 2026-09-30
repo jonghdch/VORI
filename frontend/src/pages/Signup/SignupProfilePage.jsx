@@ -76,7 +76,7 @@ const STEPS = [
 
 const initialProfile = STEPS.reduce((acc, step) => ({ ...acc, [step.key]: "" }), {});
 
-function SignupProfilePage() {
+function SignupProfilePage({ onLogout }) {
   const navigate = useNavigate();
   const [stepIndex, setStepIndex] = useState(0);
   const [profile, setProfile] = useState(initialProfile);
@@ -125,13 +125,10 @@ function SignupProfilePage() {
   return (
     <div className="signup">
       <header className="signup-header">
-        <button
-          type="button"
-          className="signup-logo-btn"
-          onClick={() => navigate("/")}
-          aria-label="VORI 홈으로"
-        >
-          VORI
+        {/* 설문은 필수라 다른 화면으로 가는 길을 두지 않는다. 계정을 떠나는 로그아웃만 연다. */}
+        <span className="signup-logo-btn signup-logo-static">VORI</span>
+        <button type="button" className="signup-logout" onClick={onLogout}>
+          로그아웃
         </button>
       </header>
 
@@ -199,8 +196,8 @@ function SignupProfilePage() {
             <button
               type="button"
               className="signup-secondary"
-              onClick={() => (stepIndex === 0 ? navigate("/signup") : setStepIndex((idx) => idx - 1))}
-              disabled={loading}
+              onClick={() => setStepIndex((idx) => idx - 1)}
+              disabled={loading || stepIndex === 0}
             >
               이전
             </button>
