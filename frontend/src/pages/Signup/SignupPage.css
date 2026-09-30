@@ -415,17 +415,6 @@
   line-height: 1.4;
 }
 
-.signup-onboarding-copy {
-  color: var(--text-2);
-  font-size: 14px;
-  line-height: 1.7;
-  margin: 0 0 6px;
-}
-
-.signup-onboarding-copy p {
-  margin: 0 0 6px;
-}
-
 /* ── 푸터 ─────────────────────────────────────────────────── */
 .signup-footer {
   text-align: center;
