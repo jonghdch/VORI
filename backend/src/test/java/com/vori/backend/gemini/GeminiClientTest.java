@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -17,14 +18,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Gemini 재시도 정책 검증.
+ * Gemini 재시도·대체 모델 정책 검증.
  * 실제로 503 이 뜰 때만 드러나는 로직이라 목으로 고정해서 확인한다.
  */
 class GeminiClientTest {
@@ -34,9 +37,29 @@ class GeminiClientTest {
             "candidates", List.of(Map.of(
                     "content", Map.of("parts", List.of(Map.of("text", "왜 이렇게 쓰셨나요?"))))));
 
-    /** 텍스트용·이미지용 두 RestTemplate 을 같은 목으로 채운다 — 재시도 정책은 공유된다. */
+    /** 대체 모델 없음 — 기존 재시도 테스트는 이 조건에서 돈다. */
     private static GeminiClient client(RestTemplate rt) {
-        return new GeminiClient(rt, rt);
+        return client(rt, "");
+    }
+
+    /**
+     * 텍스트용·이미지용 두 RestTemplate 을 같은 목으로 채운다 — 재시도 정책은 공유된다.
+     * 모델 설정은 스프링이 넣어 주는 값이라 테스트에서는 직접 채운다.
+     */
+    private static GeminiClient client(RestTemplate rt, String fallbackModels) {
+        GeminiClient c = new GeminiClient(rt, rt);
+        ReflectionTestUtils.setField(c, "model", "primary");
+        ReflectionTestUtils.setField(c, "fallbackModels", fallbackModels);
+        ReflectionTestUtils.setField(c, "embeddingModel", "embedder");
+        return c;
+    }
+
+    private static String primaryUrl() {
+        return contains("/models/primary:");
+    }
+
+    private static String backupUrl() {
+        return contains("/models/backup:");
     }
 
     private static HttpServerErrorException serverError(HttpStatus status) {
@@ -170,5 +193,141 @@ class GeminiClientTest {
 
         assertThat(vec).containsExactly(0.1, 0.2, 0.3);
         verify(rt, times(2)).postForObject(anyString(), any(), eq(Map.class));
+    }
+
+    // ───── 대체 모델 ─────
+
+    @Test
+    @DisplayName("주 모델이 503 을 3번 내면 대체 모델로 넘어간다")
+    void fallsBackAfterServerErrors() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(primaryUrl(), any(), eq(Map.class)))
+                .thenThrow(serverError(HttpStatus.SERVICE_UNAVAILABLE));
+        when(rt.postForObject(backupUrl(), any(), eq(Map.class)))
+                .thenReturn(OK_RESPONSE);
+
+        String result = client(rt, "backup")
+                .generateQuestion("축의금", 200_000, BigDecimal.valueOf(40_000), null);
+
+        assertThat(result).isEqualTo("왜 이렇게 쓰셨나요?");
+        verify(rt, times(3)).postForObject(primaryUrl(), any(), eq(Map.class));
+        verify(rt, times(1)).postForObject(backupUrl(), any(), eq(Map.class));
+    }
+
+    @Test
+    @DisplayName("429(한도 초과)는 같은 모델에 재시도하지 않고 바로 대체 모델로 — 한도는 모델별")
+    void fallsBackImmediatelyOnTooManyRequests() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(primaryUrl(), any(), eq(Map.class)))
+                .thenThrow(clientError(HttpStatus.TOO_MANY_REQUESTS));
+        when(rt.postForObject(backupUrl(), any(), eq(Map.class)))
+                .thenReturn(OK_RESPONSE);
+
+        String result = client(rt, "backup")
+                .generateQuestion("커피", 8_000, BigDecimal.valueOf(4_000), null);
+
+        assertThat(result).isNotBlank();
+        verify(rt, times(1)).postForObject(primaryUrl(), any(), eq(Map.class));
+        verify(rt, times(1)).postForObject(backupUrl(), any(), eq(Map.class));
+    }
+
+    @Test
+    @DisplayName("404(모델 은퇴)면 대체 모델로 넘어간다")
+    void fallsBackOnNotFound() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(primaryUrl(), any(), eq(Map.class)))
+                .thenThrow(clientError(HttpStatus.NOT_FOUND));
+        when(rt.postForObject(backupUrl(), any(), eq(Map.class)))
+                .thenReturn(OK_RESPONSE);
+
+        String result = client(rt, "backup")
+                .generateDailyComment("강아지", 10_000, 0, 5_000, 5);
+
+        assertThat(result).isNotBlank();
+        verify(rt, times(1)).postForObject(primaryUrl(), any(), eq(Map.class));
+        verify(rt, times(1)).postForObject(backupUrl(), any(), eq(Map.class));
+    }
+
+    @Test
+    @DisplayName("403(키 문제)은 대체 모델로 넘기지 않는다 — 어느 모델이든 같은 키라 같은 답")
+    void doesNotFallBackOnForbidden() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(primaryUrl(), any(), eq(Map.class)))
+                .thenThrow(clientError(HttpStatus.FORBIDDEN));
+
+        GeminiClient client = client(rt, "backup");
+
+        assertThatThrownBy(() -> client.generateQuestion("책", 15_000, BigDecimal.valueOf(9_000), null))
+                .isInstanceOf(RuntimeException.class);
+        verify(rt, times(1)).postForObject(anyString(), any(), eq(Map.class));
+    }
+
+    @Test
+    @DisplayName("타임아웃은 대체 모델로 넘기지 않는다 — 이미 오래 기다렸다")
+    void doesNotFallBackOnTimeout() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(primaryUrl(), any(), eq(Map.class)))
+                .thenThrow(new ResourceAccessException("Request timed out"));
+
+        GeminiClient client = client(rt, "backup");
+
+        assertThatThrownBy(() -> client.extractReceipt(new byte[]{1, 2, 3}, "image/png"))
+                .isInstanceOf(RuntimeException.class);
+        verify(rt, times(3)).postForObject(primaryUrl(), any(), eq(Map.class));
+        verify(rt, never()).postForObject(backupUrl(), any(), eq(Map.class));
+    }
+
+    @Test
+    @DisplayName("영수증 인식도 대체 모델로 넘어간다")
+    void receiptFallsBack() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(primaryUrl(), any(), eq(Map.class)))
+                .thenThrow(clientError(HttpStatus.TOO_MANY_REQUESTS));
+        when(rt.postForObject(backupUrl(), any(), eq(Map.class)))
+                .thenReturn(Map.of("candidates", List.of(Map.of(
+                        "content", Map.of("parts", List.of(
+                                Map.of("text", "{\"storeName\":\"GS25\",\"totalAmount\":8000}")))))));
+
+        String json = client(rt, "backup").extractReceipt(new byte[]{1, 2, 3}, "image/png");
+
+        assertThat(json).contains("GS25");
+    }
+
+    @Test
+    @DisplayName("대체 모델까지 모두 실패하면 포기한다")
+    void givesUpWhenAllModelsFail() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(anyString(), any(), eq(Map.class)))
+                .thenThrow(serverError(HttpStatus.SERVICE_UNAVAILABLE));
+
+        GeminiClient client = client(rt, "backup");
+
+        assertThatThrownBy(() -> client.generateQuestion("옷", 50_000, BigDecimal.valueOf(20_000), null))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("AI 서비스 호출에 실패");
+        verify(rt, times(3)).postForObject(primaryUrl(), any(), eq(Map.class));
+        verify(rt, times(3)).postForObject(backupUrl(), any(), eq(Map.class));
+    }
+
+    @Test
+    @DisplayName("임베딩은 대체 모델을 쓰지 않는다 — 모델마다 벡터 공간이 다르다")
+    void embedNeverFallsBack() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(anyString(), any(), eq(Map.class)))
+                .thenThrow(clientError(HttpStatus.TOO_MANY_REQUESTS));
+
+        GeminiClient client = client(rt, "backup");
+
+        assertThatThrownBy(() -> client.embed("아메리카노")).isInstanceOf(RuntimeException.class);
+        verify(rt, times(3)).postForObject(contains("/models/embedder:embedContent"), any(), eq(Map.class));
+        verify(rt, never()).postForObject(backupUrl(), any(), eq(Map.class));
+    }
+
+    @Test
+    @DisplayName("대체 모델 설정의 빈 칸·중복·주 모델은 걸러 낸다")
+    void modelChainSkipsBlanksAndDuplicates() {
+        GeminiClient client = client(mock(RestTemplate.class), " backup, ,primary,backup ");
+
+        assertThat(client.modelChain()).containsExactly("primary", "backup");
     }
 }

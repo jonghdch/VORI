@@ -88,7 +88,9 @@ cp .env.example .env   # repo 루트에서
 | `DB_USERNAME` | ✅ | MySQL 계정 (기본 `root`) |
 | `DB_PASSWORD` | ✅ | MySQL 비밀번호 (Windows root 는 보통 비번 있음 → 반드시 명시. 없으면 빈 값) |
 | `GEMINI_API_KEY` | ✅ | Gemini 키 — https://aistudio.google.com/app/apikey |
-| `GEMINI_MODEL` | — | 사용할 모델 (기본 `gemini-2.0-flash`) |
+| `GEMINI_MODEL` | — | 질문·코멘트·사유 분류·영수증 모델 (기본 `gemini-3.6-flash`) |
+| `GEMINI_FALLBACK_MODELS` | — | 주 모델이 과부하(5xx)·한도 초과(429)·은퇴(404)일 때 차례로 쓸 모델, 쉼표 구분 (기본 `gemini-3.5-flash`, 비우면 대체 없음) |
+| `GEMINI_EMBEDDING_MODEL` | — | 카테고리 자동 분류 임베딩 모델 (기본 `gemini-embedding-001`, 대체 없음) |
 
 > 백엔드는 `spring.config.import` 로 `.env` 를 **repo 루트 기준 상대경로**로 읽는다. 그래서 백엔드는 항상 **repo 루트를 작업 디렉터리로** 실행해야 한다(위 1회 준비 4번).
 > 편집기에서 `.env` 저장 시 **줄바꿈은 LF** 로 (CRLF 면 값 끝에 `\r` 이 붙어 DB 비번이 깨질 수 있음).
