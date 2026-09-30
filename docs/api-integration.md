@@ -306,6 +306,7 @@ const res = await fetch('http://localhost:8080/api/receipts', {
 | POST | `/api/eggs/{id}/open` | 개봉 · **펫이 있으면 409** |
 | GET | `/api/pets/active` | 키우는 펫 (없으면 본문 없는 200) |
 | POST | `/api/pets/{id}/release` | 분양 · 성체 아니면 400 |
+| POST | `/api/pets/active/interact` | 상호작용(쓰다듬기 등) 1회 · 1% 확률로 매력 +1 · 응답 `{ charmUp, pet }` · 펫 없으면 400 |
 
 ```json
 [ { "grade": "BASIC",     "name": "기본 알",   "price": 2500,

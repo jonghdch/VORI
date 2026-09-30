@@ -1,7 +1,9 @@
 package com.vori.backend.pet;
 
+import com.vori.backend.common.StatType;
 import com.vori.backend.furniture.UserFurniture;
 import com.vori.backend.furniture.UserFurnitureRepository;
+import com.vori.backend.pet.dto.PetInteractionResponse;
 import com.vori.backend.pet.dto.PetResponse;
 import com.vori.backend.theme.ThemeMaster;
 import com.vori.backend.theme.ThemeMasterRepository;
@@ -22,9 +24,11 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 펫 조회·분양. 스탯 성장 자체는 지출 등록 흐름(ExpenseService)에서 일어난다.
+ * 펫 조회·분양·상호작용. 스탯 성장은 주로 지출 등록 흐름(ExpenseService)에서 일어나고,
+ * 여기서는 상호작용의 낮은 확률 매력 보너스만 다룬다.
  */
 @Slf4j
 @Service
@@ -36,10 +40,15 @@ public class PetService {
     private final UserRepository userRepository;
     private final UserFurnitureRepository userFurnitureRepository;
     private final ThemeMasterRepository themeMasterRepository;
+    private final PetGrowthLogRepository petGrowthLogRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // 분양가 = 스탯총합 × 배수 × (1 + (개별 가구 보너스합 + 테마 세트 보너스합)/100)
     private static final int RELEASE_VALUE_PER_STAT = 10;
+
+    // 상호작용 1회당 매력이 오를 확률(%)과 오르는 양
+    private static final int INTERACT_CHARM_CHANCE_PCT = 1;
+    private static final int INTERACT_CHARM_DELTA = 1;
 
     /** 현재 키우는 펫. 없으면 null (신규 가입자·직전에 분양한 경우). */
     @Transactional(readOnly = true)
@@ -93,6 +102,40 @@ public class PetService {
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "PET_RELEASED"));
 
         return PetResponse.of(pet, findSpecies(pet.getSpeciesId()));
+    }
+
+    /**
+     * 펫 상호작용(쓰다듬기·칭찬하기 등) 1회. 1% 확률로 매력이 1 오른다.
+     * 추첨은 서버에서 한다 — 클라이언트가 당첨 여부를 정하면 요청만 조작해 스탯을 올릴 수 있다.
+     */
+    @Transactional
+    public PetInteractionResponse interact(Long userId) {
+        return interact(userId, ThreadLocalRandom.current().nextInt(100));
+    }
+
+    /** roll 은 0~99 추첨값. 테스트에서 당첨·꽝을 고정하려고 분리했다. */
+    PetInteractionResponse interact(Long userId, int roll) {
+        Pet pet = petRepository.findByUserIdAndReleasedAtIsNull(userId).stream().findFirst()
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "키우는 펫이 있어야 상호작용할 수 있습니다"));
+
+        boolean charmUp = roll < INTERACT_CHARM_CHANCE_PCT;
+        if (charmUp) {
+            pet.addStat(StatType.CHARM, INTERACT_CHARM_DELTA);
+            pet.evaluateStage();
+            petGrowthLogRepository.save(PetGrowthLog.builder()
+                    .petId(pet.getId())
+                    .userId(userId)
+                    .statType(StatType.CHARM)
+                    .delta(INTERACT_CHARM_DELTA)
+                    .savedAmount(0)
+                    .reason(GrowthReason.BONUS)
+                    .createdAt(LocalDateTime.now())
+                    .build());
+            log.info("펫 상호작용 매력 보너스 — userId={}, petId={}, charm={}",
+                    userId, pet.getId(), pet.getStatCharm());
+        }
+        return new PetInteractionResponse(charmUp, PetResponse.of(pet, findSpecies(pet.getSpeciesId())));
     }
 
     /**

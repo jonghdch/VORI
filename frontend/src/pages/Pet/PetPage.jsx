@@ -8,7 +8,7 @@ import {
   VARIANT_LABEL,
   nextStage,
 } from "../../components/petVisual";
-import { getActivePet, listPets, releasePet } from "../../api/pet";
+import { getActivePet, interactWithPet, listPets, releasePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
 import { listMyFurniture, placeFurniture as apiPlaceFurniture, unplaceFurniture } from "../../api/furniture";
 import { listThemes } from "../../api/theme";
@@ -22,6 +22,7 @@ import {
   STAT_LABEL,
   isSurface,
 } from "../../components/furnitureVisual";
+import { PetActionMenu, PetReaction, REACTION_MS, pickLine } from "./PetInteraction";
 import roomDefaultImage from "../../assets/backgrounds/room-default.png";
 import roomWoodImage from "../../assets/backgrounds/room-wood.png";
 import roomMintImage from "../../assets/backgrounds/room-mint.png";
@@ -423,6 +424,73 @@ function PetPage({ user, onLogout }) {
     setDragTarget(null);
   };
 
+  // 펫 우클릭 메뉴(쓰다듬기·칭찬하기 등)와 그 반응. 반응은 바로 보여주고, 매력 보너스(1%)는
+  // 서버가 추첨해서 알려주면 그때 덧붙인다.
+  const petRef = useRef(null);
+  const petIconRef = useRef(null);
+  const reactionSeqRef = useRef(0);
+  const [petMenu, setPetMenu] = useState(null); // { x, y } 화면 좌표
+  const [reaction, setReaction] = useState(null); // { id, actionId, line, particle, charmUp? }
+
+  const openPetMenu = (event) => {
+    event.preventDefault();
+    setDragTarget(null); // macOS ctrl+클릭은 드래그 시작과 우클릭이 같이 들어온다
+    // 키보드(메뉴 키·Shift+F10·Enter)로 열면 포인터 좌표가 없으니 펫 가운데에 띄운다
+    const hasPointer = event.clientX > 0 || event.clientY > 0;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setPetMenu(
+      hasPointer
+        ? { x: event.clientX, y: event.clientY }
+        : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+    );
+  };
+
+  const closePetMenu = useCallback((restoreFocus) => {
+    setPetMenu(null);
+    if (restoreFocus) petRef.current?.focus();
+  }, []);
+
+  const handlePetAction = (action) => {
+    closePetMenu(true);
+    reactionSeqRef.current += 1;
+    const reactionId = reactionSeqRef.current;
+    setReaction((previous) => ({
+      id: reactionId,
+      actionId: action.id,
+      line: pickLine(action, previous?.line),
+      particle: action.particle,
+    }));
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!reduceMotion) {
+      petIconRef.current?.animate?.(action.motion.keyframes, {
+        duration: action.motion.duration,
+        easing: "ease-in-out",
+      });
+    }
+
+    interactWithPet()
+      .then((result) => {
+        if (!result?.charmUp) return;
+        setPet(result.pet);
+        // 그사이 다른 반응으로 넘어갔으면 말풍선 옆 표시는 건너뛰고 안내 문구만 남긴다
+        setReaction((current) =>
+          current?.id === reactionId ? { ...current, charmUp: true } : current,
+        );
+        setNotice({ kind: "ok", text: `${result.pet.speciesName ?? "펫"}의 매력이 1 올랐어요!` });
+      })
+      .catch((e) => {
+        if (e.status !== 401) setNotice({ kind: "err", text: e.message });
+      });
+  };
+
+  // 매력 보너스 표시가 뒤늦게 붙어도 사라지는 시각은 그대로 두려고 id 에만 묶는다
+  const reactionId = reaction?.id;
+  useEffect(() => {
+    if (reactionId == null) return undefined;
+    const timer = setTimeout(() => setReaction(null), REACTION_MS);
+    return () => clearTimeout(timer);
+  }, [reactionId]);
+
   const handleFurniturePointerDown = (item, event) => {
     if (event.button !== 0) return;
     const previous = furniturePointerRef.current;
@@ -555,6 +623,7 @@ function PetPage({ user, onLogout }) {
                       left: `${petPosition.x}%`,
                       top: `${petPosition.y}%`,
                     }}
+                    ref={petRef}
                     role="button"
                     tabIndex={0}
                     onPointerDown={(event) => startDrag({ type: "pet", id: selectedPet.id }, event)}
@@ -563,11 +632,28 @@ function PetPage({ user, onLogout }) {
                     }
                     onPointerUp={endDrag}
                     onPointerCancel={endDrag}
-                    aria-label={`${selectedPet.name} 이동`}
-                    title={`${selectedPet.name} 드래그 이동`}
+                    onContextMenu={openPetMenu}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") openPetMenu(event);
+                    }}
+                    aria-haspopup="menu"
+                    aria-expanded={petMenu !== null}
+                    aria-label={`${selectedPet.name} 이동, 상호작용 메뉴 열기`}
+                    title={`${selectedPet.name} 드래그 이동, 우클릭 상호작용`}
                   >
+                    {reaction && (
+                      <PetReaction
+                        key={reaction.id}
+                        reaction={reaction}
+                        petPosition={petPosition}
+                      />
+                    )}
                     <span className="pet-current-shadow" aria-hidden />
-                    <span className="pet-current-icon" aria-label={selectedPet.name}>
+                    <span
+                      ref={petIconRef}
+                      className="pet-current-icon"
+                      aria-label={selectedPet.name}
+                    >
                       <PetArt
                         appearanceKey={selectedPet.appearanceKey}
                         stage={selectedPet.stage}
@@ -594,9 +680,16 @@ function PetPage({ user, onLogout }) {
                 )}
               </div>
 
+              {/* 펫 반응 대사를 스크린리더에 알리는 상시 영역 — 보이는 말풍선은 aria-hidden */}
+              <p className="pet-reaction-status" role="status">
+                {reaction && selectedPet
+                  ? `${selectedPet.name}: ${reaction.line}${reaction.charmUp ? " 매력이 1 올랐어요." : ""}`
+                  : ""}
+              </p>
+
               <p className="pet-room-help">
-                펫과 가구를 드래그해서 원하는 위치에 배치해요. 가구는 더블클릭하면 인벤토리로 회수돼요.
-                배치한 가구만 분양가 보너스에 반영돼요.
+                펫과 가구를 드래그해서 원하는 위치에 배치해요. 펫을 우클릭하면 쓰다듬거나 칭찬할 수 있어요.
+                가구는 더블클릭하면 인벤토리로 회수돼요. 배치한 가구만 분양가 보너스에 반영돼요.
               </p>
             </section>
           </div>
@@ -878,6 +971,15 @@ function PetPage({ user, onLogout }) {
             </section>
           </aside>
         </div>
+
+        {petMenu && selectedPet && (
+          <PetActionMenu
+            anchor={petMenu}
+            petName={selectedPet.name}
+            onSelect={handlePetAction}
+            onClose={closePetMenu}
+          />
+        )}
       </main>
     </AppShell>
   );

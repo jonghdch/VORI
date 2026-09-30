@@ -6,6 +6,7 @@
 //   GET  /api/pets/active        키우는 펫 (없으면 null)
 //   GET  /api/pets               보유·분양 이력 전체
 //   POST /api/pets/{id}/release  성체 분양 → 게임머니 획득
+//   POST /api/pets/active/interact  상호작용 1회 → 1% 확률로 매력 +1
 import { get, post } from "./http";
 
 /**
@@ -40,3 +41,9 @@ export const listPets = () => get("/pets");
 
 /** @returns {Promise<Pet>} 400 = 성체 아님, 409 = 이미 분양 */
 export const releasePet = (petId) => post(`/pets/${petId}/release`);
+
+/**
+ * 키우는 펫과 상호작용(쓰다듬기 등) 1회. 당첨 추첨은 서버가 한다.
+ * @returns {Promise<{ charmUp:boolean, pet:Pet }>} 400 = 키우는 펫 없음
+ */
+export const interactWithPet = () => post("/pets/active/interact");

@@ -985,3 +985,236 @@
 .pet-empty p {
   margin: 0;
 }
+
+/* ── 펫 상호작용 (우클릭 메뉴 · 반응) ── */
+/* 메뉴는 화면 좌표로 띄운다(position: fixed) — 방 카드의 overflow: hidden 에 잘리지 않게 main 바로 아래에 둔다 */
+.pet-action-menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 148px;
+  padding: 6px;
+  border: 1px solid var(--home-card-border);
+  border-radius: var(--home-radius-sm);
+  background: var(--home-card-surface);
+  box-shadow:
+    0 1px 2px rgba(61, 56, 48, 0.08),
+    0 12px 28px rgba(61, 56, 48, 0.16);
+  transform-origin: top left;
+  animation: pet-action-menu-in 140ms ease-out;
+}
+.pet-action-menu-caption {
+  margin: 0;
+  padding: 6px 10px 4px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--home-muted);
+}
+.pet-action-menu-item {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--home-text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+.pet-action-menu-item:hover,
+.pet-action-menu-item:focus-visible {
+  background: var(--home-green-soft);
+}
+.pet-action-menu-item:focus-visible {
+  outline: 2px solid var(--home-green);
+  outline-offset: -2px;
+}
+@media (pointer: coarse) {
+  .pet-action-menu-item {
+    min-height: 44px;
+  }
+}
+@keyframes pet-action-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* 반응 동작(찌그러짐·기울기)이 발 쪽을 축으로 움직이게 — 동작 자체는 PetInteraction.jsx 의 motion */
+.pet-current-icon {
+  transform-origin: 50% 88%;
+}
+
+.pet-reaction {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+/* 길이는 PetInteraction.jsx 의 REACTION_MS 와 같아야 한다 — 끝에서 흐려진 직후 언마운트된다 */
+.pet-reaction-bubble {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  /* 펫의 가로 위치(%)만큼 제 폭을 왼쪽으로 당긴다 — 방 왼쪽 끝에선 오른쪽으로, 오른쪽 끝에선
+     왼쪽으로 펼쳐져서 어디에 있든 방 안에 들어온다. 꼬리는 같은 비율이라 늘 펫 가운데를 가리킨다. */
+  translate: calc(var(--pet-x, 50) * -1%) 0;
+  width: max-content;
+  max-width: 220px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(255, 253, 249, 0.97);
+  box-shadow:
+    0 1px 2px rgba(61, 56, 48, 0.1),
+    0 8px 18px rgba(61, 56, 48, 0.14);
+  color: var(--home-text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+  text-align: center;
+  animation: pet-reaction-bubble 2400ms ease-out both;
+}
+.pet-reaction-bubble::after {
+  content: "";
+  position: absolute;
+  left: clamp(16px, calc(var(--pet-x, 50) * 1%), calc(100% - 16px));
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 2px;
+  background: inherit;
+  transform: rotate(45deg);
+}
+.pet-reaction-bubble.is-below {
+  top: calc(100% + 10px);
+  bottom: auto;
+}
+.pet-reaction-bubble.is-below::after {
+  top: -5px;
+  bottom: auto;
+}
+@keyframes pet-reaction-bubble {
+  0% {
+    opacity: 0;
+    scale: 0.92;
+  }
+  7% {
+    opacity: 1;
+    scale: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.pet-reaction-particles span {
+  position: absolute;
+  top: 6%;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--home-bar-orange);
+  opacity: 0;
+  animation: pet-reaction-particle 1100ms ease-out both;
+}
+.pet-reaction[data-action="pat"] .pet-reaction-particles span {
+  color: var(--home-bar-red);
+}
+.pet-reaction-particles span:nth-child(1) {
+  left: 16%;
+}
+.pet-reaction-particles span:nth-child(2) {
+  left: 46%;
+  top: -4%;
+  animation-delay: 140ms;
+}
+.pet-reaction-particles span:nth-child(3) {
+  left: 76%;
+  animation-delay: 280ms;
+}
+@keyframes pet-reaction-particle {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-38px) scale(1);
+  }
+}
+
+/* 매력 보너스 당첨 표시 — 펫 머리 옆에서 떠오른다 */
+.pet-reaction-gain {
+  position: absolute;
+  left: 78%;
+  top: 14%;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.97);
+  box-shadow:
+    0 1px 2px rgba(61, 56, 48, 0.1),
+    0 6px 14px rgba(61, 56, 48, 0.14);
+  color: var(--home-text);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+  animation: pet-reaction-gain 1600ms ease-out both;
+}
+.pet-reaction-gain::before {
+  content: "♥\FE0E";
+  margin-right: 4px;
+  color: var(--home-bar-red);
+}
+@keyframes pet-reaction-gain {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.85);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+/* 펫 반응 대사를 스크린리더에만 알리는 영역 */
+.pet-reaction-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-action-menu,
+  .pet-reaction-bubble,
+  .pet-reaction-gain {
+    animation: none;
+  }
+  .pet-reaction-particles {
+    display: none;
+  }
+}

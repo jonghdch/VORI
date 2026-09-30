@@ -1,6 +1,7 @@
 package com.vori.backend.pet;
 
 import com.vori.backend.auth.UserPrincipal;
+import com.vori.backend.pet.dto.PetInteractionResponse;
 import com.vori.backend.pet.dto.PetResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 펫 조회·분양. 인증 필요(세션), 본인 데이터만.
+ * 펫 조회·분양·상호작용. 인증 필요(세션), 본인 데이터만.
  */
 @RestController
 @RequestMapping("/api/pets")
@@ -32,6 +33,12 @@ public class PetController {
     @GetMapping
     public List<PetResponse> all(@AuthenticationPrincipal UserPrincipal principal) {
         return petService.listAll(principal.getId());
+    }
+
+    /** POST /api/pets/active/interact — 키우는 펫과 상호작용 1회. 1% 확률로 매력 +1. */
+    @PostMapping("/active/interact")
+    public PetInteractionResponse interact(@AuthenticationPrincipal UserPrincipal principal) {
+        return petService.interact(principal.getId());
     }
 
     /** POST /api/pets/{id}/release — 성체 펫 분양 → 게임머니 획득. */
