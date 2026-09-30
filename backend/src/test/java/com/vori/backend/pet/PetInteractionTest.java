@@ -34,11 +34,12 @@ class PetInteractionTest {
     private static final long USER_ID = 7L;
 
     private final PetRepository petRepository = mock(PetRepository.class);
+    private final UserRepository userRepository = mock(UserRepository.class);
     private final PetGrowthLogRepository growthLogRepository = mock(PetGrowthLogRepository.class);
     private final PetService service = new PetService(
             petRepository,
             mock(PetSpeciesRepository.class),
-            mock(UserRepository.class),
+            userRepository,
             mock(UserFurnitureRepository.class),
             mock(ThemeMasterRepository.class),
             growthLogRepository,
@@ -72,6 +73,29 @@ class PetInteractionTest {
         assertThat(response.charmUp()).isFalse();
         assertThat(pet.getStatCharm()).isEqualTo(10);
         verify(growthLogRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @DisplayName("당첨이면 상한을 세기 전에 사용자 행을 잠근다 — 동시 당첨이 상한을 넘지 못하게")
+    void winningRollLocksBeforeCounting() {
+        activePet(10, 0);
+
+        service.interact(USER_ID, 0);
+
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(userRepository, growthLogRepository);
+        order.verify(userRepository).findByIdForUpdate(USER_ID);
+        order.verify(growthLogRepository).countByPetIdAndReasonAndCreatedAtGreaterThanEqual(
+                org.mockito.ArgumentMatchers.eq(3L),
+                org.mockito.ArgumentMatchers.eq(GrowthReason.PET_INTERACTION),
+                org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @DisplayName("꽝이면 잠그지 않는다 — 매 호출마다 잠금 비용을 치르지 않게")
+    void losingRollDoesNotLock() {
+        activePet(10, 0);
+        service.interact(USER_ID, 99);
+        verify(userRepository, org.mockito.Mockito.never()).findByIdForUpdate(org.mockito.ArgumentMatchers.any());
     }
 
     @Test

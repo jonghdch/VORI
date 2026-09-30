@@ -138,10 +138,14 @@ public class PetService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "키우는 펫이 있어야 상호작용할 수 있습니다"));
 
-        boolean charmUp = roll < INTERACT_CHARM_CHANCE_PCT
-                && petGrowthLogRepository.countByPetIdAndReasonAndCreatedAtGreaterThanEqual(
-                        pet.getId(), GrowthReason.PET_INTERACTION, LocalDate.now().atStartOfDay())
-                   < INTERACT_CHARM_DAILY_CAP;
+        boolean charmUp = false;
+        if (roll < INTERACT_CHARM_CHANCE_PCT) {
+            // 당첨일 때만 사용자 행을 잠가, 동시 당첨이 "아직 상한 미만" 을 함께 읽고 넘치지 않게 한다
+            userRepository.findByIdForUpdate(userId);
+            charmUp = petGrowthLogRepository.countByPetIdAndReasonAndCreatedAtGreaterThanEqual(
+                    pet.getId(), GrowthReason.PET_INTERACTION, LocalDate.now().atStartOfDay())
+                    < INTERACT_CHARM_DAILY_CAP;
+        }
         if (charmUp) {
             pet.addStat(StatType.CHARM, INTERACT_CHARM_DELTA);
             pet.evaluateStage();
