@@ -3,6 +3,8 @@ package com.vori.backend.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vori.backend.auth.AccountStatusFilter;
 import com.vori.backend.auth.CustomUserDetailsService;
+import com.vori.backend.onboarding.OnboardingRequiredFilter;
+import com.vori.backend.onboarding.UserSpendingProfileRepository;
 import com.vori.backend.sanction.SanctionPolicy;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class SecurityConfig {
     private final UserRepository userRepository;
     private final SanctionPolicy sanctionPolicy;
     private final ObjectMapper objectMapper;
+    private final UserSpendingProfileRepository profileRepository;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -96,7 +99,10 @@ public class SecurityConfig {
             // 제재·역할을 요청마다 DB 로 확인. CORS 뒤에 둬야 403 응답에도 CORS 헤더가 붙는다.
             .addFilterBefore(new AccountStatusFilter(userRepository, sanctionPolicy, objectMapper,
                     securityContextRepository),
-                AuthorizationFilter.class);
+                AuthorizationFilter.class)
+            // 설문 전 계정은 설문·로그인 API 만. 역할이 갱신된 뒤(AccountStatusFilter 다음)에 본다.
+            .addFilterAfter(new OnboardingRequiredFilter(profileRepository, objectMapper),
+                AccountStatusFilter.class);
 
         return http.build();
     }
