@@ -32,8 +32,9 @@ import java.util.Map;
  *     편차 = (RED 경계 − 평균) ÷ z_red   → z-score 가 정확히 z_red 에서 RED 가 되도록 역산
  *   비율은 잠정값이다. 관리자 설정(signal_config)으로 옮기는 것은 후속 과제.
  *
- * 채우는 조건: 그 타입에 실제 지출이 없을 때만. 씨딩된 뒤 지출이 들어오면 표본 수가 N_MIN 을 넘으므로
- * "표본 수 == N_MIN(씨딩 직후)" 또는 "표본 수 < N_MIN(씨딩 안 됨)" 일 때만 덮어쓴다.
+ * 채우는 조건: 표본이 하나도 없거나(sample_count 0), 지금 값이 씨딩값 그대로일 때(seeded)만.
+ * 표본 수로 추측하면 실제 지출이 우연히 N_MIN 건인 사용자를, 지출 행 유무로 추측하면 지출을 지우거나
+ * 다른 타입으로 옮긴 사용자(삭제·이동은 user_stat_stats 를 되돌리지 않는다)의 기록을 덮어쓰게 된다.
  */
 @Slf4j
 @Component
@@ -113,13 +114,9 @@ public class BaselineSeeder {
     private boolean apply(Long userId, StatType type, BigDecimal mean, BigDecimal stddev) {
         UserStatStats stats = userStatStatsRepository.findByUserIdAndStatType(userId, type)
                 .orElseThrow(() -> new IllegalStateException("user_stat_stats 초기화가 누락되었습니다."));
-        int count = stats.getSampleCount();
-        boolean untouched = count < ExpenseService.N_MIN || count == SEEDED_SAMPLE_COUNT;
-        if (!untouched) return false;
-        // 표본이 1~4건인 계정(씨딩 없이 조금 쓴 기존 사용자)은 그 기록을 존중해 건너뛴다.
-        if (count > 0 && count < ExpenseService.N_MIN) return false;
-
-        stats.updateEma(mean, stddev, SEEDED_SAMPLE_COUNT);
+        boolean empty = stats.getSampleCount() == null || stats.getSampleCount() == 0;
+        if (!empty && !Boolean.TRUE.equals(stats.getSeeded())) return false; // 실제 기록은 존중한다
+        stats.seedBaseline(mean, stddev, SEEDED_SAMPLE_COUNT);
         log.info("[Onboarding] 기준선 씨딩 — userId={}, type={}, mean={}, stddev={}", userId, type, mean, stddev);
         return true;
     }
