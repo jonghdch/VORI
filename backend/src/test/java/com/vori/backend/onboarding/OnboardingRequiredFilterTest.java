@@ -85,7 +85,8 @@ class OnboardingRequiredFilterTest {
         loginAs(Role.ADMIN);
         filter.doFilter(request("GET", "/api/admin/users"), new MockHttpServletResponse(), chain);
         SecurityContextHolder.clearContext();
-        filter.doFilter(request("POST", "/api/auth/login"), new MockHttpServletResponse(), chain);
+        // 허용 목록이 아닌 경로로 — 비로그인 분기 자체를 확인한다(인증은 뒤의 AuthorizationFilter 몫)
+        filter.doFilter(request("POST", "/api/expenses"), new MockHttpServletResponse(), chain);
 
         verifyNoInteractions(profiles);
         verify(chain, times(2)).doFilter(any(), any());
