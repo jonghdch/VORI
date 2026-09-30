@@ -911,7 +911,7 @@ function PetPage({ user, onLogout }) {
                       <button
                         type="button"
                         className="home-link-btn"
-                        onClick={() => navigate("/shop")}
+                        onClick={() => navigate("/shop?tab=furniture")}
                       >
                         가구 상점 가기 →
                       </button>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import { PetArt, STAGE_LABEL, TIER_LABEL, VARIANT_LABEL } from "../../components/petVisual";
 import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
@@ -62,7 +62,11 @@ function ShopPage({ user, onLogout }) {
   const [furnitureError, setFurnitureError] = useState(null);
 
   // 상점 이미지 안 진열대에 무엇을 보여줄지 — "egg"(알 상점) | "furniture"(가구 상점)
-  const [shopTab, setShopTab] = useState("egg");
+  // /shop?tab=furniture 로 들어오면 가구 상점부터 연다 (마이룸의 "가구 상점 가기").
+  const [searchParams] = useSearchParams();
+  const [shopTab, setShopTab] = useState(() =>
+    searchParams.get("tab") === "furniture" ? "furniture" : "egg",
+  );
   const [furniturePage, setFurniturePage] = useState(0);
 
   const reload = useCallback(async () => {
