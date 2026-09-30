@@ -122,28 +122,38 @@ function ProtectedRoute({ user, authLoading, children }) {
 const SURVEY_PATH = "/signup/profile";
 function ProfileRequiredGuard({ user, children }) {
   const { pathname } = useLocation();
-  const [needsProfile, setNeedsProfile] = useState(null); // null = 아직 모름
-  const userId = user?.id;
-  const isAdmin = user?.role === "ADMIN";
+  // 결과를 어느 계정 것인지와 함께 둔다. 계정이 바뀐 첫 렌더에 이전 계정의 결과로 화면을 여는 일을 막는다.
+  const [status, setStatus] = useState({ userId: null, needsProfile: false, failed: false });
+  const [attempt, setAttempt] = useState(0);
+  const userId = user?.id ?? null;
+  const exempt = !userId || user?.role === "ADMIN";
   useEffect(() => {
-    if (!userId || isAdmin) {
-      setNeedsProfile(false);
-      return undefined;
-    }
+    if (exempt) return undefined;
     let alive = true;
-    setNeedsProfile(null);
     getOnboardingStatus()
-      .then((s) => alive && setNeedsProfile(!s?.profileCompleted))
-      .catch(() => alive && setNeedsProfile(false)); // 상태를 못 읽으면 화면은 막지 않는다(서버가 막는다)
-    const done = () => setNeedsProfile(false);
+      .then((s) => alive && setStatus({ userId, needsProfile: !s?.profileCompleted, failed: false }))
+      .catch(() => alive && setStatus({ userId, needsProfile: false, failed: true }));
+    const done = () => setStatus({ userId, needsProfile: false, failed: false });
     window.addEventListener("vori:onboarding-done", done);
     return () => {
       alive = false;
       window.removeEventListener("vori:onboarding-done", done);
     };
-  }, [userId, isAdmin]);
-  if (userId && needsProfile === null) return null;
-  if (needsProfile && pathname !== SURVEY_PATH) return <Navigate to={SURVEY_PATH} replace />;
+  }, [userId, exempt, attempt]);
+  if (exempt) return children;
+  if (status.userId !== userId) return null; // 이 계정의 설문 상태를 아직 모름
+  // 상태를 못 읽었으면 열지도(설문 우회), 설문으로 보내지도(설문을 마친 사용자까지 튕김) 않고 다시 묻는다.
+  if (status.failed) {
+    return (
+      <div className="profile-guard-error" role="alert">
+        <p>계정 상태를 확인하지 못했어요.</p>
+        <button type="button" onClick={() => { setStatus((cur) => ({ ...cur, userId: null })); setAttempt((n) => n + 1); }}>
+          다시 시도
+        </button>
+      </div>
+    );
+  }
+  if (status.needsProfile && pathname !== SURVEY_PATH) return <Navigate to={SURVEY_PATH} replace />;
   return children;
 }
 
