@@ -168,7 +168,24 @@ public class CategorySeeder implements CommandLineRunner {
 - Entity 클래스에 `@Entity` + `@Table(name="users")` 붙어 있는지 확인
 
 ### Flyway 가 마이그레이션 충돌 (`checksum mismatch`)
-- 이미 적용된 SQL 파일을 수정하면 발생. 새 `V<N+1>__fix.sql` 추가로 처리. 운영 단계에선 절대 기존 파일 수정 X
+
+같은 번호에 서로 다른 SQL 이 있을 때 난다. 원인은 두 가지다.
+
+**1. 이미 적용된 SQL 파일을 고쳤다**
+- 새 `V<N+1>__fix.sql` 을 추가해서 처리한다. 적용된 파일은 고치지 않는다 (아래 주의사항).
+
+**2. 브랜치끼리 같은 번호를 썼다**
+- 예: 내 브랜치에서 `V16__a.sql` 을 만들어 로컬 DB 에 적용해 둔 사이, 팀원의 `V16__b.sql` 이 main 에 먼저 머지된 경우. main 을 받아 앱을 켜면 `Migration checksum mismatch for migration version 16` 이 난다.
+- 번호는 **main 에 먼저 들어간 쪽이 가진다.** 아직 머지 안 된 브랜치가 파일 이름을 main 의 다음 번호로 바꾼다 (`V16__a.sql` → `V19__a.sql`). 주석·문서에서 그 번호를 적은 곳도 같이 고친다.
+- 로컬 DB 는 이력에서 내 쪽 행을 지우고 그 SQL 이 만든 테이블·컬럼을 되돌린 뒤 앱을 다시 켠다. 그러면 main 의 번호가 적용되고 내 브랜치로 돌아가면 새 번호가 이어서 적용된다.
+  ```sql
+  DELETE FROM flyway_schema_history WHERE version = '16';  -- 내가 만들었던 번호
+  DROP TABLE ...;                                           -- 그 SQL 이 만든 것
+  ```
+- 예방: 마이그레이션 파일을 만들 때와 **머지 직전**에 `origin/main` 의 마지막 번호를 다시 확인한다. 브랜치를 만든 뒤 main 에 번호가 더 늘었으면 그때 또 올린다.
+  ```bash
+  git fetch origin && git ls-tree --name-only origin/main backend/src/main/resources/db/migration/ | sort -V | tail -1
+  ```
 
 ---
 
