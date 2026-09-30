@@ -2,19 +2,23 @@ package com.vori.backend.pet;
 
 import com.vori.backend.auth.UserPrincipal;
 import com.vori.backend.pet.dto.PetInteractionResponse;
+import com.vori.backend.pet.dto.PetNameRequest;
 import com.vori.backend.pet.dto.PetResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 /**
- * 펫 조회·분양·상호작용. 인증 필요(세션), 본인 데이터만.
+ * 펫 조회·이름 짓기·분양·상호작용. 인증 필요(세션), 본인 데이터만.
  */
 @RestController
 @RequestMapping("/api/pets")
@@ -39,6 +43,16 @@ public class PetController {
     @PostMapping("/active/interact")
     public PetInteractionResponse interact(@AuthenticationPrincipal UserPrincipal principal) {
         return petService.interact(principal.getId());
+    }
+
+    /** PUT /api/pets/{id}/name — 키우는 펫의 이름 짓기(1~10자). 분양한 펫이면 409. */
+    @PutMapping("/{id}/name")
+    public PetResponse rename(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody PetNameRequest request
+    ) {
+        return petService.rename(principal.getId(), id, request.name());
     }
 
     /** POST /api/pets/{id}/release — 성체 펫 분양 → 게임머니 획득. */

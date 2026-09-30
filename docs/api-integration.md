@@ -306,6 +306,7 @@ const res = await fetch('http://localhost:8080/api/receipts', {
 | POST | `/api/eggs/{id}/open` | 개봉 · **펫이 있으면 409** |
 | GET | `/api/pets/active` | 키우는 펫 (없으면 본문 없는 200) |
 | POST | `/api/pets/{id}/release` | 분양 · 성체 아니면 400 |
+| PUT | `/api/pets/{id}/name` | 펫 이름 짓기 · 요청 `{ name }`(1~10자, 앞뒤 공백 제외) · 응답 펫 · 규칙 위반 400 · 분양한 펫 409 |
 | POST | `/api/pets/active/interact` | 상호작용(쓰다듬기 등) 1회 · 1% 확률로 매력 +1 · 응답 `{ charmUp, pet }` · 펫 없으면 400 |
 
 ```json

@@ -9,7 +9,7 @@ import { getActivePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
 import { getLatestDailyReport, markDailyReportRead } from "../../api/report";
 import { listTitles } from "../../api/titles";
-import { PetArt } from "../../components/petVisual";
+import { PetArt, petDisplayName } from "../../components/petVisual";
 import { AI_ACTIVE_FROM_HOUR } from "../../config";
 import "./HomeDashboard.css";
 
@@ -231,7 +231,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   </span>
                 </div>
                 <div className="home-pet-name-line">
-                  <h2 className="home-pet-name">{activePet?.speciesName ?? "보리"}</h2>
+                  <h2 className="home-pet-name">{activePet ? petDisplayName(activePet) : "보리"}</h2>
                   <span className="home-pet-level-label">Lv. {petLevel}</span>
                 </div>
               </div>

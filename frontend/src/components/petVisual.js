@@ -105,6 +105,9 @@ export function nextStage(stage) {
   return null;
 }
 
+/** 화면에 부를 펫 이름 — 사용자가 지어 준 이름, 아직 없으면 종족 이름. */
+export const petDisplayName = (pet) => pet?.name || pet?.speciesName || "펫";
+
 /**
  * @param {string} appearanceKey
  * @param {string} [stage] INFANT | JUVENILE | ADULT. 해당 단계 이미지가 없으면 바로 아래 단계로 대신한다

@@ -69,6 +69,21 @@ public class PetService {
                 .toList();
     }
 
+    /** 키우는 펫의 이름을 짓는다(다시 지어도 된다). 분양한 펫은 기록이라 바꾸지 않는다. */
+    @Transactional
+    public PetResponse rename(Long userId, Long petId, String name) {
+        Pet pet = petRepository.findById(petId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "펫을 찾을 수 없습니다"));
+        if (!pet.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 펫에만 이름을 지을 수 있습니다");
+        }
+        if (pet.isReleased()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 분양한 펫입니다");
+        }
+        pet.rename(name);
+        return PetResponse.of(pet, findSpecies(pet.getSpeciesId()));
+    }
+
     /**
      * 성체 펫 분양 — 게임머니 보상 지급 후 released_at 기록.
      * 잔액 갱신 경로라 사용자 행을 잠그고 읽는다.

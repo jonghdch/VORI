@@ -6,6 +6,7 @@ import {
   STAGE_LABEL,
   VARIANT_LABEL,
   nextStage,
+  petDisplayName,
 } from "../../components/petVisual";
 import { getActivePet, interactWithPet, listPets, releasePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
@@ -191,7 +192,7 @@ function PetPage({ user, onLogout }) {
   const handleRelease = async () => {
     if (!pet) return;
     const ok = window.confirm(
-      `${pet.speciesName}을(를) 분양할까요? 분양하면 더 이상 키울 수 없고, 스탯에 따라 코인을 받아요.`,
+      `${petDisplayName(pet)}을(를) 분양할까요? 분양하면 더 이상 키울 수 없고, 스탯에 따라 코인을 받아요.`,
     );
     if (!ok) return;
     setReleasing(true);
@@ -201,7 +202,7 @@ function PetPage({ user, onLogout }) {
       await loadPets();
       setNotice({
         kind: "ok",
-        text: `${released.speciesName}을(를) 분양하고 ${coin(released.releaseValue)}을 받았어요.`,
+        text: `${petDisplayName(released)}을(를) 분양하고 ${coin(released.releaseValue)}을 받았어요.`,
       });
     } catch (e) {
       setNotice({
@@ -305,8 +306,9 @@ function PetPage({ user, onLogout }) {
   const selectedPet = pet
     ? {
         id: String(pet.id),
-        name: pet.speciesName ?? "펫",
-        type: [STAGE_LABEL[pet.stage], VARIANT_LABEL[pet.variant]]
+        name: petDisplayName(pet),
+        // 이름을 지은 펫은 이름이 제목이 되므로, 종족은 여기 덧붙여 계속 보이게 한다
+        type: [pet.name ? pet.speciesName : null, STAGE_LABEL[pet.stage], VARIANT_LABEL[pet.variant]]
           .filter(Boolean)
           .join(" · "),
         appearanceKey: pet.appearanceKey,
@@ -514,7 +516,7 @@ function PetPage({ user, onLogout }) {
         setReaction((current) =>
           current?.id === reactionId ? { ...current, charmUp: true } : current,
         );
-        setNotice({ kind: "ok", text: `${result.pet.speciesName ?? "펫"}의 매력이 1 올랐어요!` });
+        setNotice({ kind: "ok", text: `${petDisplayName(result.pet)}의 매력이 1 올랐어요!` });
       })
       .catch((e) => {
         if (e.status !== 401) setNotice({ kind: "err", text: e.message });
@@ -769,7 +771,7 @@ function PetPage({ user, onLogout }) {
                         <div>
                           <strong>{selectedPet.name}</strong>
                           <small>{selectedPet.type}</small>
-                          <p>{formatDate(pet.hatchedAt)} 부화 · 스탯 합 {pet.statTotal}</p>
+                          <p>{formatDate(pet.hatchedAt)} 부화 · 경험치 {pet.statTotal}</p>
                         </div>
                       </div>
 
@@ -801,7 +803,7 @@ function PetPage({ user, onLogout }) {
                         <p className="pet-evolve-help">
                           {evolution
                             ? "합리적인 지출로 절약하면 스탯이 올라 다음 단계로 자라요."
-                            : "다 자란 펫은 분양해서 코인으로 바꿀 수 있어요. 분양가 = 스탯 합 × 10."}
+                            : "다 자란 펫은 분양해서 코인으로 바꿀 수 있어요. 분양가 = 경험치 × 10."}
                         </p>
                         {pet.stage === "ADULT" && (
                           <button
@@ -977,9 +979,9 @@ function PetPage({ user, onLogout }) {
                             />
                           </span>
                           <div className="pet-history-info">
-                            <strong>{p.speciesName}</strong>
+                            <strong>{petDisplayName(p)}</strong>
                             <small>
-                              {[STAGE_LABEL[p.stage], VARIANT_LABEL[p.variant]]
+                              {[p.name ? p.speciesName : null, STAGE_LABEL[p.stage], VARIANT_LABEL[p.variant]]
                                 .filter(Boolean)
                                 .join(" · ")}
                             </small>

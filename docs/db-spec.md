@@ -354,6 +354,7 @@ UNIQUE(user_id, report_date)
 | 펫 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 펫 고유 번호 |
 | 사용자 식별자 | `user_id` | FK, IDX | `BIGINT NOT NULL` | → `users(id)` |
 | 종족 식별자 | `species_id` | FK | `BIGINT NOT NULL` | → `pet_species(id)` |
+| 펫 이름 | `name` |  | `VARCHAR(10) NULL` | 사용자가 지어 준 이름(1~10자). NULL이면 아직 이름을 짓지 않은 펫 |
 | 알 식별자 | `egg_id` | FK, UQ | `BIGINT NULL` | → `eggs(id)`, 시작 펫이면 NULL |
 | 부화 일시 | `hatched_at` |  | `DATETIME NULL` | 부화 시각 |
 | 에너지 스탯 | `stat_energy` |  | `INT DEFAULT 0` | `ENERGY` 절약 성장값 |
@@ -371,6 +372,8 @@ UNIQUE(user_id, report_date)
 ```sql
 INDEX(user_id, released_at)
 ```
+
+`name` 추가 마이그레이션: `V25__pet_name.sql`.
 
 ---
 
