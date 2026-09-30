@@ -267,29 +267,43 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           </section>
         </div>
 
+        {/* 지출 요약 카드 — 펫 카드와 같은 베이지 바탕에 카드마다 파스텔 포인트색(살구·하늘·세이지) */}
         <div className="home-row home-row-kpi">
-          <article className="home-card home-kpi">
-            <h3 className="home-kpi-title">오늘 지출</h3>
+          <article className="home-card home-kpi home-kpi--today">
+            <div className="home-kpi-head">
+              <h3 className="home-kpi-title">오늘 지출</h3>
+              <span className="home-kpi-icon" aria-hidden>☀️</span>
+            </div>
             <p className="home-kpi-value">{won(spending?.today)}</p>
             {/* recent.length 는 "최근 지출 5건" 목록 길이지 오늘 기록 수가 아님 — 오표기 제거 */}
             <p className="home-kpi-sub">오늘 0시부터 누적</p>
           </article>
-          <article className="home-card home-kpi">
-            <h3 className="home-kpi-title">이번 달 누적</h3>
+          <article className="home-card home-kpi home-kpi--month">
+            <div className="home-kpi-head">
+              <h3 className="home-kpi-title">이번 달 누적</h3>
+              <span className="home-kpi-icon" aria-hidden>🌙</span>
+            </div>
             <p className="home-kpi-value">{won(spending?.thisMonth)}</p>
             <p className="home-kpi-sub">이번 달 총 지출</p>
           </article>
-          <article className="home-card home-kpi">
-            <h3 className="home-kpi-title">이번 주 지출</h3>
+          <article className="home-card home-kpi home-kpi--week">
+            <div className="home-kpi-head">
+              <h3 className="home-kpi-title">이번 주 지출</h3>
+              <span className="home-kpi-icon" aria-hidden>🌿</span>
+            </div>
             <p className="home-kpi-value">{won(spending?.thisWeek)}</p>
             <p className="home-kpi-sub">월요일부터 누적</p>
           </article>
         </div>
 
+        {/* 하단 카드 — 위 지출 요약 카드와 같은 베이지 바탕 + 파스텔 포인트(살구·하늘·세이지) */}
         <div className="home-row home-row-bottom">
-          <section className="home-card home-card-list">
+          <section className="home-card home-card-list home-sec--list">
             <div className="home-list-head">
-              <h2 className="home-card-title home-card-title--sm">최근 지출 내역</h2>
+              <h2 className="home-card-title home-card-title--sm home-sec-title">
+                <span className="home-sec-icon" aria-hidden>🧾</span>
+                최근 지출 내역
+              </h2>
               <p className="home-list-date">최근 {recent.length}건</p>
             </div>
             <ul className="home-tx-list">
@@ -300,7 +314,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               ) : (
                 recent.map((row) => (
                   <li key={row.id} className="home-tx-row">
-                    <span className="home-tx-icon">
+                    <span className={`home-tx-icon home-tx-icon--${(row.signalFinal || "GRAY").toLowerCase()}`}>
                       <span className={`home-tx-dot home-tx-dot--${(row.signalFinal || "GRAY").toLowerCase()}`} />
                     </span>
                     <div className="home-tx-mid">
@@ -330,8 +344,11 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             </div>
           </section>
 
-          <section className="home-card home-card-achieve">
-            <h2 className="home-card-title home-card-title--sm">최근 업적</h2>
+          <section className="home-card home-card-achieve home-sec--achieve">
+            <h2 className="home-card-title home-card-title--sm home-sec-title">
+              <span className="home-sec-icon" aria-hidden>🏆</span>
+              최근 업적
+            </h2>
             <ul className="home-ach-list">
               {achievementPreview.length === 0 ? (
                 <li className="home-ach-row">
@@ -340,11 +357,19 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               ) : (
                 achievementPreview.map((title) => (
                   <li key={title.code} className="home-ach-row">
-                    <span className="home-ach-title">{title.name}</span>
+                    <div className="home-ach-mid">
+                      <span className="home-ach-title">{title.name}</span>
+                      {/* 진행 중인 업적은 진행률 막대를 같이 보여준다 */}
+                      {!title.acquired && (
+                        <span className="home-ach-progress" aria-hidden>
+                          <span style={{ width: `${Math.min(Math.max(title.progressPct ?? 0, 0), 100)}%` }} />
+                        </span>
+                      )}
+                    </div>
                     <span
                       className={`home-badge ${title.acquired ? "home-badge--done" : "home-badge--prog"}`}
                     >
-                      {title.acquired ? "완료" : `${title.progressPct}%`}
+                      {title.acquired ? "✓ 완료" : `${title.progressPct}%`}
                     </span>
                   </li>
                 ))
@@ -359,8 +384,9 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             </button>
           </section>
 
-          <section className="home-card home-card-chart">
-            <h2 className="home-card-title home-card-title--sm">
+          <section className="home-card home-card-chart home-sec--calendar">
+            <h2 className="home-card-title home-card-title--sm home-sec-title">
+              <span className="home-sec-icon" aria-hidden>📅</span>
               {today.getMonth() + 1}월 기록 캘린더
             </h2>
             <div className="home-cal">

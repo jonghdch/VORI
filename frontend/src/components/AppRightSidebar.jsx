@@ -19,12 +19,14 @@ function AppRightSidebar() {
               className="home-side-link"
               onClick={() => navigate("/wallet/new")}
             >
-              지출 입력
+              <span className="home-side-icon" aria-hidden />
+              <span className="home-side-label">지출 입력</span>
             </button>
           </li>
           <li>
             <button type="button" className="home-side-link" disabled>
-              예산 설정
+              <span className="home-side-icon" aria-hidden />
+              <span className="home-side-label">예산 설정</span>
               <span className="home-side-soon">준비 중</span>
             </button>
           </li>
