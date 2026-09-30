@@ -48,6 +48,7 @@ const AttendancePage = lazy(() => import("./pages/Attendance/AttendancePage"));
 const TermsPage = lazy(() => import("./pages/Legal/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/Legal/PrivacyPage"));
 const AdminLayout = lazy(() => import("./pages/Admin/AdminLayout"));
+const AdminPetManagePage = lazy(() => import("./pages/Admin/PetManagePage"));
 const AdminPlaceholder = lazy(() =>
   import("./pages/Admin/AdminPlaceholder"),
 );
@@ -67,6 +68,7 @@ const AdminTitleManagePage = lazy(() =>
 
 // 실제 화면이 준비된 어드민 메뉴만 매핑. 나머지는 AdminPlaceholder.
 const ADMIN_PAGES = {
+  "/admin/pets": AdminPetManagePage,
   "/admin/dashboard": AdminDashboardPage,
   "/admin/users": AdminUsersPage,
   "/admin/sanctions": AdminSanctionsPage,

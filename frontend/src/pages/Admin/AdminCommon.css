@@ -74,6 +74,32 @@
   opacity: 0.5;
   cursor: default;
 }
+.adm-btn--small {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.adm-btn--primary {
+  border-color: var(--admin-green);
+  background: var(--admin-green);
+  color: #fff;
+}
+.adm-btn--primary:hover:not(:disabled) {
+  color: #fff;
+}
+.adm-action-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.adm-result {
+  font-size: 13px;
+}
+.adm-result--ok {
+  color: var(--admin-green);
+}
+.adm-result--error {
+  color: #b4524a;
+}
 
 /* 카드 + 상태 */
 .adm-card {
