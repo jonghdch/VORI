@@ -65,10 +65,29 @@ public class GoogleTokenVerifier {
     }
 
     /** tokeninfo 응답(claims) 검사. 외부 호출과 분리해 두어 단위 테스트가 가능하다. */
+    /** 구글 ID 토큰의 발급자 — 두 표기를 모두 쓴다(Google 문서). */
+    private static final java.util.Set<String> ISSUERS =
+        java.util.Set.of("accounts.google.com", "https://accounts.google.com");
+
+    private static boolean notExpired(Object exp) {
+        try {
+            return exp != null && Long.parseLong(exp.toString()) > java.time.Instant.now().getEpochSecond();
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     GoogleIdentity validate(Map<?, ?> claims) {
         if (claims == null || !clientId.equals(claims.get("aud"))) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                 "이 앱에 발급된 구글 인증 정보가 아닙니다");
+        }
+        // tokeninfo 가 서명·만료를 확인하지만, ID 토큰 규약(발급자·만료)은 여기서도 직접 본다
+        if (!ISSUERS.contains(String.valueOf(claims.get("iss")))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "구글이 발급한 인증 정보가 아닙니다");
+        }
+        if (!notExpired(claims.get("exp"))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "만료된 구글 인증 정보입니다");
         }
         if (!"true".equals(String.valueOf(claims.get("email_verified")))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,

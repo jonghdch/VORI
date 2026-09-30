@@ -64,4 +64,19 @@ class GoogleLoginSessionTest {
         assertEquals(403, e.getStatusCode().value());
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
+
+    @Test
+    void 첫_구글_로그인이_동시에_와서_중복_저장이_나면_한번_더_찾아_로그인한다() {
+        User user = linkedUser();
+        when(verifier.verify("tok")).thenReturn(new GoogleTokenVerifier.GoogleIdentity("sub-1", "g@vori.com", "구글"));
+        when(userService.findOrCreateGoogleUser("sub-1", "g@vori.com", "구글"))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("uq_users_google_sub"))
+                .thenReturn(user);
+        when(userDetails.loadUserByUsername("g@vori.com")).thenReturn(new UserPrincipal(user, false));
+
+        controller.google(new GoogleLoginRequest("tok"), new MockHttpServletRequest(), new MockHttpServletResponse());
+
+        verify(userService, times(2)).findOrCreateGoogleUser("sub-1", "g@vori.com", "구글");
+        assertEquals(3L, ((UserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).getId());
+    }
 }

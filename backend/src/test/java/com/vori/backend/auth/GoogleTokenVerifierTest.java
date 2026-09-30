@@ -27,6 +27,8 @@ class GoogleTokenVerifierTest {
         m.put("email", "Someone@Gmail.com");
         m.put("email_verified", "true");
         m.put("name", "홍길동");
+        m.put("iss", "https://accounts.google.com");
+        m.put("exp", String.valueOf(java.time.Instant.now().getEpochSecond() + 3600));
         return m;
     }
 
@@ -66,5 +68,21 @@ class GoogleTokenVerifierTest {
         GoogleTokenVerifier unset = new GoogleTokenVerifier(new RestTemplateBuilder(), "");
         ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> unset.verify("x.y.z"));
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, e.getStatusCode());
+    }
+
+    @Test
+    void 구글이_발급하지_않은_토큰은_401() {
+        Map<String, Object> c = validClaims();
+        c.put("iss", "https://evil.example.com");
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> verifier.validate(c));
+        assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
+    }
+
+    @Test
+    void 만료된_토큰은_401() {
+        Map<String, Object> c = validClaims();
+        c.put("exp", String.valueOf(java.time.Instant.now().getEpochSecond() - 10));
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> verifier.validate(c));
+        assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
     }
 }

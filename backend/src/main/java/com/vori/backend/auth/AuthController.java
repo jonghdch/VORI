@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -72,7 +73,13 @@ public class AuthController {
                              HttpServletRequest request,
                              HttpServletResponse response) {
         GoogleTokenVerifier.GoogleIdentity identity = googleTokenVerifier.verify(req.credential());
-        User user = userService.findOrCreateGoogleUser(identity.sub(), identity.email(), identity.name());
+        User user;
+        try {
+            user = userService.findOrCreateGoogleUser(identity.sub(), identity.email(), identity.name());
+        } catch (DataIntegrityViolationException e) {
+            // 첫 로그인이 동시에 두 번 와 한쪽이 먼저 만들었다 — 새 트랜잭션으로 다시 찾는다
+            user = userService.findOrCreateGoogleUser(identity.sub(), identity.email(), identity.name());
+        }
         UserPrincipal principal = (UserPrincipal) userDetailsService.loadUserByUsername(user.getEmail());
         if (!principal.isAccountNonLocked()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "제재 중인 계정입니다");

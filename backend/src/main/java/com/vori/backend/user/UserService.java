@@ -54,7 +54,7 @@ public class UserService {
             .createdAt(now)
             .build();
 
-        User saved = userRepository.save(user);
+        User saved = userRepository.saveAndFlush(user);
         initializeStatStats(saved.getId());
         grantStarterPet(saved.getId(), now);
         return saved;
@@ -64,20 +64,26 @@ public class UserService {
      * 구글 로그인으로 들어온 계정을 찾거나 만든다. 호출 전에 ID 토큰 검증이 끝나 있어야 한다.
      *
      * 1) google_sub 가 같은 계정이 있으면 그 계정 (이메일이 바뀌어도 같은 사람).
-     * 2) 없고 이메일이 같은 기존 계정이 있으면 그 계정에 구글을 연결한다 — 구글이 소유를
-     *    확인한 이메일(email_verified)만 여기까지 오므로 남의 계정에 붙을 수 없다.
+     * 2) 없고 이메일이 같은 기존 계정이 있으면 409 — 자동으로 연결하지 않는다. 이메일 가입은 소유를
+     *    확인하지 않으므로, 남이 먼저 그 이메일로 가입해 둔 계정에 진짜 주인의 구글을 붙이면 가입한
+     *    사람이 자기 비밀번호로 주인의 기록을 볼 수 있게 된다(탈취). 이미 다른 구글이 연결된 계정을
+     *    덮어쓰는 일도 같이 막힌다.
      * 3) 둘 다 없으면 새로 만든다. 비밀번호는 없고(password_hash NULL), 약관은 구글 버튼
      *    아래 안내 문구로 동의한 것으로 본다. 일반 가입과 같은 초기화(스탯·시작 펫)를 거친다.
+     *    닉네임·이름은 가입 규칙(닉네임 2~12자, 이름 2~30자)에 맞춘다 — 어긋나면 설문 뒤 프로필
+     *    저장이 400 으로 막힌다.
+     *
+     * 첫 로그인이 동시에 두 번 오면 한쪽 저장이 유니크 제약에 걸린다. 여기서는 saveAndFlush 로 바로
+     * 드러내고, 호출부(AuthController)가 새 트랜잭션으로 한 번 더 찾는다.
      */
     @Transactional
     public User findOrCreateGoogleUser(String googleSub, String email, String displayName) {
         Optional<User> bySub = userRepository.findByGoogleSub(googleSub);
         if (bySub.isPresent()) return bySub.get();
 
-        Optional<User> byEmail = userRepository.findByEmail(email);
-        if (byEmail.isPresent()) {
-            byEmail.get().linkGoogle(googleSub);
-            return byEmail.get();
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "이미 이메일로 가입된 계정이에요. 이메일로 로그인해 주세요.");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -85,25 +91,37 @@ public class UserService {
             .email(email)
             .googleSub(googleSub)
             .nickname(nicknameFrom(displayName, email))
-            .name(displayName == null || displayName.isBlank() ? null : truncate(displayName, 30))
+            .name(nameFrom(displayName))
             .role(Role.USER)
             .termsAgreedAt(now)
             .privacyAgreedAt(now)
             .createdAt(now)
             .build();
 
-        User saved = userRepository.save(user);
+        User saved = userRepository.saveAndFlush(user);
         initializeStatStats(saved.getId());
         grantStarterPet(saved.getId(), now);
         return saved;
     }
 
     /** 구글 표시 이름이 없으면 이메일 앞부분을 닉네임으로. nickname 은 NOT NULL·30자. */
+    // 가입 규칙(SignupRequest)과 같은 길이 — 닉네임 2~12자, 이름 2~30자
+    private static final int NICKNAME_MIN = 2, NICKNAME_MAX = 12, NAME_MIN = 2, NAME_MAX = 30;
+
+    /** 구글 이름(없으면 이메일 앞부분)으로 닉네임을 만든다. 12자로 자르고, 2자 미만이면 뒤를 채운다. */
     private static String nicknameFrom(String displayName, String email) {
         String base = displayName != null && !displayName.isBlank()
             ? displayName
             : email.substring(0, email.indexOf('@'));
-        return truncate(base.trim(), 30);
+        String nickname = truncate(base.trim(), NICKNAME_MAX);
+        return nickname.length() >= NICKNAME_MIN ? nickname : nickname + "님";
+    }
+
+    /** 구글 이름을 이름 칸에. 2자 미만이면 비워 두고 프로필 설정에서 채우게 한다. */
+    private static String nameFrom(String displayName) {
+        if (displayName == null) return null;
+        String name = truncate(displayName.trim(), NAME_MAX);
+        return name.length() >= NAME_MIN ? name : null;
     }
 
     private static String truncate(String s, int max) {

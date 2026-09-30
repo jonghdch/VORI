@@ -94,11 +94,6 @@ public class User {
         this.totalSaved = (this.totalSaved == null ? 0 : this.totalSaved) + amount;
     }
 
-    /** 기존 이메일 계정에 구글 계정을 연결한다. 이후 두 방식 모두로 로그인할 수 있다. */
-    public void linkGoogle(String googleSub) {
-        this.googleSub = googleSub;
-    }
-
     /** 로그인 성공 1회당 호출. UserService.recordLogin() 참조. */
     public void incrementLoginCount() {
         this.loginCount = (this.loginCount == null ? 0 : this.loginCount) + 1;
