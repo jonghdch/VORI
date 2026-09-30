@@ -109,10 +109,14 @@ function ScrollToTop() {
 
 // 보호 라우트 — 미인증 사용자는 /login 으로 보냄.
 // 첫 me() 호출 끝날 때까지는 화면 깜빡임 방지 위해 아무것도 렌더 X.
-function ProtectedRoute({ user, authLoading, children }) {
+// 로그인한 화면은 기본으로 소비 프로필 설문을 마쳐야 들어갈 수 있다(설문 필수).
+// 화면마다 OnboardingGate 를 감싸던 방식은 새 화면(출석·지출 입력)에서 빠지기 쉬워, 여기서 한 번에 건다.
+// 설문·온보딩 화면 자신만 allowIncompleteProfile 로 예외.
+function ProtectedRoute({ user, authLoading, allowIncompleteProfile = false, children }) {
   if (authLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  return children;
+  if (allowIncompleteProfile) return children;
+  return <OnboardingGate user={user}>{children}</OnboardingGate>;
 }
 
 // 온보딩 게이트 — 소비 프로필(월 수입 포함)을 아직 안 적은 계정은 일반 화면 대신 설문으로 보낸다.
@@ -192,7 +196,7 @@ function App() {
           <Route
             path="/signup/profile"
             element={
-              <ProtectedRoute user={user} authLoading={authLoading}>
+              <ProtectedRoute user={user} authLoading={authLoading} allowIncompleteProfile>
                 <SignupProfilePage />
               </ProtectedRoute>
             }
@@ -200,7 +204,7 @@ function App() {
           <Route
             path="/onboarding"
             element={
-              <ProtectedRoute user={user} authLoading={authLoading}>
+              <ProtectedRoute user={user} authLoading={authLoading} allowIncompleteProfile>
                 <OnboardingPage />
               </ProtectedRoute>
             }
@@ -215,7 +219,7 @@ function App() {
             path="/home"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><HomeDashboard user={user} onLogout={handleLogout} /></OnboardingGate>
+                <HomeDashboard user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
@@ -223,7 +227,7 @@ function App() {
             path="/wallet"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><WalletPage user={user} onLogout={handleLogout} /></OnboardingGate>
+                <WalletPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
@@ -243,7 +247,7 @@ function App() {
             path="/wallet/analysis"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><WalletAnalysisPage user={user} /></OnboardingGate>
+                <WalletAnalysisPage user={user} />
               </ProtectedRoute>
             }
           />
@@ -251,7 +255,7 @@ function App() {
             path="/wallet/new/confirm"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><WalletConfirmPage user={user} /></OnboardingGate>
+                <WalletConfirmPage user={user} />
               </ProtectedRoute>
             }
           />
@@ -259,7 +263,7 @@ function App() {
             path="/report"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><ReportPage user={user} onLogout={handleLogout} /></OnboardingGate>
+                <ReportPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
@@ -267,7 +271,7 @@ function App() {
             path="/raise"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><PetPage user={user} onLogout={handleLogout} /></OnboardingGate>
+                <PetPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
@@ -275,7 +279,7 @@ function App() {
             path="/dex"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><PetDexPage user={user} onLogout={handleLogout} /></OnboardingGate>
+                <PetDexPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
@@ -283,7 +287,7 @@ function App() {
             path="/shop"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><ShopPage user={user} onLogout={handleLogout} /></OnboardingGate>
+                <ShopPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
@@ -291,7 +295,7 @@ function App() {
             path="/settings"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><SettingsPage user={user} onLogout={handleLogout} /></OnboardingGate>
+                <SettingsPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
@@ -299,11 +303,11 @@ function App() {
             path="/settings/profile"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><ProfileSettingsPage
+                <ProfileSettingsPage
                   user={user}
                   onLogout={handleLogout}
                   onUserUpdate={setUser}
-                /></OnboardingGate>
+                />
               </ProtectedRoute>
             }
           />
@@ -311,7 +315,7 @@ function App() {
             path="/titles"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <OnboardingGate user={user}><AchievementPage user={user} onLogout={handleLogout} /></OnboardingGate>
+                <AchievementPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
