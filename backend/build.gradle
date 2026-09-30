@@ -39,6 +39,11 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+
+	// bootRun 과 같은 이유로 작업 디렉터리를 repo 루트로 둔다(아래 bootRun 주석 참조).
+	// 이게 없으면 BackendApplicationTests(컨텍스트 로드)가 .env 를 못 읽어
+	// "Access denied ... (using password: NO)" 로 실패한다.
+	workingDir = projectDir.parentFile
 }
 
 // .env 는 repo 루트에 있고 application.properties 의 spring.config.import 가
