@@ -106,6 +106,45 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+// 방 카드 아래에 한 문장씩 돌아가며 보여주는 팁
+const ROOM_TIPS = [
+  "펫과 가구를 드래그해서 원하는 위치에 배치해요.",
+  "펫을 우클릭하면 쓰다듬거나 칭찬할 수 있어요.",
+  "가구는 더블클릭하면 인벤토리로 회수돼요.",
+  "배치한 가구만 분양가 보너스에 반영돼요.",
+];
+
+function pickTipIndex(previous) {
+  const next = Math.floor(Math.random() * (ROOM_TIPS.length - 1));
+  // 직전 팁은 건너뛴다 — 같은 문장이 연달아 나오면 멈춘 것처럼 보인다
+  return previous === undefined || next < previous ? next : next + 1;
+}
+
+/**
+ * 팁 한 문장이 나타났다 사라지고, 사라지면 다른 팁으로 바뀐다. 한 번의 나타남~사라짐이
+ * CSS 애니메이션(pet-room-tip) 한 번이고, 끝나는 시점에 다음 문장을 고른다.
+ * 마우스를 올리거나 초점을 두면 멈춰서 끝까지 읽을 수 있다.
+ */
+function RoomTips() {
+  const [tipIndex, setTipIndex] = useState(() =>
+    Math.floor(Math.random() * ROOM_TIPS.length),
+  );
+  return (
+    <div className="pet-room-help" role="note" tabIndex={0} aria-label="마이룸 팁">
+      <span className="pet-room-help-label" aria-hidden>
+        팁
+      </span>
+      <p
+        key={tipIndex}
+        className="pet-room-help-text"
+        onAnimationEnd={() => setTipIndex(pickTipIndex(tipIndex))}
+      >
+        {ROOM_TIPS[tipIndex]}
+      </p>
+    </div>
+  );
+}
+
 function PetPage({ user, onLogout }) {
   const roomStageRef = useRef(null);
   const furniturePointerRef = useRef({ id: null, time: 0, moved: false, x: 0, y: 0 });
@@ -687,10 +726,7 @@ function PetPage({ user, onLogout }) {
                   : ""}
               </p>
 
-              <p className="pet-room-help">
-                펫과 가구를 드래그해서 원하는 위치에 배치해요. 펫을 우클릭하면 쓰다듬거나 칭찬할 수 있어요.
-                가구는 더블클릭하면 인벤토리로 회수돼요. 배치한 가구만 분양가 보너스에 반영돼요.
-              </p>
+              <RoomTips />
             </section>
           </div>
 
