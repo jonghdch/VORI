@@ -5,7 +5,7 @@ import { signup, login } from "../../api/auth";
 
 // 회원가입 페이지.
 // - POST /api/auth/signup 호출 → 성공 시 자동으로 /api/auth/login 까지 호출해
-//   세션 쿠키를 받고 홈 대시보드로 이동.
+//   세션 쿠키를 받고 소비 프로필 설정으로 이동.
 // - onLogin(user) 으로 App 의 user 상태를 갱신.
 // eslint-disable-next-line no-useless-escape
 const SPECIAL_CHAR_RE = /[!@#$%^&*()_+\-=\[\]{};:'",.<>/?]/;
@@ -88,7 +88,7 @@ function SignupPage({ onLogin }) {
       // 가입 성공 → 곧바로 로그인까지 처리해서 세션 쿠키 발급
       const user = await login(form.email, form.password);
       if (typeof onLogin === "function") onLogin(user);
-      navigate("/home");
+      navigate("/signup/profile");
     } catch (err) {
       if (signedUp) {
         // 가입은 됐는데 자동 로그인이 실패한 경우. 재가입 시도하면 409 로 막히므로

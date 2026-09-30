@@ -103,6 +103,16 @@ public class User {
         this.monthlyIncome = monthlyIncome;
     }
 
+    /** 온보딩 설문에서 받은 월 수입. 프로필 설정의 updateProfile 과 같은 컬럼을 쓴다. */
+    public void updateMonthlyIncome(Integer monthlyIncome) {
+        this.monthlyIncome = monthlyIncome;
+    }
+
+    /** 온보딩 튜토리얼 완료. */
+    public void markTutorialDone() {
+        this.tutorialDone = true;
+    }
+
     /** 칭호 장착. null 이면 해제. 소유 여부 검증은 호출부(TitleService)가 한다. */
     public void setActiveTitle(Long titleId) {
         this.activeTitleId = titleId;

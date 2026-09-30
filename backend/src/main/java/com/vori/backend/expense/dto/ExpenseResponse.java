@@ -21,9 +21,15 @@ public record ExpenseResponse(
         Signal signalInitial,
         Signal signalFinal,
         Integer savedAmount,
-        Integer statDelta
+        Integer statDelta,
+        Boolean isRecurring,
+        com.vori.backend.inquiry.ReasonCategory reasonCategory
 ) {
     public static ExpenseResponse from(Expense e) {
+        return from(e, null);
+    }
+
+    public static ExpenseResponse from(Expense e, com.vori.backend.inquiry.ReasonCategory reason) {
         return new ExpenseResponse(
                 e.getId(),
                 e.getSpentAt(),
@@ -37,7 +43,9 @@ public record ExpenseResponse(
                 e.getSignalInitial(),
                 e.getSignalFinal(),
                 e.getSavedAmount(),
-                e.getStatDelta()
+                e.getStatDelta(),
+                e.getIsRecurring(),
+                reason
         );
     }
 }

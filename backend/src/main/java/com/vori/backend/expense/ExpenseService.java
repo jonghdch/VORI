@@ -46,7 +46,11 @@ public class ExpenseService {
     private final SignalConfigService signalConfigService;
     private final AiInquiryRepository aiInquiryRepository;
 
-    private static final int N_MIN = 5;
+    /**
+     * 판정에 필요한 최소 표본 수. 이보다 적으면 z 를 계산하지 않고 GREEN.
+     * 온보딩 씨딩(BaselineSeeder)이 초기값을 넣을 때 표본 수를 이 값으로 두어 첫 지출부터 판정이 돌게 한다.
+     */
+    public static final int N_MIN = 5;
     // Z_GREEN / Z_RED 임계값은 signal_config 테이블(관리자 조정) 에서 읽는다. SignalConfigService 참조.
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
     // expenses.z_score 는 DECIMAL(6,3) — 담을 수 있는 한계. clampZScore 참조.
@@ -54,21 +58,17 @@ public class ExpenseService {
     private static final BigDecimal Z_SCORE_MIN = new BigDecimal("-999.999");
     private static final double EMA_ALPHA = 0.2;
 
-    // 절약액 → 게임머니 전환 비율 (N 원 절약당 1 코인).
-    // 기본 알이 2,500 코인이므로 25,000 원 절약 = 알 1 개. 게임 루프가 며칠 단위로 돌게 잡은 값 —
-    // 밸런싱은 이 상수만 바꾸면 된다. 분양 보상(스탯총합×10)은 여기에 얹히는 보너스 성격.
-    private static final int SAVED_PER_GAME_MONEY = 10;
-
     /** 가계부 작성 화면 mount 시 그 날짜 기존 expense 들 불러오기. */
     @Transactional(readOnly = true)
     public List<ExpenseResponse> listByDate(Long userId, LocalDate date) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
-        return expenseRepository
-                .findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(userId, start, end)
-                .stream()
-                .map(ExpenseResponse::from)
-                .toList();
+        List<Expense> expenses = expenseRepository.findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(userId, start, end);
+        if (expenses.isEmpty()) return List.of();
+        java.util.Map<Long, com.vori.backend.inquiry.ReasonCategory> reasons = new java.util.HashMap<>();
+        aiInquiryRepository.findByExpenseIdIn(expenses.stream().map(Expense::getId).toList())
+                .forEach(i -> reasons.put(i.getExpenseId(), i.getReasonCategory()));
+        return expenses.stream().map(e -> ExpenseResponse.from(e, reasons.get(e.getId()))).toList();
     }
 
     @Transactional
@@ -115,7 +115,8 @@ public class ExpenseService {
         }
 
         int savedAmount = stats.getMeanEma().subtract(BigDecimal.valueOf(req.amount())).intValue();
-        int statDelta = Math.max(savedAmount, 0) / 1000;
+        // 코인·스탯은 지출 금액이 아니라 하루 최종 판정에서만 지급한다.
+        int statDelta = 0;
 
         expense.updateCalculations(zScore, signal, savedAmount, statDelta);
 
@@ -124,15 +125,9 @@ public class ExpenseService {
         if (savedAmount > 0) {
             User user = userRepository.findById(userId).orElseThrow();
             user.addTotalSaved(savedAmount);
-            // 절약분의 일부를 게임머니로 전환 — 알 구매(상점)의 유일한 수입원.
-            user.addGameMoney(savedAmount / SAVED_PER_GAME_MONEY);
             // 목표에 누적되는 건 지출액이 아니라 절약액이다 (db-spec.md: "saved_amount 양수 값 누적").
             // 지출액을 넣으면 5만원 목표가 3만원짜리 지출 한 번에 60% 로 찍힌다.
             updateActiveGoals(userId, req.categoryId(), savedAmount, req.spentAt());
-        }
-
-        if (statDelta > 0) {
-            updateActivePet(userId, category.getStatType(), statDelta, expense.getId(), savedAmount);
         }
 
         // AI 질문 트리거 — RED 일 때만 묻는다.
@@ -196,7 +191,7 @@ public class ExpenseService {
         if (Boolean.TRUE.equals(expense.getIsRecurring()) && signal == Signal.RED) signal = Signal.GRAY;
 
         int savedAmount = stats.getMeanEma().subtract(BigDecimal.valueOf(req.amount())).intValue();
-        int statDelta = Math.max(savedAmount, 0) / 1000;
+        int statDelta = 0;
         expense.updateCalculations(zScore, signal, savedAmount, statDelta);
 
         // 수정 전 금액으로 만든 질문은 더 이상 유효하지 않다. 새 판정이 RED면 커밋 후 다시 생성한다.
@@ -264,10 +259,10 @@ public class ExpenseService {
         }
     }
 
-    private void updateActivePet(Long userId, com.vori.backend.common.StatType statType,
+    private int updateActivePet(Long userId, com.vori.backend.common.StatType statType,
                                  int statDelta, Long expenseId, int savedAmount) {
         List<Pet> pets = petRepository.findByUserIdAndReleasedAtIsNull(userId);
-        if (pets.isEmpty()) return;
+        if (pets.isEmpty()) return 0;
 
         Pet pet = pets.get(0);
         pet.addStat(statType, statDelta);
@@ -283,5 +278,6 @@ public class ExpenseService {
                 .reason(GrowthReason.EXPENSE_SAVING)
                 .createdAt(LocalDateTime.now())
                 .build());
+        return statDelta;
     }
 }
