@@ -446,11 +446,15 @@ function PetPage({ user, onLogout }) {
       <main className="home-main pet-main">
         <div className="pet-header">
           <div>
-            <p className="pet-eyebrow">마이룸</p>
             <h1 className="pet-title">
-              {selectedPet
-                ? `${nickname}님이 키우는 ${selectedPet.name}의 방`
-                : `${nickname}님의 방`}
+              <span className="pet-title-badge" aria-hidden>
+                🏠
+              </span>
+              <span className="pet-title-text">
+                {selectedPet
+                  ? `${nickname}님이 키우는 ${selectedPet.name}의 방`
+                  : `${nickname}님의 방`}
+              </span>
             </h1>
           </div>
           {selectedPet && (

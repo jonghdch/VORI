@@ -6,11 +6,28 @@
   margin-bottom: 20px;
 }
 
-.dex-head h1 {
+.dex-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
-  font-size: 26px;
+  font-size: 27px;
   font-weight: 900;
+  letter-spacing: -0.02em;
   color: var(--home-text);
+}
+
+/* 제목 배지 — 출석(초록 발자국)·업적(금색 메달)과 같은 자리, 도감은 파란 책으로 구분 */
+.dex-title-badge {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #8bb3dd 0%, #6b9bd1 55%, #4f7fb3 100%);
+  font-size: 19px;
+  transform: rotate(-7deg);
+  box-shadow: 0 3px 0 rgba(79, 127, 179, 0.4), 0 5px 10px rgba(79, 127, 179, 0.2);
 }
 
 .dex-head p {

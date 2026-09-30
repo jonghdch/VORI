@@ -7,6 +7,9 @@ import { getMonthlyLedger } from "../../api/ledger";
 import "../Wallet/WalletPage.css";
 import "./ReportPage.css";
 
+// 카테고리 도넛·범례 공용 팔레트 — WalletPage "보이는 리포트" 위젯과 동일 (색상 일관성).
+const CHART_COLORS = ["#8fb07c", "#d9a68b", "#e3c38f", "#9db8c6"];
+
 // 합리성 시그널(백엔드 enum) → 한글 상태 + 배지 색상 클래스.
 const SIGNAL_STATUS = { GREEN: "합리적", GRAY: "중립", RED: "비합리적" };
 const SIGNAL_BADGE = {
@@ -87,24 +90,6 @@ function toRow(item) {
     reason: item.reason || "",
   };
 }
-
-// 지출 행 → 카테고리별 합계 상위 N개.
-function topCategories(expenseRows, n = 5) {
-  const byCat = new Map();
-  expenseRows.forEach((r) => byCat.set(r.cat, (byCat.get(r.cat) || 0) + r.amountNum));
-  return [...byCat.entries()]
-    .map(([cat, amount]) => ({ cat, amount }))
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, n);
-}
-
-const CAT_BAR_COLORS = [
-  "var(--home-bar-green)",
-  "var(--home-bar-orange)",
-  "var(--home-bar-blue)",
-  "var(--home-bar-red)",
-  "var(--home-muted)",
-];
 
 // 소비 리포트 — 주/월 단위 대시보드. /wallet 보이는 리포트의 "자세히보기"가 이곳으로 온다.
 function ReportPage({ user, onLogout }) {
@@ -253,8 +238,48 @@ function ReportPage({ user, onLogout }) {
   });
   const signalTotal = judged.length;
 
-  const topCats = topCategories(expenseRows);
-  const topCatMax = topCats[0]?.amount || 0;
+  // 카테고리별 지출 집계 — 상위 4개 + 나머지는 "기타"로 묶어 도넛과 범례가 항상 100%를 설명하게 한다.
+  const categoryBreakdown = useMemo(() => {
+    const byCat = new Map();
+    expenseRows.forEach((r) => {
+      byCat.set(r.cat, (byCat.get(r.cat) || 0) + r.amountNum);
+    });
+    const sorted = [...byCat.entries()].sort((a, b) => b[1] - a[1]);
+    const top = sorted.slice(0, 4).map(([label, amount], i) => ({
+      label,
+      amount,
+      pct: weekExpenseTotal > 0 ? Math.round((amount / weekExpenseTotal) * 100) : 0,
+      color: CHART_COLORS[i % CHART_COLORS.length],
+    }));
+    const restAmount = sorted.slice(4).reduce((sum, [, amt]) => sum + amt, 0);
+    if (restAmount > 0) {
+      top.push({
+        label: "기타",
+        amount: restAmount,
+        pct: weekExpenseTotal > 0 ? Math.round((restAmount / weekExpenseTotal) * 100) : 0,
+        color: "#c9c2b3",
+      });
+    }
+    return top;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenseRows, weekExpenseTotal]);
+
+  // 도넛 = 카테고리 비중 conic-gradient (실데이터 기반).
+  const donutGradient = useMemo(() => {
+    if (weekExpenseTotal <= 0) return null;
+    let acc = 0;
+    const stops = categoryBreakdown.map((c) => {
+      const from = acc;
+      acc += (c.amount / weekExpenseTotal) * 360;
+      return `${c.color} ${from}deg ${acc}deg`;
+    });
+    if (acc < 359.9) stops.push(`#e8e3d8 ${acc}deg 360deg`);
+    return `conic-gradient(${stops.join(", ")})`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryBreakdown, weekExpenseTotal]);
+
+  // 순저축 = 수입 − 지출 (마이너스면 이번 기간 적자).
+  const netSaved = incomeTotal - weekExpenseTotal;
 
   // 우측 카드 기준 — 호버 중엔 미리보기, 벗어나면 고정(selected)으로 복귀.
   const active = preview ?? selected;
@@ -328,7 +353,10 @@ function ReportPage({ user, onLogout }) {
     <AppShell activeTop="wallet" activeSide="report" user={user} onLogout={onLogout}>
       <main className="home-main">
         <div className="ledger-header">
-          <h1 className="ledger-greeting report-greeting">소비 리포트</h1>
+          <h1 className="report-title">
+            <span className="report-title-badge" aria-hidden>📊</span>
+            <span className="report-title-text">소비 리포트</span>
+          </h1>
           <div className="ledger-header-actions">
             <div className="ledger-view-toggle" role="group" aria-label="보기 방식">
               <button
@@ -370,34 +398,15 @@ function ReportPage({ user, onLogout }) {
           </div>
         </div>
 
-        {/* ── 상단: 기록 캘린더 · 기간 요약 · 카테고리 TOP ── */}
+        {/* ── 상단: 스냅샷(통계+도넛+카테고리 범례) · 캘린더/AI 판정 ── */}
         <div className="home-row report-top-row">
-          <section className="home-card report-cal-card">
-            <div className="ledger-history-head">
-              <h2 className="home-card-title home-card-title--sm report-card-title">
-                {periodLabel}
-              </h2>
-              <span className="report-cal-legend">
-                <i className="report-cal-swatch is-marked" /> 기록
-                <i className="report-cal-swatch is-highlight" /> 보는 {unitLabel}
-              </span>
-            </div>
-            <RecordCalendar
-              year={calYear}
-              month={calMonth}
-              recordedKeys={calRecordedKeys}
-              highlightKeys={periodKeySet}
-              showAdjacent={viewMode === "week"}
-              onSelectDay={jumpToDay}
-            />
-          </section>
-
-          <section className="home-card report-summary-card">
+          <section className="home-card report-hero-card">
             <h2 className="home-card-title home-card-title--sm report-card-title">
-              {viewMode === "week" ? "이번 주 요약" : "이번 달 요약"}
+              {viewMode === "week" ? "이번 주 스냅샷" : "이번 달 스냅샷"}
               <span className="report-card-period">{periodLabel}</span>
             </h2>
-            <div className="report-kpi-grid">
+
+            <div className="report-hero-stats">
               <div className="report-kpi">
                 <p className="home-kpi-title">총 지출</p>
                 <p className="home-kpi-value">{formatWon(weekExpenseTotal)}</p>
@@ -409,29 +418,102 @@ function ReportPage({ user, onLogout }) {
                 <p className="home-kpi-sub">{incomeRows.length}건</p>
               </div>
               <div className="report-kpi">
+                <p className="home-kpi-title">순저축</p>
+                <p
+                  className={`home-kpi-value ${
+                    netSaved >= 0 ? "report-kpi-value--pos" : "report-kpi-value--neg"
+                  }`}
+                >
+                  {netSaved >= 0 ? "+" : "−"}
+                  {formatWon(Math.abs(netSaved))}
+                </p>
+                <p className="home-kpi-sub">수입 − 지출</p>
+              </div>
+              <div className="report-kpi">
                 <p className="home-kpi-title">기록한 날</p>
                 <p className="home-kpi-value">
                   {recordedDayCount}
                   <span className="report-kpi-unit">/ {periodDates.length}일</span>
                 </p>
-                <p className="home-kpi-sub">
-                  {periodDates.length > 0
-                    ? `${Math.round((recordedDayCount / periodDates.length) * 100)}% 기록`
-                    : "—"}
-                </p>
-              </div>
-              <div className="report-kpi">
-                <p className="home-kpi-title">하루 평균 지출</p>
-                <p className="home-kpi-value">{formatWon(dailyAvg)}</p>
-                <p className="home-kpi-sub">지난 {elapsedDays}일 기준</p>
+                <p className="home-kpi-sub">하루 평균 {formatWon(dailyAvg)}</p>
               </div>
             </div>
 
-            <div className="report-signal">
-              <div className="report-signal-head">
-                <span className="home-kpi-title">AI 판정 분포</span>
-                <span className="home-kpi-sub">{signalTotal}건 판정</span>
+            <div className="report-hero-body">
+              <div className="report-donut-wrap">
+                {donutGradient ? (
+                  <div className="report-donut" style={{ background: donutGradient }}>
+                    <div className="report-donut-hole">
+                      <span className="report-donut-total">{formatWon(weekExpenseTotal)}</span>
+                      <span className="report-donut-label">총 지출</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="report-donut report-donut--empty">
+                    <div className="report-donut-hole">
+                      <span className="report-donut-label">
+                        {loading ? "불러오는 중…" : "지출 없음"}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
+
+              <ul className="report-cat-legend-list">
+                {categoryBreakdown.length === 0 ? (
+                  <li className="report-signal-empty">이 {unitLabel}에는 지출이 없어요.</li>
+                ) : (
+                  categoryBreakdown.map((c) => (
+                    <li key={c.label} className="report-cat-legend-row">
+                      <span
+                        className="report-cat-legend-dot"
+                        style={{ background: c.color }}
+                        aria-hidden
+                      />
+                      <span className="report-cat-legend-label">{c.label}</span>
+                      <div className="home-stat-track report-cat-track">
+                        <div
+                          className="home-stat-fill"
+                          style={{ width: `${c.pct}%`, background: c.color }}
+                        />
+                      </div>
+                      <span className="report-cat-amount">
+                        {formatWon(c.amount)}
+                        <small> {c.pct}%</small>
+                      </span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          </section>
+
+          <div className="report-side-col">
+            <section className="home-card report-cal-card">
+              <div className="ledger-history-head">
+                <h2 className="home-card-title home-card-title--sm report-card-title">
+                  {periodLabel}
+                </h2>
+                <span className="report-cal-legend">
+                  <i className="report-cal-swatch is-marked" /> 기록
+                  <i className="report-cal-swatch is-highlight" /> 보는 {unitLabel}
+                </span>
+              </div>
+              <RecordCalendar
+                year={calYear}
+                month={calMonth}
+                recordedKeys={calRecordedKeys}
+                highlightKeys={periodKeySet}
+                showAdjacent={viewMode === "week"}
+                onSelectDay={jumpToDay}
+              />
+            </section>
+
+            <section className="home-card report-signal-card">
+              <h2 className="home-card-title home-card-title--sm report-card-title">
+                AI 판정 분포
+                <span className="report-card-period">{signalTotal}건</span>
+              </h2>
               {signalTotal === 0 ? (
                 <p className="report-signal-empty">이 {unitLabel}에는 AI 판정을 거친 지출이 없어요.</p>
               ) : (
@@ -457,45 +539,8 @@ function ReportPage({ user, onLogout }) {
                   </ul>
                 </>
               )}
-            </div>
-          </section>
-
-          <section className="home-card report-cat-card">
-            <h2 className="home-card-title home-card-title--sm report-card-title">
-              카테고리 TOP 5
-              <span className="report-card-period">{periodLabel}</span>
-            </h2>
-            {loading ? (
-              <p className="report-signal-empty">불러오는 중…</p>
-            ) : topCats.length === 0 ? (
-              <p className="report-signal-empty">이 {unitLabel}에는 지출이 없어요.</p>
-            ) : (
-              <ul className="report-cat-list">
-                {topCats.map((c, i) => (
-                  <li key={c.cat} className="report-cat-row">
-                    <span className="report-cat-label">{c.cat}</span>
-                    <div className="home-stat-track report-cat-track">
-                      <div
-                        className="home-stat-fill"
-                        style={{
-                          width: topCatMax > 0 ? `${(c.amount / topCatMax) * 100}%` : "0%",
-                          background: CAT_BAR_COLORS[i % CAT_BAR_COLORS.length],
-                        }}
-                      />
-                    </div>
-                    <span className="report-cat-amount">
-                      {formatWon(c.amount)}
-                      <small>
-                        {weekExpenseTotal > 0
-                          ? ` ${Math.round((c.amount / weekExpenseTotal) * 100)}%`
-                          : ""}
-                      </small>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+            </section>
+          </div>
         </div>
 
         <div className="ledger-row report-week-row">
