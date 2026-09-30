@@ -49,7 +49,7 @@
 | 생성 일시 | `created_at` |  | `DATETIME NOT NULL` | 생성 시각 |
 | 수정 일시 | `updated_at` |  | `DATETIME NOT NULL` | 수정 시각 |
 
-마이그레이션: `V19__user_spending_profiles.sql`.
+마이그레이션: `V23__user_spending_profiles.sql`.
 
 ---
 
