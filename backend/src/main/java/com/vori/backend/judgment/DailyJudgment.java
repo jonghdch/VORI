@@ -31,6 +31,10 @@ public class DailyJudgment {
     private Signal signal;
     @Column(name = "expense_count", nullable = false)
     private Integer expenseCount;
+    @Column(name = "coin_reward", nullable = false)
+    private Integer coinReward;
+    @Column(name = "stat_reward_per_type", nullable = false)
+    private Integer statRewardPerType;
     @Column(name = "judged_at", nullable = false)
     private LocalDateTime judgedAt;
 }

@@ -55,6 +55,46 @@
   gap: 12px 16px;
 }
 
+.home-account-summary {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--home-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.home-account-title, .home-account-nickname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+.home-account-title {
+  border-radius: 20px;
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+  padding: 6px 10px;
+}
+.home-account-coins {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: #fff3d6;
+  color: #916816;
+  font-weight: 700;
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .home-topbar-inner .home-account-summary { grid-column: 1 / -1; justify-self: end; }
+}
+
 .home-topbar-left {
   display: flex;
   align-items: center;
@@ -153,10 +193,6 @@
   gap: 8px;
   flex-wrap: wrap;
   justify-content: center;
-}
-/* 우측 셀의 UserAvatarMenu 를 끝쪽으로 정렬 */
-.home-topbar-inner > .user-menu {
-  justify-self: end;
 }
 
 .home-topnav-item {
@@ -322,12 +358,15 @@
   grid-template-columns: 1fr; /* 펫+스탯 통합 카드 한 줄 */
 }
 
+/* 지출 요약 행과 하단 행은 같은 3등분 열을 쓴다 —
+   최근 지출 내역 = 오늘 지출, 최근 업적 = 이번 달 누적, 캘린더 = 이번 주 지출 카드와 폭이 같다.
+   minmax(0, 1fr) 로 내용 길이와 상관없이 열 폭을 똑같이 고정. */
 .home-row-kpi {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .home-row-bottom {
-  grid-template-columns: 1.3fr 0.9fr 0.9fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
 }
 
@@ -339,9 +378,16 @@
   border: 1px solid var(--home-card-border);
 }
 
+/* 펫 카드 — 랜딩 페이지 톤(베이지 바탕 + 세이지·하늘·살구 빛)에 맞춘 배경.
+   펫 뒤에 세이지 빛이 모이고, 모서리에 하늘·살구색이 옅게 번진다. 점 무늬는 아주 은은하게. */
 .home-card-pet {
-  background: linear-gradient(145deg, #eef6ea 0%, #e4efd9 100%);
-  border-color: #d8e8cc;
+  background:
+    radial-gradient(circle at 50% 56%, rgba(212, 232, 194, 0.8) 0%, rgba(212, 232, 194, 0) 40%),
+    radial-gradient(circle at 92% 6%, rgba(220, 238, 244, 0.95) 0%, rgba(220, 238, 244, 0) 42%),
+    radial-gradient(circle at 4% 100%, rgba(251, 235, 205, 0.8) 0%, rgba(251, 235, 205, 0) 40%),
+    radial-gradient(rgba(124, 158, 107, 0.12) 1px, transparent 1.6px) 0 0 / 18px 18px,
+    linear-gradient(180deg, #fffdf9 0%, #f5f3ee 100%);
+  border-color: var(--home-card-border);
   display: flex;
   flex-direction: column;
 }
@@ -438,16 +484,18 @@
   stroke-width: 11;
   stroke-linecap: round;
 }
-.home-pet-gauge-track { stroke: var(--home-white); }
+/* 게이지 빈 부분 — 카드 배경(베이지)보다 한 톤 진한 베이지, 살짝 투명하게 */
+.home-pet-gauge-track { stroke: rgba(214, 205, 186, 0.55); }
 .home-pet-gauge-fill {
-  stroke: var(--home-green);
+  stroke: url(#home-pet-gauge-gradient);
+  filter: drop-shadow(0 1px 2px rgba(124, 158, 107, 0.25));
   transition: stroke-dasharray 0.9s ease;
 }
 
 /* 펫 카드 안 스탯 블록 — 우측 정렬, 하단 붙임, 열 폭에 맞춰 줄어듦 */
 .home-pet-stats {
   width: 100%;
-  max-width: 300px;
+  max-width: 320px;
   min-width: 0;
   justify-self: end;   /* 우측 열 안에서 오른쪽 붙임 */
   align-self: center;  /* 우측 열 세로 중앙 */
@@ -519,22 +567,41 @@
 
 .home-pet-image {
   display: block;
-  width: 150px;
-  height: 150px;
+  width: 250px;
+  height: 250px;
   object-fit: contain;
   image-rendering: pixelated;
 }
 
+/* 오늘의 한마디 — 세이지색 테이프로 붙인 크림색 메모지.
+   살짝 기울여 손으로 붙여 둔 느낌을 주고, 펫 카드의 베이지 배경과 톤을 맞췄다. */
 .home-pet-bubble {
-  margin-top: 16px;
-  padding: 16px 16px;
-  background: var(--home-white);
-  border-radius: var(--home-radius-sm);
+  margin-top: 18px;
+  padding: 18px 20px 14px;
+  background: #fffaf1;
+  border: 0;
+  border-radius: 4px;
+  box-shadow:
+    0 1px 0 #efe5d2,
+    0 10px 20px rgba(61, 56, 48, 0.08);
+  transform: rotate(-0.6deg);
   font-size: 14px;
-  line-height: 1.55;
-  color: var(--home-text);
-  border: 1px solid var(--home-border);
+  line-height: 1.6;
+  color: #3d3830;
   position: relative;
+}
+
+/* 메모지를 붙인 테이프 — 파스텔 하늘색 (랜딩의 #dceef4 계열) */
+.home-pet-bubble::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 28px;
+  width: 72px;
+  height: 18px;
+  background: rgba(184, 219, 236, 0.8);
+  border-radius: 2px;
+  transform: rotate(-3deg);
 }
 
 .home-stat-list {
@@ -545,10 +612,10 @@
 
 .home-stat-row {
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 58px 1fr 44px;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .home-stat-row:last-child {
@@ -557,33 +624,86 @@
 
 .home-stat-label {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--home-muted);
+  font-weight: 800;
+  color: var(--home-text);
+  white-space: nowrap;
 }
 
+/* 스탯별 색 점 — 막대 색과 같게 */
 .home-stat-label::before {
   content: "";
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--stat-color, currentColor);
   margin-right: 6px;
   vertical-align: middle;
 }
 
 .home-stat-track {
-  height: 16px;
+  height: 14px;
   border-radius: 999px;
-  background: #eef1ea;
+  background: #e9ece4;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
   overflow: hidden;
   min-width: 0;
 }
 
 .home-stat-fill {
   height: 100%;
+  min-width: 4px;
   border-radius: 999px;
+  background: var(--stat-color);
   transition: width 0.4s ease;
+}
+
+.home-stat-value {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--home-text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 펫 카드 안 스탯 카드 — 초록 배경 위 흰 카드로 분리 */
+.home-statcard {
+  padding: 18px 20px;
+  background: var(--home-white);
+  border: 1px solid #d8e8cc;
+  border-radius: var(--home-radius-sm);
+  box-shadow: 0 6px 18px rgba(94, 140, 78, 0.12);
+}
+
+.home-statcard-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--home-border);
+}
+
+.home-statcard-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--home-green-dark);
+}
+
+.home-statcard-total {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+}
+
+.home-statcard-total strong {
+  margin-left: 2px;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--home-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .home-kpi-title {
@@ -609,6 +729,96 @@
 
 .home-kpi-sub--warn {
   color: var(--home-warn);
+}
+
+/* ── 홈 지출 요약 카드 (오늘·이번 달·이번 주) ─────────────────
+   리포트·지갑 화면도 .home-kpi-* 를 같이 쓰므로 홈 행(.home-row-kpi) 안에서만 꾸민다.
+   카드마다 --kpi-tint(모서리 빛)·--kpi-icon-bg(아이콘 원) 색만 바꾼다. */
+.home-row-kpi .home-kpi {
+  --kpi-tint: rgba(212, 232, 194, 0.7);
+  --kpi-icon-bg: #eaf3de;
+  --kpi-accent: #7c9e6b;
+  position: relative;
+  overflow: hidden;
+  padding: 20px 22px 18px;
+  background:
+    radial-gradient(circle at 100% 0%, var(--kpi-tint) 0%, rgba(255, 253, 249, 0) 55%),
+    linear-gradient(180deg, #fffdf9 0%, #f8f5ee 100%);
+  border-color: var(--home-card-border);
+  box-shadow: 0 4px 14px rgba(61, 56, 48, 0.05);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.home-row-kpi .home-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(61, 56, 48, 0.08);
+}
+/* 카드 아래 포인트 선 */
+.home-row-kpi .home-kpi::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--kpi-accent);
+  opacity: 0.55;
+}
+
+.home-row-kpi .home-kpi--today {
+  --kpi-tint: rgba(251, 235, 205, 0.95);
+  --kpi-icon-bg: #fdf0da;
+  --kpi-accent: #e8a05a;
+}
+.home-row-kpi .home-kpi--month {
+  --kpi-tint: rgba(220, 238, 244, 0.95);
+  --kpi-icon-bg: #e4f2f7;
+  --kpi-accent: #7cb9c8;
+}
+.home-row-kpi .home-kpi--week {
+  --kpi-tint: rgba(212, 232, 194, 0.8);
+  --kpi-icon-bg: #eaf3de;
+  --kpi-accent: #7c9e6b;
+}
+
+.home-kpi-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.home-row-kpi .home-kpi-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #6b6560;
+}
+.home-kpi-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--kpi-icon-bg);
+  box-shadow: inset 0 0 0 1px rgba(61, 56, 48, 0.05);
+  font-size: 18px;
+  line-height: 1;
+}
+.home-row-kpi .home-kpi-value {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 900;
+  color: #3d3830;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.home-row-kpi .home-kpi-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9c9488;
 }
 
 /* 제목 + 건수 라벨을 한 줄에 — 라벨은 우측 정렬 */
@@ -718,6 +928,7 @@
 .home-btn {
   border: none;
   font-family: inherit;
+  word-break: keep-all; /* 좁은 카드에서 "확인하/기"처럼 글자 단위로 끊기지 않게 */
   font-size: 14px;
   font-weight: 700;
   padding: 12px 16px;
@@ -795,12 +1006,13 @@
   color: #b86a1a;
 }
 
-/* 기록 캘린더: 제목·캘린더·버튼 분리, 캘린더 가운데·버튼 하단 */
+/* 기록 캘린더: 제목·캘린더·버튼 분리, 캘린더 가운데·버튼 하단.
+   카드 높이를 행에 고정(height:100%)하고 캘린더를 줄어들게(min-height:0) 두면
+   칸이 정사각형이라 줄어들지 못하고 넘쳐서 하단 버튼과 겹쳤다.
+   → 카드는 행 높이만큼 늘어나되(stretch) 내용보다 작아지지 않게 한다. */
 .home-card-chart {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  height: 100%;
   align-self: stretch;
 }
 
@@ -809,29 +1021,24 @@
 }
 
 .home-card-chart > .home-cal {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 0;
   width: 100%;
   max-width: 360px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto 16px;
 }
 
 .home-card-chart > .home-btn-block {
   margin-top: auto;
-  padding-top: 8px;
   flex-shrink: 0;
 }
 
-/* 최근 업적: 하단 버튼을 카테고리별 지출 카드와 같은 높이에 맞춤 */
+/* 최근 업적: 하단 버튼을 옆 카드와 같은 높이(카드 바닥)에 맞춤. 목록이 길어도 버튼과 겹치지 않게 */
 .home-card-achieve {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  height: 100%;
   align-self: stretch;
 }
 
@@ -840,13 +1047,12 @@
 }
 
 .home-card-achieve > .home-ach-list {
-  flex: 1;
-  min-height: 0;
+  flex: 1 0 auto;
+  margin-bottom: 16px;
 }
 
 .home-card-achieve > .home-btn-block {
   margin-top: auto;
-  padding-top: 8px;
   flex-shrink: 0;
 }
 
@@ -1052,7 +1258,7 @@
 
 /* 펫 이미지 에셋이 없는 종족 — 이모지로 대체 (이미지와 같은 자리) */
 .home-pet-emoji {
-  font-size: 96px;
+  font-size: 140px;
   line-height: 1;
 }
 .home-pet-bubble-date {
@@ -1062,4 +1268,580 @@
   font-weight: 800;
   color: var(--home-green-dark);
   letter-spacing: 0.02em;
+}
+
+/* ── 헤더 계정 상자 (AccountSummary 아래 팝오버) ─────────── */
+.home-topbar-inner > .account-menu {
+  justify-self: end;
+  position: relative;
+  min-width: 0;
+}
+.account-menu-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 280px;
+  padding: 16px;
+  border-radius: var(--home-radius);
+  border: 1px solid var(--home-card-border);
+  background: var(--home-card-surface);
+  box-shadow: 0 16px 40px rgba(45, 51, 40, 0.16);
+  z-index: 30;
+}
+.account-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.account-menu-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--home-card-border);
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+  font-size: 19px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.account-menu-avatar.is-admin {
+  border-color: #e0a83a;
+}
+.account-menu-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.account-menu-who strong {
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.account-menu-who small {
+  font-size: 12px;
+  color: var(--home-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-menu-title {
+  color: var(--home-green-dark) !important;
+  font-weight: 700;
+}
+.account-menu-role {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #fbe9c9;
+  color: #9a6b12;
+}
+.account-menu-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0;
+}
+.account-menu-stats > div {
+  padding: 10px 12px;
+  border-radius: var(--home-radius-sm);
+  background: #f6f8f3;
+}
+.account-menu-stats dt {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--home-muted);
+  margin-bottom: 2px;
+}
+.account-menu-stats dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.account-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.account-menu-actions .home-btn {
+  width: 100%;
+}
+.account-menu-logout {
+  align-self: center;
+  margin-top: 4px;
+  color: var(--home-muted);
+}
+@media (max-width: 640px) {
+  .home-topbar-inner > .account-menu {
+    grid-column: 1 / -1;
+  }
+  .account-menu-popover {
+    width: min(280px, calc(100vw - 32px));
+  }
+}
+
+/* ── 관리자 도구 (우하단 플로팅) ─────────────────────────── */
+.admin-tools {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.admin-tools-toggle {
+  border: 1px solid #e0a83a;
+  border-radius: 999px;
+  background: #fbe9c9;
+  color: #9a6b12;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 9px 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(45, 51, 40, 0.14);
+}
+.admin-tools-panel {
+  width: 320px;
+  max-width: calc(100vw - 40px);
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  padding: 14px 16px;
+  border-radius: var(--home-radius);
+  border: 1px solid #e0a83a;
+  background: var(--home-card-surface);
+  box-shadow: 0 16px 40px rgba(45, 51, 40, 0.18);
+}
+.admin-tools-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--home-muted);
+}
+.admin-tools-section {
+  padding: 10px 0;
+  border-top: 1px solid var(--home-card-border);
+}
+.admin-tools-section h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.admin-tools-section small {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--home-muted);
+}
+.admin-tools-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.admin-tools-row .home-btn {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+.admin-tools-row select {
+  flex: 1;
+  min-width: 110px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--home-card-border);
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+}
+.admin-tools-msg {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--home-radius-sm);
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-tools-msg.is-err {
+  background: #fbe5e5;
+  color: #b23b3b;
+}
+
+
+/* ── 홈 하단 카드 (최근 지출 내역 · 최근 업적 · 기록 캘린더) ─────────
+   지출 요약 카드와 같은 톤. 리포트·지갑·업적 화면도 .home-tx-* / .home-badge 를
+   같이 쓰므로 전부 .home-row-bottom 안에서만 꾸민다. */
+.home-row-bottom .home-card {
+  --sec-tint: rgba(212, 232, 194, 0.7);
+  --sec-icon-bg: #eaf3de;
+  background:
+    radial-gradient(circle at 100% 0%, var(--sec-tint) 0%, rgba(255, 253, 249, 0) 45%),
+    linear-gradient(180deg, #fffdf9 0%, #f8f5ee 100%);
+  border-color: var(--home-card-border);
+  box-shadow: 0 4px 14px rgba(61, 56, 48, 0.05);
+}
+.home-row-bottom .home-sec--list {
+  --sec-tint: rgba(251, 235, 205, 0.9);
+  --sec-icon-bg: #fdf0da;
+}
+.home-row-bottom .home-sec--achieve {
+  --sec-tint: rgba(220, 238, 244, 0.95);
+  --sec-icon-bg: #e4f2f7;
+}
+.home-row-bottom .home-sec--calendar {
+  --sec-tint: rgba(212, 232, 194, 0.8);
+  --sec-icon-bg: #eaf3de;
+}
+
+/* 카드 제목 + 파스텔 아이콘 */
+.home-sec-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #3d3830;
+}
+.home-sec-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--sec-icon-bg);
+  box-shadow: inset 0 0 0 1px rgba(61, 56, 48, 0.05);
+  font-size: 15px;
+  line-height: 1;
+}
+.home-row-bottom .home-list-date {
+  font-size: 12px;
+  color: #9c9488;
+}
+
+/* 최근 지출 — 행마다 둥근 칸, 시그널 점은 같은 계열 파스텔 원 안에 */
+.home-row-bottom .home-tx-row {
+  padding: 10px 8px;
+  margin: 0 -8px;
+  border-radius: 10px;
+  border-bottom: 1px dashed #e6dfd1;
+  transition: background 0.12s ease;
+}
+.home-row-bottom .home-tx-row:last-of-type {
+  border-bottom: none;
+}
+.home-row-bottom .home-tx-row:hover {
+  background: rgba(255, 250, 241, 0.9);
+}
+.home-row-bottom .home-tx-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #f1eee7;
+}
+.home-row-bottom .home-tx-icon--green { background: #eaf3de; }
+.home-row-bottom .home-tx-icon--red   { background: #fbe6e2; }
+.home-row-bottom .home-tx-dot {
+  width: 12px;
+  height: 12px;
+}
+.home-row-bottom .home-tx-name {
+  color: #3d3830;
+  font-size: 14px;
+}
+.home-row-bottom .home-tx-cat {
+  color: #9c9488;
+}
+.home-row-bottom .home-tx-amount {
+  color: #3d3830;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 최근 업적 — 진행 중이면 얇은 진행 막대 */
+.home-row-bottom .home-ach-row {
+  border-bottom: 1px dashed #e6dfd1;
+}
+.home-row-bottom .home-ach-row:last-of-type {
+  border-bottom: none;
+}
+.home-ach-mid {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.home-row-bottom .home-ach-title {
+  color: #3d3830;
+  font-weight: 700;
+}
+.home-ach-progress {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: #ebe6da;
+  overflow: hidden;
+}
+.home-ach-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b8dbec, #7cb9c8);
+}
+.home-row-bottom .home-badge--done {
+  background: #eaf3de;
+  color: #5e8c4e;
+}
+.home-row-bottom .home-badge--prog {
+  background: #e4f2f7;
+  color: #3f7f90;
+}
+
+/* 기록 캘린더 — 홈에서만 칸을 베이지·파스텔 톤으로 (리포트 캘린더는 그대로) */
+.home-cal .rc-weekday {
+  color: #9c9488;
+}
+.home-cal .rc-cell {
+  background: #f1ede4;
+  color: #9c9488;
+}
+/* 달 시작 전 빈 칸은 비워 둔다 */
+.home-cal .rc-cell--blank {
+  background: none;
+}
+.home-cal .rc-cell.is-marked,
+.home-cal .rc-cell.is-signal-green {
+  background: #9dbb86;
+  color: #fff;
+}
+.home-cal .rc-cell.is-signal-gray {
+  background: #eab676;
+  color: #fff;
+}
+.home-cal .rc-cell.is-signal-red {
+  background: #e0908a;
+  color: #fff;
+}
+.home-cal .rc-cell.is-today {
+  box-shadow: inset 0 0 0 2px #7cb9c8;
+}
+
+/* 하단 카드 버튼 — 세이지·따뜻한 갈색으로 톤 맞춤 */
+.home-row-bottom .home-btn-primary {
+  background: #7c9e6b;
+  box-shadow: 0 4px 10px rgba(124, 158, 107, 0.25);
+}
+.home-row-bottom .home-btn-dark {
+  background: #3d3830;
+}
+.home-row-bottom .home-link-btn {
+  color: #5e8c4e;
+}
+
+/* 최근 지출 내역 — 폭이 좁아져서 링크·버튼이 한 줄에 안 들어간다.
+   옆 카드처럼 버튼을 카드 바닥에 꽉 채우고, 링크는 그 위 가운데에 둔다. */
+.home-row-bottom .home-sec--list {
+  display: flex;
+  flex-direction: column;
+}
+.home-row-bottom .home-sec--list > .home-tx-list {
+  flex: 1 0 auto;
+}
+.home-row-bottom .home-sec--list > .home-card-actions {
+  margin-top: auto;
+  padding-top: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.home-row-bottom .home-sec--list .home-link-btn {
+  align-self: center;
+}
+.home-row-bottom .home-sec--list .home-card-actions .home-btn {
+  width: 100%;
+}
+
+/* ── 사이드바(메뉴바) — 홈 카드와 같은 베이지·파스텔 톤 ─────────────
+   메뉴마다 작은 아이콘 원을 달고, 선택된 메뉴는 크림색 카드처럼 떠 보이게 한다. */
+.home-sidebar {
+  background: linear-gradient(180deg, #fffdf9 0%, #f8f5ee 100%);
+}
+.home-sidebar--left {
+  border-right-color: var(--home-card-border);
+}
+.home-sidebar--right {
+  border-left-color: var(--home-card-border);
+}
+.home-side-title {
+  color: #b3aa9c;
+  letter-spacing: 0.08em;
+  padding-left: 8px;
+}
+.home-side-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 12px;
+  color: #6b6560;
+  font-weight: 600;
+  transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+.home-side-link:hover {
+  background: rgba(212, 232, 194, 0.5); /* 연두빛 */
+  color: #3d3830;
+}
+.home-side-link.is-active {
+  background: #fffdf9;
+  color: #3d3830;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(61, 56, 48, 0.07);
+}
+.home-side-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f1ede4;
+  font-size: 14px;
+  line-height: 1;
+  transition: background 0.12s ease;
+}
+.home-side-link:hover .home-side-icon {
+  background: #fdf0da;
+}
+.home-side-link.is-active .home-side-icon {
+  background: #eaf3de;
+}
+.home-side-label {
+  min-width: 0;
+}
+.home-side-soon {
+  margin-left: auto;
+  border-color: #e6dfd1;
+  color: #b3aa9c;
+}
+
+/* 관리자 메뉴 — 사이드바 맨 아래, 점선으로 일반 메뉴와 구분 */
+.home-sidebar > .home-side-block.home-side-block--admin {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px dashed #e6dfd1;
+}
+.home-side-block--admin .home-side-icon {
+  background: #e4f2f7;
+}
+
+/* ── 사이드바 기호: 작은 원(●) ─────────────────────────────
+   메뉴별 이모지 대신 모두 같은 원 모양. 평소엔 어두운 갈색으로 꺼져 있다가,
+   누르면(선택된 메뉴) 초록빛이 들어온다. */
+.home-side-icon,
+.home-side-link:hover .home-side-icon,
+.home-side-link.is-active .home-side-icon,
+.home-side-block--admin .home-side-icon {
+  width: 18px;
+  height: 28px;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  position: relative;
+}
+.home-side-icon::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6f665b;
+  transform: translate(-50%, -50%) rotate(45deg);
+  transition: background 0.2s ease, box-shadow 0.25s ease, transform 0.2s ease;
+}
+/* 원 안쪽 반짝임 — 켜졌을 때만 보인다 */
+.home-side-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fbfff5;
+  transform: translate(-50%, -50%) rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.home-side-link:hover .home-side-icon::before {
+  background: #8fb07c;
+}
+/* 켜짐 — 선택된 메뉴 */
+.home-side-link.is-active .home-side-icon::before {
+  background: #8fd16a;
+  box-shadow:
+    0 0 4px 1px rgba(127, 201, 90, 0.9),
+    0 0 12px 3px rgba(127, 201, 90, 0.45);
+  transform: translate(-50%, -50%) rotate(45deg) scale(1.15);
+  animation: home-side-glow 2.4s ease-in-out infinite;
+}
+.home-side-link.is-active .home-side-icon::after {
+  opacity: 0.9;
+}
+/* 누르는 순간 한 번 번쩍 */
+.home-side-link:active .home-side-icon::before {
+  background: #b4e59a;
+  box-shadow: 0 0 14px 5px rgba(127, 201, 90, 0.6);
+}
+.home-side-link:disabled .home-side-icon::before {
+  background: #c9bfae;
+  box-shadow: none;
+  animation: none;
+}
+@keyframes home-side-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 4px 1px rgba(127, 201, 90, 0.9),
+      0 0 12px 3px rgba(127, 201, 90, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 6px 2px rgba(127, 201, 90, 1),
+      0 0 18px 5px rgba(127, 201, 90, 0.55);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-side-link.is-active .home-side-icon::before {
+    animation: none;
+  }
+}
+
+/* 관리 섹션 제목 옆 도구 아이콘 */
+.home-side-title-icon {
+  margin-right: 4px;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+/* 로그아웃 — 메뉴 칸 전체가 아니라 글자에만 커서가 바뀌고, 배경색도 생기지 않는다.
+   버튼을 글자 폭으로 줄여서 글자 밖은 눌리지 않게 한다. */
+.home-side-link.home-side-link--logout,
+.home-side-link.home-side-link--logout:hover,
+.home-side-link.home-side-link--logout:active {
+  display: inline-flex;
+  width: auto;
+  background: none;
+  box-shadow: none;
+}
+.home-side-link.home-side-link--logout:hover {
+  color: #3d3830;
 }

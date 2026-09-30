@@ -486,7 +486,7 @@ function WalletEntryPage({ user }) {
             <button
               type="button"
               className="ledger-back"
-              onClick={() => navigate(isEditMode ? "/wallet" : "/home")}
+              onClick={() => navigate("/wallet")}
               disabled={submitting}
             >
               돌아가기

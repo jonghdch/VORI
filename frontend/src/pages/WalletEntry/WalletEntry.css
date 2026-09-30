@@ -710,12 +710,12 @@
   background: #e8f3df;
 }
 .ledger-signal-result--gray {
-  color: #a96518;
-  background: #fff0d8;
+  color: #8c7614;
+  background: #fff8d9;
 }
 .ledger-signal-result--red {
-  color: #a94444;
-  background: #f8dfdf;
+  color: #a96518;
+  background: #fff0d8;
 }
 .ledger-pay-group {
   background: #fbfaf6;
@@ -812,4 +812,82 @@
 }
 .ledger-pay-toggle:hover {
   color: #2b2b2b;
+}
+.ledger-reward-card {
+  padding: 22px;
+  border-color: #dce9d4;
+  background: linear-gradient(135deg, #fbfdf9 0%, #f2f8ed 100%);
+}
+.ledger-reward-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.ledger-reward-heading > div > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #7f8878;
+  font-size: 13px;
+  font-weight: 700;
+}
+.ledger-reward-heading h2 {
+  margin: 0;
+  color: #365d2d;
+  font-size: 22px;
+}
+.ledger-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.ledger-reward-item {
+  display: flex;
+  min-height: 112px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px 8px;
+  border: 1px solid #dbe8d4;
+  border-radius: 12px;
+  background: #fff;
+  color: #6c7665;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+.ledger-reward-item--coin {
+  border-color: #f0d89b;
+  background: #fffaf0;
+  color: #8d6b22;
+}
+.ledger-reward-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.ledger-reward-item strong {
+  color: #3e6d35;
+  font-size: 21px;
+  line-height: 1.1;
+}
+.ledger-reward-item--coin strong { color: #af7e17; }
+.ledger-reward-note {
+  margin: 14px 0 0;
+  color: #727b6c;
+  font-size: 13px;
+}
+.ledger-judgment-card > p { line-height: 1.7; font-size: 14px; }
+.ledger-judgment-card h2 { font-size: 18px; }
+.ledger-reward-heading h2 { font-size: 22px; }
+@media (max-width: 900px) {
+  .ledger-reward-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 540px) {
+  .ledger-reward-card { padding: 17px; }
+  .ledger-reward-heading { align-items: center; }
+  .ledger-reward-heading h2 { font-size: 19px; }
+  .ledger-reward-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ledger-reward-item { min-height: 96px; }
 }

@@ -10,6 +10,7 @@ import java.util.List;
 
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
+    @Query("SELECT e FROM Expense e WHERE e.userId = :userId AND e.spentAt >= :start AND e.spentAt < :end ORDER BY e.spentAt DESC")
     List<Expense> findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(
         Long userId, LocalDateTime start, LocalDateTime end);
 

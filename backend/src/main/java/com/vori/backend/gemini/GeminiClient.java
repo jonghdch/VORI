@@ -14,6 +14,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -30,21 +31,46 @@ public class GeminiClient {
     @Value("${gemini.api.key}")
     private String apiKey;
 
+    /**
+     * 질문·코멘트·사유 분류·영수증에 쓰는 모델. 기본값은 application.properties(`GEMINI_MODEL`).
+     *
+     * <p>기본 gemini-3.6-flash 는 gemini-2.0-flash 은퇴 시 구글이 후속으로 지목한 모델이다.
+     * -latest 별칭은 은퇴 걱정이 없는 대신 어떤 모델에 붙을지 알 수 없다 — 실측에서
+     * gemini-flash-latest 는 503 이 3/3, 응답이 40~58초였고 3.6-flash 는 3/3 성공에 평균 9.6초였다.
+     * 지연시간을 예측할 수 있는 쪽을 택한다. 은퇴하면 404 본문이 다음 후속을 알려준다.
+     */
+    @Value("${gemini.model}")
+    private String model;
+
+    /**
+     * 주 모델이 못 받을 때 차례로 시도할 대체 모델(쉼표 구분, 비우면 대체 없음). `GEMINI_FALLBACK_MODELS`.
+     *
+     * <p>2026-09-29 밤 중간발표 녹화 중 3.6-flash 가 503(과부하)을 연달아 냈고, 재시도·재촬영이 겹쳐
+     * 429(무료 하루 20건)까지 소진됐다. 무료 한도는 quotaId `GenerateRequestsPerDayPerProjectPerModel-FreeTier`
+     * — <b>모델별</b>이라 3.5-flash 로 바꾸자 바로 됐다. 그때는 코드를 고쳐 재부팅했는데, 그걸 자동으로 한다.
+     */
+    @Value("${gemini.fallback-models}")
+    private String fallbackModels;
+
+    /**
+     * 임베딩 모델. `GEMINI_EMBEDDING_MODEL`.
+     *
+     * <p>대체 모델을 두지 않는다. 모델마다 벡터 공간이 달라서, CategorizeService 가 부팅 때 캐시한
+     * 카테고리 벡터와 다른 모델로 만든 입력 벡터를 비교하면 유사도가 의미 없어진다.
+     * 바꾸려면 재부팅해서 캐시까지 새 모델로 다시 만들어야 한다.
+     */
+    @Value("${gemini.embedding-model}")
+    private String embeddingModel;
+
     @jakarta.annotation.PostConstruct
-    void logKeyStatus() {
+    void logConfig() {
         int n = apiKey == null ? 0 : apiKey.length();
         log.info("[Gemini] api key loaded — length={} (값 자체는 로그 X)", n);
+        List<String> chain = modelChain();
+        log.info("[Gemini] 모델 {} (대체 {}) · 임베딩 {}", chain.get(0), chain.subList(1, chain.size()), embeddingModel);
     }
-    
-    // gemini-2.0-flash 은퇴 시 구글이 후속으로 지목한 모델.
-    // -latest 별칭은 은퇴 걱정이 없는 대신 어떤 모델에 붙을지 알 수 없다 — 실측에서
-    // gemini-flash-latest 는 503 이 3/3, 응답이 40~58초였고 3.6-flash 는 3/3 성공에 평균 9.6초였다.
-    // 지연시간을 예측할 수 있는 쪽을 택한다. 이 모델이 은퇴하면 404 본문이 다음 후속을 알려준다.
-    private static final String BASE_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=";
 
-    private static final String EMBED_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=";
+    private static final String API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
 
     /**
      * 과지출(RED)에 이유를 묻는 질문.
@@ -190,7 +216,7 @@ public class GeminiClient {
      */
     @SuppressWarnings("unchecked")
     public double[] embed(String text) {
-        String url = EMBED_URL + apiKey;
+        String url = API_BASE + embeddingModel + ":embedContent?key=" + apiKey;
         Map<String, Object> body = Map.of(
                 "content", Map.of("parts", List.of(Map.of("text", text)))
         );
@@ -208,12 +234,11 @@ public class GeminiClient {
     }
 
     private String callGemini(String text) {
-        String url = BASE_URL + apiKey;
         Map<String, Object> body = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", text))))
         );
         try {
-            return extractText(postWithRetry(url, body, "generateContent"));
+            return extractText(generate(body, "generateContent", restTemplate));
         } catch (Exception e) {
             log.error("Gemini API 호출 실패", e);
             throw new RuntimeException("AI 서비스 호출에 실패했습니다.");
@@ -258,11 +283,57 @@ public class GeminiClient {
         );
 
         try {
-            return extractText(postWithRetry(
-                    BASE_URL + apiKey, body, "extractReceipt", geminiImageRestTemplate));
+            return extractText(generate(body, "extractReceipt", geminiImageRestTemplate));
         } catch (Exception e) {
             log.error("Gemini 영수증 인식 실패", e);
             throw new RuntimeException("영수증 인식에 실패했습니다.");
+        }
+    }
+
+    // ───── 대체 모델 ─────
+
+    /** 주 모델 + 대체 모델 순서. 빈 칸·중복은 뺀다. */
+    List<String> modelChain() {
+        List<String> chain = new ArrayList<>();
+        chain.add(model.trim());
+        if (fallbackModels != null) {
+            for (String m : fallbackModels.split(",")) {
+                String name = m.trim();
+                if (!name.isEmpty() && !chain.contains(name)) chain.add(name);
+            }
+        }
+        return chain;
+    }
+
+    /**
+     * generateContent 를 주 모델부터 차례로 시도한다. 각 모델 안에서는 {@link #postWithRetry} 의 재시도를 탄다.
+     *
+     * <p>다음 모델로 넘기는 경우는 <b>그 모델만의 문제</b>일 때다.
+     * <ul>
+     *   <li>5xx — 재시도를 다 써도 과부하가 안 풀림</li>
+     *   <li>429 — 무료 한도가 모델별이라 다른 모델은 남아 있다</li>
+     *   <li>404 — 모델 은퇴</li>
+     * </ul>
+     * 401·403·400 은 넘기지 않는다. 키·요청 문제라 어느 모델로 보내도 같은 답이 온다.
+     * 타임아웃도 넘기지 않는다. 영수증은 읽기 60초 × 3회라 이미 오래 기다렸고, 여기서 한 모델을
+     * 더 돌면 사용자가 몇 분을 기다리게 된다.
+     */
+    private Map<?, ?> generate(Object body, String label, RestTemplate client) {
+        List<String> chain = modelChain();
+        for (int i = 0; ; i++) {
+            String current = chain.get(i);
+            boolean hasNext = i + 1 < chain.size();
+            try {
+                Map<?, ?> response = postWithRetry(
+                        API_BASE + current + ":generateContent?key=" + apiKey, body, label, client, hasNext);
+                if (i > 0) log.info("[Gemini] {} — 대체 모델 {} 로 처리함", label, current);
+                return response;
+            } catch (HttpServerErrorException
+                     | HttpClientErrorException.TooManyRequests
+                     | HttpClientErrorException.NotFound e) {
+                if (!hasNext) throw e;
+                log.warn("[Gemini] {} — {} 사용 불가({}), {} 로 넘김", label, current, causeOf(e), chain.get(i + 1));
+            }
         }
     }
 
@@ -285,18 +356,23 @@ public class GeminiClient {
      * 이 한 곳이 generateContent·embedContent 양쪽을 모두 덮는다. 특히 부팅 시
      * CategorizeService 가 임베딩을 수십 번 연속 호출하는데, 거기서 503 한 번에
      * 카테고리 캐시 전체가 날아가던 위험을 없앤다.
+     *
+     * @param hasFallback 대체 모델이 있으면 429 는 같은 모델에 재시도하지 않고 바로 던진다.
+     *                    하루 한도라면 몇 초 기다려서는 안 풀리고(태평양 자정 리셋), 헛된 재시도만 쌓인다.
      */
     private Map<?, ?> postWithRetry(String url, Object body, String label) {
-        return postWithRetry(url, body, label, restTemplate);
+        return postWithRetry(url, body, label, restTemplate, false);
     }
 
-    private Map<?, ?> postWithRetry(String url, Object body, String label, RestTemplate client) {
+    private Map<?, ?> postWithRetry(String url, Object body, String label, RestTemplate client,
+                                    boolean hasFallback) {
         for (int attempt = 1; ; attempt++) {
             try {
                 return client.postForObject(url, body, Map.class);
             } catch (HttpServerErrorException
                      | HttpClientErrorException.TooManyRequests
                      | ResourceAccessException e) {
+                if (hasFallback && e instanceof HttpClientErrorException.TooManyRequests) throw e;
                 if (attempt >= MAX_ATTEMPTS) {
                     log.error("[Gemini] {} — {}회 시도 모두 실패 ({})", label, attempt, causeOf(e));
                     throw e;

@@ -15,21 +15,21 @@ import "./StoryPage.css";
 // 종족을 추가하면 petCatalog·petVisual 과 함께 여기도 한 줄 추가.
 const PET_BLURB = {
   dragon: "가장 오래 잠든 알. 깨어나면 루미나의 하늘을 다시 밝혀요.",
-  lion: "소원의 파수꾼. 화성의 파장 앞에서도 물러서지 않았어요.",
-  snake: "달의 그림자 속을 지키던 친구. 조용하지만 눈이 밝아요.",
-  fox: "소원을 가장 먼저 알아채는 친구. 꾀가 많고 발이 빨라요.",
-  deer: "달빛 초원을 지키던 친구. 걸음이 조용하고 마음이 넓어요.",
-  penguin: "얼음 바다의 소원을 모으던 친구. 서두르지 않지만 꾸준해요.",
   wolf: "밤마다 달을 향해 노래하던 친구. 의리가 깊어요.",
-  turtle: "루미나에서 가장 오래 산 친구. 급할 것 없다는 게 신조예요.",
-  puppy: "토끼와 함께 지구에 먼저 내려온 친구. 당신의 첫 동료가 돼요.",
-  kitten: "창가에서 소원을 듣던 친구. 변덕스럽지만 정이 많아요.",
-  rabbit: "튜토리얼 토끼의 동생. 소원 배달을 도와요.",
-  sheep: "구름을 닮은 친구. 곁에 있으면 걱정이 조금 가벼워져요.",
-  frog: "달의 연못에 살던 친구. 작은 소원도 놓치지 않아요.",
-  squirrel: "도토리처럼 소원을 모아 두던 친구. 알뜰한 게 장점이에요.",
-  monkey: "장난기 많은 친구. 지루한 기록도 놀이로 만들어요.",
+  snake: "달의 그림자 속을 지키던 친구. 조용하지만 눈이 밝아요.",
   panda: "느긋한 친구. 하루에 한 번만 기록해도 반겨 줘요.",
+  raccoon: "흘린 소원을 주워 깨끗이 씻어 두던 친구. 손재주가 좋아요.",
+  penguin: "얼음 바다의 소원을 모으던 친구. 서두르지 않지만 꾸준해요.",
+  lion: "소원의 파수꾼. 화성의 파장 앞에서도 물러서지 않았어요.",
+  deer: "달빛 초원을 지키던 친구. 걸음이 조용하고 마음이 넓어요.",
+  fox: "소원을 가장 먼저 알아채는 친구. 꾀가 많고 발이 빨라요.",
+  sheep: "구름을 닮은 친구. 곁에 있으면 걱정이 조금 가벼워져요.",
+  monkey: "장난기 많은 친구. 지루한 기록도 놀이로 만들어요.",
+  squirrel: "도토리처럼 소원을 모아 두던 친구. 알뜰한 게 장점이에요.",
+  kitten: "창가에서 소원을 듣던 친구. 변덕스럽지만 정이 많아요.",
+  puppy: "토끼와 함께 지구에 먼저 내려온 친구. 당신의 첫 동료가 돼요.",
+  rabbit: "튜토리얼 토끼의 동생. 소원 배달을 도와요.",
+  turtle: "루미나에서 가장 오래 산 친구. 급할 것 없다는 게 신조예요.",
 };
 
 // 캐릭터 목록 — 도감과 같은 16종. 등급 표기도 도감 이름(일반~레전드)을 따른다.
@@ -71,7 +71,7 @@ const STORY_TABS = [
   { id: "items", label: "아이템" },
 ];
 
-// 성장 단계 — 펫 화면과 같은 이름(아기 → 청소년 → 성체)과 임계값을 쓴다.
+// 성장 단계 — 펫·도감 화면과 같은 이름(1차 → 2차 → 3차)과 임계값을 쓴다.
 const EVOLUTION_STAGES = STAGE_ORDER.map((stage) => ({
   id: stage,
   label: STAGE_LABEL[stage] ?? stage,
@@ -628,6 +628,7 @@ function StoryPage({ user, onLogout }) {
                     <div className="story-evolution-thumb">
                       <PetArt
                         appearanceKey={selectedCharacter.appearanceKey}
+                        stage={stage.id}
                         name={selectedCharacter.name}
                         className="story-evolution-img"
                         emojiClassName="story-evolution-emoji"
@@ -663,7 +664,7 @@ function StoryPage({ user, onLogout }) {
                   </div>
                   <div>
                     <dt>마이룸 흔적</dt>
-                    <dd>성체가 된 뒤에도 방 안에 작은 기념품과 보너스를 남깁니다.</dd>
+                    <dd>{STAGE_LABEL.ADULT}가 된 뒤에도 방 안에 작은 기념품과 보너스를 남깁니다.</dd>
                   </div>
                   <div>
                     <dt>성격 메모</dt>

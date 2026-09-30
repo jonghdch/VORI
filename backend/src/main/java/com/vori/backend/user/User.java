@@ -104,6 +104,25 @@ public class User {
         this.loginCount = (this.loginCount == null ? 0 : this.loginCount) + 1;
     }
 
+    /** 사용자가 환경설정에서 변경하는 공개 프로필 정보. */
+    public void updateProfile(String nickname, String name, Integer age, String job, Integer monthlyIncome) {
+        this.nickname = nickname;
+        this.name = name;
+        this.age = age;
+        this.job = job;
+        this.monthlyIncome = monthlyIncome;
+    }
+
+    /** 온보딩 설문에서 받은 월 수입. 프로필 설정의 updateProfile 과 같은 컬럼을 쓴다. */
+    public void updateMonthlyIncome(Integer monthlyIncome) {
+        this.monthlyIncome = monthlyIncome;
+    }
+
+    /** 온보딩 튜토리얼 완료. */
+    public void markTutorialDone() {
+        this.tutorialDone = true;
+    }
+
     /** 칭호 장착. null 이면 해제. 소유 여부 검증은 호출부(TitleService)가 한다. */
     public void setActiveTitle(Long titleId) {
         this.activeTitleId = titleId;
@@ -122,6 +141,7 @@ public class User {
      */
     public void spendGameMoney(int amount) {
         if (amount < 0) throw new IllegalArgumentException("차감액은 음수일 수 없습니다: " + amount);
+        if (role == Role.ADMIN) return;
         int current = this.gameMoney == null ? 0 : this.gameMoney;
         if (current < amount) {
             throw new IllegalStateException("게임머니 부족: 보유 " + current + ", 필요 " + amount);

@@ -16,8 +16,23 @@ async function handle(res) {
 export const getTodayJudgment = () =>
   fetch(`${API_BASE}/daily-judgments/today`, { credentials: "include" }).then(handle);
 
+export const getDateJudgment = (date) =>
+  fetch(`${API_BASE}/daily-judgments?date=${encodeURIComponent(date)}`, {
+    credentials: "include",
+  }).then(handle);
+
+export const getMonthlyJudgments = (month) =>
+  fetch(`${API_BASE}/daily-judgments/month?month=${encodeURIComponent(month)}`, {
+    credentials: "include",
+  }).then(handle);
+
 export const startTodayJudgment = () =>
   fetch(`${API_BASE}/daily-judgments/today`, {
     method: "POST",
     credentials: "include",
+  }).then(handle);
+
+export const startDateJudgment = (date) =>
+  fetch(`${API_BASE}/daily-judgments?date=${encodeURIComponent(date)}`, {
+    method: "POST", credentials: "include",
   }).then(handle);

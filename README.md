@@ -88,7 +88,9 @@ cp .env.example .env   # repo 루트에서
 | `DB_USERNAME` | ✅ | MySQL 계정 (기본 `root`) |
 | `DB_PASSWORD` | ✅ | MySQL 비밀번호 (Windows root 는 보통 비번 있음 → 반드시 명시. 없으면 빈 값) |
 | `GEMINI_API_KEY` | ✅ | Gemini 키 — https://aistudio.google.com/app/apikey |
-| `GEMINI_MODEL` | — | 사용할 모델 (기본 `gemini-2.0-flash`) |
+| `GEMINI_MODEL` | — | 질문·코멘트·사유 분류·영수증 모델 (기본 `gemini-3.6-flash`) |
+| `GEMINI_FALLBACK_MODELS` | — | 주 모델이 과부하(5xx)·한도 초과(429)·은퇴(404)일 때 차례로 쓸 모델, 쉼표 구분 (기본 `gemini-3.5-flash`, 비우면 대체 없음) |
+| `GEMINI_EMBEDDING_MODEL` | — | 카테고리 자동 분류 임베딩 모델 (기본 `gemini-embedding-001`, 대체 없음) |
 | `GOOGLE_CLIENT_ID` | — | 구글 로그인용 OAuth 클라이언트 ID. 비우면 구글 로그인만 꺼진다(503). `frontend/.env.local` 의 `REACT_APP_GOOGLE_CLIENT_ID` 와 같은 값 |
 
 > 백엔드는 `spring.config.import` 로 `.env` 를 **repo 루트 기준 상대경로**로 읽는다. 그래서 백엔드는 항상 **repo 루트를 작업 디렉터리로** 실행해야 한다(위 1회 준비 4번).
@@ -247,4 +249,5 @@ navigate("/login");
 | [`docs/backend-flow.md`](docs/backend-flow.md) | 요청·응답 흐름·레이어 책임·신규 기능 추가 체크리스트 |
 | [`docs/domain.md`](docs/domain.md) | 비즈 룰·계산식·상태머신·용어집 (Service 짤 때 SSOT) |
 | [`docs/db-spec.md`](docs/db-spec.md) | 테이블 18종 명세 + 변경 이력 |
+| [`docs/signup-flow.md`](docs/signup-flow.md) | 회원가입 중 소비 프로필 5단계 수집·온보딩 연결 설계 |
 | [`docs/tutorial-flow.md`](docs/tutorial-flow.md) | 신규 사용자 온보딩·인앱 튜토리얼 사용자 흐름 설계 |

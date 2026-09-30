@@ -9,11 +9,14 @@ public record DailyJudgmentResponse(
         LocalDate date,
         Signal signal,
         int expenseCount,
+        int coinReward,
+        int statRewardPerType,
         LocalDateTime judgedAt,
         boolean alreadyJudged
 ) {
     static DailyJudgmentResponse from(DailyJudgment j, boolean alreadyJudged) {
         return new DailyJudgmentResponse(
-                j.getJudgmentDate(), j.getSignal(), j.getExpenseCount(), j.getJudgedAt(), alreadyJudged);
+                j.getJudgmentDate(), j.getSignal(), j.getExpenseCount(),
+                j.getCoinReward(), j.getStatRewardPerType(), j.getJudgedAt(), alreadyJudged);
     }
 }

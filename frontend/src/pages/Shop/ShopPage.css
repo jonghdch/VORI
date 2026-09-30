@@ -23,40 +23,80 @@
   pointer-events: none;
 }
 
+/* 인사 패널 — 나무 가게 배경에 어울리게 천장에 매달린 '간판'.
+   짙은 나무 테두리 + 안쪽 밝은 나무 선 + 크림색 판, 위에 끈 두 줄. */
 .shop-hero-panel {
   position: relative;
   z-index: 1;
-  width: min(390px, 72%);
-  margin: 24px;
-  padding: 18px 20px;
-  border: 1px solid rgba(255, 253, 249, 0.58);
-  border-radius: var(--home-radius);
-  background: rgba(255, 253, 249, 0.88);
-  box-shadow: 0 18px 32px rgba(45, 35, 28, 0.16);
+  width: min(400px, 72%);
+  margin: 48px 24px 24px 28px;
+  padding: 20px 22px 18px;
+  border: 4px solid #6b4a2f;
+  border-radius: 10px;
+  background: #fff6e6;
+  box-shadow:
+    inset 0 0 0 3px #ecd3ab,
+    0 6px 0 #4a3220,
+    0 18px 30px rgba(45, 35, 28, 0.28);
+  transform: rotate(-0.8deg);
+  transform-origin: 50% -40px;
 }
 
+/* 간판을 매단 끈 (왼쪽·오른쪽) — 무늬 없는 단색 끈.
+   화면 맨 위(천장)부터 간판까지 끊김 없이 이어지도록 위로 넉넉히 뻗고,
+   넘치는 부분은 .shop-hero 의 overflow:hidden 이 잘라 준다. */
+.shop-hero-panel::before,
+.shop-hero-panel::after {
+  content: "";
+  position: absolute;
+  top: -80px;
+  width: 5px;
+  height: 84px;
+  border-radius: 3px;
+  background: #8a6441;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 236, 205, 0.35),
+    inset -1px 0 0 rgba(0, 0, 0, 0.18);
+}
+.shop-hero-panel::before {
+  left: 40px;
+}
+.shop-hero-panel::after {
+  right: 40px;
+}
+
+/* VORI SHOP — 간판 위 작은 리본 라벨 */
 .shop-eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: #7c9e6b;
+  box-shadow: 0 2px 0 #5e7d50;
+  font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.06em;
-  color: var(--home-green-dark);
+  letter-spacing: 0.12em;
+  color: #fffdf9;
 }
 
 .shop-hero-panel h1 {
   margin: 0;
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 900;
-  line-height: 1.3;
-  color: var(--home-text);
+  line-height: 1.35;
+  color: #4a3220;
+  word-break: keep-all;
 }
 
 .shop-hero-panel p:last-child {
   margin: 10px 0 0;
-  color: var(--home-muted);
+  padding-top: 10px;
+  border-top: 2px dashed #e3c9a0;
+  color: #7a6048;
   font-size: 14px;
   font-weight: 700;
   line-height: 1.55;
+  word-break: keep-all;
 }
 
 .shop-coin-badge {
@@ -107,6 +147,10 @@
 }
 
 .shop-display-info {
+  /* 세 등급 카드의 폭·높이를 문구 길이와 상관없이 똑같이 맞춘다 */
+  flex: 1;
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -135,7 +179,9 @@
 }
 
 .shop-display-info strong {
-  margin-top: 10px;
+  /* 가격·구매 버튼을 카드 아래쪽에 붙여 세 카드의 줄을 맞춘다 */
+  margin-top: auto;
+  padding-top: 10px;
   color: var(--home-text);
   font-size: 18px;
   font-weight: 900;
@@ -155,7 +201,8 @@
 
   .shop-hero-panel {
     width: auto;
-    margin: 18px;
+    margin: 44px 18px 18px;
+    transform: none;
   }
 
   .shop-coin-badge {
@@ -368,95 +415,199 @@
 .shop-tag--b { background: var(--home-green-soft); color: var(--home-green-dark); }
 .shop-tag--variant { background: #fde8f3; color: #b0357a; }
 
-/* ── 가구 상점 ── */
-.shop-furniture {
-  margin-top: 20px;
+/* ── 알 / 가구 상점 전환 탭 (상점 이미지 오른쪽 위, 코인 배지 아래) ── */
+.shop-tabs {
+  position: absolute;
+  top: 84px;
+  right: 24px;
+  z-index: 2;
+  display: flex;
+  gap: 10px;
 }
-.shop-furniture-grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
-}
-.shop-furniture-card {
-  display: grid;
-  grid-template-columns: 56px 1fr auto;
+
+.shop-tab {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: var(--home-radius-sm);
-  background: #f6f8f3;
-  min-width: 0;
+  justify-content: center;
+  gap: 2px;
+  width: 76px;
+  height: 76px;
+  padding: 6px;
+  border: 2px solid rgba(255, 253, 249, 0.7);
+  border-radius: 18px;
+  background: rgba(255, 253, 249, 0.82);
+  color: var(--home-muted);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(45, 35, 28, 0.14);
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
-.shop-furniture-card.is-locked {
-  opacity: 0.72;
-}
-.shop-furniture-art {
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: var(--home-green-soft);
-  overflow: hidden;
-}
-.shop-furniture-image {
-  width: 90%;
-  height: 90%;
+
+.shop-tab img {
+  width: 42px;
+  height: 42px;
   object-fit: contain;
   image-rendering: pixelated;
 }
+
+.shop-tab:hover {
+  transform: translateY(-2px);
+}
+
+.shop-tab.is-active {
+  border-color: var(--home-green-dark);
+  background: #fffdf9;
+  color: var(--home-green-dark);
+}
+
+.shop-tab:focus-visible {
+  outline: 3px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
+/* ── 가구 진열대 — 알처럼 3개씩, 양옆 화살표로 넘긴다 ── */
+.shop-furniture-stage {
+  position: absolute;
+  left: 50%;
+  /* 알 진열대(.shop-display-shelf)와 같은 높이에 카드 아랫단을 맞춘다 */
+  bottom: 155px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  align-items: center;
+  column-gap: 16px;
+  width: min(940px, calc(100% - 32px));
+  transform: translateX(-50%);
+}
+
+.shop-furniture-shelf {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+}
+
+.shop-page-arrow {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 2px solid rgba(255, 253, 249, 0.7);
+  border-radius: 50%;
+  background: rgba(255, 253, 249, 0.92);
+  color: var(--home-green-dark);
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(45, 35, 28, 0.16);
+  transition: transform 0.15s ease;
+}
+
+.shop-page-arrow:hover:not(:disabled) {
+  transform: scale(1.08);
+}
+
+.shop-page-arrow:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.shop-page-arrow:focus-visible {
+  outline: 3px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
+/* 쪽 표시는 카드 아래에 띄워 둔다 — 진열대 높이 계산에서 빠지도록 */
+.shop-page-indicator {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  white-space: nowrap;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.9);
+  color: var(--home-muted);
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.shop-furniture-item .shop-display-info h2 {
+  font-size: 18px;
+}
+
+.shop-furniture-item .shop-display-info p {
+  font-size: 13px;
+}
+
+.shop-furniture-item .shop-display-info small {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.shop-furniture-item.is-locked .shop-display-image-wrap {
+  opacity: 0.6;
+}
+
 .shop-furniture-emoji {
-  font-size: 28px;
+  font-size: 84px;
   line-height: 1;
 }
-.shop-furniture-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.shop-furniture-info strong {
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+
 .shop-furniture-owned {
+  margin: -2px 0 6px;
   font-style: normal;
   font-size: 11px;
   font-weight: 800;
-  padding: 1px 7px;
+  padding: 1px 8px;
   border-radius: 999px;
   background: var(--home-green-soft);
   color: var(--home-green-dark);
 }
-.shop-furniture-info small {
-  font-size: 12px;
-  color: var(--home-muted);
-  font-weight: 600;
-}
+
 .shop-furniture-theme {
-  color: #5b4bb5 !important;
+  color: #5b4bb5;
 }
+
 .shop-furniture-lock {
-  color: #9a6b12 !important;
+  color: #9a6b12;
 }
-.shop-furniture-buy {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-.shop-furniture-buy strong {
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.shop-furniture-buy .shop-buy-btn {
-  margin-top: 0;
-  padding: 7px 14px;
-  font-size: 13px;
+
+@media (max-width: 720px) {
+  .shop-tabs {
+    top: auto;
+    right: auto;
+    left: 18px;
+    bottom: 14px;
+  }
+
+  .shop-tab {
+    width: 60px;
+    height: 60px;
+    font-size: 12px;
+  }
+
+  .shop-tab img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .shop-furniture-stage {
+    bottom: 86px;
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    column-gap: 8px;
+  }
+
+  .shop-furniture-shelf {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-page-arrow {
+    width: 40px;
+    height: 40px;
+  }
 }

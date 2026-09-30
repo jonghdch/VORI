@@ -52,7 +52,7 @@ public class PetGrowthLog {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false,
-        columnDefinition = "ENUM('EXPENSE_SAVING','GOAL_ACHIEVED','BONUS')")
+        columnDefinition = "ENUM('EXPENSE_SAVING','GOAL_ACHIEVED','BONUS','DAILY_JUDGMENT','ATTENDANCE_ITEM','FURNITURE_BONUS')")
     private GrowthReason reason;
 
     @Column(name = "created_at", nullable = false)

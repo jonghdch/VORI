@@ -3,7 +3,8 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toIsoDate } from "./utils";
 import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
 import { listExpensesByDate } from "../../api/ledger";
-import { startTodayJudgment } from "../../api/dailyJudgment";
+import { startDateJudgment } from "../../api/dailyJudgment";
+import JudgmentResults, { judgmentReason } from "./JudgmentResults";
 import { canUseAiJudge } from "../../config";
 import "./WalletEntry.css";
 
@@ -17,7 +18,7 @@ import "./WalletEntry.css";
 function WalletAnalysisPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const dateStr = params.get("date") || toIsoDate();
+  const dateStr = user?.role === "ADMIN" ? params.get("date") || toIsoDate() : toIsoDate();
   // 이벤트 활성 시간대 가드. 카드 버튼과 동일 기준(config.isAiJudgeOpen).
   // 진입 시점에 1회만 판정해 고정 — 매 렌더 재평가하면 23:59에 답변을
   // 타이핑하던 사용자가 자정을 넘는 순간 리다이렉트로 축출되고 작성 내용이 날아간다.
@@ -50,6 +51,10 @@ function WalletAnalysisPage({ user }) {
     setLoading(true);
     setLoadProgress(8);
     setLoadError(false);
+    setJudgment(null);
+    setPage(1);
+    setAnswers({});
+    submittedRef.current.clear();
     const tryFetch = async () => {
       if (cancelled) return;
       try {
@@ -59,7 +64,7 @@ function WalletAnalysisPage({ user }) {
         ]);
         if (cancelled) return;
         setExpenses(expenseData);
-        if (data.length === 0 && attempts < MAX_RETRIES) {
+        if (data.length === 0 && expenseData.some((e) => e.signalFinal === "RED" && !e.reasonCategory && !e.isRecurring) && attempts < MAX_RETRIES) {
           attempts++;
           setLoadProgress(45 + attempts * 8);
           setTimeout(tryFetch, RETRY_INTERVAL_MS);
@@ -79,7 +84,7 @@ function WalletAnalysisPage({ user }) {
     const start = async () => {
       try {
         setLoadProgress(20);
-        const result = await startTodayJudgment();
+        const result = await startDateJudgment(dateStr);
         if (cancelled) return;
         setJudgment(result);
         setLoadProgress(45);
@@ -102,14 +107,14 @@ function WalletAnalysisPage({ user }) {
   }
 
   const total = inquiries.length;
-  const dailySignal = judgment?.signal || getDailySignal(expenses);
-  const judgedExpenseCount = judgment?.expenseCount ?? expenses.length;
+  const dailySignal = getDailySignal(expenses);
+  const judgedExpenseCount = expenses.length;
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () => setPage((p) => Math.min(total, p + 1));
 
   // 이벤트 종료/닫기는 모두 가계부로 복귀.
-  const goDone = () => navigate("/wallet");
-  const goBack = () => navigate("/wallet");
+  const goDone = () => navigate(`/wallet?date=${dateStr}`);
+  const goBack = goDone;
 
   // 답변 입력된 inquiry 들만 POST. 완료 뒤 갱신된 소비별 판정 결과를 보여준다.
   const submitAll = async () => {
@@ -126,7 +131,6 @@ function WalletAnalysisPage({ user }) {
       }
       const refreshedExpenses = await listExpensesByDate(dateStr);
       setExpenses(refreshedExpenses);
-      setJudgment(null);
       setInquiries([]);
       setPage(1);
     } catch (e) {
@@ -150,6 +154,7 @@ function WalletAnalysisPage({ user }) {
       </header>
 
       <main className="ledger-entry-main">
+        <p className="ledger-subtitle">{dateStr} 소비 판정{user?.role === "ADMIN" ? " · 관리자 시연" : ""}</p>
         {loading ? (
           <div className="ledger-center-y">
             <div className="ledger-title-block ledger-title-block-center">
@@ -228,18 +233,20 @@ function WalletAnalysisPage({ user }) {
                 <strong>{signalLabel(dailySignal)}</strong>
               </div>
               <h1 className="ledger-title">
-                {judgedExpenseCount === 0 ? "오늘은 지출이 없습니다" : "오늘의 소비 판정이 완료됐어요"}
+                {judgedExpenseCount === 0 ? "선택한 날짜에는 지출이 없습니다" : "소비 판정이 완료됐어요"}
               </h1>
               <p className="ledger-subtitle">
                 {judgedExpenseCount === 0
-                  ? "돈을 쓰지 않은 오늘이 진정한 절약이에요. 초록색 판정을 받았어요!"
+                  ? "지출이 없어 초록으로 표시했어요. 지급 보상은 아래에서 확인하세요."
                   : dailySignal === "GREEN"
-                    ? "오늘은 평소보다 알뜰하게 소비했어요."
+                    ? "모든 지출이 초록으로 분류됐어요. 항목별 판정 근거를 확인해 보세요."
                     : dailySignal === "GRAY"
-                      ? "오늘은 평소와 비슷한 수준으로 소비했어요."
-                      : "평소보다 큰 지출이 있었지만 답변할 AI 질문은 없어요."}
+                      ? "주황 지출이 포함되어 있어요. 하루 색상은 빨강, 주황, 초록 순으로 가장 주의가 필요한 지출을 따라요."
+                      : "빨강 지출이 포함되어 있어요. 아래 항목별 금액 비교와 사유를 확인해 보세요."}
               </p>
             </div>
+            {judgment?.alreadyJudged && <p className="ledger-hint">이미 판정한 날짜예요. 현재 지출의 결과와 기존 지급 내역을 보여드려요.</p>}
+            <JudgmentResults expenses={expenses} judgment={judgment} />
             <div className="ledger-actions">
               <div className="ledger-actions-row">
                 <button type="button" className="ledger-next" onClick={goDone}>
@@ -253,7 +260,7 @@ function WalletAnalysisPage({ user }) {
           <>
             <div className="ledger-title-block">
               <h1 className="ledger-title">
-                오늘의 소비를 분석해볼게요
+                선택한 날짜의 소비를 분석해볼게요
                 <span className="ledger-info-wrap">
                   <button
                     type="button"
@@ -425,26 +432,6 @@ function signalLabel(signal) {
   if (signal === "GREEN") return "초록 · 절약";
   if (signal === "RED") return "빨강 · 과소비";
   return "주황 · 보통";
-}
-
-function judgmentReason(expense, signal) {
-  const savedAmount = Number(expense.savedAmount);
-  if (signal === "GREEN") {
-    if (Number.isFinite(savedAmount) && savedAmount > 0) {
-      return `평소 소비 기준보다 ${savedAmount.toLocaleString("ko-KR")}원 절약한 소비예요.`;
-    }
-    if (expense.signalInitial && expense.signalInitial !== "GREEN") {
-      return "작성한 소비 사유가 반영되어 합리적인 지출로 판정됐어요.";
-    }
-    return "평소 소비 범위보다 알뜰하게 사용한 합리적인 지출이에요.";
-  }
-  if (signal === "RED") {
-    return "평소 소비 범위보다 금액이 커서 한 번 더 확인이 필요한 지출이에요.";
-  }
-  if (expense.signalInitial && expense.signalInitial !== expense.signalFinal) {
-    return "작성한 소비 사유를 반영해 일반적인 소비 범위로 조정됐어요.";
-  }
-  return "평소와 비슷한 범위의 소비로 판정됐어요.";
 }
 
 export default WalletAnalysisPage;

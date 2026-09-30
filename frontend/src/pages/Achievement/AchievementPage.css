@@ -6,11 +6,38 @@
   margin-bottom: 20px;
 }
 
-.ach-head h1 {
+.ach-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
-  font-size: 26px;
+}
+
+/* 제목 앞에 살짝 기울어진 메달 배지 — 출석 페이지 제목 배지와 같은 느낌이되,
+   업적·보상을 뜻하는 금색으로 구분했다 */
+.ach-title-badge {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #f3c869 0%, #e2af3d 55%, #c4901f 100%);
+  font-size: 20px;
+  transform: rotate(7deg);
+  box-shadow: 0 3px 0 rgba(168, 122, 28, 0.4), 0 5px 10px rgba(168, 122, 28, 0.2);
+}
+
+.ach-title-text {
+  font-size: 27px;
   font-weight: 900;
+  letter-spacing: -0.02em;
   color: var(--home-text);
+}
+
+.ach-title-slash {
+  margin: 0 7px;
+  color: var(--home-muted);
+  font-weight: 700;
 }
 
 .ach-head p {
