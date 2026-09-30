@@ -105,7 +105,12 @@ function PetDexPage({ onLogout }) {
     <AppShell activeTop="raise" activeSide="dex" onLogout={onLogout}>
       <main className="home-main dex-main">
         <header className="dex-head">
-          <h1>펫 도감</h1>
+          <h1 className="dex-title">
+            <span className="dex-title-badge" aria-hidden>
+              📖
+            </span>
+            펫 도감
+          </h1>
           <p>
             키울 수 있는 펫 {PET_CATALOG.length}종을 모두 모았어요. 지금 키우는 펫과
             끝까지 키워 분양한 펫이 표시돼요.

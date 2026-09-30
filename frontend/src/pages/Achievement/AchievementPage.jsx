@@ -163,7 +163,14 @@ function AchievementPage({ onLogout }) {
     <AppShell activeTop="home" activeSide="achievement" onLogout={onLogout}>
       <main className="home-main ach-main">
         <header className="ach-head">
-          <h1>업적 / 칭호</h1>
+          <h1 className="ach-title">
+            <span className="ach-title-badge" aria-hidden>
+              🏅
+            </span>
+            <span className="ach-title-text">
+              업적<span className="ach-title-slash">/</span>칭호
+            </span>
+          </h1>
           <p>
             가계부·펫 활동으로 업적을 쌓으면 같은 조건의 칭호가 열려요. 획득한 칭호는
             홈에 표시할 수 있어요.
