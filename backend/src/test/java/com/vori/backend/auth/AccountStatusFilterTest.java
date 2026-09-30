@@ -118,7 +118,7 @@ class AccountStatusFilterTest {
      * 막으면 제재된 옛 세션이 남은 브라우저에서 다른 계정 로그인이 첫 시도에 403 이 된다.
      */
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {"/api/auth/logout", "/api/auth/login", "/api/auth/signup"})
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"/api/auth/logout", "/api/auth/login", "/api/auth/signup", "/api/auth/google"})
     void authEndpointsAreNotBlockedByOldSession(String path) throws Exception {
         loginAs(Role.USER);
         MockHttpServletRequest req = new MockHttpServletRequest("POST", path);

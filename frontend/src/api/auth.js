@@ -39,6 +39,25 @@ export async function login(email, password) {
   return res.json(); // { id, email, nickname, role }
 }
 
+/**
+ * 구글 로그인 — Google Identity Services 가 준 credential(ID 토큰)을 백엔드에 넘긴다.
+ * 백엔드가 토큰을 검증하고 계정을 찾거나 만든 뒤 이메일 로그인과 같은 세션 쿠키를 준다.
+ * 401 = 토큰 검증 실패, 403 = 이메일 미확인·제재 계정, 503 = 서버에 클라이언트 ID 미설정.
+ */
+export async function loginWithGoogle(credential) {
+  const res = await fetch(`${API_BASE}/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ credential }),
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `구글 로그인 실패 (${res.status})`);
+    throw new AuthError(msg, res.status);
+  }
+  return res.json(); // { id, email, nickname, role }
+}
+
 export async function logout() {
   const res = await fetch(`${API_BASE}/auth/logout`, {
     method: "POST",

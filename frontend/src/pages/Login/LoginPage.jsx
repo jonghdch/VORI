@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 import { login } from "../../api/auth";
+import GoogleSignInButton from "../../components/GoogleSignInButton";
 import { getOnboardingStatus } from "../../api/onboarding";
 
 // 로그인 페이지.
@@ -15,21 +16,25 @@ function LoginPage({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // 로그인 뒤 갈 곳 — 이메일·구글 로그인이 같이 쓴다. 설문 전이면 설문, 튜토리얼 전이면 온보딩.
+  const afterLogin = async (user) => {
+    if (typeof onLogin === "function") onLogin(user);
+    const status = await getOnboardingStatus().catch(() => null);
+    if (status && !status.profileCompleted) {
+      navigate("/signup/profile");
+    } else if (status && !status.tutorialDone) {
+      navigate("/onboarding");
+    } else {
+      navigate("/home");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const user = await login(email, password);
-      if (typeof onLogin === "function") onLogin(user);
-      const status = await getOnboardingStatus().catch(() => null);
-      if (status && !status.profileCompleted) {
-        navigate("/signup/profile");
-      } else if (status && !status.tutorialDone) {
-        navigate("/onboarding");
-      } else {
-        navigate("/home");
-      }
+      await afterLogin(await login(email, password));
     } catch (err) {
       setError(err.message || "로그인 중 오류가 발생했어요");
     } finally {
@@ -130,8 +135,16 @@ function LoginPage({ onLogin }) {
             </button>
           </form>
 
-          {/* 소셜 로그인 — 백엔드 OAuth 미구현. 동작 없는 버튼을 노출하지 않고,
-              구현되면 이 자리에 되살린다. */}
+          {/* 구글 로그인 — REACT_APP_GOOGLE_CLIENT_ID 가 있을 때만 버튼이 그려진다 */}
+          {process.env.REACT_APP_GOOGLE_CLIENT_ID && (
+            <>
+              <div className="login-divider">또는</div>
+              <GoogleSignInButton
+                onLogin={afterLogin}
+                onError={(msg) => setError(msg)}
+              />
+            </>
+          )}
 
           {/* ───────── 회원가입 안내 ───────── */}
           <p className="login-signup">

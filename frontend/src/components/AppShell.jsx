@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AccountMenu from "./AccountMenu";
 import AdminTools from "./AdminTools";
+import PetNameGate from "./PetNameGate";
 import { getMe } from "../api/user";
 import "../pages/Home/HomeDashboard.css";
 
@@ -261,6 +262,7 @@ function AppShell({
       </div>
 
       {isAdmin && <AdminTools />}
+      <PetNameGate />
     </div>
   );
 }

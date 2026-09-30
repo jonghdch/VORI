@@ -4,7 +4,7 @@ import AppShell from "../../components/AppShell";
 import { PetArt, STAGE_LABEL, TIER_LABEL, VARIANT_LABEL } from "../../components/petVisual";
 import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
-import { getMe } from "../../api/user";
+import { getMe, notifyPetChanged } from "../../api/user";
 import { CATEGORY_LABEL, FurnitureArt, STAT_LABEL, isSurface } from "../../components/furnitureVisual";
 import eggBasicImage from "../../assets/shop/egg-basic.png";
 import eggPremiumImage from "../../assets/shop/egg-premium.png";
@@ -141,6 +141,8 @@ function ShopPage({ user, onLogout }) {
     try {
       const res = await openEgg(egg.id);
       setResult(res);
+      // 새 펫이 생겼다 — 이름 짓기 팝업(PetNameGate)이 이 신호를 받고 뜬다
+      notifyPetChanged();
       await reload();
     } catch (e) {
       // 서버가 보여줄 문구를 message 로 준다(GlobalExceptionHandler). 상태 코드로 문구를

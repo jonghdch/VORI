@@ -4,11 +4,11 @@ import AppShell from "../../components/AppShell";
 import {
   PetArt,
   STAGE_LABEL,
-  TIER_LABEL,
   VARIANT_LABEL,
   nextStage,
+  petDisplayName,
 } from "../../components/petVisual";
-import { getActivePet, listPets, releasePet } from "../../api/pet";
+import { getActivePet, interactWithPet, listPets, releasePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
 import { listMyFurniture, placeFurniture as apiPlaceFurniture, unplaceFurniture } from "../../api/furniture";
 import { listThemes } from "../../api/theme";
@@ -22,6 +22,7 @@ import {
   STAT_LABEL,
   isSurface,
 } from "../../components/furnitureVisual";
+import { PetActionMenu, PetReaction, REACTION_MS, pickLine } from "./PetInteraction";
 import roomDefaultImage from "../../assets/backgrounds/room-default.png";
 import roomWoodImage from "../../assets/backgrounds/room-wood.png";
 import roomMintImage from "../../assets/backgrounds/room-mint.png";
@@ -105,6 +106,45 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+// 방 카드 아래에 한 문장씩 돌아가며 보여주는 팁
+const ROOM_TIPS = [
+  "펫과 가구를 드래그해서 원하는 위치에 배치해요.",
+  "펫을 우클릭하면 쓰다듬거나 칭찬할 수 있어요.",
+  "가구는 더블클릭하면 인벤토리로 회수돼요.",
+  "배치한 가구만 분양가 보너스에 반영돼요.",
+];
+
+function pickTipIndex(previous) {
+  const next = Math.floor(Math.random() * (ROOM_TIPS.length - 1));
+  // 직전 팁은 건너뛴다 — 같은 문장이 연달아 나오면 멈춘 것처럼 보인다
+  return previous === undefined || next < previous ? next : next + 1;
+}
+
+/**
+ * 팁 한 문장이 나타났다 사라지고, 사라지면 다른 팁으로 바뀐다. 한 번의 나타남~사라짐이
+ * CSS 애니메이션(pet-room-tip) 한 번이고, 끝나는 시점에 다음 문장을 고른다.
+ * 마우스를 올리거나 초점을 두면 멈춰서 끝까지 읽을 수 있다.
+ */
+function RoomTips() {
+  const [tipIndex, setTipIndex] = useState(() =>
+    Math.floor(Math.random() * ROOM_TIPS.length),
+  );
+  return (
+    <div className="pet-room-help" role="note" tabIndex={0} aria-label="마이룸 팁">
+      <span className="pet-room-help-label" aria-hidden>
+        팁
+      </span>
+      <p
+        key={tipIndex}
+        className="pet-room-help-text"
+        onAnimationEnd={() => setTipIndex(pickTipIndex(tipIndex))}
+      >
+        {ROOM_TIPS[tipIndex]}
+      </p>
+    </div>
+  );
+}
+
 function PetPage({ user, onLogout }) {
   const roomStageRef = useRef(null);
   const furniturePointerRef = useRef({ id: null, time: 0, moved: false, x: 0, y: 0 });
@@ -152,7 +192,7 @@ function PetPage({ user, onLogout }) {
   const handleRelease = async () => {
     if (!pet) return;
     const ok = window.confirm(
-      `${pet.speciesName}을(를) 분양할까요? 분양하면 더 이상 키울 수 없고, 스탯에 따라 코인을 받아요.`,
+      `${petDisplayName(pet)}을(를) 분양할까요? 분양하면 더 이상 키울 수 없고, 스탯에 따라 코인을 받아요.`,
     );
     if (!ok) return;
     setReleasing(true);
@@ -162,7 +202,7 @@ function PetPage({ user, onLogout }) {
       await loadPets();
       setNotice({
         kind: "ok",
-        text: `${released.speciesName}을(를) 분양하고 ${coin(released.releaseValue)}을 받았어요.`,
+        text: `${petDisplayName(released)}을(를) 분양하고 ${coin(released.releaseValue)}을 받았어요.`,
       });
     } catch (e) {
       setNotice({
@@ -266,8 +306,9 @@ function PetPage({ user, onLogout }) {
   const selectedPet = pet
     ? {
         id: String(pet.id),
-        name: pet.speciesName ?? "펫",
-        type: [TIER_LABEL[pet.tier], STAGE_LABEL[pet.stage], VARIANT_LABEL[pet.variant]]
+        name: petDisplayName(pet),
+        // 이름을 지은 펫은 이름이 제목이 되므로, 종족은 여기 덧붙여 계속 보이게 한다
+        type: [pet.name ? pet.speciesName : null, STAGE_LABEL[pet.stage], VARIANT_LABEL[pet.variant]]
           .filter(Boolean)
           .join(" · "),
         appearanceKey: pet.appearanceKey,
@@ -423,6 +464,73 @@ function PetPage({ user, onLogout }) {
     setDragTarget(null);
   };
 
+  // 펫 우클릭 메뉴(쓰다듬기·칭찬하기 등)와 그 반응. 반응은 바로 보여주고, 매력 보너스(1%)는
+  // 서버가 추첨해서 알려주면 그때 덧붙인다.
+  const petRef = useRef(null);
+  const petIconRef = useRef(null);
+  const reactionSeqRef = useRef(0);
+  const [petMenu, setPetMenu] = useState(null); // { x, y } 화면 좌표
+  const [reaction, setReaction] = useState(null); // { id, actionId, line, particle, charmUp? }
+
+  const openPetMenu = (event) => {
+    event.preventDefault();
+    setDragTarget(null); // macOS ctrl+클릭은 드래그 시작과 우클릭이 같이 들어온다
+    // 키보드(메뉴 키·Shift+F10·Enter)로 열면 포인터 좌표가 없으니 펫 가운데에 띄운다
+    const hasPointer = event.clientX > 0 || event.clientY > 0;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setPetMenu(
+      hasPointer
+        ? { x: event.clientX, y: event.clientY }
+        : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+    );
+  };
+
+  const closePetMenu = useCallback((restoreFocus) => {
+    setPetMenu(null);
+    if (restoreFocus) petRef.current?.focus();
+  }, []);
+
+  const handlePetAction = (action) => {
+    closePetMenu(true);
+    reactionSeqRef.current += 1;
+    const reactionId = reactionSeqRef.current;
+    setReaction((previous) => ({
+      id: reactionId,
+      actionId: action.id,
+      line: pickLine(action, previous?.line),
+      particle: action.particle,
+    }));
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!reduceMotion) {
+      petIconRef.current?.animate?.(action.motion.keyframes, {
+        duration: action.motion.duration,
+        easing: "ease-in-out",
+      });
+    }
+
+    interactWithPet()
+      .then((result) => {
+        if (!result?.charmUp) return;
+        setPet(result.pet);
+        // 그사이 다른 반응으로 넘어갔으면 말풍선 옆 표시는 건너뛰고 안내 문구만 남긴다
+        setReaction((current) =>
+          current?.id === reactionId ? { ...current, charmUp: true } : current,
+        );
+        setNotice({ kind: "ok", text: `${petDisplayName(result.pet)}의 매력이 1 올랐어요!` });
+      })
+      .catch((e) => {
+        if (e.status !== 401) setNotice({ kind: "err", text: e.message });
+      });
+  };
+
+  // 매력 보너스 표시가 뒤늦게 붙어도 사라지는 시각은 그대로 두려고 id 에만 묶는다
+  const reactionId = reaction?.id;
+  useEffect(() => {
+    if (reactionId == null) return undefined;
+    const timer = setTimeout(() => setReaction(null), REACTION_MS);
+    return () => clearTimeout(timer);
+  }, [reactionId]);
+
   const handleFurniturePointerDown = (item, event) => {
     if (event.button !== 0) return;
     const previous = furniturePointerRef.current;
@@ -555,6 +663,7 @@ function PetPage({ user, onLogout }) {
                       left: `${petPosition.x}%`,
                       top: `${petPosition.y}%`,
                     }}
+                    ref={petRef}
                     role="button"
                     tabIndex={0}
                     onPointerDown={(event) => startDrag({ type: "pet", id: selectedPet.id }, event)}
@@ -563,11 +672,28 @@ function PetPage({ user, onLogout }) {
                     }
                     onPointerUp={endDrag}
                     onPointerCancel={endDrag}
-                    aria-label={`${selectedPet.name} 이동`}
-                    title={`${selectedPet.name} 드래그 이동`}
+                    onContextMenu={openPetMenu}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") openPetMenu(event);
+                    }}
+                    aria-haspopup="menu"
+                    aria-expanded={petMenu !== null}
+                    aria-label={`${selectedPet.name} 이동, 상호작용 메뉴 열기`}
+                    title={`${selectedPet.name} 드래그 이동, 우클릭 상호작용`}
                   >
+                    {reaction && (
+                      <PetReaction
+                        key={reaction.id}
+                        reaction={reaction}
+                        petPosition={petPosition}
+                      />
+                    )}
                     <span className="pet-current-shadow" aria-hidden />
-                    <span className="pet-current-icon" aria-label={selectedPet.name}>
+                    <span
+                      ref={petIconRef}
+                      className="pet-current-icon"
+                      aria-label={selectedPet.name}
+                    >
                       <PetArt
                         appearanceKey={selectedPet.appearanceKey}
                         stage={selectedPet.stage}
@@ -594,10 +720,14 @@ function PetPage({ user, onLogout }) {
                 )}
               </div>
 
-              <p className="pet-room-help">
-                펫과 가구를 드래그해서 원하는 위치에 배치해요. 가구는 더블클릭하면 인벤토리로 회수돼요.
-                배치한 가구만 분양가 보너스에 반영돼요.
+              {/* 펫 반응 대사를 스크린리더에 알리는 상시 영역 — 보이는 말풍선은 aria-hidden */}
+              <p className="pet-reaction-status" role="status">
+                {reaction && selectedPet
+                  ? `${selectedPet.name}: ${reaction.line}${reaction.charmUp ? " 매력이 1 올랐어요." : ""}`
+                  : ""}
               </p>
+
+              <RoomTips />
             </section>
           </div>
 
@@ -641,7 +771,7 @@ function PetPage({ user, onLogout }) {
                         <div>
                           <strong>{selectedPet.name}</strong>
                           <small>{selectedPet.type}</small>
-                          <p>{formatDate(pet.hatchedAt)} 부화 · 스탯 합 {pet.statTotal}</p>
+                          <p>{formatDate(pet.hatchedAt)} 부화 · 경험치 {pet.statTotal}</p>
                         </div>
                       </div>
 
@@ -673,7 +803,7 @@ function PetPage({ user, onLogout }) {
                         <p className="pet-evolve-help">
                           {evolution
                             ? "합리적인 지출로 절약하면 스탯이 올라 다음 단계로 자라요."
-                            : "다 자란 펫은 분양해서 코인으로 바꿀 수 있어요. 분양가 = 스탯 합 × 10."}
+                            : "다 자란 펫은 분양해서 코인으로 바꿀 수 있어요. 분양가 = 경험치 × 10."}
                         </p>
                         {pet.stage === "ADULT" && (
                           <button
@@ -849,9 +979,9 @@ function PetPage({ user, onLogout }) {
                             />
                           </span>
                           <div className="pet-history-info">
-                            <strong>{p.speciesName}</strong>
+                            <strong>{petDisplayName(p)}</strong>
                             <small>
-                              {[TIER_LABEL[p.tier], STAGE_LABEL[p.stage], VARIANT_LABEL[p.variant]]
+                              {[p.name ? p.speciesName : null, STAGE_LABEL[p.stage], VARIANT_LABEL[p.variant]]
                                 .filter(Boolean)
                                 .join(" · ")}
                             </small>
@@ -878,6 +1008,15 @@ function PetPage({ user, onLogout }) {
             </section>
           </aside>
         </div>
+
+        {petMenu && selectedPet && (
+          <PetActionMenu
+            anchor={petMenu}
+            petName={selectedPet.name}
+            onSelect={handlePetAction}
+            onClose={closePetMenu}
+          />
+        )}
       </main>
     </AppShell>
   );

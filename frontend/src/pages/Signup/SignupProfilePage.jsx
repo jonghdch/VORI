@@ -15,7 +15,7 @@ const STEPS = [
   {
     key: "monthlyBudgetBand",
     title: "한 달에 자유롭게 쓸 수 있는 돈은 어느 정도인가요?",
-    caption: "처음 판정할 때 소비 규모를 너무 크게 오해하지 않게 도와줘요.",
+    caption: "정확한 소비 판정을 위한 정보 수집이에요.",
     options: [
       ["UNDER_20", "20만원 이하"],
       ["BAND_20_40", "20만~40만원"],

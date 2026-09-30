@@ -15,7 +15,8 @@
 |---|---|---|---|---|
 | 사용자 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 사용자 고유 번호 |
 | 이메일 | `email` | UQ | `VARCHAR(100) NOT NULL` | 로그인 이메일 |
-| 비밀번호 해시 | `password_hash` |  | `VARCHAR(255) NOT NULL` | bcrypt 등 해시 결과 |
+| 비밀번호 해시 | `password_hash` |  | `VARCHAR(255) NULL` | bcrypt 등 해시 결과. NULL = 구글로만 가입한 계정 (V19) |
+| 구글 계정 식별자 | `google_sub` |  | `VARCHAR(64) NULL UNIQUE` | 구글 ID 토큰의 `sub`. NULL = 구글 미연결. 이메일이 아니라 이 값으로 매칭 (V19) |
 | 닉네임 | `nickname` |  | `VARCHAR(30) NOT NULL` | 화면 표시 이름 |
 | 이름 | `name` |  | `VARCHAR(30)` | 튜토리얼 수집값 |
 | 나이 | `age` |  | `TINYINT UNSIGNED` | 튜토리얼 수집값 |
@@ -354,6 +355,7 @@ UNIQUE(user_id, report_date)
 | 펫 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 펫 고유 번호 |
 | 사용자 식별자 | `user_id` | FK, IDX | `BIGINT NOT NULL` | → `users(id)` |
 | 종족 식별자 | `species_id` | FK | `BIGINT NOT NULL` | → `pet_species(id)` |
+| 펫 이름 | `name` |  | `VARCHAR(10) NULL` | 사용자가 지어 준 이름(1~10자). NULL이면 아직 이름을 짓지 않은 펫 |
 | 알 식별자 | `egg_id` | FK, UQ | `BIGINT NULL` | → `eggs(id)`, 시작 펫이면 NULL |
 | 부화 일시 | `hatched_at` |  | `DATETIME NULL` | 부화 시각 |
 | 에너지 스탯 | `stat_energy` |  | `INT DEFAULT 0` | `ENERGY` 절약 성장값 |
@@ -371,6 +373,8 @@ UNIQUE(user_id, report_date)
 ```sql
 INDEX(user_id, released_at)
 ```
+
+`name` 추가 마이그레이션: `V25__pet_name.sql`.
 
 ---
 

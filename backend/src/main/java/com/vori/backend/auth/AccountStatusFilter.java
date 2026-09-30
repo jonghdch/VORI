@@ -58,7 +58,7 @@ public class AccountStatusFilter extends OncePerRequestFilter {
      *   로그인 자체의 제재 확인은 CustomUserDetailsService 가 한다
      */
     private static final Set<String> SESSION_ENDPOINTS =
-        Set.of("/api/auth/logout", "/api/auth/login", "/api/auth/signup");
+        Set.of("/api/auth/logout", "/api/auth/login", "/api/auth/signup", "/api/auth/google");
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {

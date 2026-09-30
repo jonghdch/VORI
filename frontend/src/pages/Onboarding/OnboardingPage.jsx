@@ -109,11 +109,6 @@ function OnboardingPage() {
             </div>
           </div>
 
-          <div className="signup-onboarding-copy">
-            <p>처음 몇 번은 기록이 쌓이도록 부드럽게 판정해요.</p>
-            <p>빨간불이 뜨면 금액만 보지 않고, 왜 썼는지도 함께 물어봐요.</p>
-          </div>
-
           <div className="signup-actions">
             <button
               type="button"

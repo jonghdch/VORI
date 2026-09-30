@@ -32,6 +32,10 @@ public class Pet {
     @Column(name = "species_id", nullable = false)
     private Long speciesId;
 
+    // 사용자가 지어 준 이름(1~10자). NULL = 아직 이름을 짓지 않음 — 화면이 이름 짓기 팝업을 띄운다.
+    @Column(length = 10)
+    private String name;
+
     @Column(name = "egg_id", unique = true)
     private Long eggId;
 
@@ -132,6 +136,11 @@ public class Pet {
         this.statIq = base + (rem > 2 ? 1 : 0);
         this.statEndurance = base;
         this.stage = target;
+    }
+
+    /** 이름을 짓는다. 길이·공백 검사는 요청 DTO(PetNameRequest)가 맡는다. */
+    public void rename(String name) {
+        this.name = name;
     }
 
     public boolean isReleased() {
