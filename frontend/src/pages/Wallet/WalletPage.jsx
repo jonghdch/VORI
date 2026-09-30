@@ -37,6 +37,13 @@ const SIGNAL_BADGE = {
   RED: "ledger-history-badge--red",
 };
 
+// 상세 패널의 AI 판정 상자 색. 표 배지와 같은 판정 → 같은 색.
+const SIGNAL_DETAIL = {
+  GREEN: "ledger-detail-ai--green",
+  GRAY: "ledger-detail-ai--gray",
+  RED: "ledger-detail-ai--red",
+};
+
 // 카테고리/타입 → 아이콘 (백엔드가 아이콘을 주지 않으므로 프론트에서 매핑).
 const CATEGORY_ICON = {
   식비: "🍚",
@@ -744,7 +751,8 @@ function WalletPage({ user, onLogout }) {
                   </div>
                 )}
                 {selectedRow.aiStatus && (
-                  <div className="ledger-detail-ai">
+                  // 표 배지(SIGNAL_BADGE)와 같은 색을 쓴다 — 예전엔 판정과 상관없이 초록이었다.
+                  <div className={`ledger-detail-ai ${SIGNAL_DETAIL[selectedRow.signal] || "ledger-detail-ai--gray"}`}>
                     <span className="ledger-detail-ai-badge">
                       AI 판정 · {selectedRow.aiStatus}
                     </span>
