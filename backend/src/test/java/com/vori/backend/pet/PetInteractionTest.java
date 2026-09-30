@@ -58,7 +58,24 @@ class PetInteractionTest {
     }
 
     @Test
-    @DisplayName("당첨이면 매력이 1 오르고 BONUS 성장 이력이 남는다")
+    @DisplayName("오늘 상호작용 보너스가 상한에 닿으면 당첨이어도 오르지 않는다 — 자동 호출로 매력을 모으지 못하게")
+    void dailyCapBlocksFarming() {
+        Pet pet = activePet(10, 0);
+        when(growthLogRepository.countByPetIdAndReasonAndCreatedAtGreaterThanEqual(
+                org.mockito.ArgumentMatchers.eq(3L),
+                org.mockito.ArgumentMatchers.eq(GrowthReason.PET_INTERACTION),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn((long) PetService.INTERACT_CHARM_DAILY_CAP);
+
+        PetInteractionResponse response = service.interact(USER_ID, 0);
+
+        assertThat(response.charmUp()).isFalse();
+        assertThat(pet.getStatCharm()).isEqualTo(10);
+        verify(growthLogRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @DisplayName("당첨이면 매력이 1 오르고 PET_INTERACTION 성장 이력이 남는다")
     void winningRollAddsOneCharm() {
         Pet pet = activePet(10, 0);
 
@@ -75,7 +92,7 @@ class PetInteractionTest {
         assertThat(saved.getValue().getStatType()).isEqualTo(StatType.CHARM);
         assertThat(saved.getValue().getDelta()).isEqualTo(1);
         assertThat(saved.getValue().getSavedAmount()).isZero();
-        assertThat(saved.getValue().getReason()).isEqualTo(GrowthReason.BONUS);
+        assertThat(saved.getValue().getReason()).isEqualTo(GrowthReason.PET_INTERACTION);
     }
 
     @Test

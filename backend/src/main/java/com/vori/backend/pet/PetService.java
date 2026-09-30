@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +50,9 @@ public class PetService {
     // 상호작용 1회당 매력이 오를 확률(%)과 오르는 양
     private static final int INTERACT_CHARM_CHANCE_PCT = 1;
     private static final int INTERACT_CHARM_DELTA = 1;
+    // 상호작용으로 매력이 오를 수 있는 하루 횟수. 호출 자체엔 제한이 없어, 자동으로 수만 번 불러
+    // 매력(→ 성장 단계·분양가)을 모으지 못하게 당첨 횟수를 막는다. 1% 라 정상 사용에선 거의 닿지 않는다.
+    static final int INTERACT_CHARM_DAILY_CAP = 3;
 
     /** 현재 키우는 펫. 없으면 null (신규 가입자·직전에 분양한 경우). */
     @Transactional(readOnly = true)
@@ -134,7 +138,10 @@ public class PetService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "키우는 펫이 있어야 상호작용할 수 있습니다"));
 
-        boolean charmUp = roll < INTERACT_CHARM_CHANCE_PCT;
+        boolean charmUp = roll < INTERACT_CHARM_CHANCE_PCT
+                && petGrowthLogRepository.countByPetIdAndReasonAndCreatedAtGreaterThanEqual(
+                        pet.getId(), GrowthReason.PET_INTERACTION, LocalDate.now().atStartOfDay())
+                   < INTERACT_CHARM_DAILY_CAP;
         if (charmUp) {
             pet.addStat(StatType.CHARM, INTERACT_CHARM_DELTA);
             pet.evaluateStage();
@@ -144,7 +151,7 @@ public class PetService {
                     .statType(StatType.CHARM)
                     .delta(INTERACT_CHARM_DELTA)
                     .savedAmount(0)
-                    .reason(GrowthReason.BONUS)
+                    .reason(GrowthReason.PET_INTERACTION)
                     .createdAt(LocalDateTime.now())
                     .build());
             log.info("펫 상호작용 매력 보너스 — userId={}, petId={}, charm={}",
