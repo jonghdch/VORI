@@ -109,39 +109,41 @@ function ScrollToTop() {
 
 // 보호 라우트 — 미인증 사용자는 /login 으로 보냄.
 // 첫 me() 호출 끝날 때까지는 화면 깜빡임 방지 위해 아무것도 렌더 X.
-// 로그인한 화면은 기본으로 소비 프로필 설문을 마쳐야 들어갈 수 있다(설문 필수).
-// 화면마다 OnboardingGate 를 감싸던 방식은 새 화면(출석·지출 입력)에서 빠지기 쉬워, 여기서 한 번에 건다.
-// 설문·온보딩 화면 자신만 allowIncompleteProfile 로 예외.
-function ProtectedRoute({ user, authLoading, allowIncompleteProfile = false, children }) {
+function ProtectedRoute({ user, authLoading, children }) {
   if (authLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (allowIncompleteProfile) return children;
-  return <OnboardingGate user={user}>{children}</OnboardingGate>;
+  return children;
 }
 
-// 온보딩 게이트 — 소비 프로필(월 수입 포함)을 아직 안 적은 계정은 일반 화면 대신 설문으로 보낸다.
-// 온보딩 이전에 만든 계정도 다음 접속 때 한 번 타게 된다. 관리자는 시연·검증 계정이라 제외.
-// 상태는 세션당 한 번만 읽고, 설문을 마치면 vori:onboarding-done 이벤트로 풀린다.
-function OnboardingGate({ user, children }) {
+// 설문 필수 — 소비 프로필 설문을 마치지 않은 로그인 계정은 설문 화면(/signup/profile) 밖으로 못 나간다.
+// 보호 화면뿐 아니라 첫 화면·스토리·로그인·약관 같은 공개 화면도 막는다. 라우트마다 거는 대신
+// <Routes> 전체를 감싸 새 화면이 생겨도 빠지지 않게 한다. 서버도 OnboardingRequiredFilter 로 막는다.
+// 관리자는 설문 대상이 아니다. 상태는 계정이 바뀔 때 한 번 읽고, 설문을 마치면 vori:onboarding-done 으로 풀린다.
+const SURVEY_PATH = "/signup/profile";
+function ProfileRequiredGuard({ user, children }) {
+  const { pathname } = useLocation();
   const [needsProfile, setNeedsProfile] = useState(null); // null = 아직 모름
+  const userId = user?.id;
+  const isAdmin = user?.role === "ADMIN";
   useEffect(() => {
-    if (!user || user.role === "ADMIN") {
+    if (!userId || isAdmin) {
       setNeedsProfile(false);
       return undefined;
     }
     let alive = true;
+    setNeedsProfile(null);
     getOnboardingStatus()
       .then((s) => alive && setNeedsProfile(!s?.profileCompleted))
-      .catch(() => alive && setNeedsProfile(false)); // 상태를 못 읽으면 막지 않는다
+      .catch(() => alive && setNeedsProfile(false)); // 상태를 못 읽으면 화면은 막지 않는다(서버가 막는다)
     const done = () => setNeedsProfile(false);
     window.addEventListener("vori:onboarding-done", done);
     return () => {
       alive = false;
       window.removeEventListener("vori:onboarding-done", done);
     };
-  }, [user]);
-  if (needsProfile === null) return null;
-  if (needsProfile) return <Navigate to="/signup/profile" replace />;
+  }, [userId, isAdmin]);
+  if (userId && needsProfile === null) return null;
+  if (needsProfile && pathname !== SURVEY_PATH) return <Navigate to={SURVEY_PATH} replace />;
   return children;
 }
 
@@ -180,6 +182,7 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <Suspense fallback={null}>
+        <ProfileRequiredGuard user={user}>
         <Routes>
           <Route
             path="/"
@@ -196,15 +199,15 @@ function App() {
           <Route
             path="/signup/profile"
             element={
-              <ProtectedRoute user={user} authLoading={authLoading} allowIncompleteProfile>
-                <SignupProfilePage />
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <SignupProfilePage onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
           <Route
             path="/onboarding"
             element={
-              <ProtectedRoute user={user} authLoading={authLoading} allowIncompleteProfile>
+              <ProtectedRoute user={user} authLoading={authLoading}>
                 <OnboardingPage />
               </ProtectedRoute>
             }
@@ -348,6 +351,7 @@ function App() {
             )}
           </Route>
         </Routes>
+        </ProfileRequiredGuard>
       </Suspense>
     </BrowserRouter>
   );
