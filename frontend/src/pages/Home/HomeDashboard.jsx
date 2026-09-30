@@ -13,12 +13,14 @@ import { PetArt } from "../../components/petVisual";
 import { AI_ACTIVE_FROM_HOUR } from "../../config";
 import "./HomeDashboard.css";
 
-// 스탯 4종 표시 메타 (값은 백엔드 stats 에서).
+// 스탯 4종 표시 메타 — 값은 키우는 펫 본인의 스탯(PetResponse.stat*). 펫 화면과 같은 값이다.
+// 홈 요약(summary.stats)은 지출에 쌓인 변동만 합산해서, 출석 아이템처럼 펫에만 반영되는
+// 변화가 빠진다. 그래서 이 카드에는 쓰지 않는다.
 const STAT_META = [
-  { key: "energy", label: "에너지", color: "var(--home-bar-green)" },
-  { key: "charm", label: "매력", color: "var(--home-bar-red)" },
-  { key: "iq", label: "지능", color: "var(--home-bar-orange)" },
-  { key: "endurance", label: "지구력", color: "var(--home-bar-blue)" },
+  { key: "statEnergy", label: "에너지", color: "var(--home-bar-green)" },
+  { key: "statCharm", label: "매력", color: "var(--home-bar-red)" },
+  { key: "statIq", label: "지능", color: "var(--home-bar-orange)" },
+  { key: "statEndurance", label: "지구력", color: "var(--home-bar-blue)" },
 ];
 
 const won = (n) => `${(n ?? 0).toLocaleString("ko-KR")}원`;
@@ -43,7 +45,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     };
   }, []);
 
-  // 키우는 펫(이름·외형) + 최신 일일 리포트(펫 말풍선). 둘 다 실패해도 홈은 떠야 하므로 조용히 fallback.
+  // 키우는 펫(이름·외형·스탯) + 최신 일일 리포트(펫 말풍선). 둘 다 실패해도 홈은 떠야 하므로 조용히 fallback.
   const [activePet, setActivePet] = useState(null);
   const [dailyReport, setDailyReport] = useState(null);
   const [titles, setTitles] = useState([]);
@@ -121,7 +123,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     weekday: "long",
   }).format(today);
 
-  const stats = summary?.stats;
+  // 펫이 없으면(분양 직후 등) 0 으로 그린다.
+  const stats = activePet;
   const spending = summary?.spending;
   const recent = summary?.recentExpenses ?? [];
   const activeTitle = titles.find((title) => title.active);
