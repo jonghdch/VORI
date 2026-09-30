@@ -4,7 +4,6 @@ import AppShell from "../../components/AppShell";
 import {
   PetArt,
   STAGE_LABEL,
-  TIER_LABEL,
   VARIANT_LABEL,
   nextStage,
 } from "../../components/petVisual";
@@ -307,7 +306,7 @@ function PetPage({ user, onLogout }) {
     ? {
         id: String(pet.id),
         name: pet.speciesName ?? "펫",
-        type: [TIER_LABEL[pet.tier], STAGE_LABEL[pet.stage], VARIANT_LABEL[pet.variant]]
+        type: [STAGE_LABEL[pet.stage], VARIANT_LABEL[pet.variant]]
           .filter(Boolean)
           .join(" · "),
         appearanceKey: pet.appearanceKey,
@@ -980,7 +979,7 @@ function PetPage({ user, onLogout }) {
                           <div className="pet-history-info">
                             <strong>{p.speciesName}</strong>
                             <small>
-                              {[TIER_LABEL[p.tier], STAGE_LABEL[p.stage], VARIANT_LABEL[p.variant]]
+                              {[STAGE_LABEL[p.stage], VARIANT_LABEL[p.variant]]
                                 .filter(Boolean)
                                 .join(" · ")}
                             </small>
