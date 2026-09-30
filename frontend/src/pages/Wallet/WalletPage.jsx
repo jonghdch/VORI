@@ -12,11 +12,12 @@ import "./WalletPage.css";
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 // 카테고리 차트·도넛 공용 팔레트 (상위 카테고리 순서대로 순환).
+// 베이지 화면에 튀지 않게 채도를 낮춘 세이지·클레이·샌드·더스티블루.
 const CHART_COLORS = [
-  "var(--home-bar-green)",
-  "var(--home-bar-red)",
-  "var(--home-bar-orange)",
-  "var(--home-bar-blue)",
+  "#8fb07c",
+  "#d9a68b",
+  "#e3c38f",
+  "#9db8c6",
 ];
 
 // 합리성 시그널(백엔드 enum) → 한글 상태 + 배지 색상 클래스.
@@ -450,7 +451,9 @@ function WalletPage({ user, onLogout }) {
       <main className="home-main ledger-main">
         <div className="ledger-header">
           <h1 className="ledger-greeting">
-            총 지출액 {formatWon(monthExpenseTotal)}
+            <span className="ledger-greeting-icon" aria-hidden>💸</span>
+            <span className="ledger-greeting-label">총 지출액</span>
+            <strong className="ledger-greeting-value">{formatWon(monthExpenseTotal)}</strong>
           </h1>
           <div className="ledger-header-actions">
             <div className="ledger-view-toggle" role="group" aria-label="보기 방식">
@@ -505,7 +508,7 @@ function WalletPage({ user, onLogout }) {
         </div>
 
         <div className="ledger-row ledger-row-calendar">
-          <section className="home-card ledger-calendar-card">
+          <section className="home-card ledger-calendar-card ledger-sec--sage">
             <div className="ledger-cal-weekdays">
               {WEEKDAYS.map((weekday, i) => (
                 <span key={weekday} className={`ledger-cal-weekday ${i === 0 ? "ledger-cal-weekday--sun" : ""} ${i === 6 ? "ledger-cal-weekday--sat" : ""}`}>
@@ -636,9 +639,10 @@ function WalletPage({ user, onLogout }) {
           </section>
 
           <div className="ledger-day-col">
-          <section className="home-card ledger-day-card">
+          <section className="home-card ledger-day-card ledger-sec--sky">
             <div className="ledger-day-head">
-              <h2 className="home-card-title home-card-title--sm">
+              <h2 className="home-card-title home-card-title--sm ledger-sec-title">
+                <span className="ledger-sec-icon" aria-hidden>🗓️</span>
                 {selectedDay
                   ? dayLabel(viewYear, viewMonth, selectedDay)
                   : "날짜를 선택하세요"}
@@ -778,9 +782,12 @@ function WalletPage({ user, onLogout }) {
           )}
         </section>
 
-        <section className="ledger-history-card">
+        <section className="ledger-history-card ledger-sec--apricot">
           <div className="ledger-history-head">
-            <span className="ledger-history-chip">{viewMode === "week" ? "주간 지출 내역" : "월간 지출 내역"}</span>
+            <span className="ledger-history-chip ledger-sec-title">
+              <span className="ledger-sec-icon" aria-hidden>📋</span>
+              {viewMode === "week" ? "주간 지출 내역" : "월간 지출 내역"}
+            </span>
             <span className="ledger-history-chip ledger-history-chip--total">총 {formatWon(visibleExpenseTotal)}</span>
           </div>
 
@@ -859,8 +866,8 @@ function WalletPage({ user, onLogout }) {
         </section>
 
         <div className="ledger-row ledger-row-insights">
-          <section className="home-card ledger-report-card">
-            <h2 className="home-card-title home-card-title--sm">보이는 리포트</h2>
+          <section className="home-card ledger-report-card ledger-sec--apricot">
+            <h2 className="home-card-title home-card-title--sm ledger-sec-title"><span className="ledger-sec-icon" aria-hidden>📊</span>보이는 리포트</h2>
             {donutGradient ? (
               <>
                 <div className="ledger-donut-wrap">
@@ -899,8 +906,8 @@ function WalletPage({ user, onLogout }) {
             </button>
           </section>
 
-          <section className="home-card ledger-ai-card">
-            <h2 className="home-card-title home-card-title--sm">AI 소비 판정</h2>
+          <section className="home-card ledger-ai-card ledger-sec--sky">
+            <h2 className="home-card-title home-card-title--sm ledger-sec-title"><span className="ledger-sec-icon" aria-hidden>🐾</span>AI 소비 판정</h2>
             <div className="ledger-ai-box">
               <p className="ledger-ai-text">보리가 오늘 소비를 분석해요</p>
             </div>
@@ -933,8 +940,9 @@ function WalletPage({ user, onLogout }) {
           </section>
 
           <div className="ledger-side-col">
-            <section className="home-card ledger-cat-card">
-              <h2 className="home-card-title home-card-title--sm">
+            <section className="home-card ledger-cat-card ledger-sec--sage">
+              <h2 className="home-card-title home-card-title--sm ledger-sec-title">
+                <span className="ledger-sec-icon" aria-hidden>🗂️</span>
                 카테고리별 지출
               </h2>
               {categoryBreakdown.length > 0 ? (
@@ -960,9 +968,9 @@ function WalletPage({ user, onLogout }) {
             </section>
 
             {/* 예산 API 미구현 — 가짜 수치 대신 준비 중임을 명시 */}
-            <section className="home-card ledger-budget-card">
+            <section className="home-card ledger-budget-card ledger-sec--sky">
               <div className="ledger-budget-head">
-                <h2 className="home-card-title home-card-title--sm">예산 현황</h2>
+                <h2 className="home-card-title home-card-title--sm ledger-sec-title"><span className="ledger-sec-icon" aria-hidden>🎯</span>예산 현황</h2>
               </div>
               <p className="ledger-card-empty">예산 설정 기능을 준비 중이에요.</p>
             </section>
@@ -972,16 +980,22 @@ function WalletPage({ user, onLogout }) {
         <div className="ledger-row ledger-row-summary ledger-row-summary--bottom">
           {[
             {
+              key: "expense",
+              icon: "💸",
               title: "이번 달 지출",
               value: formatWon(monthExpenseTotal),
               sub: `지출 ${expenseRows.length}건`,
             },
             {
+              key: "income",
+              icon: "💰",
               title: "이번 달 수입",
               value: formatWon(monthIncomeTotal),
               sub: `수입 ${incomeRows.length}건`,
             },
             {
+              key: "ai",
+              icon: "🐾",
               title: "AI 판정",
               value: `${aiJudgedCount}건`,
               sub:
@@ -990,13 +1004,21 @@ function WalletPage({ user, onLogout }) {
                   : "예외적인 지출만 판정해요",
             },
             {
+              key: "records",
+              icon: "📝",
               title: "이번 달 기록",
               value: `${rows.length}건`,
               sub: `지출 ${expenseRows.length} · 수입 ${incomeRows.length}`,
             },
           ].map((card) => (
-            <article key={card.title} className="home-card ledger-summary-card">
-              <h3 className="home-kpi-title">{card.title}</h3>
+            <article
+              key={card.key}
+              className={`home-card ledger-summary-card ledger-summary-card--${card.key}`}
+            >
+              <div className="ledger-summary-head">
+                <h3 className="home-kpi-title">{card.title}</h3>
+                <span className="ledger-summary-icon" aria-hidden>{card.icon}</span>
+              </div>
               <p className="home-kpi-value">{card.value}</p>
               <p className="home-kpi-sub">{card.sub}</p>
             </article>

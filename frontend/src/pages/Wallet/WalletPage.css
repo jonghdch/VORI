@@ -1115,3 +1115,493 @@
   .ledger-day-reward { padding: 16px; }
   .ledger-day-reward-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ================================================================
+   가계부 — 홈 화면과 같은 디자인 언어
+   베이지 크림 바탕 + 카드마다 파스텔 포인트(세이지·하늘·살구) + 제목 아이콘.
+   다른 화면에 번지지 않도록 전부 .ledger-main 안에서만 덮어쓴다.
+   ================================================================ */
+.ledger-main {
+  --lg-text: #3d3830;
+  --lg-text-2: #6b6560;
+  --lg-text-3: #9c9488;
+  --lg-line: #e6dfd1;
+  --lg-cell: #faf7f0;
+  --lg-sage: #7c9e6b;
+  --lg-sage-soft: #eaf3de;
+  --lg-sky: #7cb9c8;
+  --lg-sky-soft: #e4f2f7;
+  --lg-apricot: #e8a05a;
+  --lg-apricot-soft: #fdf0da;
+}
+
+/* ── 카드 공통 ─────────────────────────── */
+.ledger-main .home-card,
+.ledger-main .ledger-history-card {
+  --sec-tint: rgba(212, 232, 194, 0.7);
+  --sec-icon-bg: var(--lg-sage-soft);
+  background:
+    radial-gradient(circle at 100% 0%, var(--sec-tint) 0%, rgba(255, 253, 249, 0) 42%),
+    linear-gradient(180deg, #fffdf9 0%, #f8f5ee 100%);
+  border: 1px solid var(--home-card-border);
+  box-shadow: 0 4px 14px rgba(61, 56, 48, 0.05);
+}
+/* 색 절제 — 카드 톤은 한 가지(아주 옅은 세이지 빛)로 통일. 색은 데이터 의미(판정·카테고리)에만 쓴다. */
+.ledger-main .ledger-sec--sage,
+.ledger-main .ledger-sec--sky,
+.ledger-main .ledger-sec--apricot { --sec-tint: rgba(212, 232, 194, 0.35); --sec-icon-bg: #f1ede4; }
+
+.ledger-main .home-card-title {
+  color: var(--lg-text);
+}
+.ledger-sec-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ledger-sec-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--sec-icon-bg, var(--lg-sage-soft));
+  box-shadow: inset 0 0 0 1px rgba(61, 56, 48, 0.05);
+  font-size: 15px;
+  line-height: 1;
+}
+.ledger-main .home-btn-primary {
+  background: var(--lg-sage);
+  box-shadow: 0 4px 10px rgba(124, 158, 107, 0.25);
+}
+.ledger-main .home-link-btn {
+  color: #5e8c4e;
+}
+.ledger-main .ledger-card-empty {
+  color: var(--lg-text-3);
+}
+
+/* ── 상단: 총 지출 캡슐 · 주/월 토글 · 날짜 이동 ─────────── */
+.ledger-main .ledger-greeting {
+  gap: 10px;
+  padding: 8px 20px 8px 8px;
+  border-color: var(--home-card-border);
+  background: #fffdf9;
+  box-shadow: 0 4px 14px rgba(61, 56, 48, 0.05);
+}
+.ledger-greeting-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f1ede4;
+  font-size: 16px;
+}
+.ledger-greeting-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--lg-text-3);
+}
+.ledger-greeting-value {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--lg-text);
+  font-variant-numeric: tabular-nums;
+}
+.ledger-main .ledger-view-toggle,
+.ledger-main .ledger-date-nav {
+  background: #fffdf9;
+  border-color: var(--home-card-border);
+  box-shadow: 0 2px 8px rgba(61, 56, 48, 0.04);
+}
+.ledger-main .ledger-view-toggle button {
+  color: var(--lg-text-3);
+}
+.ledger-main .ledger-view-toggle button.is-active {
+  background: var(--lg-sage-soft);
+  color: #5e8c4e;
+  box-shadow: inset 0 0 0 1px rgba(124, 158, 107, 0.25);
+}
+.ledger-main .ledger-date-display {
+  color: var(--lg-text);
+  font-weight: 800;
+}
+.ledger-main .ledger-date-arrow:hover {
+  background: #f1ede4;
+  color: var(--lg-text);
+}
+
+/* ── 캘린더 ─────────────────────────── */
+/* 빈 칸(div)과 날짜 칸(button)의 높이 계산 방식이 달라 첫 주 줄만 18px 더 높았다 → 통일 */
+.ledger-main .ledger-cal-cell {
+  box-sizing: border-box;
+}
+.ledger-main .ledger-cal-weekday {
+  color: var(--lg-text-3);
+}
+.ledger-main .ledger-cal-weekday--sun { color: #c98a82; }
+.ledger-main .ledger-cal-weekday--sat { color: #8aa6b8; }
+.ledger-main .ledger-cal-cell {
+  background: var(--lg-cell);
+  border-color: #efe8da;
+  border-radius: 12px;
+}
+.ledger-main .ledger-cal-cell:hover {
+  background: #fffaf1;
+  border-color: #e9d9bd;
+}
+.ledger-main .ledger-cal-cell--empty {
+  background: transparent;
+  border-color: transparent;
+}
+.ledger-main .ledger-cal-cell--highlight {
+  background: #f3f8ee;
+  border-color: #d4e8c2;
+}
+/* 판정 색 — 홈 캘린더와 같은 파스텔 계열 */
+.ledger-main .ledger-cal-cell--signal-green { background: #eef6e7; border-color: #b9d2a6; }
+.ledger-main .ledger-cal-cell--signal-gray  { background: #fdf1de; border-color: #eab676; }
+.ledger-main .ledger-cal-cell--signal-red   { background: #fbe6e2; border-color: #e0908a; }
+.ledger-main .ledger-cal-cell--today {
+  box-shadow: inset 0 0 0 2px #9dbb86;
+}
+.ledger-main .ledger-cal-cell--selected {
+  border-color: var(--lg-sage);
+  box-shadow:
+    inset 0 0 0 2px rgba(124, 158, 107, 0.45),
+    0 4px 10px rgba(61, 56, 48, 0.08);
+}
+.ledger-main .ledger-cal-cell--selected.ledger-cal-cell--signal-green { box-shadow: inset 0 0 0 2px #8fb07c, 0 4px 10px rgba(61, 56, 48, 0.08); }
+.ledger-main .ledger-cal-cell--selected.ledger-cal-cell--signal-gray  { box-shadow: inset 0 0 0 2px #d99a52, 0 4px 10px rgba(61, 56, 48, 0.08); }
+.ledger-main .ledger-cal-cell--selected.ledger-cal-cell--signal-red   { box-shadow: inset 0 0 0 2px #cf7f78, 0 4px 10px rgba(61, 56, 48, 0.08); }
+.ledger-main .ledger-cal-day {
+  color: var(--lg-text);
+}
+.ledger-main .ledger-cal-event {
+  border-radius: 6px;
+}
+.ledger-main .ledger-cal-event--expense {
+  color: var(--lg-text-2);
+  background: rgba(255, 253, 249, 0.85);
+  box-shadow: inset 0 0 0 1px #efe5d2;
+}
+.ledger-main .ledger-cal-event--income {
+  color: #5e8c4e;
+  background: rgba(212, 232, 194, 0.55);
+}
+
+/* ── 날짜 카드 (목록 + 상세) ─────────────────────────── */
+.ledger-main .ledger-detail-row {
+  border-bottom: 1px dashed var(--lg-line);
+}
+.ledger-main .ledger-detail-row:hover,
+.ledger-main .ledger-detail-row.is-selected {
+  background: rgba(255, 250, 241, 0.95);
+}
+.ledger-main .ledger-detail-row.is-selected {
+  box-shadow: inset 3px 0 0 #9dbb86, 0 2px 8px rgba(61, 56, 48, 0.05);
+}
+.ledger-main .ledger-detail-row .home-tx-icon,
+.ledger-main .ledger-detail-icon {
+  background: #f1ede4;
+}
+.ledger-main .home-tx-name,
+.ledger-main .home-tx-amount {
+  color: var(--lg-text);
+}
+.ledger-main .home-tx-cat {
+  color: var(--lg-text-3);
+}
+.ledger-main .ledger-day-empty {
+  border-color: var(--lg-line);
+  background: rgba(255, 250, 241, 0.7);
+}
+.ledger-main .ledger-expense-detail {
+  background: #fffaf1;
+  border: 0;
+  box-shadow: 0 1px 0 #efe5d2, 0 8px 18px rgba(61, 56, 48, 0.07);
+}
+.ledger-main .ledger-detail-eyebrow,
+.ledger-main .ledger-detail-grid dt,
+.ledger-main .ledger-detail-note span {
+  color: var(--lg-text-3);
+}
+.ledger-main .ledger-detail-title,
+.ledger-main .ledger-detail-amount,
+.ledger-main .ledger-detail-grid dd {
+  color: var(--lg-text);
+}
+.ledger-main .ledger-detail-note p {
+  background: #fffdf9;
+  border-color: var(--lg-line);
+}
+.ledger-main .ledger-detail-note p:empty {
+  background: #f4efe5;
+  border-color: #f4efe5;
+}
+.ledger-main .ledger-detail-type--expense { background: #f1ede4; color: var(--lg-text-2); }
+.ledger-main .ledger-detail-type--income  { background: var(--lg-sage-soft); color: #5e8c4e; }
+.ledger-main .ledger-detail-ai {
+  background: #f4efe5;
+}
+.ledger-main .ledger-detail-ai-badge {
+  color: #5e8c4e;
+}
+
+/* ── 지출 내역 표 — 크림 카드 안에 ─────────────────────────── */
+.ledger-main .ledger-history-card {
+  padding: 20px 22px 18px;
+  border-radius: var(--home-radius);
+}
+.ledger-main .ledger-history-chip {
+  color: var(--lg-text);
+}
+.ledger-main .ledger-history-chip--total {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #f1ede4;
+  color: var(--lg-text);
+  font-size: 14px;
+}
+.ledger-main .ledger-history-table th {
+  background: #f4efe5;
+  color: var(--lg-text-3);
+}
+.ledger-main .ledger-history-table td {
+  border-bottom: 1px dashed var(--lg-line);
+  color: var(--lg-text);
+}
+.ledger-main .ledger-history-table tbody tr:nth-child(even) {
+  background: rgba(255, 253, 249, 0.7);
+}
+.ledger-main .ledger-history-table tbody tr:hover,
+.ledger-main .ledger-history-table tbody tr:nth-child(even):hover,
+.ledger-main .ledger-history-table tbody tr.is-selected,
+.ledger-main .ledger-history-table tbody tr:nth-child(even).is-selected {
+  background: #fffaf1;
+}
+.ledger-main .ledger-history-table tbody tr.is-selected td:first-child {
+  box-shadow: inset 3px 0 0 #9dbb86;
+}
+.ledger-main .ledger-history-badge--green { background: var(--lg-sage-soft); color: #5e8c4e; }
+.ledger-main .ledger-history-badge--gray  { background: var(--lg-apricot-soft); color: #a86a2c; }
+.ledger-main .ledger-history-badge--red   { background: #fbe6e2; color: #b85c55; }
+.ledger-main .ledger-history-pager button {
+  background: #fffdf9;
+  border-color: var(--home-card-border);
+}
+.ledger-main .ledger-history-pager button:not(:disabled):hover {
+  background: #f1ede4;
+}
+
+/* ── 보이는 리포트 · AI 판정 · 카테고리 · 예산 ─────────────────── */
+.ledger-main .ledger-donut {
+  box-shadow: 0 6px 16px rgba(61, 56, 48, 0.08);
+}
+.ledger-main .ledger-donut-hole {
+  background: #fffdf9;
+  box-shadow: inset 0 0 0 1px #efe5d2;
+}
+.ledger-main .ledger-donut-amount {
+  color: var(--lg-text);
+}
+.ledger-main .ledger-donut-legend {
+  color: var(--lg-text-2);
+}
+.ledger-main .ledger-ai-box {
+  background: #faf7f0;
+  border: 1px dashed var(--lg-line);
+}
+.ledger-main .ledger-ai-text {
+  color: var(--lg-text-2);
+}
+.ledger-main .ledger-ai-action-btn {
+  background: var(--lg-sage);
+  box-shadow: 0 4px 10px rgba(124, 158, 107, 0.25);
+}
+.ledger-main .ledger-ai-footnote {
+  color: var(--lg-text-3);
+}
+.ledger-main .home-cat-label,
+.ledger-main .home-cat-amount {
+  color: var(--lg-text-2);
+}
+.ledger-main .home-cat-track,
+.ledger-main .ledger-budget-track {
+  background: #ebe6da;
+}
+
+/* ── 하단 요약 카드 — 홈 지출 요약과 같은 모양 ─────────────────── */
+.ledger-main .ledger-summary-card {
+  --kpi-tint: rgba(212, 232, 194, 0.35);
+  --kpi-icon-bg: #f1ede4;
+  --kpi-accent: #9dbb86;
+  position: relative;
+  overflow: hidden;
+  padding: 20px 22px 18px;
+  background:
+    radial-gradient(circle at 100% 0%, var(--kpi-tint) 0%, rgba(255, 253, 249, 0) 55%),
+    linear-gradient(180deg, #fffdf9 0%, #f8f5ee 100%);
+}
+.ledger-main .ledger-summary-card::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--kpi-accent);
+  opacity: 0.4;
+}
+/* 요약 카드 4개도 같은 톤 — 카드마다 색을 바꾸지 않는다 */
+.ledger-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ledger-summary-head .home-kpi-title {
+  margin: 0;
+  font-weight: 800;
+  color: var(--lg-text-2);
+}
+.ledger-summary-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--kpi-icon-bg);
+  box-shadow: inset 0 0 0 1px rgba(61, 56, 48, 0.05);
+  font-size: 16px;
+}
+.ledger-main .ledger-summary-card .home-kpi-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--lg-text);
+  font-variant-numeric: tabular-nums;
+}
+.ledger-main .ledger-summary-card .home-kpi-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lg-text-3);
+}
+
+/* ── 그라데이션 정리 ───────────────────────────────────────────
+   캘린더·AI 소비 판정 카드만 옅은 빛(그라데이션)을 남기고,
+   나머지 카드는 단색 크림 + '가계부 노트' 느낌의 점선 제목 구분선으로 꾸민다. */
+.ledger-main .home-card,
+.ledger-main .ledger-history-card {
+  background: #fffdf9;
+}
+.ledger-main .ledger-calendar-card,
+.ledger-main .ledger-ai-card {
+  background:
+    radial-gradient(circle at 100% 0%, var(--sec-tint) 0%, rgba(255, 253, 249, 0) 42%),
+    linear-gradient(180deg, #fffdf9 0%, #f8f5ee 100%);
+}
+
+/* 제목 아래 점선 — 노트 한 줄을 그은 듯이 */
+.ledger-main .ledger-day-head,
+.ledger-main .ledger-history-head,
+.ledger-main .ledger-budget-head,
+.ledger-main .ledger-report-card > .ledger-sec-title,
+.ledger-main .ledger-cat-card > .ledger-sec-title {
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px dashed var(--lg-line);
+}
+.ledger-main .ledger-report-card > .ledger-sec-title {
+  align-self: stretch;
+  justify-content: center;
+}
+.ledger-main .ledger-history-head {
+  align-items: center;
+}
+
+/* 하단 요약 카드 — 단색 + 아래 포인트 선 대신 영수증처럼 점선 구분 */
+.ledger-main .ledger-summary-card {
+  background: #fffdf9;
+}
+.ledger-main .ledger-summary-card::after {
+  display: none;
+}
+.ledger-main .ledger-summary-card .home-kpi-sub {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--lg-line);
+}
+
+/* AI 소비 판정 — 그라데이션 없이 다른 카드와 같은 단색 크림. 코랄은 버튼에만 쓴다. */
+.ledger-main .ledger-ai-card {
+  background: #fffdf9;
+}
+
+/* 판정 시작하기 버튼 — 카드의 코랄 톤에 맞춘 알약형 버튼 + 화살표.
+   대기 중일 때는 흐린 버튼 대신 '잠긴' 느낌의 베이지 점선 버튼. */
+.ledger-main .ledger-ai-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.ledger-main .ledger-ai-action-btn--active {
+  background: #e98b6d;
+  color: #fffdf9;
+  box-shadow:
+    0 6px 14px rgba(233, 139, 109, 0.28),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+}
+.ledger-main .ledger-ai-action-btn--active::after {
+  content: "→";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 253, 249, 0.25);
+  font-size: 14px;
+  transition: transform 0.15s ease;
+}
+.ledger-main .ledger-ai-action-btn--active:hover {
+  filter: none;
+  background: #e27f60;
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 18px rgba(233, 139, 109, 0.34),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+}
+.ledger-main .ledger-ai-action-btn--active:hover::after {
+  transform: translateX(3px);
+}
+.ledger-main .ledger-ai-action-btn--active:active {
+  transform: translateY(1px);
+  box-shadow: 0 3px 8px rgba(233, 139, 109, 0.25);
+}
+.ledger-main .ledger-ai-action-btn--waiting,
+.ledger-main .ledger-ai-action-btn--waiting:disabled {
+  opacity: 1;
+  background: #f4efe5;
+  color: var(--lg-text-3);
+  border: 1px dashed #dccfb8;
+  box-shadow: none;
+}
+.ledger-main .ledger-ai-action-btn--waiting::before {
+  content: "🔒";
+  font-size: 13px;
+}

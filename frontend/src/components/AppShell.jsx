@@ -14,6 +14,7 @@ const TOP_NAV = [
 
 // page: null = 아직 화면이 없는 메뉴 — 누르면 아무 일도 없는 척하지 않도록
 // disabled + "준비 중" 표기로 렌더한다.
+// 메뉴 앞 기호는 공통 작은 원(●) — 평소엔 어둡고, 선택된 메뉴만 빛난다 (HomeDashboard.css).
 const SIDE_MENU = [
   { id: "home", label: "홈 대시보드", page: "home" },
   { id: "wallet", label: "가계부", page: "wallet" },
@@ -164,7 +165,8 @@ function AppShell({
                     onClick={() => go(item.page)}
                     disabled={!item.page}
                   >
-                    {item.label}
+                    <span className="home-side-icon" aria-hidden />
+                    <span className="home-side-label">{item.label}</span>
                     {!item.page && (
                       <span className="home-side-soon">준비 중</span>
                     )}
@@ -184,7 +186,8 @@ function AppShell({
                     onClick={() => go(item.page)}
                     disabled={!item.page}
                   >
-                    {item.label}
+                    <span className="home-side-icon" aria-hidden />
+                    <span className="home-side-label">{item.label}</span>
                     {!item.page && (
                       <span className="home-side-soon">준비 중</span>
                     )}
@@ -193,22 +196,6 @@ function AppShell({
               ))}
             </ul>
           </div>
-          {isAdmin && (
-            <div className="home-side-block">
-              <div className="home-side-title">관리</div>
-              <ul className="home-side-list">
-                <li>
-                  <button
-                    type="button"
-                    className={`home-side-link ${activeSide === "admin" ? "is-active" : ""}`}
-                    onClick={() => go("/admin")}
-                  >
-                    관리자 페이지
-                  </button>
-                </li>
-              </ul>
-            </div>
-          )}
           <div className="home-side-block">
             <div className="home-side-title">설정</div>
             <ul className="home-side-list">
@@ -218,7 +205,8 @@ function AppShell({
                   className="home-side-link"
                   onClick={() => go("settings")}
                 >
-                  환경설정
+                  <span className="home-side-icon" aria-hidden />
+                  <span className="home-side-label">환경설정</span>
                 </button>
               </li>
               <li>
@@ -228,23 +216,45 @@ function AppShell({
                   aria-current={activeSide === "profile" ? "page" : undefined}
                   onClick={() => go("settings/profile")}
                 >
-                  프로필 설정
+                  <span className="home-side-icon" aria-hidden />
+                  <span className="home-side-label">프로필 설정</span>
                 </button>
               </li>
               <li>
                 <button
                   type="button"
-                  className="home-side-link"
+                  className="home-side-link home-side-link--logout"
                   onClick={() => {
                     setMenuOpen(false);
                     if (typeof onLogout === "function") onLogout();
                   }}
                 >
-                  로그아웃
+                  <span className="home-side-label">로그아웃</span>
                 </button>
               </li>
             </ul>
           </div>
+          {/* 관리자 전용 — 일반 메뉴와 섞이지 않게 사이드바 맨 아래에 둔다 */}
+          {isAdmin && (
+            <div className="home-side-block home-side-block--admin">
+              <div className="home-side-title">
+                <span className="home-side-title-icon" aria-hidden>🛠️</span>
+                관리
+              </div>
+              <ul className="home-side-list">
+                <li>
+                  <button
+                    type="button"
+                    className={`home-side-link ${activeSide === "admin" ? "is-active" : ""}`}
+                    onClick={() => go("/admin")}
+                  >
+                    <span className="home-side-icon" aria-hidden />
+                    <span className="home-side-label">관리자 페이지</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
         </aside>
 
         {children}
