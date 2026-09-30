@@ -48,14 +48,32 @@ public class UserStatStats {
     @Builder.Default
     private Integer sampleCount = 0;
 
+    /**
+     * 평균·편차가 온보딩 설문으로 채운 초기값(BaselineSeeder)인지. 실제 지출이 한 번이라도 반영되면 false.
+     * 표본 수만으로는 "씨딩값" 과 "실제 N_MIN 건" 을 구분할 수 없어서 따로 표시한다.
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean seeded = false;
+
     @Column(name = "updated_at", nullable = false,
             columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
             insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
+    /** 실제 지출 반영. 씨딩값 위에 쌓이면 그때부터는 실제 기록이다. */
     public void updateEma(BigDecimal newMeanEma, BigDecimal newStddevEma, int newSampleCount) {
         this.meanEma = newMeanEma;
         this.stddevEma = newStddevEma;
         this.sampleCount = newSampleCount;
+        this.seeded = false;
+    }
+
+    /** 온보딩 초기 기준선(BaselineSeeder 전용). 실제 지출이 반영되기 전까지는 다시 씨딩할 수 있다. */
+    public void seedBaseline(BigDecimal mean, BigDecimal stddev, int sampleCount) {
+        this.meanEma = mean;
+        this.stddevEma = stddev;
+        this.sampleCount = sampleCount;
+        this.seeded = true;
     }
 }

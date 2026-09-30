@@ -122,30 +122,6 @@ function SignupProfilePage() {
     }
   };
 
-  // "나중에 하기" — 선택형 문항만 UNKNOWN 으로 채운다. 월 수입은 필수라 건너뛸 수 없다.
-  const skip = async () => {
-    if (!/^\d+$/.test(String(profile.monthlyIncome))) {
-      setStepIndex(0);
-      setError("월 수입은 꼭 입력해 주세요. 나머지는 나중에 해도 돼요.");
-      return;
-    }
-    const skipped = STEPS.reduce(
-      (acc, item) => ({ ...acc, [item.key]: item.type === "number" ? profile[item.key] : profile[item.key] || "UNKNOWN" }),
-      {},
-    );
-    setError("");
-    setLoading(true);
-    try {
-      await saveSpendingProfile(toRequest(skipped));
-      window.dispatchEvent(new Event("vori:onboarding-done"));
-      navigate("/onboarding");
-    } catch (err) {
-      setError(err.message || "소비 기준 저장 중 오류가 발생했어요");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="signup">
       <header className="signup-header">
@@ -238,9 +214,6 @@ function SignupProfilePage() {
             </button>
           </div>
 
-          <button type="button" className="signup-skip" onClick={skip} disabled={loading}>
-            나중에 하기
-          </button>
         </section>
       </main>
 
