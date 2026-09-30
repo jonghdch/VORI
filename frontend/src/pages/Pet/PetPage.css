@@ -649,6 +649,16 @@
 .pet-furniture-card small {
   display: block;
 }
+.pet-furniture-bonus-help { margin: -2px 0 14px; color: var(--home-muted); font-size: 12px; line-height: 1.55; }
+.pet-attendance-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid #d9e7d2; border-radius: 12px; background: #f5faef; }
+.pet-attendance-card strong { display: block; color: var(--home-green-dark); }
+.pet-attendance-card p { margin: 5px 0 0; color: var(--home-muted); font-size: 13px; }
+.pet-item-list { display: grid; gap: 9px; margin-top: 14px; }
+.pet-item-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px; border: 1px solid var(--home-card-border); border-radius: 10px; background: var(--home-card-surface); }
+.pet-item-card strong, .pet-item-card span { display: block; }
+.pet-item-card span { margin-top: 3px; color: var(--home-green-dark); font-size: 13px; font-weight: 800; }
+.pet-item-card button { border: 0; border-radius: 8px; background: var(--home-green); color: #fff; padding: 8px 11px; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.pet-item-card button:disabled { opacity: .45; cursor: not-allowed; }
 
 .pet-furniture-card span {
   display: grid;
@@ -912,11 +922,18 @@
   color: var(--home-text);
   box-shadow: inset 0 0 0 1.5px var(--home-green);
 }
+.pet-room-bonus-chips { justify-content: flex-end; max-width: 340px; }
+.pet-room-bonus-chips .pet-room-bonus-chip--release {
+  background: var(--home-green-soft);
+  color: var(--home-text);
+  box-shadow: inset 0 0 0 1px var(--home-green);
+}
 /* 좁은 화면에선 방 카드 위쪽이 세로로 쌓이므로 칩도 왼쪽 정렬 (위 720px 블록보다 뒤에 있어야 이긴다) */
 @media (max-width: 720px) {
   .pet-room-chips {
     align-items: flex-start;
   }
+  .pet-room-bonus-chips { justify-content: flex-start; }
 }
 .pet-empty .home-link-btn {
   display: block;

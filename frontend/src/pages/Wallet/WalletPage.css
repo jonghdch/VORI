@@ -1009,6 +1009,47 @@
   font-variant-numeric: tabular-nums;
 }
 
+.ledger-day-reward {
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border: 1px solid #d9e7d2;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fbfdf9, #f2f8ed);
+}
+.ledger-day-reward-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.ledger-day-reward-head > div { display: grid; gap: 3px; }
+.ledger-day-reward-head span:first-child {
+  color: var(--home-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.ledger-day-reward-head strong { color: #365d2d; font-size: 18px; }
+.ledger-day-reward-values {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.ledger-day-reward-value {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #dce8d6;
+  border-radius: 10px;
+  background: #fff;
+}
+.ledger-day-reward-value span { color: var(--home-muted); font-size: 12px; font-weight: 700; }
+.ledger-day-reward-value strong { color: #3e6d35; font-size: 20px; }
+.ledger-day-reward-value--coin { border-color: #f0d89b; background: #fffaf0; }
+.ledger-day-reward-value--coin strong { color: #af7e17; }
+.ledger-day-reward-empty { margin: 0; color: var(--home-muted); font-size: 14px; }
+.ledger-day-reward-error { color: #b34c4c; }
+
 @media (max-width: 1200px) {
   .ledger-row-summary {
     grid-template-columns: repeat(2, 1fr);
@@ -1047,6 +1088,8 @@
   .ledger-cal-cell {
     height: 72px;
   }
+
+  .ledger-day-reward-values { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
@@ -1068,4 +1111,7 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .ledger-day-reward { padding: 16px; }
+  .ledger-day-reward-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
