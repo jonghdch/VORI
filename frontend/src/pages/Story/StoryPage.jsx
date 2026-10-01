@@ -5,6 +5,7 @@ import SiteHeader from "../../components/SiteHeader";
 import { PET_CATALOG, DEX_TIER_LABEL, STAGE_ORDER } from "../../components/petCatalog";
 import { PetArt, STAGE_LABEL, STAGE_THRESHOLD } from "../../components/petVisual";
 import { FurnitureArt, CATEGORY_LABEL, STAT_LABEL } from "../../components/furnitureVisual";
+import useMediaQuery from "../../components/useMediaQuery";
 // SiteHeader 가 .landing-header 등 랜딩 페이지의 헤더 클래스를 그대로 쓰기
 // 때문에, 이 페이지에서도 LandingPage.css 를 함께 import 합니다.
 import "../Landing/LandingPage.css";
@@ -157,21 +158,6 @@ const STORY_CHAPTERS = [
     ],
   },
 ];
-
-// matchMedia 를 React 상태로. SSR 없음(CRA)이라 첫 렌더에서 바로 읽어도 된다.
-function useMediaQuery(query) {
-  const [matches, setMatches] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(query).matches
-  );
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const onChange = (event) => setMatches(event.matches);
-    setMatches(mql.matches);
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, [query]);
-  return matches;
-}
 
 const chapterReveal = {
   hidden: { opacity: 1 },
