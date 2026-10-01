@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { listTitles, setActiveTitle } from "../../api/titles";
 import { getMe, updateMe } from "../../api/user";
 import "./ProfileSettingsPanel.css";
 
@@ -12,53 +10,14 @@ const formFromUser = (user) => ({
   monthlyIncome: user?.monthlyIncome ?? "",
 });
 
-// 환경설정 > 프로필 탭. 칭호 선택 + 내 정보 수정.
+// 환경설정 > 프로필 탭. 내 정보 수정. (칭호는 도감 칭호 탭에서 바꾼다)
 function ProfileSettingsPanel({ user, onUserUpdate }) {
-  const navigate = useNavigate();
   const [initial, setInitial] = useState(() => formFromUser(user));
   const [form, setForm] = useState(initial);
   const [email, setEmail] = useState(user?.email || "");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-  const [titles, setTitles] = useState([]);
-  const [titleLoading, setTitleLoading] = useState(true);
-  const [selectedTitle, setSelectedTitle] = useState("");
-  const [savedTitle, setSavedTitle] = useState("");
-  const [titleSaving, setTitleSaving] = useState(false);
-  const [titleError, setTitleError] = useState("");
-  const [titleNotice, setTitleNotice] = useState("");
-
-  useEffect(() => {
-    let alive = true;
-    listTitles().then((items) => {
-      if (!alive) return;
-      setTitles(items.filter((item) => item.acquired));
-      const active = items.find((item) => item.active);
-      const value = active ? String(active.id) : "";
-      setSelectedTitle(value);
-      setSavedTitle(value);
-    }).catch((err) => {
-      if (alive) setTitleError(err.message || "칭호를 불러오지 못했어요.");
-    }).finally(() => {
-      if (alive) setTitleLoading(false);
-    });
-    return () => { alive = false; };
-  }, []);
-
-  const handleTitleSave = async () => {
-    setTitleSaving(true);
-    setTitleNotice("");
-    try {
-      await setActiveTitle(selectedTitle === "" ? null : Number(selectedTitle));
-      setSavedTitle(selectedTitle);
-      setTitleNotice(selectedTitle ? "칭호를 적용했어요." : "칭호를 해제했어요.");
-    } catch (err) {
-      setTitleNotice(err.message || "칭호 저장에 실패했어요.");
-    } finally {
-      setTitleSaving(false);
-    }
-  };
 
   // /auth/me 응답에는 헤더용 최소 정보만 있으므로, 프로필 상세값은 별도 API에서 읽는다.
   useEffect(() => {
@@ -118,27 +77,6 @@ function ProfileSettingsPanel({ user, onUserUpdate }) {
 
   return (
     <div className="profile-settings">
-      <section className="profile-form" aria-labelledby="profile-title-heading">
-        <h2 id="profile-title-heading">칭호 설정</h2>
-        <label>
-          <span>표시할 칭호</span>
-          <select
-            value={selectedTitle}
-            disabled={titleLoading || titleSaving || !!titleError}
-            onChange={(event) => { setSelectedTitle(event.target.value); setTitleNotice(""); }}
-          >
-            <option value="">칭호 없음</option>
-            {titles.map((title) => <option key={title.id} value={String(title.id)}>{title.name}</option>)}
-          </select>
-          <small>{titleLoading ? "칭호를 불러오는 중…" : titles.length ? "획득한 칭호를 선택하거나 ‘칭호 없음’으로 해제할 수 있어요." : "아직 획득한 칭호가 없어요. 업적/칭호에서 획득 조건을 확인하세요."}</small>
-        </label>
-        {titleError && <p role="alert" className="profile-message error">{titleError}</p>}
-        {titleNotice && <p role="status" className="profile-message">{titleNotice}</p>}
-        <div className="profile-actions">
-          <button type="button" className="profile-cancel" onClick={() => navigate("/dex?tab=titles")}>업적/칭호 보기</button>
-          <button type="button" className="profile-save" disabled={titleLoading || titleSaving || !!titleError || selectedTitle === savedTitle} onClick={handleTitleSave}>{titleSaving ? "적용 중…" : "칭호 적용"}</button>
-        </div>
-      </section>
       <form className="profile-form" onSubmit={handleSave}>
         <label>
           <span>이메일</span>

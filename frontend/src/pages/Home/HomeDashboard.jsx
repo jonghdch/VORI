@@ -241,14 +241,17 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                       strokeDasharray={`${(245.04 * petExp) / 100} 326.73`}
                     />
                   </svg>
+                  {/* 펫을 불러오기 전에는 그림을 비워 둔다 — 기본 강아지가 잠깐 보였다 바뀌지 않게 */}
                   <div className="home-pet-art" aria-hidden>
-                    <PetArt
-                      appearanceKey={activePet?.appearanceKey ?? "puppy"}
-                      stage={activePet?.stage}
-                      name=""
-                      className="home-pet-image"
-                      emojiClassName="home-pet-emoji"
-                    />
+                    {activePet && (
+                      <PetArt
+                        appearanceKey={activePet.appearanceKey}
+                        stage={activePet.stage}
+                        name=""
+                        className="home-pet-image"
+                        emojiClassName="home-pet-emoji"
+                      />
+                    )}
                   </div>
                   <button
                     type="button"
@@ -306,27 +309,20 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
           <article className="home-card home-kpi home-kpi--today">
             <div className="home-kpi-head">
               <h3 className="home-kpi-title">오늘 지출</h3>
-              <span className="home-kpi-icon" aria-hidden>☀️</span>
             </div>
             <p className="home-kpi-value">{won(spending?.today)}</p>
-            {/* recent.length 는 "최근 지출 5건" 목록 길이지 오늘 기록 수가 아님 — 오표기 제거 */}
-            <p className="home-kpi-sub">오늘 0시부터 누적</p>
           </article>
           <article className="home-card home-kpi home-kpi--month">
             <div className="home-kpi-head">
-              <h3 className="home-kpi-title">이번 달 누적</h3>
-              <span className="home-kpi-icon" aria-hidden>🌙</span>
+              <h3 className="home-kpi-title">이번 달 총 지출</h3>
             </div>
             <p className="home-kpi-value">{won(spending?.thisMonth)}</p>
-            <p className="home-kpi-sub">이번 달 총 지출</p>
           </article>
           <article className="home-card home-kpi home-kpi--week">
             <div className="home-kpi-head">
               <h3 className="home-kpi-title">이번 주 지출</h3>
-              <span className="home-kpi-icon" aria-hidden>🌿</span>
             </div>
             <p className="home-kpi-value">{won(spending?.thisWeek)}</p>
-            <p className="home-kpi-sub">월요일부터 누적</p>
           </article>
         </div>
 
