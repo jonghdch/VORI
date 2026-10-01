@@ -43,7 +43,8 @@ class PetInteractionTest {
             mock(UserFurnitureRepository.class),
             mock(ThemeMasterRepository.class),
             growthLogRepository,
-            mock(ApplicationEventPublisher.class));
+            mock(ApplicationEventPublisher.class),
+            mock(com.vori.backend.notification.NotificationService.class));
 
     private Pet activePet(int charm, int energy) {
         Pet pet = Pet.builder()

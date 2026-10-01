@@ -39,7 +39,8 @@ class PetNameTest {
             mock(UserFurnitureRepository.class),
             mock(ThemeMasterRepository.class),
             mock(PetGrowthLogRepository.class),
-            mock(ApplicationEventPublisher.class));
+            mock(ApplicationEventPublisher.class),
+            mock(com.vori.backend.notification.NotificationService.class));
 
     private boolean valid(String name) {
         return validator.validate(new PetNameRequest(name)).isEmpty();

@@ -57,6 +57,7 @@ public class TitleService {
     private final AiInquiryRepository aiInquiryRepository;
     private final ReceiptOcrJobRepository receiptOcrJobRepository;
     private final ThemeMasterRepository themeMasterRepository;
+    private final com.vori.backend.notification.NotificationService notificationService;
 
     /**
      * 전체 칭호 목록. 조회 시점에 평가를 겸해 놓친 획득을 메운다. 획득 → 미획득 순.
@@ -174,6 +175,12 @@ public class TitleService {
             log.info("칭호 획득 — userId={}, title={}, unlocksThemeId={}",
                     userId, title.getName(), unlocksThemeId);
             granted.add(title);
+            // 관리자는 시연용으로 칭호를 한꺼번에 받으므로 알림을 쌓지 않는다
+            if (!admin) {
+                notificationService.notify(userId, com.vori.backend.notification.NotificationType.TITLE_ACQUIRED,
+                        "새 칭호 「" + title.getName() + "」를 얻었어요", title.getDescription(),
+                        "/dex?tab=titles", "title:" + title.getId());
+            }
         }
         return granted;
     }

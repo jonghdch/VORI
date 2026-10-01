@@ -4,6 +4,7 @@ import com.vori.backend.common.StatType;
 import com.vori.backend.furniture.UserFurniture;
 import com.vori.backend.furniture.UserFurnitureRepository;
 import com.vori.backend.pet.dto.PetInteractionResponse;
+import com.vori.backend.notification.NotificationService;
 import com.vori.backend.pet.dto.PetResponse;
 import com.vori.backend.theme.ThemeMaster;
 import com.vori.backend.theme.ThemeMasterRepository;
@@ -43,6 +44,7 @@ public class PetService {
     private final ThemeMasterRepository themeMasterRepository;
     private final PetGrowthLogRepository petGrowthLogRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     // 분양가 = EXP(스탯 합 × 10) × (1 + (개별 가구 보너스합 + 테마 세트 보너스합)/100)
 
@@ -148,8 +150,10 @@ public class PetService {
                     < INTERACT_CHARM_DAILY_CAP;
         }
         if (charmUp) {
+            int levelBefore = pet.level();
             pet.addStat(StatType.CHARM, INTERACT_CHARM_DELTA);
             pet.evaluateStage();
+            notificationService.petGrew(userId, pet, levelBefore);
             petGrowthLogRepository.save(PetGrowthLog.builder()
                     .petId(pet.getId())
                     .userId(userId)

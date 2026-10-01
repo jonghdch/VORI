@@ -51,7 +51,8 @@ class HiddenTitleTest {
             mock(GachaPullRepository.class),
             mock(AiInquiryRepository.class),
             mock(ReceiptOcrJobRepository.class),
-            themeMasterRepository);
+            themeMasterRepository,
+            mock(com.vori.backend.notification.NotificationService.class));
 
     private final Title lovely = title(1L, "PET_LOVELY", "사랑둥이", TitleMetricType.PET_INTERACTIONS, 100, true);
     private final Title recordStart = title(2L, "RECORD_START", "기록의 시작", TitleMetricType.EXPENSE_COUNT, 10, false);
