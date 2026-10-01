@@ -283,9 +283,6 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               {/* 스탯 카드 — 흰 카드 + 수치 표시로 초록 배경 위에서도 눈에 띄게.
                   막대 길이는 네 스탯 중 가장 큰 값(최소 100) 기준 상대 비율. */}
               <section className="home-pet-stats home-statcard" aria-label="펫 스탯">
-                <div className="home-statcard-head">
-                  <h3 className="home-statcard-title">펫 스탯</h3>
-                </div>
                 <ul className="home-stat-list">
                   {STAT_META.map((m) => {
                     const value = stats?.[m.key] ?? 0;

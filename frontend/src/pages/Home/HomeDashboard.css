@@ -739,37 +739,6 @@
   box-shadow: 0 6px 18px rgba(94, 140, 78, 0.12);
 }
 
-.home-statcard-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--home-border);
-}
-
-.home-statcard-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 900;
-  color: var(--home-green-dark);
-}
-
-.home-statcard-total {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--home-muted);
-}
-
-.home-statcard-total strong {
-  margin-left: 2px;
-  font-size: 15px;
-  font-weight: 900;
-  color: var(--home-text);
-  font-variant-numeric: tabular-nums;
-}
-
 .home-kpi-title {
   margin: 0 0 8px;
   font-size: 14px;
