@@ -241,11 +241,12 @@ export function adminClearMyPet() {
   return adminSend("DELETE", "/admin/me/pet", undefined, "펫 비우기");
 }
 
-/** 대상 사용자의 활성 펫을 지정한 성장 단계까지 성장시킨다. */
+/** 대상 사용자의 활성 펫을 지정한 성장 단계(또는 "GRADUATE" = 30레벨 졸업)까지 성장시킨다. */
 export function growUserPet(userId, stage) {
+  const query = stage === "GRADUATE" ? "level=30" : `stage=${encodeURIComponent(stage)}`;
   return adminSend(
     "POST",
-    `/admin/users/${userId}/pet/grow?stage=${encodeURIComponent(stage)}`,
+    `/admin/users/${userId}/pet/grow?${query}`,
     undefined,
     "펫 성장",
   );

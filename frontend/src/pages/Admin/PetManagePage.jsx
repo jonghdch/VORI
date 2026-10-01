@@ -38,7 +38,7 @@ function PetManagePage() {
     setNotices((prev) => ({ ...prev, [user.id]: null }));
     try {
       const pet = await growUserPet(user.id, stage);
-      const stageLabel = STAGE_LABELS[pet.stage] || pet.stage;
+      const stageLabel = `${STAGE_LABELS[pet.stage] || pet.stage} · Lv. ${pet.level}`;
       setNotices((prev) => ({
         ...prev,
         [user.id]: { kind: "ok", text: `${pet.speciesName || "펫"} · ${stageLabel} 적용 완료` },
@@ -116,6 +116,15 @@ function PetManagePage() {
                             onClick={() => grow(user, "ADULT")}
                           >
                             {working === `${user.id}:ADULT` ? "처리 중…" : "성체까지"}
+                          </button>
+                          <button
+                            type="button"
+                            className="adm-btn adm-btn--small adm-btn--primary"
+                            disabled={working !== null}
+                            onClick={() => grow(user, "GRADUATE")}
+                            title="30레벨까지 — 분양(졸업) 가능"
+                          >
+                            {working === `${user.id}:GRADUATE` ? "처리 중…" : "졸업까지"}
                           </button>
                         </div>
                       </td>

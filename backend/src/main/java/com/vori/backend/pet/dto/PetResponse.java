@@ -2,7 +2,6 @@ package com.vori.backend.pet.dto;
 
 import com.vori.backend.pet.Pet;
 import com.vori.backend.pet.PetLevel;
-import com.vori.backend.pet.PetStage;
 import com.vori.backend.pet.PetSpecies;
 
 import java.time.LocalDateTime;
@@ -47,7 +46,7 @@ public record PetResponse(
                 s == null ? null : s.getTier().name(),
                 s == null ? null : s.getAppearanceKey(),
                 p.getVariant().name(),
-                displayStage(p).name(),
+                p.displayStage().name(),
                 nz(p.getStatEnergy()),
                 nz(p.getStatCharm()),
                 nz(p.getStatIq()),
@@ -62,16 +61,6 @@ public record PetResponse(
                 p.getHatchedAt(),
                 p.getReleasedAt(),
                 p.getReleaseValue());
-    }
-
-    /**
-     * 화면에 보일 단계 — 저장된 단계와 레벨이 정하는 단계 중 높은 쪽.
-     * 단계는 스탯이 오를 때만 다시 계산되므로, 진화 기준을 바꾼 직후의 기존 펫은 저장값이 낮을 수 있다.
-     * 다음 성장 때 Pet.evaluateStage 가 저장값도 맞춘다.
-     */
-    private static PetStage displayStage(Pet p) {
-        PetStage byLevel = PetLevel.stageFor(p.level());
-        return byLevel.ordinal() > p.getStage().ordinal() ? byLevel : p.getStage();
     }
 
     private static int nz(Integer v) {

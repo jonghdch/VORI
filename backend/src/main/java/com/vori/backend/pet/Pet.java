@@ -105,6 +105,16 @@ public class Pet {
         return PetLevel.levelFor(exp());
     }
 
+    /**
+     * 화면·리포트에 보일 단계 — 저장된 단계와 레벨이 정하는 단계 중 높은 쪽.
+     * 단계는 스탯이 오를 때만 다시 계산되므로, 진화 기준을 바꾼 직후의 기존 펫은 저장값이 낮을 수 있다.
+     * 다음 성장 때 evaluateStage 가 저장값도 맞춘다.
+     */
+    public PetStage displayStage() {
+        PetStage byLevel = PetLevel.stageFor(level());
+        return byLevel.ordinal() > stage.ordinal() ? byLevel : stage;
+    }
+
     /** 만렙(30)을 달성해 졸업(분양)할 수 있는가. */
     public boolean isGraduated() {
         return level() >= PetLevel.MAX_LEVEL;

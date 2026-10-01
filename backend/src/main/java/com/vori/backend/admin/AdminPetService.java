@@ -7,6 +7,7 @@ import com.vori.backend.pet.PetGrowthLog;
 import com.vori.backend.pet.PetGrowthLogRepository;
 import com.vori.backend.pet.PetRepository;
 import com.vori.backend.pet.PetSpeciesRepository;
+import com.vori.backend.pet.PetLevel;
 import com.vori.backend.pet.PetStage;
 import com.vori.backend.pet.PetVariant;
 import com.vori.backend.pet.PetSpecies;
@@ -40,12 +41,24 @@ public class AdminPetService {
     private final PetSpeciesRepository petSpeciesRepository;
     private final PetGrowthLogRepository petGrowthLogRepository;
 
+    /** 대상 사용자의 활성 펫을 지정한 레벨까지 성장시킨다(30 = 졸업). 이미 그 이상이면 그대로. */
+    @Transactional
+    public PetResponse growActivePetToLevel(Long userId, int level) {
+        int target = PetLevel.minExpFor(Math.max(1, Math.min(level, PetLevel.MAX_LEVEL))) / PetLevel.EXP_PER_STAT;
+        return growTo(userId, target);
+    }
+
     /**
      * 대상 사용자의 활성 펫을 지정한 단계까지 성장시킨다.
      * 이미 그 단계 이상이면 아무것도 하지 않는다(반복 호출해도 스탯이 계속 불어나지 않게).
      */
     @Transactional
     public PetResponse growActivePet(Long userId, PetStage targetStage) {
+        return growTo(userId, Pet.minStatTotalFor(targetStage));
+    }
+
+    /** 스탯 합을 target 까지 올린다. 부족분은 4대 스탯에 고르게, 성장 로그는 BONUS. */
+    private PetResponse growTo(Long userId, int target) {
         List<Pet> pets = petRepository.findByUserIdAndReleasedAtIsNull(userId);
         if (pets.isEmpty()) {
             throw new ResponseStatusException(
@@ -54,7 +67,6 @@ public class AdminPetService {
         Pet pet = pets.get(0);
 
         int current = pet.statTotal();
-        int target = Pet.minStatTotalFor(targetStage);
         if (current >= target) {
             log.info("[ADMIN] 펫 성장 스킵 — 이미 조건 충족. userId={}, petId={}, statTotal={}",
                     userId, pet.getId(), current);

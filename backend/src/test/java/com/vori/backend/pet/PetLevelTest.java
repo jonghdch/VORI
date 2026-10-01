@@ -118,6 +118,15 @@ class PetLevelTest {
         assertThat(PetResponse.of(forced, null).stage()).isEqualTo("ADULT");
     }
 
+    @Test
+    @DisplayName("표시 단계는 Pet.displayStage 한 곳 — 리포트 스냅샷도 같은 값을 쓴다")
+    void displayStageOnPet() {
+        Pet old = Pet.builder().id(3L).userId(1L).speciesId(1L)
+                .statEnergy(150).stage(PetStage.INFANT)
+                .createdAt(LocalDateTime.now()).build();
+        assertThat(old.displayStage()).isEqualTo(PetStage.ADULT);
+    }
+
     private static PetStage stageAfter(int total) {
         Pet p = pet(total);
         p.evaluateStage();

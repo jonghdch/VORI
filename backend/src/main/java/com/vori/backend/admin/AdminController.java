@@ -134,8 +134,9 @@ public class AdminController {
     // ───── 시연·QA 도구 ─────
 
     /**
-     * POST /api/admin/users/{userId}/pet/grow?stage=ADULT
-     * 대상 사용자의 활성 펫을 해당 단계까지 즉시 성장시킨다.
+     * POST /api/admin/users/{userId}/pet/grow?stage=ADULT  또는  ?level=30
+     * 대상 사용자의 활성 펫을 해당 단계(또는 레벨)까지 즉시 성장시킨다. level 이 있으면 level 우선.
+     * 분양(졸업)은 30레벨부터라 시연에서 분양을 보이려면 level=30 을 쓴다.
      *
      * 성체까지 정상적으로 키우려면 누적 30만원어치 절약이 필요해 발표 자리에서 분양을
      * 보여줄 수 없다. 진화 임계값을 낮추면 운영 규칙이 왜곡되므로 어드민 경로로만 연다.
@@ -144,9 +145,12 @@ public class AdminController {
     @PostMapping("/users/{userId}/pet/grow")
     public ResponseEntity<PetResponse> growUserPet(
             @PathVariable Long userId,
-            @RequestParam(defaultValue = "ADULT") PetStage stage
+            @RequestParam(defaultValue = "ADULT") PetStage stage,
+            @RequestParam(required = false) Integer level
     ) {
-        return ResponseEntity.ok(adminPetService.growActivePet(userId, stage));
+        return ResponseEntity.ok(level != null
+                ? adminPetService.growActivePetToLevel(userId, level)
+                : adminPetService.growActivePet(userId, stage));
     }
 
     // ───── 관리자 본인 계정 도구 (/api/admin/me/**) ─────
