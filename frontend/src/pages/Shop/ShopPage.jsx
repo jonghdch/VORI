@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppShell from "../../components/AppShell";
+import PurchaseHistoryModal from "../../components/PurchaseHistoryModal";
 import { PetArt, STAGE_LABEL, TIER_LABEL, VARIANT_LABEL } from "../../components/petVisual";
 import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
@@ -68,6 +69,10 @@ function ShopPage({ user, onLogout }) {
     searchParams.get("tab") === "furniture" ? "furniture" : "egg",
   );
   const [furniturePage, setFurniturePage] = useState(0);
+
+  // 구매 내역 팝업 — 닫히면 포커스를 여는 버튼으로 되돌린다
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyButtonRef = useRef(null);
 
   const reload = useCallback(async () => {
     const [meRes, eggRes] = await Promise.all([getMe(), listMyEggs(true)]);
@@ -226,8 +231,29 @@ function ShopPage({ user, onLogout }) {
             )}
           </div>
 
-          <div className="shop-coin-badge" aria-live="polite">
-            보유 코인 {loading ? "…" : unlimitedCoins ? "∞" : gameMoney.toLocaleString("ko-KR")}
+          <div className="shop-hero-corner">
+            <button
+              ref={historyButtonRef}
+              type="button"
+              className="shop-history-btn"
+              onClick={() => setHistoryOpen(true)}
+              aria-haspopup="dialog"
+            >
+              <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+                <path
+                  d="M3.5 1.5h9v13l-2.2-1.4L8 14.5l-2.3-1.4-2.2 1.4zM6 5.5h4M6 8.5h4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              구매 내역
+            </button>
+            <div className="shop-coin-badge" aria-live="polite">
+              보유 코인 {loading ? "…" : unlimitedCoins ? "∞" : gameMoney.toLocaleString("ko-KR")}
+            </div>
           </div>
 
           {/* 알 / 가구 상점 전환 — 아이콘을 누르면 진열대가 바뀐다 */}
@@ -488,6 +514,14 @@ function ShopPage({ user, onLogout }) {
           </section>
         </div>
 
+        {historyOpen && (
+          <PurchaseHistoryModal
+            onClose={() => {
+              setHistoryOpen(false);
+              historyButtonRef.current?.focus();
+            }}
+          />
+        )}
       </main>
     </AppShell>
   );
