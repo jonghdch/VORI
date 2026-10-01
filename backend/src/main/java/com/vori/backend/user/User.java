@@ -28,7 +28,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    // NULL = 구글로만 가입한 계정(비밀번호 없음). V19 참조.
+    // NULL = 구글로만 가입한 계정(비밀번호 없음). V26 참조.
     @Column(name = "password_hash", length = 255)
     private String passwordHash;
 
