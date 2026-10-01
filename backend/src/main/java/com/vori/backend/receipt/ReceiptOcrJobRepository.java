@@ -1,6 +1,8 @@
 package com.vori.backend.receipt;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -12,6 +14,18 @@ public interface ReceiptOcrJobRepository extends JpaRepository<ReceiptOcrJob, Lo
 
     List<ReceiptOcrJob> findByStatus(OcrStatus status);
 
-    /** 인식에 성공한 영수증 수 — 영수증 칭호 조건. 실패 건은 세지 않는다. */
-    long countByUserIdAndStatus(Long userId, OcrStatus status);
+    /**
+     * 실제로 값을 읽어 낸 영수증 수 — 영수증 칭호("스캔 마스터") 조건.
+     *
+     * 상태가 SUCCESS 여도 영수증이 아니거나 판독이 안 된 사진은 값이 모두 비어 있다(호출 자체는 성공).
+     * 예전엔 상태만 봐서 이런 사진도 세어 아무 사진이나 올려 칭호를 딸 수 있었다.
+     * 화면이 "인식 성공" 으로 보는 기준(금액이나 항목 중 하나라도 있음)과 같게 센다.
+     */
+    @Query("""
+        SELECT COUNT(j) FROM ReceiptOcrJob j
+        WHERE j.userId = :userId
+          AND j.status = com.vori.backend.receipt.OcrStatus.SUCCESS
+          AND (j.extractedAmount IS NOT NULL OR j.extractedItem IS NOT NULL)
+        """)
+    long countReadScans(@Param("userId") Long userId);
 }
