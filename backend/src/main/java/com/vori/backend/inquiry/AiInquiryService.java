@@ -77,6 +77,15 @@ public class AiInquiryService {
                 .toList();
     }
 
+    /**
+     * 커밋 뒤 비동기로 AI 문구를 만들어 대기 질문의 템플릿 문구를 덮어쓴다.
+     *
+     * 질문 행 자체는 ExpenseService 가 지출과 같은 트랜잭션에서 이미 넣었다(AiInquiry.pending).
+     * 그래서 여기서 Gemini 가 실패해도 질문은 남고, 사용자는 템플릿 문구로 답할 수 있다.
+     * 행이 없거나(지출 수정으로 지워지고 새 행이 생김) 이미 답한 뒤면 아무것도 바꾸지 않는다.
+     * 그래서 이벤트의 inquiryId(행 id)로 찾는다 — expense_id 로 찾으면 수정 전 금액으로 만든
+     * 옛 문구가 늦게 도착해 새 질문을 덮어쓴다.
+     */
     @Async("aiExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleAnomalyEvent(ExpenseAnomalyEvent event) {
@@ -84,16 +93,23 @@ public class AiInquiryService {
             String question = geminiClient.generateQuestion(
                     event.getItem(), event.getAmount(), event.getMeanEma(), event.getStatType()
             );
-            aiInquiryRepository.save(AiInquiry.builder()
-                    .expenseId(event.getExpenseId())
-                    .userId(event.getUserId())
-                    .question(question)
-                    .signalAdjusted(false)
-                    .askedAt(LocalDateTime.now())
-                    .build());
+            refineQuestion(event.getInquiryId(), question);
         } catch (Exception e) {
-            log.error("AI 질문 생성 실패: expenseId={}", event.getExpenseId(), e);
+            // 질문은 템플릿으로 남아 사용자 쪽은 멈추지 않지만, AI 층이 죽은 건 운영이 알아야 한다.
+            log.error("AI 질문 문구 생성 실패 — 템플릿 문구 유지: expenseId={}", event.getExpenseId(), e);
         }
+    }
+
+    /**
+     * 대기 질문의 문구를 AI 문구로 교체. 답한 뒤거나 행이 없으면 false.
+     * 엔티티를 읽어 merge 하지 않고 조건 UPDATE 한 번으로 끝낸다 — 그 사이 들어온 답변을
+     * 지우지 않기 위해서다. 트랜잭션은 리포지토리 메서드가 연다: 이 메서드는
+     * handleAnomalyEvent 가 같은 클래스 안에서 부르므로(self-invocation) 여기에 붙인
+     * @Transactional 은 프록시를 타지 않아 효력이 없다.
+     */
+    public boolean refineQuestion(Long inquiryId, String aiQuestion) {
+        if (inquiryId == null || aiQuestion == null || aiQuestion.isBlank()) return false;
+        return aiInquiryRepository.updateQuestionIfUnanswered(inquiryId, aiQuestion) > 0;
     }
 
     /**
