@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import AppShell from "../../components/AppShell";
-import { checkInAttendance, getAttendance, getAttendanceMonth } from "../../api/attendance";
-import "./AttendancePage.css";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { checkInAttendance, getAttendance, getAttendanceMonth } from "../api/attendance";
+import "./AttendanceModal.css";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const STREAK_GOAL = 3; // 이 일수마다 확정 보상 아이템을 준다
@@ -10,7 +9,32 @@ const pad = (n) => String(n).padStart(2, "0");
 const monthKeyOf = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
 const dateKeyOf = (date) => `${monthKeyOf(date)}-${pad(date.getDate())}`;
 
-function AttendancePage({ user, onLogout }) {
+/** 출석 팝업을 열라는 신호. 계정 메뉴의 "출석 확인" 이 쏘고 AttendanceGate 가 듣는다. */
+export const OPEN_ATTENDANCE_EVENT = "vori:open-attendance";
+export const openAttendance = () => window.dispatchEvent(new Event(OPEN_ATTENDANCE_EVENT));
+
+// 오늘 이미 팝업을 보여 줬는지(닫았는지) — 자동으로는 하루 한 번만 띄운다.
+const SHOWN_KEY = "vori.attendance.shownOn";
+export const wasShownToday = () => {
+  try {
+    return localStorage.getItem(SHOWN_KEY) === dateKeyOf(new Date());
+  } catch {
+    return false;
+  }
+};
+export const markShownToday = () => {
+  try {
+    localStorage.setItem(SHOWN_KEY, dateKeyOf(new Date()));
+  } catch {}
+};
+
+/**
+ * 출석 팝업 — 원래 /attendance 페이지였던 내용을 그대로 담은 다이얼로그.
+ * 출석하기 · 연속 출석 띠 · 달력 · 이번 달 보상. 닫기 버튼·Esc·바깥 클릭으로 닫힌다.
+ */
+function AttendanceModal({ onClose }) {
+  const titleId = useId();
+  const dialogRef = useRef(null);
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyOf(today);
   const todayKey = dateKeyOf(today);
@@ -45,6 +69,21 @@ function AttendancePage({ user, onLogout }) {
       alive = false;
     };
   }, [month, loadMonth]);
+
+  // 팝업이 떠 있는 동안 뒤 화면 스크롤 잠금 + Esc 로 닫기 + 첫 포커스
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    dialogRef.current?.focus();
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
 
   const handleCheckIn = async () => {
     setCheckingIn(true);
@@ -81,7 +120,6 @@ function AttendancePage({ user, onLogout }) {
     ],
     [firstWeekday, daysInMonth],
   );
-  // 달력 아래 "이번 달 받은 보상" 목록 — 날짜순
   const monthRewards = useMemo(
     () => history.filter((item) => item.itemAwarded).sort((a, b) => a.date.localeCompare(b.date)),
     [history],
@@ -99,11 +137,27 @@ function AttendancePage({ user, onLogout }) {
   const ready = !loading || !!status;
 
   return (
-    <AppShell activeTop="home" activeSide="attendance" user={user} onLogout={onLogout}>
-      <main className="home-main attendance-main">
+    <div
+      className="attendance-backdrop"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        className="attendance-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+      >
+        <button type="button" className="attendance-close" onClick={onClose} aria-label="닫기">
+          ×
+        </button>
+
         <div className="attendance-head">
           <div>
-            <h1 className="attendance-title">
+            <h1 className="attendance-title" id={titleId}>
               <span className="attendance-title-badge" aria-hidden>
                 🐾
               </span>
@@ -143,9 +197,6 @@ function AttendancePage({ user, onLogout }) {
           </p>
         )}
 
-        {/* 연속 출석·다음 보상·오늘 상태를 따로 뗀 카드 3개 대신 하나의 띠에 이어서 보여준다.
-            연속 일수와 "며칠 남았는지"는 사실 같은 값을 두 방향에서 보여주는 것이라
-            점 표시기 하나로 합치고, 오늘 상태만 오른쪽에 배지로 분리했다. */}
         <section className="attendance-banner">
           <div className="attendance-banner-streak">
             <span className="attendance-banner-flame" aria-hidden>
@@ -309,9 +360,9 @@ function AttendancePage({ user, onLogout }) {
             </ul>
           </section>
         )}
-      </main>
-    </AppShell>
+      </div>
+    </div>
   );
 }
 
-export default AttendancePage;
+export default AttendanceModal;
