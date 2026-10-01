@@ -307,10 +307,6 @@ function PetPage({ user, onLogout }) {
     ? {
         id: String(pet.id),
         name: petDisplayName(pet),
-        // 이름을 지은 펫은 이름이 제목이 되므로, 종족은 여기 덧붙여 계속 보이게 한다
-        type: [pet.name ? pet.speciesName : null, STAGE_LABEL[pet.stage], VARIANT_LABEL[pet.variant]]
-          .filter(Boolean)
-          .join(" · "),
         appearanceKey: pet.appearanceKey,
         stage: pet.stage,
         color: PET_ACCENT,
@@ -562,25 +558,6 @@ function PetPage({ user, onLogout }) {
       onLogout={onLogout}
     >
       <main className="home-main pet-main">
-        <div className="pet-header">
-          <div>
-            <h1 className="pet-title">
-              <span className="pet-title-badge" aria-hidden>
-                🏠
-              </span>
-              <span className="pet-title-text">
-                {selectedPet
-                  ? `${nickname}님이 키우는 ${selectedPet.name}의 방`
-                  : `${nickname}님의 방`}
-              </span>
-            </h1>
-          </div>
-          {selectedPet && (
-            <div className="pet-header-status">
-              <span>{selectedPet.type}</span>
-            </div>
-          )}
-        </div>
 
         <div className="pet-myroom-layout">
           {/* 왼쪽: 방 */}
@@ -596,10 +573,15 @@ function PetPage({ user, onLogout }) {
               }
             >
               <div className="pet-room-top">
-                <div>
-                  <span className="pet-room-label">방 색상</span>
-                  <h2>{selectedBackground.name}</h2>
-                </div>
+                {/* 방 제목 — 펫이 있으면 "(펫 이름)의 방" */}
+                <h1 className="pet-title">
+                  <span className="pet-title-badge" aria-hidden>
+                    🏠
+                  </span>
+                  <span className="pet-title-text">
+                    {selectedPet ? `${selectedPet.name}의 방` : `${nickname}님의 방`}
+                  </span>
+                </h1>
                 <div className="pet-room-chips">
                   <ul className="pet-surface-chips pet-room-bonus-chips" aria-label="배치 가구 보너스">
                     <li className="pet-room-bonus-chip--release">분양가 +{roomBonus.release}%</li>
