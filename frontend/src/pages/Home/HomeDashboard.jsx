@@ -26,6 +26,23 @@ const STAT_META = [
 
 const won = (n) => `${(n ?? 0).toLocaleString("ko-KR")}원`;
 
+// 월간 리포트 버튼을 띄우는 기간 — 매달 마지막 날 12시(월간 정산 시각)부터 7일.
+const REPORT_WINDOW_DAYS = 7;
+
+/** 지금이 리포트 기간이면 그 리포트의 달("YYYY-MM"), 아니면 null. 기간은 다음 달 초까지 걸친다. */
+function reportWindowMonth(now = new Date()) {
+  // 이번 달과 지난달 마지막 날 12시를 차례로 본다
+  for (const offset of [0, -1]) {
+    const start = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0, 12);
+    const end = new Date(start);
+    end.setDate(end.getDate() + REPORT_WINDOW_DAYS);
+    if (now >= start && now < end) {
+      return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}`;
+    }
+  }
+  return null;
+}
+
 function HomeDashboard({ user, onNavigate, onLogout }) {
   const navigate = useNavigate();
 
@@ -119,6 +136,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   }, []);
 
   const today = new Date();
+  const reportMonth = reportWindowMonth(today);
   const dateStr = new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
@@ -441,13 +459,24 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 signalByKey={calendarSignals}
               />
             </div>
-            <button
-              type="button"
-              className="home-btn home-btn-primary home-btn-block"
-              onClick={() => navigate("/report")}
-            >
-              ▶ 리포트 확인하기
-            </button>
+            {/* 월말 정산 뒤 일주일은 그 달 리포트로, 그 외에는 가계부로 */}
+            {reportMonth ? (
+              <button
+                type="button"
+                className="home-btn home-btn-primary home-btn-block"
+                onClick={() => navigate(`/report?month=${reportMonth}`)}
+              >
+                ▶ 리포트 확인하기
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="home-btn home-btn-primary home-btn-block"
+                onClick={() => navigate("/wallet")}
+              >
+                ▶ 가계부 이동하기
+              </button>
+            )}
           </section>
         </div>
 
