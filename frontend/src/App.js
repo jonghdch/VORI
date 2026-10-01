@@ -40,9 +40,6 @@ const PetDexPage = lazy(() => import("./pages/PetDex/PetDexPage"));
 const PetDetailPage = lazy(() => import("./pages/PetDex/PetDetailPage"));
 const ShopPage = lazy(() => import("./pages/Shop/ShopPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
-const ProfileSettingsPage = lazy(() =>
-  import("./pages/Settings/ProfileSettingsPage"),
-);
 // 이용약관·개인정보처리방침 — 공개(비인증) 페이지.
 const TermsPage = lazy(() => import("./pages/Legal/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/Legal/PrivacyPage"));
@@ -95,8 +92,8 @@ const ADMIN_PAGES = {
 //   /raise                  펫 키우기
 //   /dex                    펫 도감
 //   /shop                   상점
-//   /settings               환경설정
-//   /settings/profile       프로필 설정
+//   /settings               환경설정 → /settings/profile 로 보냄
+//   /settings/:tab          환경설정 탭 (profile 프로필 · general 기본 설정)
 //   /titles                 업적/칭호
 //   /admin/*                어드민 (ADMIN 전용)
 
@@ -313,19 +310,12 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
           <Route
-            path="/settings"
+            path="/settings/:tab"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
-                <SettingsPage user={user} onLogout={handleLogout} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings/profile"
-            element={
-              <ProtectedRoute user={user} authLoading={authLoading}>
-                <ProfileSettingsPage
+                <SettingsPage
                   user={user}
                   onLogout={handleLogout}
                   onUserUpdate={setUser}

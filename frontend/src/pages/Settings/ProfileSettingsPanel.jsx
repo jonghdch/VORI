@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AppShell from "../../components/AppShell";
 import { listTitles, setActiveTitle } from "../../api/titles";
 import { getMe, updateMe } from "../../api/user";
-import "./ProfileSettingsPage.css";
+import "./ProfileSettingsPanel.css";
 
 const formFromUser = (user) => ({
   nickname: user?.nickname || "",
@@ -13,7 +12,8 @@ const formFromUser = (user) => ({
   monthlyIncome: user?.monthlyIncome ?? "",
 });
 
-function ProfileSettingsPage({ user, onLogout, onUserUpdate }) {
+// 환경설정 > 프로필 탭. 칭호 선택 + 내 정보 수정.
+function ProfileSettingsPanel({ user, onUserUpdate }) {
   const navigate = useNavigate();
   const [initial, setInitial] = useState(() => formFromUser(user));
   const [form, setForm] = useState(initial);
@@ -117,74 +117,68 @@ function ProfileSettingsPage({ user, onLogout, onUserUpdate }) {
   };
 
   return (
-    <AppShell activeTop="" activeSide="profile" onLogout={onLogout}>
-      <main className="profile-settings-main home-main">
-        <div>
-          <h1>프로필 설정</h1>
-          <p>내 정보를 수정하면 VORI 화면에 바로 반영됩니다.</p>
+    <div className="profile-settings">
+      <section className="profile-form" aria-labelledby="profile-title-heading">
+        <h2 id="profile-title-heading">칭호 설정</h2>
+        <label>
+          <span>표시할 칭호</span>
+          <select
+            value={selectedTitle}
+            disabled={titleLoading || titleSaving || !!titleError}
+            onChange={(event) => { setSelectedTitle(event.target.value); setTitleNotice(""); }}
+          >
+            <option value="">칭호 없음</option>
+            {titles.map((title) => <option key={title.id} value={String(title.id)}>{title.name}</option>)}
+          </select>
+          <small>{titleLoading ? "칭호를 불러오는 중…" : titles.length ? "획득한 칭호를 선택하거나 ‘칭호 없음’으로 해제할 수 있어요." : "아직 획득한 칭호가 없어요. 업적/칭호에서 획득 조건을 확인하세요."}</small>
+        </label>
+        {titleError && <p role="alert" className="profile-message error">{titleError}</p>}
+        {titleNotice && <p role="status" className="profile-message">{titleNotice}</p>}
+        <div className="profile-actions">
+          <button type="button" className="profile-cancel" onClick={() => navigate("/dex?tab=titles")}>업적/칭호 보기</button>
+          <button type="button" className="profile-save" disabled={titleLoading || titleSaving || !!titleError || selectedTitle === savedTitle} onClick={handleTitleSave}>{titleSaving ? "적용 중…" : "칭호 적용"}</button>
         </div>
-        <section className="profile-form" aria-labelledby="profile-title-heading">
-          <h2 id="profile-title-heading">칭호 설정</h2>
+      </section>
+      <form className="profile-form" onSubmit={handleSave}>
+        <label>
+          <span>이메일</span>
+          <input value={email} disabled />
+          <small>이메일은 로그인 계정으로 사용됩니다.</small>
+        </label>
+        <label>
+          <span>닉네임 <b>필수</b></span>
+          <input value={form.nickname} maxLength="12" onChange={setField("nickname")} placeholder="표시할 닉네임" />
+        </label>
+        <label>
+          <span>이름 <b>필수</b></span>
+          <input value={form.name} maxLength="30" onChange={setField("name")} placeholder="이름을 입력하세요" />
+        </label>
+        <div className="profile-form-grid">
           <label>
-            <span>표시할 칭호</span>
-            <select
-              value={selectedTitle}
-              disabled={titleLoading || titleSaving || !!titleError}
-              onChange={(event) => { setSelectedTitle(event.target.value); setTitleNotice(""); }}
-            >
-              <option value="">칭호 없음</option>
-              {titles.map((title) => <option key={title.id} value={String(title.id)}>{title.name}</option>)}
-            </select>
-            <small>{titleLoading ? "칭호를 불러오는 중…" : titles.length ? "획득한 칭호를 선택하거나 ‘칭호 없음’으로 해제할 수 있어요." : "아직 획득한 칭호가 없어요. 업적/칭호에서 획득 조건을 확인하세요."}</small>
+            <span>나이</span>
+            <input type="number" min="1" max="120" value={form.age} onChange={setField("age")} placeholder="예: 23" />
           </label>
-          {titleError && <p role="alert" className="profile-message error">{titleError}</p>}
-          {titleNotice && <p role="status" className="profile-message">{titleNotice}</p>}
-          <div className="profile-actions">
-            <button type="button" className="profile-cancel" onClick={() => navigate("/dex?tab=titles")}>업적/칭호 보기</button>
-            <button type="button" className="profile-save" disabled={titleLoading || titleSaving || !!titleError || selectedTitle === savedTitle} onClick={handleTitleSave}>{titleSaving ? "적용 중…" : "칭호 적용"}</button>
+          <label>
+            <span>직업</span>
+            <input value={form.job} maxLength="50" onChange={setField("job")} placeholder="예: 대학생" />
+          </label>
+        </div>
+        <label>
+          <span>월 수입</span>
+          <div className="profile-money-input">
+            <input type="number" min="0" value={form.monthlyIncome} onChange={setField("monthlyIncome")} placeholder="예: 2500000" />
+            <em>원</em>
           </div>
-        </section>
-        <form className="profile-form" onSubmit={handleSave}>
-          <label>
-            <span>이메일</span>
-            <input value={email} disabled />
-            <small>이메일은 로그인 계정으로 사용됩니다.</small>
-          </label>
-          <label>
-            <span>닉네임 <b>필수</b></span>
-            <input value={form.nickname} maxLength="12" onChange={setField("nickname")} placeholder="표시할 닉네임" />
-          </label>
-          <label>
-            <span>이름 <b>필수</b></span>
-            <input value={form.name} maxLength="30" onChange={setField("name")} placeholder="이름을 입력하세요" />
-          </label>
-          <div className="profile-form-grid">
-            <label>
-              <span>나이</span>
-              <input type="number" min="1" max="120" value={form.age} onChange={setField("age")} placeholder="예: 23" />
-            </label>
-            <label>
-              <span>직업</span>
-              <input value={form.job} maxLength="50" onChange={setField("job")} placeholder="예: 대학생" />
-            </label>
-          </div>
-          <label>
-            <span>월 수입</span>
-            <div className="profile-money-input">
-              <input type="number" min="0" value={form.monthlyIncome} onChange={setField("monthlyIncome")} placeholder="예: 2500000" />
-              <em>원</em>
-            </div>
-          </label>
-          {error && <p className="profile-message error">{error}</p>}
-          {notice && <p className="profile-message success">{notice}</p>}
-          <div className="profile-actions">
-            <button type="button" className="profile-cancel" onClick={() => { setForm(initial); setError(""); setNotice(""); }}>취소</button>
-            <button type="submit" className="profile-save" disabled={!changed || saving}>{saving ? "저장 중..." : "저장하기"}</button>
-          </div>
-        </form>
-      </main>
-    </AppShell>
+        </label>
+        {error && <p className="profile-message error">{error}</p>}
+        {notice && <p className="profile-message success">{notice}</p>}
+        <div className="profile-actions">
+          <button type="button" className="profile-cancel" onClick={() => { setForm(initial); setError(""); setNotice(""); }}>취소</button>
+          <button type="submit" className="profile-save" disabled={!changed || saving}>{saving ? "저장 중..." : "저장하기"}</button>
+        </div>
+      </form>
+    </div>
   );
 }
 
-export default ProfileSettingsPage;
+export default ProfileSettingsPanel;

@@ -199,25 +199,16 @@ function AppShell({
           <div className="home-side-block">
             <div className="home-side-title">설정</div>
             <ul className="home-side-list">
+              {/* 프로필은 환경설정 안의 탭이다 (/settings/profile) */}
               <li>
                 <button
                   type="button"
-                  className="home-side-link"
+                  className={`home-side-link ${activeSide === "settings" ? "is-active" : ""}`}
+                  aria-current={activeSide === "settings" ? "page" : undefined}
                   onClick={() => go("settings")}
                 >
                   <span className="home-side-icon" aria-hidden />
                   <span className="home-side-label">환경설정</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  className={`home-side-link ${activeSide === "profile" ? "is-active" : ""}`}
-                  aria-current={activeSide === "profile" ? "page" : undefined}
-                  onClick={() => go("settings/profile")}
-                >
-                  <span className="home-side-icon" aria-hidden />
-                  <span className="home-side-label">프로필 설정</span>
                 </button>
               </li>
               <li>
