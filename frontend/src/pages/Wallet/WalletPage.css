@@ -1061,6 +1061,7 @@
 .ledger-day-reward-value strong { color: #3e6d35; font-size: 20px; }
 .ledger-day-reward-value--coin { border-color: #f0d89b; background: #fffaf0; }
 .ledger-day-reward-value--coin strong { color: #af7e17; }
+.ledger-day-reward-coin { vertical-align: -2px; font-size: 14px; }
 .ledger-day-reward-empty { margin: 0; color: var(--home-muted); font-size: 14px; }
 .ledger-day-reward-error { color: #b34c4c; }
 

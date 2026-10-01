@@ -957,6 +957,7 @@
   color: #8d6b22;
 }
 .ledger-reward-icon {
+  display: inline-flex;
   font-size: 22px;
   line-height: 1;
 }

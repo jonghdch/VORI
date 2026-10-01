@@ -1,4 +1,5 @@
 import { useState } from "react";
+import CoinIcon from "../../components/CoinIcon";
 
 const LABELS = { GREEN: "초록 · 합리적", GRAY: "노랑 · 보통", RED: "주황 · 주의" };
 // 목록에 보여 주는 묶음 순서.
@@ -46,7 +47,7 @@ export default function JudgmentResults({ expenses, judgment }) {
       </div>
       <div className="ledger-reward-grid">
         <div className="ledger-reward-item ledger-reward-item--coin">
-          <span className="ledger-reward-icon" aria-hidden="true">🪙</span>
+          <span className="ledger-reward-icon" aria-hidden="true"><CoinIcon /></span>
           <span>보유 코인</span>
           <strong>+{coin.toLocaleString("ko-KR")}</strong>
         </div>

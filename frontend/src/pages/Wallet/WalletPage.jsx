@@ -6,6 +6,7 @@ import { getMonthlyLedger } from "../../api/ledger";
 import { getMonthlyJudgments } from "../../api/dailyJudgment";
 import { listInquiriesByDate } from "../../api/inquiries";
 import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
+import CoinIcon from "../../components/CoinIcon";
 import "../Home/HomeDashboard.css";
 import "./WalletPage.css";
 
@@ -779,7 +780,7 @@ function WalletPage({ user, onLogout }) {
             <p className="ledger-day-reward-empty ledger-day-reward-error">{judgmentError}</p>
           ) : selectedJudgment ? (
             <div className="ledger-day-reward-values">
-              <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span>🪙 받은 코인</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
+              <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span><CoinIcon className="ledger-day-reward-coin" /> 받은 코인</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
               <div className="ledger-day-reward-value"><span>⚡ 에너지</span><strong>+{selectedJudgment.statRewardPerType || 0}</strong></div>
               <div className="ledger-day-reward-value"><span>✨ 매력</span><strong>+{selectedJudgment.statRewardPerType || 0}</strong></div>
               <div className="ledger-day-reward-value"><span>🧠 지능</span><strong>+{selectedJudgment.statRewardPerType || 0}</strong></div>
