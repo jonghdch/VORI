@@ -241,14 +241,17 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                       strokeDasharray={`${(245.04 * petExp) / 100} 326.73`}
                     />
                   </svg>
+                  {/* 펫을 불러오기 전에는 그림을 비워 둔다 — 기본 강아지가 잠깐 보였다 바뀌지 않게 */}
                   <div className="home-pet-art" aria-hidden>
-                    <PetArt
-                      appearanceKey={activePet?.appearanceKey ?? "puppy"}
-                      stage={activePet?.stage}
-                      name=""
-                      className="home-pet-image"
-                      emojiClassName="home-pet-emoji"
-                    />
+                    {activePet && (
+                      <PetArt
+                        appearanceKey={activePet.appearanceKey}
+                        stage={activePet.stage}
+                        name=""
+                        className="home-pet-image"
+                        emojiClassName="home-pet-emoji"
+                      />
+                    )}
                   </div>
                   <button
                     type="button"
