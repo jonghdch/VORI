@@ -784,6 +784,14 @@
   border-radius: 999px;
   font-size: 14px;
 }
+/* 판정 완료 화면 — 제목·설명을 신호 배지와 그 아래 블록(보상 카드)의 한가운데에 둔다.
+   배지 아래 여백 18px 과 .ledger-center-y 의 gap 160px 을 합쳐 위아래 89px 씩 나눈다. */
+.ledger-title-block--result {
+  margin-bottom: -71px;
+}
+.ledger-title-block--result .ledger-signal-result {
+  margin-bottom: 89px;
+}
 .ledger-signal-dot {
   width: 11px;
   height: 11px;

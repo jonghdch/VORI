@@ -229,7 +229,7 @@ function WalletAnalysisPage({ user }) {
             <div className="ledger-actions">
               <div className="ledger-actions-row">
                 <button type="button" className="ledger-back" onClick={goBack}>
-                  가계부로 돌아가기
+                  돌아가기
                 </button>
                 <button
                   type="button"
@@ -244,7 +244,7 @@ function WalletAnalysisPage({ user }) {
         ) : total === 0 ? (
           // ───── AI 질문 없음 — 무지출 또는 오늘 소비의 최종 신호 안내 ─────
           <div className="ledger-center-y">
-            <div className="ledger-title-block">
+            <div className="ledger-title-block ledger-title-block--result">
               <div className={`ledger-signal-result ledger-signal-result--${dailySignal.toLowerCase()}`}>
                 <span className="ledger-signal-dot" aria-hidden />
                 <strong>{signalLabel(dailySignal)}</strong>
@@ -256,13 +256,12 @@ function WalletAnalysisPage({ user }) {
                 {judgedExpenseCount === 0
                   ? "지출이 없어 초록으로 표시했어요. 지급 보상은 아래에서 확인하세요."
                   : dailySignal === "GREEN"
-                    ? "모든 지출이 초록으로 분류됐어요. 항목별 판정 근거를 확인해 보세요."
+                    ? "모든 지출이 초록으로 분류됐어요. 항목별로 판정 이유를 확인해 보세요."
                     : dailySignal === "GRAY"
                       ? "주황 지출이 포함되어 있어요. 하루 색상은 빨강, 주황, 초록 순으로 가장 주의가 필요한 지출을 따라요."
                       : "빨강 지출이 포함되어 있어요. 아래 항목별 금액 비교와 사유를 확인해 보세요."}
               </p>
             </div>
-            {judgment?.alreadyJudged && <p className="ledger-hint">이미 판정한 날짜예요. 현재 지출의 결과와 기존 지급 내역을 보여드려요.</p>}
             {questionPending && (
               <p className="ledger-hint">
                 질문이 없는 빨강 지출이 있어요. 아래 항목별 판정을 확인하고, 사유를 남기고 싶으면 가계부에서 그 지출을 수정해 주세요.
