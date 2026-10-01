@@ -8,6 +8,7 @@ import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/
 import { getMe, notifyPetChanged } from "../../api/user";
 import { CATEGORY_LABEL, FurnitureArt, STAT_LABEL, isSurface } from "../../components/furnitureVisual";
 import { EGG_IMAGE, eggImageFor } from "../../components/eggVisual";
+import useMediaQuery from "../../components/useMediaQuery";
 import shopBackgroundImage from "../../assets/shop/shop-background.png";
 import furnitureIconImage from "../../assets/shop/furniture-icon.png";
 import "../Home/HomeDashboard.css";
@@ -25,7 +26,64 @@ const TIER_ORDER = ["S", "A", "B", "C"];
 // 가구 진열대는 알 진열대처럼 한 번에 3개씩 보여주고, 화살표로 넘긴다.
 const FURNITURE_PER_PAGE = 3;
 
+// 세로로 든 휴대폰처럼 좁은 화면에서는 알·가구 모두 1개씩 보여준다 — 3개를 세로로
+// 쌓으면 간판을 덮고 잘린다. ShopPage.css 의 진열대 미디어 쿼리와 같은 값이어야 한다.
+const NARROW_QUERY = "(max-width: 720px)";
+
 const coin = (n) => `${(n ?? 0).toLocaleString("ko-KR")} 코인`;
+
+// 진열대 쪽 나누기. 위치를 쪽 번호가 아니라 그 쪽 첫 상품의 순번(start)으로 기억해서,
+// 화면을 돌려 한 쪽 개수가 바뀌어도 보던 상품이 그대로 남는다.
+function paginate(items, start, perPage) {
+  const pageCount = Math.max(1, Math.ceil(items.length / perPage));
+  // 상품 수가 줄어 현재 쪽이 사라져도 마지막 쪽을 보여준다
+  const page = Math.min(Math.floor(start / perPage), pageCount - 1);
+  return {
+    page,
+    pageCount,
+    visible: items.slice(page * perPage, (page + 1) * perPage),
+    prevStart: (page - 1) * perPage,
+    nextStart: (page + 1) * perPage,
+  };
+}
+
+// 양옆 화살표로 넘기는 진열대. noun 은 화살표 안내 문구("이전 가구 보기")에 쓴다.
+function PagedShelf({ id, labelledBy, noun, pager, onMove, showIndicator, children }) {
+  return (
+    <div className="shop-paged-stage" id={id} role="tabpanel" aria-labelledby={labelledBy}>
+      <button
+        type="button"
+        className="shop-page-arrow"
+        aria-label={`이전 ${noun} 보기`}
+        disabled={pager.page === 0}
+        onClick={() => onMove(pager.prevStart)}
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <div className="shop-paged-shelf" aria-live="polite">
+        {children}
+      </div>
+      <button
+        type="button"
+        className="shop-page-arrow"
+        aria-label={`다음 ${noun} 보기`}
+        disabled={pager.page >= pager.pageCount - 1}
+        onClick={() => onMove(pager.nextStart)}
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {showIndicator && (
+        <p className="shop-page-indicator">
+          {pager.page + 1} / {pager.pageCount}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function ShopPage({ user, onLogout }) {
   const navigate = useNavigate();
@@ -51,7 +109,10 @@ function ShopPage({ user, onLogout }) {
   const [shopTab, setShopTab] = useState(() =>
     searchParams.get("tab") === "furniture" ? "furniture" : "egg",
   );
-  const [furniturePage, setFurniturePage] = useState(0);
+  // 진열대에서 지금 보는 쪽의 첫 상품 순번 (paginate 참고)
+  const [eggStart, setEggStart] = useState(0);
+  const [furnitureStart, setFurnitureStart] = useState(0);
+  const narrow = useMediaQuery(NARROW_QUERY);
 
   // 구매 내역 팝업 — 닫힐 때 포커스 복귀는 모달이 맡는다(열기 전 포커스로 되돌림)
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -168,12 +229,49 @@ function ShopPage({ user, onLogout }) {
 
   // 벽지·바닥(방 전체에 깔리는 면)은 상점 진열대에 올리지 않는다
   const shelfFurniture = furnitureProducts.filter((item) => !isSurface(item.category));
-  const furniturePageCount = Math.max(1, Math.ceil(shelfFurniture.length / FURNITURE_PER_PAGE));
-  // 상품 수가 줄어 현재 쪽이 사라져도 마지막 쪽을 보여준다
-  const currentFurniturePage = Math.min(furniturePage, furniturePageCount - 1);
-  const visibleFurniture = shelfFurniture.slice(
-    currentFurniturePage * FURNITURE_PER_PAGE,
-    (currentFurniturePage + 1) * FURNITURE_PER_PAGE
+  const furniturePager = paginate(shelfFurniture, furnitureStart, narrow ? 1 : FURNITURE_PER_PAGE);
+  // 알은 넓은 화면에서 전부 한 줄에 놓고(넘기지 않음), 좁은 화면에서만 1개씩 넘긴다
+  const eggPager = paginate(products, eggStart, 1);
+
+  const eggShelfBody = (
+    <>
+      {loading && products.length === 0 && (
+        <p className="shop-shelf-state">상품을 불러오는 중…</p>
+      )}
+      {error && <p className="shop-shelf-state shop-shelf-state--error">{error}</p>}
+      {(narrow ? eggPager.visible : products).map((item) => {
+        const affordable = unlimitedCoins || gameMoney >= item.price;
+        const isBusy = busy === `buy:${item.grade}`;
+        return (
+          <article key={item.grade} className="shop-display-item">
+            <div className="shop-display-image-wrap">
+              <img src={eggImageFor(item.grade, item.name)} alt={item.name} className="shop-display-image" />
+            </div>
+            <div className="shop-display-info">
+              <h2>{item.name}</h2>
+              <p>{GRADE_COPY[item.grade] ?? "새 친구가 태어날 알이에요."}</p>
+              <ul className="shop-prob-list" aria-label="등급별 확률">
+                {TIER_ORDER.filter((t) => item.probabilities?.[t] > 0).map((t) => (
+                  <li key={t} className={`shop-prob shop-prob--${t.toLowerCase()}`}>
+                    {t} {item.probabilities[t]}%
+                  </li>
+                ))}
+              </ul>
+              <strong>{coin(item.price)}</strong>
+              <button
+                type="button"
+                className="home-btn home-btn-primary shop-buy-btn"
+                disabled={!affordable || isBusy || busy !== null}
+                onClick={() => handleBuy(item)}
+                title={affordable ? undefined : "코인이 부족해요"}
+              >
+                {isBusy ? "구매 중…" : affordable ? "구매하기" : "코인 부족"}
+              </button>
+            </div>
+          </article>
+        );
+      })}
+    </>
   );
 
   const ownedCountByName = myFurniture.reduce((acc, f) => {
@@ -265,78 +363,45 @@ function ShopPage({ user, onLogout }) {
             </button>
           </div>
 
-          {shopTab === "egg" && (
-          <div
-            className="shop-display-shelf"
-            id="shop-panel-egg"
-            role="tabpanel"
-            aria-labelledby="shop-tab-egg"
-          >
-            {loading && products.length === 0 && (
-              <p className="shop-shelf-state">상품을 불러오는 중…</p>
-            )}
-            {error && <p className="shop-shelf-state shop-shelf-state--error">{error}</p>}
-            {products.map((item) => {
-              const affordable = unlimitedCoins || gameMoney >= item.price;
-              const isBusy = busy === `buy:${item.grade}`;
-              return (
-                <article key={item.grade} className="shop-display-item">
-                  <div className="shop-display-image-wrap">
-                    <img src={eggImageFor(item.grade, item.name)} alt={item.name} className="shop-display-image" />
-                  </div>
-                  <div className="shop-display-info">
-                    <h2>{item.name}</h2>
-                    <p>{GRADE_COPY[item.grade] ?? "새 친구가 태어날 알이에요."}</p>
-                    <ul className="shop-prob-list" aria-label="등급별 확률">
-                      {TIER_ORDER.filter((t) => item.probabilities?.[t] > 0).map((t) => (
-                        <li key={t} className={`shop-prob shop-prob--${t.toLowerCase()}`}>
-                          {t} {item.probabilities[t]}%
-                        </li>
-                      ))}
-                    </ul>
-                    <strong>{coin(item.price)}</strong>
-                    <button
-                      type="button"
-                      className="home-btn home-btn-primary shop-buy-btn"
-                      disabled={!affordable || isBusy || busy !== null}
-                      onClick={() => handleBuy(item)}
-                      title={affordable ? undefined : "코인이 부족해요"}
-                    >
-                      {isBusy ? "구매 중…" : affordable ? "구매하기" : "코인 부족"}
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-          )}
+          {shopTab === "egg" &&
+            (narrow ? (
+              <PagedShelf
+                id="shop-panel-egg"
+                labelledBy="shop-tab-egg"
+                noun="알"
+                pager={eggPager}
+                onMove={setEggStart}
+                showIndicator={products.length > 0}
+              >
+                {eggShelfBody}
+              </PagedShelf>
+            ) : (
+              <div
+                className="shop-display-shelf"
+                id="shop-panel-egg"
+                role="tabpanel"
+                aria-labelledby="shop-tab-egg"
+              >
+                {eggShelfBody}
+              </div>
+            ))}
 
           {shopTab === "furniture" && (
-            <div
-              className="shop-furniture-stage"
+            <PagedShelf
               id="shop-panel-furniture"
-              role="tabpanel"
-              aria-labelledby="shop-tab-furniture"
+              labelledBy="shop-tab-furniture"
+              noun="가구"
+              pager={furniturePager}
+              onMove={setFurnitureStart}
+              showIndicator={shelfFurniture.length > 0}
             >
-              <button
-                type="button"
-                className="shop-page-arrow"
-                aria-label="이전 가구 보기"
-                disabled={currentFurniturePage === 0}
-                onClick={() => setFurniturePage(currentFurniturePage - 1)}
-              >
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <div className="shop-furniture-shelf" aria-live="polite">
               {furnitureError && (
                 <p className="shop-shelf-state shop-shelf-state--error">{furnitureError}</p>
               )}
               {!furnitureError && furnitureProducts.length === 0 && (
                 <p className="shop-shelf-state">가구를 불러오는 중…</p>
               )}
-              {visibleFurniture.map((item) => {
+              {furniturePager.visible.map((item) => {
                 const affordable = unlimitedCoins || gameMoney >= item.price;
                 const isBusy = busy === `furniture:${item.code}`;
                 const owned = ownedCountByName[item.name] || 0;
@@ -384,24 +449,7 @@ function ShopPage({ user, onLogout }) {
                   </article>
                 );
               })}
-              </div>
-              <button
-                type="button"
-                className="shop-page-arrow"
-                aria-label="다음 가구 보기"
-                disabled={currentFurniturePage >= furniturePageCount - 1}
-                onClick={() => setFurniturePage(currentFurniturePage + 1)}
-              >
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                  <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              {shelfFurniture.length > 0 && (
-                <p className="shop-page-indicator">
-                  {currentFurniturePage + 1} / {furniturePageCount}
-                </p>
-              )}
-            </div>
+            </PagedShelf>
           )}
         </section>
 

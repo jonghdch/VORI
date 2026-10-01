@@ -717,7 +717,7 @@ function PetPage({ user, onLogout }) {
                   !petLoading && (
                     <div className="pet-room-empty">
                       <strong>아직 키우는 펫이 없어요</strong>
-                      <p>상점에서 알을 데려와 개봉하면 새 친구가 태어나요.</p>
+                      <p>상점에서 새 친구를 데려올 수 있어요.</p>
                       <button
                         type="button"
                         className="home-btn home-btn-primary"

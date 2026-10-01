@@ -436,6 +436,32 @@
 }
 
 /* 중앙 세로 스택: 칭호→보리→이름(Lv 라벨 포함)→경험치바 */
+/* 펫 없음 안내 — 게이지·스탯 카드 자리에 가운데로. 카드 없이 글자만 (초록 배경 위에 바로) */
+.home-pet-empty {
+  grid-column: 1 / -1;
+  justify-self: center;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* 펫이 있을 때의 본문 높이(게이지+이름 줄 371px)를 그대로 유지해 카드 크기가 안 바뀌게 */
+  min-height: 371px;
+  text-align: center;
+}
+
+.home-pet-empty strong {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.home-pet-empty p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--home-muted);
+}
+
 .home-pet-center {
   display: flex;
   flex-direction: column;
@@ -1104,6 +1130,12 @@
 .report-placeholder-text { margin: 12px 0 0; font-size: 15px; color: var(--home-muted); }
 
 @media (max-width: 1024px) {
+  /* 한 줄 배치에서는 화면 폭에 맞춰 줄인다 — 1024px 에서는 펫이 있을 때의 본문 높이
+     (게이지 371 + 간격 16 + 스탯 카드 191 = 578)와 같고, 휴대폰 세로에서는 200px 대. */
+  .home-pet-empty {
+    min-height: clamp(200px, 56.5vw, 578px);
+  }
+
   .home-row-pet,
   .home-row-kpi,
   .home-row-bottom {
@@ -1233,22 +1265,37 @@
 }
 
 @media (max-width: 640px) {
+  /* 세로로 든 휴대폰: 로고를 빼고 그 자리(햄버거 옆)에 주 메뉴를 둔다 — 홈으로 가기는
+     메뉴의 "홈"이 맡는다. 계정 요약은 자리가 모자라면 다음 줄 오른쪽으로 내려간다. */
+  .home-logo {
+    display: none;
+  }
+
   .home-topnav {
-    order: 3;
-    width: 100%;
-    justify-self: stretch;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+    flex-wrap: nowrap;
     justify-content: flex-start;
+  }
+
+  .home-topnav-item {
+    padding: 8px 12px;
+    white-space: nowrap;
   }
 
   .home-topbar-inner {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
     align-items: center;
+    column-gap: 10px;
   }
 
-  .home-logo {
-    justify-self: auto;
+  /* 아주 좁은 폰(320px 대)에서도 메뉴가 햄버거 옆 한 줄에 들어가게 */
+  @media (max-width: 340px) {
+    .home-topnav-item {
+      padding: 8px 9px;
+    }
   }
 
   .home-main {
@@ -1378,8 +1425,10 @@
   color: var(--home-muted);
 }
 @media (max-width: 640px) {
+  /* 이 폭에서 헤더는 flex-wrap — 계정 요약이 다음 줄로 밀려도 오른쪽에 붙인다 */
   .home-topbar-inner > .account-menu {
     grid-column: 1 / -1;
+    margin-left: auto;
   }
   .account-menu-popover {
     width: min(280px, calc(100vw - 32px));
