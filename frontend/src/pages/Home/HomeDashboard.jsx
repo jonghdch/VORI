@@ -56,9 +56,13 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     let alive = true;
     const loadPet = () =>
       getActivePet()
-        .then((p) => alive && setActivePet(p))
-        .catch(() => {})
-        .finally(() => alive && setPetLoaded(true));
+        .then((p) => {
+          if (!alive) return;
+          setActivePet(p);
+          // 조회에 성공했을 때만 "불러옴" — 실패를 펫 없음으로 보고 상점 안내를 띄우지 않게
+          setPetLoaded(true);
+        })
+        .catch(() => {});
     loadPet();
     window.addEventListener(PET_CHANGED_EVENT, loadPet);
     getLatestDailyReport()
