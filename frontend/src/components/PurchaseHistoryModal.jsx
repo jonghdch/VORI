@@ -2,13 +2,10 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { listMyEggs } from "../api/pet";
 import { listMyFurniture } from "../api/furniture";
 import { FurnitureArt } from "./furnitureVisual";
-import eggBasicImage from "../assets/shop/egg-basic.png";
-import eggPremiumImage from "../assets/shop/egg-premium.png";
-import eggSupremeImage from "../assets/shop/egg-supreme.png";
+import { eggImageFor } from "./eggVisual";
 import "./PurchaseHistoryModal.css";
 
-// 알은 등급(EggResponse.grade: BASIC/PREMIUM/LEGENDARY)별 이미지, 가구는 종류(category)별 이미지.
-const EGG_IMAGE = { BASIC: eggBasicImage, PREMIUM: eggPremiumImage, LEGENDARY: eggSupremeImage };
+// 알은 등급 이름(EggResponse.gradeName)으로 이미지를 고르고, 가구는 종류(category)로 고른다.
 const FOCUSABLE = 'button:not(:disabled), [href], [tabindex]:not([tabindex="-1"])';
 
 const dateOf = (iso) => (iso ? iso.slice(0, 10).replaceAll("-", ". ") : "");
@@ -31,7 +28,7 @@ function PurchaseHistoryModal({ onClose }) {
           key: `egg-${e.id}`,
           kind: "egg",
           name: e.gradeName,
-          grade: e.grade,
+          image: eggImageFor(e.grade, e.gradeName),
           stage: e.opened ? "개봉함" : "미개봉",
           price: e.price,
           at: e.purchasedAt,
@@ -56,25 +53,26 @@ function PurchaseHistoryModal({ onClose }) {
     load();
   }, [load]);
 
-  // 팝업이 떠 있는 동안 뒤 화면 스크롤 잠금, 닫기 버튼에 포커스, 닫힐 때 원래 포커스 복귀
+  // 팝업이 떠 있는 동안 뒤 화면 스크롤 잠금, 닫기 버튼에 포커스, 닫힐 때 원래 포커스 복귀.
+  // Esc 는 문서 레벨에서 듣는다 — 목록 글자를 클릭해 포커스가 밖으로 나가도 닫혀야 한다.
   useEffect(() => {
     const previousFocus = document.activeElement;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     closeRef.current?.focus();
+    const onEscape = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onEscape);
     return () => {
+      document.removeEventListener("keydown", onEscape);
       document.body.style.overflow = previousOverflow;
       if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
-  }, []);
+  }, [onClose]);
 
-  // Esc 로 닫기 + Tab 이 팝업 안에서만 돌게
+  // Tab 이 팝업 안에서만 돌게
   const onKeyDown = (e) => {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      onClose();
-      return;
-    }
     if (e.key !== "Tab") return;
     const focusable = dialogRef.current?.querySelectorAll(FOCUSABLE);
     if (!focusable || focusable.length === 0) return;
@@ -102,6 +100,7 @@ function PurchaseHistoryModal({ onClose }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
         onKeyDown={onKeyDown}
       >
         <header className="purchase-head">
@@ -145,11 +144,7 @@ function PurchaseHistoryModal({ onClose }) {
                 <li key={item.key} className="purchase-row">
                   <span className="purchase-thumb" aria-hidden>
                     {item.kind === "egg" ? (
-                      <img
-                        src={EGG_IMAGE[item.grade] ?? eggBasicImage}
-                        alt=""
-                        className="purchase-thumb-image"
-                      />
+                      <img src={item.image} alt="" className="purchase-thumb-image" />
                     ) : (
                       <FurnitureArt
                         category={item.category}

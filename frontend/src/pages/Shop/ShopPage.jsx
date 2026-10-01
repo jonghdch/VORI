@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import PurchaseHistoryModal from "../../components/PurchaseHistoryModal";
@@ -7,9 +7,7 @@ import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
 import { getMe, notifyPetChanged } from "../../api/user";
 import { CATEGORY_LABEL, FurnitureArt, STAT_LABEL, isSurface } from "../../components/furnitureVisual";
-import eggBasicImage from "../../assets/shop/egg-basic.png";
-import eggPremiumImage from "../../assets/shop/egg-premium.png";
-import eggSupremeImage from "../../assets/shop/egg-supreme.png";
+import { EGG_IMAGE, eggImageFor } from "../../components/eggVisual";
 import shopBackgroundImage from "../../assets/shop/shop-background.png";
 import furnitureIconImage from "../../assets/shop/furniture-icon.png";
 import "../Home/HomeDashboard.css";
@@ -20,21 +18,6 @@ const GRADE_COPY = {
   BASIC: "어떤 친구가 태어날지 두근두근한 기본 알이에요.",
   PREMIUM: "희귀한 친구를 만날 확률이 높아진 고급 알이에요.",
   LEGENDARY: "S등급 친구가 가장 잘 나오는 최고급 알이에요.",
-};
-
-// 등급별 알 이미지 — 등급 코드가 없으면 등급 이름으로 판별하고, 그래도 모르면 기본 알.
-const EGG_IMAGE = {
-  BASIC: eggBasicImage,
-  PREMIUM: eggPremiumImage,
-  LEGENDARY: eggSupremeImage,
-};
-
-const eggImageFor = (grade, gradeName) => {
-  if (EGG_IMAGE[grade]) return EGG_IMAGE[grade];
-  const name = gradeName || "";
-  if (name.includes("최고급")) return eggSupremeImage;
-  if (name.includes("고급")) return eggPremiumImage;
-  return eggBasicImage;
 };
 
 const TIER_ORDER = ["S", "A", "B", "C"];
@@ -70,9 +53,8 @@ function ShopPage({ user, onLogout }) {
   );
   const [furniturePage, setFurniturePage] = useState(0);
 
-  // 구매 내역 팝업 — 닫히면 포커스를 여는 버튼으로 되돌린다
+  // 구매 내역 팝업 — 닫힐 때 포커스 복귀는 모달이 맡는다(열기 전 포커스로 되돌림)
   const [historyOpen, setHistoryOpen] = useState(false);
-  const historyButtonRef = useRef(null);
 
   const reload = useCallback(async () => {
     const [meRes, eggRes] = await Promise.all([getMe(), listMyEggs(true)]);
@@ -233,7 +215,6 @@ function ShopPage({ user, onLogout }) {
 
           <div className="shop-hero-corner">
             <button
-              ref={historyButtonRef}
               type="button"
               className="shop-history-btn"
               onClick={() => setHistoryOpen(true)}
@@ -267,7 +248,7 @@ function ShopPage({ user, onLogout }) {
               className={`shop-tab ${shopTab === "egg" ? "is-active" : ""}`}
               onClick={() => setShopTab("egg")}
             >
-              <img src={eggBasicImage} alt="" />
+              <img src={EGG_IMAGE.BASIC} alt="" />
               <span>알</span>
             </button>
             <button
@@ -515,12 +496,7 @@ function ShopPage({ user, onLogout }) {
         </div>
 
         {historyOpen && (
-          <PurchaseHistoryModal
-            onClose={() => {
-              setHistoryOpen(false);
-              historyButtonRef.current?.focus();
-            }}
-          />
+          <PurchaseHistoryModal onClose={() => setHistoryOpen(false)} />
         )}
       </main>
     </AppShell>
