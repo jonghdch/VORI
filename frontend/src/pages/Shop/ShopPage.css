@@ -611,3 +611,76 @@
     height: 40px;
   }
 }
+
+/* ── 구매 내역 버튼 ──
+   901px 이상: 히어로 우측 아래(진열대 아래 띠). 코인 배지는 우측 위 그대로.
+   721~900px: 코인 배지가 우측 아래로 내려오므로 .shop-hero-corner 로 묶어 그 왼쪽에 나란히.
+   720px 이하: 아래 줄 왼쪽에 알/가구 탭이 있어 가로로 못 놓는다 — 코인 배지 위에 세로로. */
+.shop-hero-corner {
+  display: contents;
+}
+
+.shop-history-btn {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.92);
+  color: var(--home-green-dark);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(45, 51, 40, 0.08), 0 6px 16px rgba(45, 51, 40, 0.14);
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+
+.shop-history-btn:hover {
+  background: #fff;
+}
+
+.shop-history-btn:active {
+  transform: translateY(1px);
+}
+
+.shop-history-btn:focus-visible {
+  outline: 2px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
+.shop-history-btn svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .shop-hero-corner {
+    position: absolute;
+    right: 18px;
+    bottom: 18px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .shop-hero-corner .shop-coin-badge,
+  .shop-hero-corner .shop-history-btn {
+    position: static;
+  }
+}
+
+@media (max-width: 720px) {
+  .shop-hero-corner {
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 6px;
+  }
+}

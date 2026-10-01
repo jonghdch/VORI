@@ -1,0 +1,259 @@
+/* 구매 내역 팝업 — AppShell(.home) 안에서 뜨므로 --home-* 토큰을 그대로 쓴다.
+   여는 버튼(.shop-history-btn)의 자리·모양은 ShopPage.css 가 정한다. */
+/* ── 다이얼로그 ── */
+.purchase-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200; /* 사이드바(41)·마이룸 메뉴(50)·가구 회수 확인보다 위 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(45, 51, 40, 0.48);
+  animation: purchase-fade 0.18s ease-out;
+}
+
+.purchase-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  max-height: min(560px, calc(100vh - 40px));
+  box-sizing: border-box;
+  padding: 22px 22px 18px;
+  border-radius: var(--home-radius);
+  border: 1px solid var(--home-card-border);
+  background: var(--home-card-surface);
+  color: var(--home-text);
+  box-shadow:
+    0 1px 2px rgba(45, 51, 40, 0.08),
+    0 18px 48px rgba(45, 51, 40, 0.22);
+  animation: purchase-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.purchase-dialog:focus {
+  outline: none;
+}
+
+.purchase-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.purchase-head-text {
+  min-width: 0;
+}
+
+.purchase-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+}
+
+.purchase-summary {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--home-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.purchase-close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin: -4px -6px 0 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--home-muted);
+  font-family: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.purchase-close:hover {
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+}
+
+.purchase-close:focus-visible {
+  outline: 2px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
+.purchase-body {
+  min-height: 0;
+  margin: 16px -6px 0;
+  padding: 0 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.purchase-state {
+  margin: 0;
+  padding: 36px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--home-muted);
+}
+
+.purchase-state--err {
+  color: var(--home-warn);
+}
+
+.purchase-retry {
+  display: block;
+  margin: -24px auto 24px;
+  padding: 8px 14px;
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--home-green-dark);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.purchase-retry:hover {
+  background: var(--home-green-soft);
+}
+
+.purchase-retry:focus-visible {
+  outline: 2px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
+.purchase-group {
+  margin-top: 16px;
+}
+
+.purchase-group:first-child {
+  margin-top: 0;
+}
+
+.purchase-group-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--home-muted);
+}
+
+.purchase-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.purchase-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--home-card-border);
+  border-radius: var(--home-radius-sm);
+  background: #fff;
+}
+
+.purchase-thumb {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--home-green-soft);
+}
+
+.purchase-thumb-image {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.purchase-thumb-emoji {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.purchase-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.purchase-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.purchase-meta {
+  display: flex;
+  flex-wrap: wrap; /* 좁은 화면에서는 날짜·상태가 다음 줄로 */
+  align-items: center;
+  gap: 2px 6px;
+  margin-top: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.purchase-meta > span {
+  white-space: nowrap;
+}
+
+.purchase-kind {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.purchase-kind--egg {
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+}
+
+.purchase-kind--furniture {
+  background: #fdf0da;
+  color: #9a6b12;
+}
+
+.purchase-price {
+  flex-shrink: 0;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--home-text);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .purchase-backdrop,
+  .purchase-dialog {
+    animation: none;
+  }
+
+  .purchase-close,
+  .purchase-retry {
+    transition: none;
+  }
+}

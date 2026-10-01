@@ -17,7 +17,8 @@ import { get, put } from "./http";
  *   current: number,         // 현재 지표값 (예: 지출 7건 기록함 → 7)
  *   threshold: number,       // 목표치 (예: 10)
  *   progressPct: number,     // 0~100. 달성 후에도 100 을 넘지 않는다
- *   acquiredAt: string|null  // ISO-8601. 미획득이면 null
+ *   acquiredAt: string|null, // ISO-8601. 미획득이면 null
+ *   hidden: boolean          // 히든 칭호. 히든은 획득한 뒤에만 목록에 나온다
  * }} Title
  */
 

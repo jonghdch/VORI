@@ -33,6 +33,9 @@ function formatProgressText(item) {
   if (code.startsWith("RECORD_")) {
     return `${current}건 / ${threshold}건 기록`;
   }
+  if (code === "PET_LOVELY") {
+    return `${current}회 / ${threshold}회 상호작용`;
+  }
   if (code.startsWith("PET_")) {
     return `${current}마리 / ${threshold}마리 분양`;
   }
@@ -252,7 +255,7 @@ function AchievementPage({ onLogout }) {
                       </span>
                     </div>
                     <p className="ach-card-desc">
-                      달성 시 칭호 「{item.name}」 획득
+                      {item.hidden ? "히든 업적 · " : "달성 시 "}칭호 「{item.name}」 획득
                     </p>
                     <div className="ach-progress-row">
                       <span>달성도</span>
@@ -306,7 +309,12 @@ function AchievementPage({ onLogout }) {
                       className={`ach-title-item ${t.active ? "is-active" : ""}`}
                     >
                       <div className="ach-title-main">
-                        <p className="ach-title-name">{t.name}</p>
+                        <p className="ach-title-name">
+                          {t.name}
+                          {t.hidden && (
+                            <span className="home-badge home-badge--prog ach-hidden-badge">히든</span>
+                          )}
+                        </p>
                         <p className="ach-title-meta">
                           {t.description}
                           {t.acquiredAt

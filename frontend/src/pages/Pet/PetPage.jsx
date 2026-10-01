@@ -510,13 +510,23 @@ function PetPage({ user, onLogout }) {
 
     interactWithPet()
       .then((result) => {
-        if (!result?.charmUp) return;
-        setPet(result.pet);
-        // 그사이 다른 반응으로 넘어갔으면 말풍선 옆 표시는 건너뛰고 안내 문구만 남긴다
-        setReaction((current) =>
-          current?.id === reactionId ? { ...current, charmUp: true } : current,
-        );
-        setNotice({ kind: "ok", text: `${petDisplayName(result.pet)}의 매력이 1 올랐어요!` });
+        if (!result) return;
+        const messages = [];
+        if (result.charmUp) {
+          setPet(result.pet);
+          // 그사이 다른 반응으로 넘어갔으면 말풍선 옆 표시는 건너뛰고 안내 문구만 남긴다
+          setReaction((current) =>
+            current?.id === reactionId ? { ...current, charmUp: true } : current,
+          );
+          messages.push(`${petDisplayName(result.pet)}의 매력이 1 올랐어요!`);
+        }
+        // 상호작용 횟수로 받는 칭호 — 히든 칭호는 목록에 없던 것이라 여기서 알려줘야 한다
+        for (const title of result.newTitles ?? []) {
+          messages.push(
+            `${title.hidden ? "히든 칭호" : "칭호"} 「${title.name}」 획득! 업적/칭호 화면에서 장착할 수 있어요.`,
+          );
+        }
+        if (messages.length > 0) setNotice({ kind: "ok", text: messages.join(" ") });
       })
       .catch((e) => {
         if (e.status !== 401) setNotice({ kind: "err", text: e.message });

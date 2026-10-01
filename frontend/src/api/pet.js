@@ -17,6 +17,7 @@ import { get, post, put } from "./http";
  *   id:number, name:string|null, speciesId:number, speciesName:string, tier:string, appearanceKey:string,
  *   variant:"NORMAL"|"IRO"|"ALIEN", stage:"INFANT"|"JUVENILE"|"ADULT",
  *   statEnergy:number, statCharm:number, statIq:number, statEndurance:number, statTotal:number,
+ *   interactionCount:number,
  *   hatchedAt:string, releasedAt:string|null, releaseValue:number|null
  * }} Pet
  */
@@ -48,6 +49,8 @@ export const releasePet = (petId) => post(`/pets/${petId}/release`);
 
 /**
  * 키우는 펫과 상호작용(쓰다듬기 등) 1회. 당첨 추첨은 서버가 한다.
- * @returns {Promise<{ charmUp:boolean, pet:Pet }>} 400 = 키우는 펫 없음
+ * newTitles 는 이번 상호작용으로 새로 받은 칭호 — 대개 비어 있고, 히든 칭호는 여기서 처음 드러난다.
+ * @returns {Promise<{ charmUp:boolean, pet:Pet, newTitles:{ name:string, hidden:boolean }[] }>}
+ *   400 = 키우는 펫 없음
  */
 export const interactWithPet = () => post("/pets/active/interact");

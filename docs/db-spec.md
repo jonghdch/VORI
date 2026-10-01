@@ -362,6 +362,7 @@ UNIQUE(user_id, report_date)
 | 매력 스탯 | `stat_charm` |  | `INT DEFAULT 0` | `CHARM` 절약 성장값 |
 | 지능 스탯 | `stat_iq` |  | `INT DEFAULT 0` | `IQ` 절약 성장값 |
 | 지구력 스탯 | `stat_endurance` |  | `INT DEFAULT 0` | `ENDURANCE` 절약 성장값 |
+| 상호작용 횟수 | `interaction_count` |  | `INT NOT NULL DEFAULT 0` | 쓰다듬기 등 상호작용 누적 횟수. 칭호 조건(`PET_INTERACTIONS`) 기준값 |
 | 성장 단계 | `stage` |  | `ENUM('INFANT','JUVENILE','ADULT') DEFAULT 'INFANT'` | 성장 단계 |
 | 변종 종류 | `variant` |  | `ENUM('NORMAL','IRO','ALIEN') DEFAULT 'NORMAL'` | 변종 |
 | 생성 일시 | `created_at` |  | `DATETIME NOT NULL` | 생성 시각 |
@@ -374,7 +375,7 @@ UNIQUE(user_id, report_date)
 INDEX(user_id, released_at)
 ```
 
-`name` 추가 마이그레이션: `V25__pet_name.sql`.
+`name` 추가 마이그레이션: `V25__pet_name.sql`. `interaction_count` 추가 마이그레이션: `V28__pet_interaction_hidden_title.sql`(칭호 마스터 `titles` 의 `hidden` 컬럼·`PET_INTERACTIONS` 지표·히든 칭호 「사랑둥이」도 같은 파일).
 
 ---
 

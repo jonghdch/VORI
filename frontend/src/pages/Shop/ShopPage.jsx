@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppShell from "../../components/AppShell";
+import PurchaseHistoryModal from "../../components/PurchaseHistoryModal";
 import { PetArt, STAGE_LABEL, TIER_LABEL, VARIANT_LABEL } from "../../components/petVisual";
 import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
 import { getMe, notifyPetChanged } from "../../api/user";
 import { CATEGORY_LABEL, FurnitureArt, STAT_LABEL, isSurface } from "../../components/furnitureVisual";
-import eggBasicImage from "../../assets/shop/egg-basic.png";
-import eggPremiumImage from "../../assets/shop/egg-premium.png";
-import eggSupremeImage from "../../assets/shop/egg-supreme.png";
+import { EGG_IMAGE, eggImageFor } from "../../components/eggVisual";
 import shopBackgroundImage from "../../assets/shop/shop-background.png";
 import furnitureIconImage from "../../assets/shop/furniture-icon.png";
 import "../Home/HomeDashboard.css";
@@ -19,21 +18,6 @@ const GRADE_COPY = {
   BASIC: "어떤 친구가 태어날지 두근두근한 기본 알이에요.",
   PREMIUM: "희귀한 친구를 만날 확률이 높아진 고급 알이에요.",
   LEGENDARY: "S등급 친구가 가장 잘 나오는 최고급 알이에요.",
-};
-
-// 등급별 알 이미지 — 등급 코드가 없으면 등급 이름으로 판별하고, 그래도 모르면 기본 알.
-const EGG_IMAGE = {
-  BASIC: eggBasicImage,
-  PREMIUM: eggPremiumImage,
-  LEGENDARY: eggSupremeImage,
-};
-
-const eggImageFor = (grade, gradeName) => {
-  if (EGG_IMAGE[grade]) return EGG_IMAGE[grade];
-  const name = gradeName || "";
-  if (name.includes("최고급")) return eggSupremeImage;
-  if (name.includes("고급")) return eggPremiumImage;
-  return eggBasicImage;
 };
 
 const TIER_ORDER = ["S", "A", "B", "C"];
@@ -68,6 +52,9 @@ function ShopPage({ user, onLogout }) {
     searchParams.get("tab") === "furniture" ? "furniture" : "egg",
   );
   const [furniturePage, setFurniturePage] = useState(0);
+
+  // 구매 내역 팝업 — 닫힐 때 포커스 복귀는 모달이 맡는다(열기 전 포커스로 되돌림)
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const reload = useCallback(async () => {
     const [meRes, eggRes] = await Promise.all([getMe(), listMyEggs(true)]);
@@ -226,8 +213,28 @@ function ShopPage({ user, onLogout }) {
             )}
           </div>
 
-          <div className="shop-coin-badge" aria-live="polite">
-            보유 코인 {loading ? "…" : unlimitedCoins ? "∞" : gameMoney.toLocaleString("ko-KR")}
+          <div className="shop-hero-corner">
+            <button
+              type="button"
+              className="shop-history-btn"
+              onClick={() => setHistoryOpen(true)}
+              aria-haspopup="dialog"
+            >
+              <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+                <path
+                  d="M3.5 1.5h9v13l-2.2-1.4L8 14.5l-2.3-1.4-2.2 1.4zM6 5.5h4M6 8.5h4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              구매 내역
+            </button>
+            <div className="shop-coin-badge" aria-live="polite">
+              보유 코인 {loading ? "…" : unlimitedCoins ? "∞" : gameMoney.toLocaleString("ko-KR")}
+            </div>
           </div>
 
           {/* 알 / 가구 상점 전환 — 아이콘을 누르면 진열대가 바뀐다 */}
@@ -241,7 +248,7 @@ function ShopPage({ user, onLogout }) {
               className={`shop-tab ${shopTab === "egg" ? "is-active" : ""}`}
               onClick={() => setShopTab("egg")}
             >
-              <img src={eggBasicImage} alt="" />
+              <img src={EGG_IMAGE.BASIC} alt="" />
               <span>알</span>
             </button>
             <button
@@ -488,6 +495,9 @@ function ShopPage({ user, onLogout }) {
           </section>
         </div>
 
+        {historyOpen && (
+          <PurchaseHistoryModal onClose={() => setHistoryOpen(false)} />
+        )}
       </main>
     </AppShell>
   );

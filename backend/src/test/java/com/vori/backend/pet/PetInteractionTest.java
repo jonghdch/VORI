@@ -134,6 +134,20 @@ class PetInteractionTest {
     }
 
     @Test
+    @DisplayName("당첨이든 꽝이든 상호작용 횟수는 1씩 쌓인다")
+    void everyInteractionIsCounted() {
+        Pet pet = activePet(10, 0);
+
+        service.interact(USER_ID, 50);
+        service.interact(USER_ID, 0);
+        PetInteractionResponse third = service.interact(USER_ID, 99);
+
+        assertThat(pet.getInteractionCount()).isEqualTo(3);
+        assertThat(third.pet().interactionCount()).isEqualTo(3);
+        assertThat(third.newTitles()).isEmpty();
+    }
+
+    @Test
     @DisplayName("매력 1로 진화 임계값을 넘으면 단계가 오른다")
     void winningRollCanEvolve() {
         Pet pet = activePet(0, Pet.minStatTotalFor(PetStage.JUVENILE) - 1);

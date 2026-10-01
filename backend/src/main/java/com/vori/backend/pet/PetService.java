@@ -138,6 +138,8 @@ public class PetService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "키우는 펫이 있어야 상호작용할 수 있습니다"));
 
+        pet.recordInteraction();
+
         boolean charmUp = false;
         if (roll < INTERACT_CHARM_CHANCE_PCT) {
             // 당첨일 때만 사용자 행을 잠가, 동시 당첨이 "아직 상한 미만" 을 함께 읽고 넘치지 않게 한다
@@ -161,7 +163,8 @@ public class PetService {
             log.info("펫 상호작용 매력 보너스 — userId={}, petId={}, charm={}",
                     userId, pet.getId(), pet.getStatCharm());
         }
-        return new PetInteractionResponse(charmUp, PetResponse.of(pet, findSpecies(pet.getSpeciesId())));
+        return new PetInteractionResponse(
+                charmUp, PetResponse.of(pet, findSpecies(pet.getSpeciesId())), List.of());
     }
 
     /**
