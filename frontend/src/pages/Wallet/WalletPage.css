@@ -966,6 +966,120 @@
   transition: width 0.4s ease;
 }
 
+/* 예산을 넘겼을 때 — 막대는 꽉 찬 채 색만 바뀌고, 넘긴 금액은 글자로 알린다 */
+.ledger-budget-fill.is-over {
+  background: var(--lg-apricot, #e8a05a);
+}
+.ledger-budget-over {
+  color: #b4532a;
+}
+/* 막대 아래 — 왼쪽 사용률, 오른쪽 남은(넘긴) 금액 */
+.ledger-budget-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+  margin: 8px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.ledger-budget-values {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 미설정·조회 실패 — 안내 한 줄과 행동 하나 */
+.ledger-budget-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ledger-budget-state .ledger-budget-label {
+  margin: 0;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+/* 예산 입력 */
+.ledger-budget-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ledger-budget-form .ledger-budget-label {
+  margin: 0;
+}
+.ledger-budget-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--lg-line, #e6dfd1);
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.ledger-budget-field:focus-within {
+  border-color: var(--lg-sage, #7c9e6b);
+  box-shadow: 0 0 0 3px rgba(124, 158, 107, 0.22);
+}
+.ledger-budget-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 0;
+  border: none;
+  outline: none;
+  background: none;
+  font-family: inherit;
+  font-size: 16px; /* 16px 미만이면 iOS 가 포커스 때 화면을 확대한다 */
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--lg-text, #3d3830);
+}
+.ledger-budget-input::placeholder {
+  color: var(--lg-text-3, #9c9488);
+}
+.ledger-budget-unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lg-text-2, #6b6560);
+}
+.ledger-budget-error {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b4532a;
+}
+.ledger-budget-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+.ledger-budget-actions .home-btn {
+  padding: 10px 18px;
+}
+.ledger-main .ledger-budget-actions .ledger-budget-clear {
+  margin-left: auto;
+  color: var(--lg-text-2, #6b6560);
+}
+.ledger-budget-card .home-btn:disabled,
+.ledger-budget-card .home-link-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.ledger-budget-card .home-btn:focus-visible,
+.ledger-budget-card .home-link-btn:focus-visible {
+  outline: 2px solid var(--lg-sage, #7c9e6b);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledger-budget-fill,
+  .ledger-budget-field {
+    transition: none;
+  }
+}
+
 /* ── 주/월 세그먼트 토글 ─────────────────────────────── */
 .ledger-view-toggle {
   display: inline-flex;

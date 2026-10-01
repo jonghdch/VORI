@@ -61,10 +61,13 @@ function AppRightSidebar() {
             </button>
           </li>
           <li>
-            <button type="button" className="home-side-link" disabled>
+            <button
+              type="button"
+              className="home-side-link"
+              onClick={() => navigate("/wallet#budget")}
+            >
               <span className="home-side-icon" aria-hidden />
               <span className="home-side-label">예산 설정</span>
-              <span className="home-side-soon">준비 중</span>
             </button>
           </li>
         </ul>
