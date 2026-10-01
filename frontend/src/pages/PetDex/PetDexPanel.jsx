@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   DEX_TIER_LABEL,
   DEX_TIERS,
@@ -116,7 +117,11 @@ function PetDexPanel({ pets, isAdmin, error }) {
               </div>
 
               <div className="dex-card-top">
-                <h2 className="dex-name">{sp.name}</h2>
+                <h2 className="dex-name">
+                  <Link to={`/dex/${sp.appearanceKey}`} className="dex-card-link">
+                    {sp.name}
+                  </Link>
+                </h2>
                 <span className={`dex-tier dex-tier--${sp.tier}`}>
                   {DEX_TIER_LABEL[sp.tier]}
                 </span>

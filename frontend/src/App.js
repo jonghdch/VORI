@@ -37,6 +37,7 @@ const WalletPage = lazy(() => import("./pages/Wallet/WalletPage"));
 const ReportPage = lazy(() => import("./pages/Report/ReportPage"));
 const PetPage = lazy(() => import("./pages/Pet/PetPage"));
 const PetDexPage = lazy(() => import("./pages/PetDex/PetDexPage"));
+const PetDetailPage = lazy(() => import("./pages/PetDex/PetDetailPage"));
 const ShopPage = lazy(() => import("./pages/Shop/ShopPage"));
 const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
 const ProfileSettingsPage = lazy(() =>
@@ -293,6 +294,14 @@ function App() {
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <PetDexPage user={user} onLogout={handleLogout} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dex/:appearanceKey"
+            element={
+              <ProtectedRoute user={user} authLoading={authLoading}>
+                <PetDetailPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
