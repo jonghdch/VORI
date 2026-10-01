@@ -23,7 +23,7 @@ export const ADMIN_NAV = [
   {
     label: "게임 컨텐츠",
     items: [
-      { to: "/admin/pets", label: "펫 / 도감 관리" },
+      { to: "/admin/pets", label: "펫 성장 지원" },
       { to: "/admin/cosmetics", label: "꾸미기 컨텐츠 관리" },
     ],
   },

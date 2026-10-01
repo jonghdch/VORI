@@ -1,5 +1,5 @@
 // 가계부 행 저장 API 클라이언트.
-// 백엔드 3개 endpoint (POST /api/expenses, /api/incomes, /api/savings) 호출.
+// 작성 화면은 POST /api/ledger/entries 한 번으로 지출·수입·저축을 함께 저장한다.
 
 import { API_BASE } from "./base";
 
@@ -55,52 +55,11 @@ export async function deleteExpense(id) {
   if (!res.ok) throw new Error(`삭제 실패 (${res.status})`);
 }
 
-export async function updateExpense(id, { item, amount, categoryId, paymentMethod }) {
-  const res = await fetch(`${API_BASE}/expenses/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ item, amount: Number(amount), categoryId, paymentMethod }),
-  });
-  if (!res.ok) {
-    let message = `수정 실패 (${res.status})`;
-    try {
-      const data = await res.json();
-      if (data?.message) message = data.message;
-    } catch {}
-    throw new Error(message);
-  }
-  return res.json();
-}
-
 // 카테고리 트리 (대분류 + 소분류). 가계부 확인 화면에서 categoryId → 이름 매핑용.
 export const listCategoryTree = () => get(`/categories`);
 
-export function createExpense({ item, amount, categoryId, paymentMethod, spentAt }) {
-  return post("/expenses", {
-    item,
-    amount: Number(amount),
-    categoryId,
-    paymentMethod,
-    spentAt,
-  });
-}
-
-export function createIncome({ item, amount, source, paymentMethod, receivedAt }) {
-  return post("/incomes", {
-    item,
-    amount: Number(amount),
-    source,
-    paymentMethod,
-    receivedAt,
-  });
-}
-
-export function createSaving({ item, amount, savingType, savedAt }) {
-  return post("/savings", {
-    item,
-    amount: Number(amount),
-    savingType,
-    savedAt,
-  });
+// 작성 화면의 지출·수입·저축을 한 트랜잭션으로 저장한다. 하나라도 실패하면 아무것도 저장되지 않는다.
+// 지출 행에 id 가 있으면 수정, 없으면 등록.
+export function saveLedgerEntries({ expenses, incomes, savings }) {
+  return post("/ledger/entries", { expenses, incomes, savings });
 }
