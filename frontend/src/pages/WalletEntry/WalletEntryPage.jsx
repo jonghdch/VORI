@@ -197,6 +197,32 @@ function WalletEntryPage({ user }) {
   const removeRow = (setter, id) =>
     setter((rows) => rows.filter((r) => r.id !== id));
 
+  // 현재 카드의 금액 입력이 끝나면 이미 만들어져 있는 다음 빈 카드로만 이동한다.
+  // 새 카드를 자동 생성하지는 않는다. 섹션 표시 순서(수입 → 지출 → 저축)를 그대로 따른다.
+  const focusNextEmptyCard = (currentType, currentId) => {
+    const orderedRows = [
+      ...income.map((row) => ({ ...row, entryType: "income" })),
+      ...expense.map((row) => ({ ...row, entryType: "expense" })),
+      ...savings.map((row) => ({ ...row, entryType: "savings" })),
+    ];
+    const currentIndex = orderedRows.findIndex(
+      (row) => row.entryType === currentType && row.id === currentId,
+    );
+    if (currentIndex < 0) return;
+    const current = orderedRows[currentIndex];
+    if (!(current.name || "").trim() || !String(current.amount || "").trim()) return;
+
+    const nextEmpty = orderedRows
+      .slice(currentIndex + 1)
+      .find((row) => !row.dbId && !(row.name || "").trim() && !String(row.amount || "").trim());
+    if (!nextEmpty) return;
+
+    const input = document.querySelector(
+      `[data-entry-type="${nextEmpty.entryType}"][data-row-id="${nextEmpty.id}"] [data-entry-field="name"]`,
+    );
+    input?.focus();
+  };
+
   // ── 영수증 OCR ──────────────────────────────────────────────────────────
   // 인식 결과를 바로 저장하지 않고 지출 행으로 채워만 준다. 흐린 영수증은 일부만
   // 읽히므로(모든 필드가 null 일 수 있다) 사용자가 확인·수정하는 단계를 반드시 남긴다.
@@ -418,6 +444,7 @@ function WalletEntryPage({ user }) {
                 type="income"
                 onChange={(patch) => updateRow(setIncome, row.id, patch)}
                 onDelete={() => removeRow(setIncome, row.id)}
+                onComplete={() => focusNextEmptyCard("income", row.id)}
               />
             ))}
           </section>
@@ -435,6 +462,7 @@ function WalletEntryPage({ user }) {
                 expenseCatOptions={expenseCatOptions}
                 onChange={(patch) => updateRow(setExpense, row.id, patch)}
                 onDelete={() => removeRow(setExpense, row.id)}
+                onComplete={() => focusNextEmptyCard("expense", row.id)}
               />
             ))}
           </section>
@@ -451,6 +479,7 @@ function WalletEntryPage({ user }) {
                 type="savings"
                 onChange={(patch) => updateRow(setSavings, row.id, patch)}
                 onDelete={() => removeRow(setSavings, row.id)}
+                onComplete={() => focusNextEmptyCard("savings", row.id)}
               />
             ))}
           </section>
@@ -513,7 +542,16 @@ function WalletEntryPage({ user }) {
   );
 }
 
-function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }) {
+function EntryRow({
+  num,
+  row,
+  type,
+  expenseCatOptions = [],
+  onChange,
+  onDelete,
+  onComplete,
+}) {
+  const amountInputRef = useRef(null);
   // 이미 DB 에 저장된 행 — 수정/삭제 API 가 없어서 여기서 고쳐도 반영되지 않는다.
   // 수정 가능한 척하지 않도록 읽기 전용으로 잠그고 "저장됨" 표시.
   const saved = Boolean(row.dbId);
@@ -587,7 +625,11 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
     );
 
   return (
-    <div className="ledger-entry-row">
+    <div
+      className="ledger-entry-row"
+      data-entry-type={type}
+      data-row-id={row.id}
+    >
       <div className="ledger-row-head">
         <span className="ledger-row-num">{String(num).padStart(2, "0")}</span>
         {/* 결제수단은 지출만. 수입은 "어디서 받았나"(출처), 저축은 유형만 고른다. */}
@@ -624,12 +666,19 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
         <input
           type="text"
           className="ledger-row-input"
+          data-entry-field="name"
           value={row.name}
           onChange={(e) => onChange({
             name: e.target.value,
             ...(type === "expense" ? { categoryTouched: false } : {}),
           })}
           disabled={locked}
+          enterKeyHint="next"
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || e.nativeEvent?.isComposing) return;
+            e.preventDefault();
+            amountInputRef.current?.focus();
+          }}
           placeholder={
             type === "income"
               ? "예: 6월 월급, 엄마 용돈"
@@ -641,14 +690,22 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
         <span className="ledger-row-label">금액</span>
         <div className="ledger-row-input-wrap">
           <input
+            ref={amountInputRef}
             type="text"
             inputMode="numeric"
             className="ledger-row-input"
+            data-entry-field="amount"
             value={row.amount ? Number(row.amount).toLocaleString("ko-KR") : ""}
             onChange={(e) =>
               onChange({ amount: e.target.value.replace(/[^\d]/g, "") })
             }
             disabled={locked}
+            enterKeyHint="next"
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" || e.nativeEvent?.isComposing) return;
+              e.preventDefault();
+              onComplete?.();
+            }}
           />
           <span className="ledger-row-unit">원</span>
         </div>

@@ -333,6 +333,7 @@ function ShopPage({ user, onLogout }) {
             </button>
             <div
               className="shop-coin-badge"
+              role="status"
               aria-live="polite"
               aria-label={`보유 코인 ${loading ? "확인 중" : unlimitedCoins ? "무제한" : gameMoney.toLocaleString("ko-KR")}`}
             >
