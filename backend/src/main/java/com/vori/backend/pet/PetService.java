@@ -102,9 +102,9 @@ public class PetService {
         if (pet.isReleased()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 분양한 펫입니다");
         }
-        if (pet.getStage() != PetStage.ADULT) {
+        if (!pet.isGraduated()) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "성체가 된 펫만 분양할 수 있습니다");
+                    HttpStatus.BAD_REQUEST, PetLevel.MAX_LEVEL + "레벨을 달성한 펫만 분양할 수 있습니다");
         }
 
         int value = calculateReleaseValue(userId, pet);

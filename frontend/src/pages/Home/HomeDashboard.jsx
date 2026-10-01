@@ -9,7 +9,7 @@ import { getActivePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
 import { getLatestDailyReport, markDailyReportRead } from "../../api/report";
 import { listTitles } from "../../api/titles";
-import { PetArt, petDisplayName } from "../../components/petVisual";
+import { PetArt, petDisplayName, levelProgressPct } from "../../components/petVisual";
 import { AI_ACTIVE_FROM_HOUR } from "../../config";
 import "./HomeDashboard.css";
 
@@ -141,11 +141,9 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
       : titles
   ).slice(0, 4);
 
-  // 경험치바 — 프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
-  // 백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체.
-  const statTotal = STAT_META.reduce((s, m) => s + (stats?.[m.key] ?? 0), 0);
-  const petLevel = Math.floor(statTotal / 100) + 1;
-  const petExp = statTotal % 100;
+  // 레벨·경험치 게이지 — 서버(PetLevel)가 계산한 값. 게이지는 지금 레벨 안에서 다음 레벨까지의 진행률.
+  const petLevel = activePet?.level ?? 1;
+  const petExp = levelProgressPct(activePet);
   // 스탯 막대 기준값 — 가장 큰 스탯(최소 100). 스탯이 100을 넘어도 막대끼리 비교가 된다.
   const statScale = Math.max(100, ...STAT_META.map((m) => stats?.[m.key] ?? 0));
 
@@ -214,7 +212,11 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                     className="home-pet-gauge-ring"
                     viewBox="0 0 120 120"
                     role="img"
-                    aria-label={`경험치 ${petExp}/100 (Lv. ${petLevel})`}
+                    aria-label={
+                    activePet?.levelExpNeeded
+                      ? `Lv. ${petLevel}, 다음 레벨까지 ${activePet.levelExp}/${activePet.levelExpNeeded}`
+                      : `Lv. ${petLevel} (만렙)`
+                  }
                   >
                     {/* 채움 색 — 화면 왼쪽(시작) 연한 세이지 → 오른쪽 짙은 세이지. 랜딩 톤과 맞춤.
                         원이 135° 회전돼 있어 좌표도 회전 전 기준(대각선)으로 잡았다. */}
@@ -253,6 +255,19 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                       />
                     )}
                   </div>
+                  <div className="home-pet-gauge-foot">
+                    {/* 다음 레벨까지 경험치(현재 / 필요) 캡슐. 만렙이면 MAX */}
+                    {activePet && (
+                      <span className="home-pet-exp">
+                        <span className="home-pet-exp-label">EXP</span>
+                        {activePet.levelExpNeeded
+                          ? `${activePet.levelExp} / ${activePet.levelExpNeeded}`
+                          : "MAX"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="home-pet-name-line">
                   <button
                     type="button"
                     className="home-pet-title-badge"
@@ -261,8 +276,6 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   >
                     {activeTitle?.name ?? "칭호 없음"}
                   </button>
-                </div>
-                <div className="home-pet-name-line">
                   <h2 className="home-pet-name">{activePet ? petDisplayName(activePet) : "보리"}</h2>
                   <span className="home-pet-level-label">Lv. {petLevel}</span>
                 </div>
@@ -272,9 +285,6 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               <section className="home-pet-stats home-statcard" aria-label="펫 스탯">
                 <div className="home-statcard-head">
                   <h3 className="home-statcard-title">펫 스탯</h3>
-                  <span className="home-statcard-total">
-                    합계 <strong>{statTotal.toLocaleString("ko-KR")}</strong>
-                  </span>
                 </div>
                 <ul className="home-stat-list">
                   {STAT_META.map((m) => {

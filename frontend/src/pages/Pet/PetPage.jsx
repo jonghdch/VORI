@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import {
   PetArt,
-  STAGE_LABEL,
-  nextStage,
   petDisplayName,
+  levelProgressPct,
+  nextMilestone,
+  MAX_LEVEL,
 } from "../../components/petVisual";
 import { getActivePet, interactWithPet, listPets, releasePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
@@ -210,7 +211,7 @@ function PetPage({ user, onLogout }) {
         kind: "err",
         text:
           e.status === 400
-            ? `${STAGE_LABEL.ADULT}까지 키운 펫만 분양할 수 있어요.`
+            ? e.message || `${MAX_LEVEL}레벨을 달성한 펫만 분양할 수 있어요.`
             : e.status === 409
               ? "이미 분양한 펫이에요."
               : e.message,
@@ -313,7 +314,8 @@ function PetPage({ user, onLogout }) {
         color: PET_ACCENT,
       }
     : null;
-  const evolution = pet ? nextStage(pet.stage) : null;
+  const milestone = pet ? nextMilestone(pet.level) : null;
+  const graduated = pet ? pet.level >= pet.maxLevel : false;
   const selectedBackground =
     BACKGROUNDS.find((background) => background.id === selectedBackgroundId) ??
     BACKGROUNDS[0];
@@ -773,41 +775,32 @@ function PetPage({ user, onLogout }) {
                         <div>
                           <strong>{selectedPet.name}</strong>
                           <small>{selectedPet.type}</small>
-                          <p>{formatDate(pet.hatchedAt)} 부화 · 경험치 {pet.statTotal}</p>
+                          <p>{formatDate(pet.hatchedAt)} 부화 · Lv. {pet.level}</p>
                         </div>
                       </div>
 
-                      {/* 진화 진행도 — 임계값은 백엔드와 동일(200/300) */}
+                      {/* 레벨 진행도 — 레벨·진행 경험치는 서버(PetLevel) 값. 5레벨 2차, 15레벨 3차, 30레벨 졸업 */}
                       <div className="pet-evolve">
                         <div className="pet-evolve-head">
-                          <span>
-                            {evolution
-                              ? `${STAGE_LABEL[evolution.stage]}까지`
-                              : "최종 단계"}
-                          </span>
+                          <span>Lv. {pet.level} / {pet.maxLevel}</span>
                           <strong>
-                            {evolution
-                              ? `${Math.min(pet.statTotal, evolution.threshold)} / ${evolution.threshold}`
-                              : `${STAGE_LABEL.ADULT} 완료`}
+                            {graduated
+                              ? "졸업 가능"
+                              : `다음 레벨까지 ${pet.levelExp} / ${pet.levelExpNeeded}`}
                           </strong>
                         </div>
                         <div className="pet-status-track">
                           <div
                             className="pet-status-fill"
-                            style={{
-                              width: evolution
-                                ? `${Math.min(100, (pet.statTotal / evolution.threshold) * 100)}%`
-                                : "100%",
-                              background: "var(--home-green)",
-                            }}
+                            style={{ width: `${levelProgressPct(pet)}%`, background: "var(--home-green)" }}
                           />
                         </div>
                         <p className="pet-evolve-help">
-                          {evolution
-                            ? "합리적인 지출로 절약하면 스탯이 올라 다음 단계로 자라요."
-                            : "다 자란 펫은 분양해서 코인으로 바꿀 수 있어요. 분양가 = 경험치 × 10."}
+                          {milestone
+                            ? `Lv. ${milestone.level}에 ${milestone.label}. 하루 소비 판정과 출석 보상으로 경험치가 쌓여요.`
+                            : "30레벨을 달성했어요! 분양해서 졸업시키면 코인으로 바꿀 수 있어요. 분양가 = 경험치 × 10."}
                         </p>
-                        {pet.stage === "ADULT" && (
+                        {graduated && (
                           <button
                             type="button"
                             className="home-btn home-btn-primary pet-release-btn"

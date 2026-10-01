@@ -178,7 +178,7 @@ function PetDetailPage({ onLogout }) {
                       {VARIANT_LABEL[p.variant] && <span className="dex-badge dex-badge--done">{VARIANT_LABEL[p.variant]}</span>}
                     </strong>
                     <small>
-                      {STAGE_LABEL[p.stage]} · 경험치 {p.statTotal} · {formatDate(p.hatchedAt)} 부화
+                      {STAGE_LABEL[p.stage]} · Lv. {p.level} · {formatDate(p.hatchedAt)} 부화
                     </small>
                   </div>
                   <span className="dexd-record-state">

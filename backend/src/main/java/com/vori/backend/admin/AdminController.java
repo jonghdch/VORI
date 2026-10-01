@@ -167,6 +167,13 @@ public class AdminController {
         return adminPetService.setActivePetAppearance(principal.getId(), speciesId, variant);
     }
 
+    /** PUT /api/admin/me/pet/level?level=30 — 활성 펫 레벨 강제(1~30, 내려가기 포함). */
+    @PutMapping("/me/pet/level")
+    public PetResponse setMyPetLevel(@AuthenticationPrincipal UserPrincipal principal,
+                                     @RequestParam int level) {
+        return adminPetService.setActivePetLevel(principal.getId(), level);
+    }
+
     /** PUT /api/admin/me/pet/stage?stage=JUVENILE — 활성 펫 단계 강제(내려가기 포함). */
     @PutMapping("/me/pet/stage")
     public PetResponse setMyPetStage(@AuthenticationPrincipal UserPrincipal principal,

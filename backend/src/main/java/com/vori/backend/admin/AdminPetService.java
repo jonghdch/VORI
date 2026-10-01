@@ -111,6 +111,20 @@ public class AdminPetService {
         return PetResponse.of(pet, species);
     }
 
+    /** 활성 펫의 레벨을 강제로 맞춘다(시연용, 내려가기 허용). 30 이면 졸업(분양) 버튼이 열린다. */
+    @Transactional
+    public PetResponse setActivePetLevel(Long userId, int level) {
+        List<Pet> pets = petRepository.findByUserIdAndReleasedAtIsNull(userId);
+        if (pets.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "활성 펫이 없습니다. 먼저 종족을 골라 펫을 만드세요");
+        }
+        Pet pet = pets.get(0);
+        pet.forceLevel(level);
+        log.warn("[ADMIN] 펫 레벨 강제 설정(시연용) — userId={}, petId={}, level={}, statTotal={}",
+                userId, pet.getId(), pet.level(), pet.statTotal());
+        return PetResponse.of(pet, findSpecies(pet));
+    }
+
     /**
      * 활성 펫의 단계를 강제로 맞춘다(내려가는 것도 허용). 스탯은 그 단계의 최소값으로 재설정.
      * 정상 성장(growActivePet)과 달리 성장 로그를 남기지 않는다 — 실제 절약이 아니기 때문.

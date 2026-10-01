@@ -76,10 +76,6 @@ public class Pet {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    // 진화 임계값 — 4대 스탯 합 기준. 1학기 설계서 §Step 4 기준값.
-    private static final int JUVENILE_THRESHOLD = 200;
-    private static final int ADULT_THRESHOLD = 300;
-
     public void addStat(com.vori.backend.common.StatType statType, int delta) {
         switch (statType) {
             case ENERGY     -> this.statEnergy     += delta;
@@ -89,30 +85,33 @@ public class Pet {
         }
     }
 
-    /** 해당 단계가 되기 위한 최소 스탯 합. 임계값이 여기 한 곳에만 있도록 밖에서도 이걸 쓴다. */
+    /** 해당 단계가 되기 위한 최소 스탯 합(경험치). 기준은 PetLevel 한 곳에 있다. */
     public static int minStatTotalFor(PetStage stage) {
-        return switch (stage) {
-            case INFANT -> 0;
-            case JUVENILE -> JUVENILE_THRESHOLD;
-            case ADULT -> ADULT_THRESHOLD;
-        };
+        return PetLevel.minTotalFor(PetLevel.levelOf(stage));
     }
 
-    /** 4대 스탯 합. 진화 판정·분양가 산출의 기준값. */
+    /** 4대 스탯 합 = 경험치. 레벨·진화 판정과 분양가 산출의 기준값. */
     public int statTotal() {
         return nz(statEnergy) + nz(statCharm) + nz(statIq) + nz(statEndurance);
     }
 
+    /** 경험치에서 계산한 레벨(1~30). */
+    public int level() {
+        return PetLevel.levelFor(statTotal());
+    }
+
+    /** 만렙(30)을 달성해 졸업(분양)할 수 있는가. */
+    public boolean isGraduated() {
+        return level() >= PetLevel.MAX_LEVEL;
+    }
+
     /**
-     * 스탯 합에 따라 성장 단계를 갱신한다. addStat 직후 호출.
+     * 레벨에 따라 성장 단계를 갱신한다(5레벨 2차, 15레벨 3차). addStat 직후 호출.
      * 단계는 되돌아가지 않는다 — 지출 삭제로 스탯이 줄어도 이미 큰 펫이 도로 작아지면
      * 사용자 경험이 무너지므로 상향 전이만 허용.
      */
     public void evaluateStage() {
-        int total = statTotal();
-        PetStage next = total >= ADULT_THRESHOLD ? PetStage.ADULT
-                : total >= JUVENILE_THRESHOLD ? PetStage.JUVENILE
-                : PetStage.INFANT;
+        PetStage next = PetLevel.stageFor(level());
         if (next.ordinal() > this.stage.ordinal()) {
             this.stage = next;
         }
@@ -133,14 +132,25 @@ public class Pet {
      * evaluateStage() 를 다시 돌려도 같은 단계가 나온다(내려가는 전이도 허용).
      */
     public void forceStage(PetStage target) {
-        int total = minStatTotalFor(target);
+        setStatTotal(minStatTotalFor(target));
+        this.stage = target;
+    }
+
+    /** 레벨을 강제로 맞춘다(관리자 시연용, 내려가기 허용). 스탯 합을 그 레벨의 최소값으로, 단계도 그 레벨에 맞춘다. */
+    public void forceLevel(int level) {
+        int target = Math.max(1, Math.min(level, PetLevel.MAX_LEVEL));
+        setStatTotal(PetLevel.minTotalFor(target));
+        this.stage = PetLevel.stageFor(target);
+    }
+
+    /** 스탯 합을 total 로 맞추며 4대 스탯에 고르게 나눈다. */
+    private void setStatTotal(int total) {
         int base = total / 4;
         int rem = total % 4;
         this.statEnergy = base + (rem > 0 ? 1 : 0);
         this.statCharm = base + (rem > 1 ? 1 : 0);
         this.statIq = base + (rem > 2 ? 1 : 0);
         this.statEndurance = base;
-        this.stage = target;
     }
 
     /** 상호작용 1회를 센다. */
