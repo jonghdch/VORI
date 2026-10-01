@@ -115,8 +115,7 @@
   font-weight: 600;
 }
 
-/* 오늘 출석하기 버튼 — 꾹 눌리는 느낌이 나는 통통한 게임식 버튼.
-   아래쪽에 진한 색 턱을 만들어 두고, 누르면 그 턱만큼 내려앉는다. */
+/* 오늘 출석하기 버튼 — 통통한 알약 모양. 그림자 없이 면만 쓴다. */
 .attendance-cta {
   display: inline-flex;
   align-items: center;
@@ -129,7 +128,7 @@
   padding: 13px 22px;
   border-radius: 999px;
   cursor: pointer;
-  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.12s ease;
+  transition: filter 0.12s ease;
 }
 
 .attendance-cta-icon {
@@ -140,16 +139,10 @@
 .attendance-cta--ready {
   background: linear-gradient(160deg, #8ec277 0%, var(--home-green) 55%, var(--home-green-dark) 100%);
   color: #fff;
-  box-shadow: 0 4px 0 var(--home-green-dark), 0 10px 18px rgba(94, 140, 78, 0.28);
 }
 
 .attendance-cta--ready:hover:not(:disabled) {
   filter: brightness(1.05);
-}
-
-.attendance-cta--ready:active:not(:disabled) {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 var(--home-green-dark), 0 4px 10px rgba(94, 140, 78, 0.22);
 }
 
 .attendance-cta--ready:disabled {
@@ -160,7 +153,6 @@
 .attendance-cta--done {
   background: var(--home-green-soft);
   color: var(--home-green-dark);
-  box-shadow: none;
   cursor: default;
 }
 
