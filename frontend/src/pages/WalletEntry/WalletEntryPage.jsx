@@ -211,7 +211,7 @@ function WalletEntryPage({ user }) {
     if (!file) return;
 
     setReceiptBusy(true);
-    setReceiptNotice({ kind: "info", text: "영수증을 읽는 중이에요. 10~15초쯤 걸려요." });
+    setReceiptNotice({ kind: "info", text: "사진을 읽는 중이에요. 10~15초쯤 걸려요." });
     try {
       // 업로드 전에 긴 변 2048px 로 줄인다. 용량이 큰 원본일수록 인식이 느려진다 — prepareReceiptImage 참조.
       const photo = await prepareReceiptImage(file);
@@ -227,11 +227,17 @@ function WalletEntryPage({ user }) {
       const r = await uploadReceipt(photo);
 
       // 영수증이 아니거나 판독 불가여도 200 이 온다 — 값이 비었는지로 판단한다.
+      // 사진 종류(sourceType)로 이유를 나눠 안내한다. 여러 건이 찍힌 캡처는 서버가 값을 비워 보낸다.
       if (r.amount == null && !r.item) {
-        setReceiptNotice({
-          kind: "err",
-          text: r.errorMessage || "영수증을 읽지 못했어요. 더 밝은 곳에서 다시 찍어보세요.",
-        });
+        const source = r.extracted?.sourceType;
+        const text =
+          r.errorMessage ||
+          (source === "MULTIPLE"
+            ? "결제가 여러 건 보여요. 한 건만 보이게 잘라서 다시 올려주세요."
+            : source === "NOT_PAYMENT"
+              ? "결제 내역이 보이지 않아요. 취소·환불·입금 내역은 지출로 채우지 않아요."
+              : "사진을 읽지 못했어요. 더 밝은 곳에서 다시 찍거나 캡처를 다시 올려주세요.");
+        setReceiptNotice({ kind: "err", text });
         return;
       }
 
@@ -248,14 +254,14 @@ function WalletEntryPage({ user }) {
         },
       ]);
 
-      // 영수증 날짜가 지금 보는 날짜와 다르면 알려만 준다. 날짜를 임의로 바꾸면
+      // 사진 속 날짜가 지금 보는 날짜와 다르면 알려만 준다. 날짜를 임의로 바꾸면
       // 이미 입력한 다른 행들이 엉뚱한 날짜로 저장된다.
       const other = r.date && r.date !== dateStr;
       setReceiptNotice({
         kind: other ? "warn" : "ok",
         text: other
-          ? `영수증 날짜는 ${r.date} 예요. 지금은 ${dateStr} 을 작성 중이라 금액만 채웠어요.`
-          : "영수증을 읽었어요. 금액과 항목을 확인해주세요.",
+          ? `사진 속 날짜는 ${r.date} 예요. 지금은 ${dateStr} 을 작성 중이라 금액만 채웠어요.`
+          : "사진을 읽었어요. 금액과 항목을 확인해주세요.",
       });
     } catch (err) {
       setReceiptNotice({ kind: "err", text: err.message });
@@ -374,8 +380,9 @@ function WalletEntryPage({ user }) {
           </p>
         </div>
 
-        {/* 영수증 OCR. 줄여서 보내도 인식에 6~13초 걸려서 진행 표시가 필수다 —
-            아무 표시 없이 기다리게 하면 멈춘 것처럼 보인다. */}
+        {/* 영수증·결제 캡처 OCR. 줄여서 보내도 인식에 6~13초 걸려서 진행 표시가 필수다 —
+            아무 표시 없이 기다리게 하면 멈춘 것처럼 보인다. 종이 영수증이 없는 결제가 많아
+            카드 승인 문자·결제 완료·이체 완료 캡처도 받는다(중간발표 상호평가). */}
         {!isEditMode && <section className="ledger-receipt">
           <input
             ref={receiptInput}
@@ -391,7 +398,7 @@ function WalletEntryPage({ user }) {
             onClick={() => receiptInput.current?.click()}
             disabled={receiptBusy}
           >
-            {receiptBusy ? "영수증 읽는 중…" : "📷 영수증 사진으로 채우기"}
+            {receiptBusy ? "사진 읽는 중…" : "📷 영수증·결제 캡처로 채우기"}
           </button>
           {receiptNotice && (
             <p className={`ledger-receipt-notice ledger-receipt-notice--${receiptNotice.kind}`}>

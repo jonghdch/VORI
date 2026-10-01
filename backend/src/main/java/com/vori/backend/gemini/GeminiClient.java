@@ -14,6 +14,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -253,25 +254,16 @@ public class GeminiClient {
      *
      * 반환값은 파싱하지 않은 원문이다. 호출부가 DTO 로 매핑하고, 원문은 그대로 저장해
      * 나중에 값을 다시 확인할 수 있게 한다.
+     *
+     * <p><b>결제 내역 캡처도 받는다(2026-10-01, 중간발표 상호평가).</b> 카드 승인 문자·알림,
+     * 간편결제 완료 화면, 이체 완료 화면처럼 종이 영수증이 없는 결제가 많다. 사진 종류를 {@code sourceType}
+     * 으로 함께 받는데, 여러 건이 한 화면에 찍힌 경우(카드 이용내역 목록 등)는 <b>MULTIPLE</b> 로 받고 값을
+     * 채우지 않는다 — 어느 건을 원하는지 모델이 고르면 틀린 금액이 조용히 들어간다.
+     * 승인 취소·환불은 지출이 아니므로 NOT_PAYMENT 로 본다.
+     * 카드 문자는 연도가 없는 경우가 많아("10/01 12:34") 오늘 날짜를 함께 넘긴다.
      */
     public String extractReceipt(byte[] image, String mimeType) {
-        String prompt = """
-                이 영수증 이미지에서 가계부 등록에 필요한 정보를 뽑아 JSON 으로만 출력하세요.
-
-                {
-                  "storeName": "상호명",
-                  "date": "YYYY-MM-DD",
-                  "time": "HH:MM",
-                  "totalAmount": 총결제금액(정수, 원),
-                  "items": [{"name": "품목명", "quantity": 수량(정수), "amount": 금액(정수)}],
-                  "paymentMethod": "CASH|CREDIT|DEBIT|TRANSFER|MOBILE_PAY|UNKNOWN",
-                  "representativeItem": "대표 품목 한 개(가장 비싸거나 대표적인 것)"
-                }
-
-                주의:
-                - 금액은 콤마 없이 정수로만. 읽을 수 없는 값은 null.
-                - 영수증이 아니거나 판독 불가능하면 모든 값을 null 로 두세요.
-                """;
+        String prompt = receiptPrompt(LocalDate.now());
 
         Map<String, Object> body = Map.of(
                 "contents", List.of(Map.of("parts", List.of(
@@ -288,6 +280,44 @@ public class GeminiClient {
             log.error("Gemini 영수증 인식 실패", e);
             throw new RuntimeException("영수증 인식에 실패했습니다.");
         }
+    }
+
+    /** 영수증·결제 캡처 인식 프롬프트. 오늘 날짜는 연도가 빠진 결제 문자를 보완하는 데 쓴다. */
+    static String receiptPrompt(LocalDate today) {
+        return """
+                이 이미지에서 가계부 지출 등록에 필요한 정보를 뽑아 JSON 으로만 출력하세요.
+                이미지는 종이 영수증일 수도, 결제 내역 화면 캡처일 수도 있습니다.
+
+                {
+                  "sourceType": "RECEIPT|CARD_ALERT|PAYMENT_SCREEN|TRANSFER|MULTIPLE|NOT_PAYMENT",
+                  "storeName": "상호명 또는 가맹점명. 이체면 받는 분",
+                  "date": "YYYY-MM-DD",
+                  "time": "HH:MM",
+                  "totalAmount": 총결제금액(정수, 원),
+                  "items": [{"name": "품목명", "quantity": 수량(정수), "amount": 금액(정수)}],
+                  "paymentMethod": "CASH|CREDIT|DEBIT|TRANSFER|MOBILE_PAY|UNKNOWN",
+                  "representativeItem": "대표 품목 한 개(가장 비싸거나 대표적인 것). 이체면 메모(받는 분 통장 표시 등). 없으면 null"
+                }
+
+                sourceType:
+                - RECEIPT: 종이·전자 영수증
+                - CARD_ALERT: 카드 승인 문자나 알림 (예: "OO카드 승인 12,500원 일시불 10/01 12:34 가맹점명")
+                - PAYMENT_SCREEN: 카드사·간편결제 앱의 결제 완료 화면이나 결제 상세 화면
+                - TRANSFER: 계좌이체 완료 화면이나 이체 상세 화면
+                - MULTIPLE: 결제나 이체가 여러 건 한 화면에 보이는 목록 (이용내역, 거래내역 등)
+                - NOT_PAYMENT: 결제 내역이 아니거나, 승인 취소·환불·입금처럼 지출이 아닌 것
+
+                주의:
+                - 금액은 콤마 없이 정수로만. 읽을 수 없는 값은 null.
+                - MULTIPLE 이나 NOT_PAYMENT 이면 sourceType 만 채우고 나머지는 모두 null.
+                  여러 건 중 하나를 골라 채우지 마세요.
+                - 판독이 불가능하면 sourceType 을 포함해 모든 값을 null.
+                - 오늘은 %s 입니다. 날짜에 연도가 없으면 오늘이거나 그 이전 중 가장 가까운 날짜로 채우세요.
+                - 결제수단: 체크카드는 DEBIT, 신용카드는 CREDIT, 계좌이체는 TRANSFER,
+                  카카오페이·네이버페이·토스페이 같은 간편결제는 MOBILE_PAY, 알 수 없으면 UNKNOWN.
+                - 카드번호·계좌번호·승인번호·사람 이름의 일부 같은 값은 어떤 칸에도 넣지 마세요.
+                  단 이체의 받는 분은 storeName 에 넣어도 됩니다.
+                """.formatted(today);
     }
 
     // ───── 대체 모델 ─────
