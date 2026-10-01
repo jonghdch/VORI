@@ -650,21 +650,33 @@
   border-radius: inherit;
 }
 
+/* 방 테마가 스크롤 없이 많이 보이도록 데스크톱 3열, 오른쪽 카드가 넓어지면 4열 */
 .pet-background-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
+/* 카드 = 위쪽 썸네일 + 아래쪽 이름. 글씨를 그림 위에 얹지 않는다 */
 .pet-background-card {
-  min-height: 92px;
-  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 6px 8px;
   border-radius: var(--home-radius-sm);
   overflow: hidden;
-  text-align: left;
+  text-align: center;
 }
 
-.pet-background-card.pet-room-bg--image {
+.pet-background-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1; /* 배경 원본 1200×600 비율 */
+  border-radius: calc(var(--home-radius-sm) - 4px);
+  background-color: #eef1ea;
+}
+
+.pet-background-thumb.pet-room-bg--image {
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -688,22 +700,27 @@
   box-shadow: none;
 }
 
-.pet-background-card span,
+.pet-background-name,
 .pet-background-card strong {
-  position: relative;
-  z-index: 1;
   display: block;
+  line-height: 1.25;
+  word-break: keep-all;
 }
 
-.pet-background-card span {
-  font-size: 14px;
+.pet-background-name {
+  color: var(--home-text);
+  font-size: 13px;
   font-weight: 900;
 }
 
 .pet-background-card strong {
-  margin-top: 6px;
-  font-size: 12px;
-  color: rgba(45, 51, 40, 0.68);
+  color: var(--home-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pet-background-card.is-selected .pet-background-name {
+  color: var(--home-green-dark);
 }
 
 .pet-furniture-grid {
@@ -739,6 +756,9 @@
 .pet-item-card span { margin-top: 3px; color: var(--home-green-dark); font-size: 13px; font-weight: 800; }
 .pet-item-card button { border: 0; border-radius: 8px; background: var(--home-green); color: #fff; padding: 8px 11px; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .pet-item-card button:disabled { opacity: .45; cursor: not-allowed; }
+/* 아이템 픽셀 이미지 — 이름 왼쪽에 */
+.pet-item-image { flex-shrink: 0; width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated; }
+.pet-item-text { flex: 1; min-width: 0; }
 
 .pet-furniture-card span {
   display: grid;
@@ -772,6 +792,10 @@
     grid-template-columns: 1fr;
     --myroom-height: 560px;
   }
+
+  .pet-background-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -779,7 +803,10 @@
     flex-direction: column;
   }
 
-  .pet-background-list,
+  .pet-background-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .pet-furniture-grid {
     grid-template-columns: 1fr;
   }
