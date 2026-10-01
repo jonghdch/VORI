@@ -42,7 +42,6 @@ const SettingsPage = lazy(() => import("./pages/Settings/SettingsPage"));
 const ProfileSettingsPage = lazy(() =>
   import("./pages/Settings/ProfileSettingsPage"),
 );
-const AchievementPage = lazy(() => import("./pages/Achievement/AchievementPage"));
 // 이용약관·개인정보처리방침 — 공개(비인증) 페이지.
 const TermsPage = lazy(() => import("./pages/Legal/TermsPage"));
 const PrivacyPage = lazy(() => import("./pages/Legal/PrivacyPage"));
@@ -325,14 +324,8 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/titles"
-            element={
-              <ProtectedRoute user={user} authLoading={authLoading}>
-                <AchievementPage user={user} onLogout={handleLogout} />
-              </ProtectedRoute>
-            }
-          />
+          {/* 업적/칭호는 도감 탭으로 합쳤다 — 예전 링크는 그 탭으로 보낸다 */}
+          <Route path="/titles" element={<Navigate to="/dex?tab=titles" replace />} />
           {/* 어드민 — 셸(AdminLayout) + 사이드바 메뉴별 중첩 라우트.
               본문은 현재 AdminPlaceholder. 기본 진입은 종합 대시보드. */}
           <Route

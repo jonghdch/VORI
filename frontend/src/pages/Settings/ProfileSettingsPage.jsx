@@ -140,7 +140,7 @@ function ProfileSettingsPage({ user, onLogout, onUserUpdate }) {
           {titleError && <p role="alert" className="profile-message error">{titleError}</p>}
           {titleNotice && <p role="status" className="profile-message">{titleNotice}</p>}
           <div className="profile-actions">
-            <button type="button" className="profile-cancel" onClick={() => navigate("/titles")}>업적/칭호 보기</button>
+            <button type="button" className="profile-cancel" onClick={() => navigate("/dex?tab=titles")}>업적/칭호 보기</button>
             <button type="button" className="profile-save" disabled={titleLoading || titleSaving || !!titleError || selectedTitle === savedTitle} onClick={handleTitleSave}>{titleSaving ? "적용 중…" : "칭호 적용"}</button>
           </div>
         </section>
