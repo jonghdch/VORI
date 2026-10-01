@@ -1,5 +1,78 @@
-.attendance-main {
-  padding-bottom: 48px;
+/* 출석 팝업 — AppShell(.home) 안에서 뜨므로 --home-* 토큰을 그대로 쓴다.
+   원래 /attendance 페이지였던 내용을 다이얼로그 안에 담았다. */
+.attendance-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 190; /* 사이드바(41)·관리자 도구(40) 위, 펫 이름 팝업(200) 아래 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(45, 51, 40, 0.48);
+  animation: attendance-fade 0.18s ease-out;
+}
+
+.attendance-dialog {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+  padding: 28px 28px 24px;
+  border-radius: var(--home-radius);
+  border: 1px solid var(--home-card-border);
+  background: var(--home-bg);
+  box-shadow:
+    0 1px 2px rgba(45, 51, 40, 0.08),
+    0 18px 48px rgba(45, 51, 40, 0.22);
+  color: var(--home-text);
+  animation: attendance-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.attendance-dialog:focus {
+  outline: none;
+}
+
+.attendance-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  background: var(--home-card-surface);
+  color: var(--home-muted);
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.attendance-close:hover {
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+}
+
+.attendance-close:focus-visible {
+  outline: 2px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
+@keyframes attendance-fade {
+  from { opacity: 0; }
+}
+
+@keyframes attendance-rise {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attendance-backdrop,
+  .attendance-dialog {
+    animation: none;
+  }
 }
 
 .attendance-head {
@@ -8,6 +81,7 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 22px;
+  padding-right: 44px; /* 닫기 버튼 자리 */
 }
 
 .attendance-title {
@@ -501,6 +575,15 @@
 }
 
 @media (max-width: 720px) {
+  .attendance-backdrop {
+    padding: 12px;
+  }
+
+  .attendance-dialog {
+    max-height: calc(100vh - 24px);
+    padding: 22px 16px 18px;
+  }
+
   .attendance-head {
     flex-direction: column;
   }
