@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.ExpenseRepository;
 import com.vori.backend.gemini.GeminiClient;
+import com.vori.backend.inquiry.AiInquiry;
+import com.vori.backend.inquiry.AiInquiryRepository;
+import com.vori.backend.inquiry.ReasonCategory;
 import com.vori.backend.income.Income;
 import com.vori.backend.income.IncomeRepository;
 import com.vori.backend.pet.Pet;
@@ -21,6 +24,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -46,14 +50,20 @@ public class DailyReportService {
     private final PetRepository petRepository;
     private final PetSpeciesRepository petSpeciesRepository;
     private final PetGrowthLogRepository petGrowthLogRepository;
+    private final AiInquiryRepository aiInquiryRepository;
     private final GeminiClient geminiClient;
     private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
 
-    /** 하루치 집계 결과 — AI 호출 전에 트랜잭션 밖으로 들고 나올 값들. */
+    /**
+     * 하루치 집계 결과 — AI 호출 전에 트랜잭션 밖으로 들고 나올 값들.
+     * petName 은 사용자가 지어 준 이름(없으면 null), speciesName 은 종족명.
+     * reasons 는 그날 지출 중 AI 질문에 답해 분류된 이유들(코멘트 전용, 리포트에는 저장하지 않는다).
+     */
     private record DailySummary(
             int incomeTotal, int expenseTotal, int savedAmount,
-            int statDeltaTotal, String petName, String petSnapshot) {}
+            int statDeltaTotal, String petName, String speciesName, String petSnapshot,
+            List<ReasonCategory> reasons) {}
 
     public record BatchResult(LocalDate date, int targeted, int generated, int failed) {}
 
@@ -146,9 +156,10 @@ public class DailyReportService {
         // AI 실패로 리포트 자체가 사라지면 안 된다 — 코멘트만 비우고 통계는 남긴다
         String comment = null;
         try {
-            comment = geminiClient.generateDailyComment(
-                    summary.petName(), summary.expenseTotal(),
-                    summary.incomeTotal(), summary.savedAmount(), summary.statDeltaTotal());
+            comment = geminiClient.generateDailyComment(new GeminiClient.DailyCommentInput(
+                    summary.petName(), summary.speciesName(),
+                    summary.expenseTotal(), summary.incomeTotal(), summary.savedAmount(),
+                    summary.statDeltaTotal(), summary.reasons()));
         } catch (Exception e) {
             log.warn("AI 코멘트 생성 실패 — 통계만 저장. userId={}, date={}", userId, date);
         }
@@ -182,6 +193,14 @@ public class DailyReportService {
 
         int statDeltaTotal = petGrowthLogRepository.sumDeltaInRange(userId, start, end);
 
+        // 답한 질문만 분류가 있다(reason_category 는 답변 때 채워진다). 미답변은 이유를 모르는 지출로 둔다.
+        List<ReasonCategory> reasons = expenses.isEmpty() ? List.of()
+                : aiInquiryRepository.findByExpenseIdIn(expenses.stream().map(Expense::getId).toList())
+                        .stream()
+                        .map(AiInquiry::getReasonCategory)
+                        .filter(Objects::nonNull)
+                        .toList();
+
         List<Pet> pets = petRepository.findByUserIdAndReleasedAtIsNull(userId);
         Pet pet = pets.isEmpty() ? null : pets.get(0);
         PetSpecies species = pet == null ? null
@@ -189,8 +208,10 @@ public class DailyReportService {
 
         return new DailySummary(
                 incomeTotal, expenseTotal, savedAmount, statDeltaTotal,
+                pet == null ? null : pet.getName(),
                 species == null ? null : species.getName(),
-                writeSnapshot(pet, species));
+                writeSnapshot(pet, species),
+                reasons);
     }
 
     /** 짧은 쓰기 트랜잭션. 같은 날 리포트가 있으면 덮어쓴다(멱등). */

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AccountSummary from "./AccountSummary";
 import { getMe } from "../api/user";
 import { listTitles } from "../api/titles";
+import { openAttendance } from "./AttendanceModal";
 
 const coin = (n) => (n ?? 0).toLocaleString("ko-KR");
 
@@ -98,6 +99,16 @@ function AccountMenu({ onLogout }) {
                 관리자 페이지
               </button>
             )}
+            <button
+              type="button"
+              className="home-btn"
+              onClick={() => {
+                setOpen(false);
+                openAttendance(); // 출석 팝업을 다시 띄운다 (AttendanceGate)
+              }}
+            >
+              🐾 출석 확인
+            </button>
             <button
               type="button"
               className="home-link-btn account-menu-logout"

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AccountMenu from "./AccountMenu";
 import AdminTools from "./AdminTools";
 import PetNameGate from "./PetNameGate";
+import AttendanceGate from "./AttendanceGate";
 import { getMe } from "../api/user";
 import "../pages/Home/HomeDashboard.css";
 
@@ -27,7 +28,6 @@ const GAME_MENU = [
   { id: "dex", label: "펫 도감", page: "dex" },
   { id: "shop", label: "상점", page: "shop" },
   { id: "achievement", label: "업적/칭호", page: "titles" },
-  { id: "attendance", label: "출석", page: "attendance" },
 ];
 
 // 데스크톱(1025px 이상)에서 왼쪽 사이드바를 접어 둔 상태를 기억한다. 모바일 드로어와는 별개.
@@ -263,6 +263,7 @@ function AppShell({
 
       {isAdmin && <AdminTools />}
       <PetNameGate />
+      <AttendanceGate />
     </div>
   );
 }

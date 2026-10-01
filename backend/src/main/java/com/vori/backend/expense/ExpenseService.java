@@ -8,6 +8,7 @@ import com.vori.backend.expense.dto.ExpenseUpdateRequest;
 import com.vori.backend.goal.Goal;
 import com.vori.backend.goal.GoalRepository;
 import com.vori.backend.goal.GoalStatus;
+import com.vori.backend.inquiry.AiInquiry;
 import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.pet.GrowthReason;
 import com.vori.backend.pet.Pet;
@@ -142,10 +143,16 @@ public class ExpenseService {
         // 두 건 중 한 번씩 이유를 캐묻는 앱은 쓰이지 않는다.
         //
         // 반복 결제는 사용자의 의식적 결정이 아니므로 여전히 스킵한다.
+        //
+        // 질문 행은 여기서(같은 트랜잭션) 템플릿 문구로 먼저 만든다. AI 문구는 커밋 뒤
+        // AiInquiryService.handleAnomalyEvent 가 비동기로 덮어쓴다. Gemini 가 실패해도
+        // 질문이 남고, 저장 직후 열리는 분석 화면이 빈 목록을 보지 않는다.
         boolean skipAiQuestion = Boolean.TRUE.equals(req.isRecurring());
         if (signal == Signal.RED && !skipAiQuestion) {
+            AiInquiry pending = aiInquiryRepository.save(
+                    AiInquiry.pending(expense.getId(), userId, req.item(), req.amount()));
             eventPublisher.publishEvent(new ExpenseAnomalyEvent(
-                    expense.getId(), userId, req.item(), req.amount(),
+                    pending.getId(), expense.getId(), userId, req.item(), req.amount(),
                     category.getStatType(), stats.getMeanEma(), signal
             ));
         }
@@ -194,11 +201,19 @@ public class ExpenseService {
         int statDelta = 0;
         expense.updateCalculations(zScore, signal, savedAmount, statDelta);
 
-        // 수정 전 금액으로 만든 질문은 더 이상 유효하지 않다. 새 판정이 RED면 커밋 후 다시 생성한다.
-        aiInquiryRepository.findByExpenseId(expenseId).ifPresent(aiInquiryRepository::delete);
+        // 수정 전 금액으로 만든 질문은 더 이상 유효하지 않다. 새 판정이 RED면 템플릿 질문을
+        // 바로 다시 만들고, AI 문구는 커밋 후 비동기로 덮어쓴다.
+        // flush: expense_id 가 UNIQUE 라, Hibernate 가 INSERT 를 DELETE 보다 먼저 내보내면
+        // 같은 expense_id 로 두 행이 겹쳐 제약 위반이 난다.
+        aiInquiryRepository.findByExpenseId(expenseId).ifPresent(old -> {
+            aiInquiryRepository.delete(old);
+            aiInquiryRepository.flush();
+        });
         if (signal == Signal.RED && !Boolean.TRUE.equals(expense.getIsRecurring())) {
+            AiInquiry pending = aiInquiryRepository.save(AiInquiry.pending(
+                    expense.getId(), userId, expense.getItem(), expense.getAmount()));
             eventPublisher.publishEvent(new ExpenseAnomalyEvent(
-                    expense.getId(), userId, expense.getItem(), expense.getAmount(),
+                    pending.getId(), expense.getId(), userId, expense.getItem(), expense.getAmount(),
                     expense.getStatType(), stats.getMeanEma(), signal));
         }
         return ExpenseResponse.from(expense);
