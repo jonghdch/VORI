@@ -10,6 +10,9 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import com.vori.backend.inquiry.ReasonCategory;
+import org.mockito.ArgumentCaptor;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Gemini 재시도·대체 모델 정책 검증.
+ * Gemini 재시도·대체 모델 정책, 일일 코멘트 프롬프트 구성 검증.
  * 실제로 503 이 뜰 때만 드러나는 로직이라 목으로 고정해서 확인한다.
  */
 class GeminiClientTest {
@@ -36,6 +39,12 @@ class GeminiClientTest {
     private static final Map<String, Object> OK_RESPONSE = Map.of(
             "candidates", List.of(Map.of(
                     "content", Map.of("parts", List.of(Map.of("text", "왜 이렇게 쓰셨나요?"))))));
+
+    /** 일일 코멘트 입력 — 이름은 아직 없고 수입은 0 인 펫. */
+    private static GeminiClient.DailyCommentInput comment(String species, int expense, int saved, int stat,
+                                                          List<ReasonCategory> reasons) {
+        return new GeminiClient.DailyCommentInput(null, species, expense, 0, saved, stat, reasons);
+    }
 
     /** 대체 모델 없음 — 기존 재시도 테스트는 이 조건에서 돈다. */
     private static GeminiClient client(RestTemplate rt) {
@@ -112,7 +121,7 @@ class GeminiClientTest {
                 .thenReturn(OK_RESPONSE);
 
         String result = client(rt)
-                .generateDailyComment("강아지", 303_000, 0, -3_000, 57);
+                .generateDailyComment(comment("강아지", 303_000, -3_000, 57, List.of()));
 
         assertThat(result).isNotBlank();
         verify(rt, times(2)).postForObject(anyString(), any(), eq(Map.class));
@@ -241,7 +250,7 @@ class GeminiClientTest {
                 .thenReturn(OK_RESPONSE);
 
         String result = client(rt, "backup")
-                .generateDailyComment("강아지", 10_000, 0, 5_000, 5);
+                .generateDailyComment(comment("강아지", 10_000, 5_000, 5, List.of()));
 
         assertThat(result).isNotBlank();
         verify(rt, times(1)).postForObject(primaryUrl(), any(), eq(Map.class));
@@ -329,5 +338,54 @@ class GeminiClientTest {
         GeminiClient client = client(mock(RestTemplate.class), " backup, ,primary,backup ");
 
         assertThat(client.modelChain()).containsExactly("primary", "backup");
+    }
+
+    // ───── 일일 코멘트 프롬프트 ─────
+
+    /** 실제로 Gemini 에 보낸 프롬프트 문장을 꺼낸다. */
+    @SuppressWarnings("unchecked")
+    private static String sentPrompt(RestTemplate rt) {
+        ArgumentCaptor<Object> body = ArgumentCaptor.forClass(Object.class);
+        verify(rt).postForObject(anyString(), body.capture(), eq(Map.class));
+        Map<String, Object> b = (Map<String, Object>) body.getValue();
+        Map<String, Object> content = ((List<Map<String, Object>>) b.get("contents")).get(0);
+        return (String) ((List<Map<String, Object>>) content.get("parts")).get(0).get("text");
+    }
+
+    @Test
+    @DisplayName("일일 코멘트에 그날 답한 지출 이유가 판단 없는 말로 들어간다")
+    void dailyCommentIncludesReasons() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(anyString(), any(), eq(Map.class))).thenReturn(OK_RESPONSE);
+
+        client(rt).generateDailyComment(new GeminiClient.DailyCommentInput(
+                "콩이", "강아지", 230_000, 0, -160_000, 44,
+                List.of(ReasonCategory.CEREMONY, ReasonCategory.IMPULSE, ReasonCategory.IMPULSE)));
+
+        String prompt = sentPrompt(rt);
+        assertThat(prompt).contains("강아지 '콩이'");
+        assertThat(prompt).contains("경조사(결혼식·장례식 등) 1건");
+        assertThat(prompt).contains("사고 싶어서 산 것 2건");
+        // 분류 이름(IMPULSE)을 "충동" 같은 판단이 섞인 말로 옮기지 않는다
+        assertThat(prompt).doesNotContain("충동").doesNotContain("IMPULSE");
+    }
+
+    @Test
+    @DisplayName("답한 이유가 없으면 '없음' — 예전처럼 금액만 보고 말한다")
+    void dailyCommentWithoutReasons() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(anyString(), any(), eq(Map.class))).thenReturn(OK_RESPONSE);
+
+        client(rt).generateDailyComment(comment("고양이", 12_000, 3_000, 0, List.of()));
+
+        assertThat(sentPrompt(rt)).contains("사용자가 직접 밝힌 지출 이유: 없음");
+    }
+
+    @Test
+    @DisplayName("펫 이름이 있으면 '종족 이름' 으로, 없으면 종족명으로, 펫이 없으면 일반 펫으로 말한다")
+    void introUsesPetName() {
+        assertThat(GeminiClient.introFor("콩이", "강아지")).isEqualTo("너는 사용자가 키우는 강아지 '콩이'야.");
+        assertThat(GeminiClient.introFor(null, "강아지")).isEqualTo("너는 사용자가 키우는 반려 펫 '강아지'야.");
+        assertThat(GeminiClient.introFor(" ", null)).isEqualTo("너는 사용자의 절약을 돕는 반려 펫이야.");
     }
 }
