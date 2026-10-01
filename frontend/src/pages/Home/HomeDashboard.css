@@ -76,12 +76,20 @@
   white-space: nowrap;
   max-width: 140px;
 }
+/* 홈 펫 카드의 칭호 배지(.home-pet-title-badge)와 같은 모양 */
 .home-account-title {
   cursor: pointer;
-  border-radius: 20px;
-  background: var(--home-green-soft);
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  background: var(--home-card-surface);
+  color: var(--home-muted);
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.home-account-title:hover {
+  border-color: var(--home-green-dark);
   color: var(--home-green-dark);
-  padding: 6px 10px;
 }
 .home-account-coins {
   flex-shrink: 0;
@@ -542,26 +550,26 @@
   color: var(--home-green-dark);
 }
 
-/* 칭호 캡슐 — 칭호 없으면 muted 톤 */
-/* 칭호 배지 — 헤더 계정 칩의 칭호(.home-account-title)와 같은 모양 */
+/* 칭호 캡슐 — 테두리만 있는 muted 알약, 올리면 초록 */
 .home-pet-title-badge {
-  border: none;
-  border-radius: 20px;
-  padding: 6px 10px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: normal;
-  color: var(--home-green-dark);
-  background: var(--home-green-soft);
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+  background: var(--home-card-surface);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 140px;
+  font-family: inherit;
+  line-height: inherit;
   cursor: pointer;
 }
 .home-pet-title-badge:hover {
-  filter: brightness(0.97);
+  border-color: var(--home-green-dark);
+  color: var(--home-green-dark);
 }
 .home-pet-title-badge:focus-visible {
   outline: 2px solid var(--home-green-dark);
