@@ -85,19 +85,24 @@ public class Pet {
         }
     }
 
-    /** 해당 단계가 되기 위한 최소 스탯 합(경험치). 기준은 PetLevel 한 곳에 있다. */
+    /** 해당 단계가 되기 위한 최소 스탯 합. 기준은 PetLevel 한 곳에 있다(EXP 를 스탯 단위로 환산). */
     public static int minStatTotalFor(PetStage stage) {
-        return PetLevel.minTotalFor(PetLevel.levelOf(stage));
+        return PetLevel.minExpFor(PetLevel.levelOf(stage)) / PetLevel.EXP_PER_STAT;
     }
 
-    /** 4대 스탯 합 = 경험치. 레벨·진화 판정과 분양가 산출의 기준값. */
+    /** 4대 스탯 합. */
     public int statTotal() {
         return nz(statEnergy) + nz(statCharm) + nz(statIq) + nz(statEndurance);
     }
 
-    /** 경험치에서 계산한 레벨(1~30). */
+    /** EXP = 스탯 합 × 10. 레벨 판정과 분양가 산출의 기준값. */
+    public int exp() {
+        return statTotal() * PetLevel.EXP_PER_STAT;
+    }
+
+    /** EXP 에서 계산한 레벨(1~30). */
     public int level() {
-        return PetLevel.levelFor(statTotal());
+        return PetLevel.levelFor(exp());
     }
 
     /** 만렙(30)을 달성해 졸업(분양)할 수 있는가. */
@@ -139,7 +144,7 @@ public class Pet {
     /** 레벨을 강제로 맞춘다(관리자 시연용, 내려가기 허용). 스탯 합을 그 레벨의 최소값으로, 단계도 그 레벨에 맞춘다. */
     public void forceLevel(int level) {
         int target = Math.max(1, Math.min(level, PetLevel.MAX_LEVEL));
-        setStatTotal(PetLevel.minTotalFor(target));
+        setStatTotal(PetLevel.minExpFor(target) / PetLevel.EXP_PER_STAT);
         this.stage = PetLevel.stageFor(target);
     }
 

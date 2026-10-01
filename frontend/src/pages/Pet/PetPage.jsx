@@ -798,7 +798,7 @@ function PetPage({ user, onLogout }) {
                         <p className="pet-evolve-help">
                           {milestone
                             ? `Lv. ${milestone.level}에 ${milestone.label}. 하루 소비 판정과 출석 보상으로 경험치가 쌓여요.`
-                            : "30레벨을 달성했어요! 분양해서 졸업시키면 코인으로 바꿀 수 있어요. 분양가 = 경험치 × 10."}
+                            : "30레벨을 달성했어요! 분양해서 졸업시키면 코인으로 바꿀 수 있어요. 분양가 = EXP."}
                         </p>
                         {graduated && (
                           <button
@@ -807,7 +807,7 @@ function PetPage({ user, onLogout }) {
                             disabled={releasing}
                             onClick={handleRelease}
                           >
-                            {releasing ? "분양 중…" : `분양하기 (${coin(pet.statTotal * 10)}~)`}
+                            {releasing ? "분양 중…" : `분양하기 (${coin(pet.exp)}~)`}
                           </button>
                         )}
                       </div>

@@ -44,8 +44,7 @@ public class PetService {
     private final PetGrowthLogRepository petGrowthLogRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    // 분양가 = 스탯총합 × 배수 × (1 + (개별 가구 보너스합 + 테마 세트 보너스합)/100)
-    private static final int RELEASE_VALUE_PER_STAT = 10;
+    // 분양가 = EXP(스탯 합 × 10) × (1 + (개별 가구 보너스합 + 테마 세트 보너스합)/100)
 
     // 상호작용 1회당 매력이 오를 확률(%)과 오르는 양
     private static final int INTERACT_CHARM_CHANCE_PCT = 1;
@@ -185,7 +184,8 @@ public class PetService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .add(setBonusPct(placed));
 
-        BigDecimal base = BigDecimal.valueOf((long) pet.statTotal() * RELEASE_VALUE_PER_STAT);
+        // 기본값 = EXP (= 스탯 합 × 10)
+        BigDecimal base = BigDecimal.valueOf((long) pet.exp());
         BigDecimal multiplier = BigDecimal.ONE.add(bonusPct.movePointLeft(2));
 
         return base.multiply(multiplier).setScale(0, RoundingMode.DOWN).intValue();

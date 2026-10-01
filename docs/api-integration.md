@@ -344,7 +344,7 @@ const res = await fetch('http://localhost:8080/api/receipts', {
 | GET | `/api/eggs/products` | 등급별 가격 · 확률 |
 | POST | `/api/eggs/buy?grade=BASIC` | 구매 (펫이 있어도 가능) |
 | POST | `/api/eggs/{id}/open` | 개봉 · **펫이 있으면 409** |
-| GET | `/api/pets/active` | 키우는 펫 (없으면 본문 없는 200) · `level`·`levelExp`·`levelExpNeeded`·`maxLevel` 포함 |
+| GET | `/api/pets/active` | 키우는 펫 (없으면 본문 없는 200) · `exp`(스탯 합 × 10)·`level`·`levelExp`·`levelExpNeeded`·`maxLevel` 포함 |
 | POST | `/api/pets/{id}/release` | 분양(졸업) · 30레벨 미만이면 400 |
 | PUT | `/api/pets/{id}/name` | 펫 이름 짓기 · 요청 `{ name }`(1~10자, 앞뒤 공백 제외) · 응답 펫 · 규칙 위반 400 · 분양한 펫 409 |
 | POST | `/api/pets/active/interact` | 상호작용(쓰다듬기 등) 1회 · 1% 확률로 매력 +1 · 응답 `{ charmUp, pet, newTitles }` — `newTitles` 는 이번 상호작용으로 받은 칭호 `[{ name, hidden }]`(대개 빈 배열) · 펫 없으면 400 |
