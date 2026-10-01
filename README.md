@@ -142,10 +142,11 @@ gemini.api.key=${GEMINI_API_KEY}
 | `auth/` | 인증·세션 | AuthController, UserPrincipal, CustomUserDetailsService, dto/ |
 | `user/` | 사용자 도메인 | User(Entity), Role(enum), UserRepository, UserService |
 | `common/` | 도메인 공용 | StatType 등 여러 도메인이 공유하는 enum |
-| `budget/` | 월 예산 | MonthlyBudget + Repository |
+| `budget/` | 월 예산 | BudgetController, BudgetService, MonthlyBudget + Repository, dto/ |
 | `category/` | 지출 카테고리 | Category + Repository |
 | `expense/` | 지출 | Expense, Signal(enum), Repository |
 | `income/` | 수입 | Income, IncomeSource(enum), Repository |
+| `ledger/` | 가계부 조회·저장 | LedgerController(월별 조회·작성 화면 일괄 저장·지출 삭제), LedgerService, dto/ |
 | `goal/` | 절약 목표 | Goal, GoalStatus(enum), Repository |
 | `stats/` | EMA 통계 | UserStatStats, UserStatStatsId(composite PK), Repository |
 | `inquiry/` | AI 사유 질문 | AiInquiry, ReasonCategory(enum), Repository |

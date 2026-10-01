@@ -1,9 +1,10 @@
 # 프론트엔드 연동 가이드
 
-> 아직 화면에 붙지 않은 도메인(**가구·테마·목표·예산**)을 React 에 연결하기 위한 문서.
-> 칭호는 PR #22, 영수증은 PR #21 로 붙었다 — 아래 명세는 그대로 유효하고, 붙은 것의 실제 사용 예는
-> `frontend/src/api/{titles,receipt}.js` 를 보면 된다.
+> 가구·테마·목표·예산 같은 도메인을 React 에 연결하기 위한 문서.
+> 칭호는 PR #22, 영수증은 PR #21, 예산은 PR #82 로 붙었고 아직 화면이 없는 건 **목표**뿐이다. 아래 명세는 그대로
+> 유효하다. 붙은 것의 실제 사용 예는 `frontend/src/api/{titles,receipt,furniture,theme,budget}.js` 를 보면 된다.
 > 아래 JSON 은 전부 실제로 서버를 띄워 호출해 받은 응답이고, 예시로 지어낸 값이 없다.
+> [가계부](#가계부) 절의 일괄 저장만 예외다. 2026-10-01 에 코드를 읽고 적었고 응답 JSON 은 싣지 않았다.
 
 | | |
 |---|---|
@@ -120,12 +121,14 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 
 ### 가계부 — 지출 등록
 
-지출 한 건이 절약·코인·펫 스탯·목표·칭호를 전부 움직인다.
+지출은 절약액·누적 절약액·목표·칭호를 움직인다. **코인과 펫 스탯은 지출 때 나오지 않는다.** 하루에 한 번 하는
+소비 판정(`POST /api/daily-judgments`) 때 지급된다([6절](#코인과-스탯이-생기는-공식)).
 
 1. `GET /api/categories`
    카테고리 선택지. `categoryId` 가 `statType` 을 결정한다.
-2. `POST /api/expenses`
-   응답의 `signalFinal`(GREEN/GRAY/RED)로 신호등을, `savedAmount` 로 "얼마 아꼈어요" 를 띄운다.
+2. `POST /api/ledger/entries`
+   작성 화면의 지출·수입·저축을 **한 번에** 보낸다. 서버가 한 트랜잭션으로 저장하므로, 하나라도 실패하면
+   아무것도 저장되지 않는다([가계부](#가계부) 엔드포인트 참조). 한 건만 넣을 때는 `POST /api/expenses` 를 써도 된다.
 3. `GET /api/titles`
    지출 등록 직후 칭호가 새로 붙었을 수 있다. `acquired` 가 바뀐 항목을 축하 연출에 쓴다.
 
@@ -139,7 +142,7 @@ POST /api/auth/login   { "email": "...", "password": "..." }
    PNG · JPEG, 10MB 이하. 헤더에 `Content-Type` 을 **넣지 않는다.**
 3. 응답의 `amount` · `date` · `item` 을 지출 폼에 채움
    `status: "SUCCESS"` 여도 개별 값은 `null` 일 수 있다(흐린 영수증). 읽힌 값만 채우고 나머지는 사용자가 입력하게 둔다.
-4. `POST /api/expenses`
+4. `POST /api/ledger/entries` (또는 `POST /api/expenses`)
    사용자가 확인·수정한 뒤 등록. **OCR 이 지출을 자동 생성하지는 않는다.**
 
 ---
@@ -221,7 +224,43 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 단, **히든 칭호(`hidden: true`)는 획득한 뒤에만 목록에 나온다** — 따기 전에는 이름도 조건도 내려오지 않는다. 지금은 「사랑둥이」(한 펫과 상호작용 100회) 하나다.
 장착은 `{ "titleId": 8 }`, 해제는 `{ "titleId": null }`.
 
+### 가계부
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/api/ledger?yearMonth=2026-10` | 그 달 지출+수입 통합 목록(날짜 오름차순) |
+| POST | `/api/ledger/entries` | 작성 화면 일괄 저장 — 지출(등록·수정)·수입·저축을 한 트랜잭션으로 |
+| DELETE | `/api/ledger/expenses/{id}` | 본인 지출 삭제 · 204 |
+| POST | `/api/expenses` | 지출 1건 등록 |
+| PUT | `/api/expenses/{id}` | 지출 1건 수정 |
+
+```json
+// POST /api/ledger/entries — 세 목록 모두 생략 가능(생략하면 빈 목록). 목록마다 최대 100건
+{
+  "expenses": [
+    { "id": null, "item": "점심", "amount": 8000, "categoryId": 3,
+      "paymentMethod": "CREDIT", "spentAt": "2026-10-01T00:00:00" },
+    { "id": 41, "item": "저녁", "amount": 12000, "categoryId": 3, "paymentMethod": "DEBIT" }
+  ],
+  "incomes":  [ { "item": "알바", "amount": 50000, "source": "PART_TIME", "receivedAt": "2026-10-01" } ],
+  "savings":  [ { "item": "적금", "amount": 30000, "savingType": "DEPOSIT", "savedAt": "2026-10-01" } ]
+}
+```
+
+- 지출 행은 **`id` 가 없으면 등록, 있으면 수정**이다. 수정 행은 `paymentMethod` 가 필수다(없으면 400).
+  남의 지출이거나 없는 `id` 면 403 / 400 이 나고 요청 전체가 되돌아간다.
+- 수입·저축 행의 모양은 `POST /api/incomes` · `POST /api/savings` 요청과 같다.
+- 응답은 `{ expenses, incomes, savings }` 이고 각 목록은 요청과 같은 순서로 저장된 행을 담는다.
+  단건 API 의 응답 모양과 같다.
+- 실패하면 아무것도 저장되지 않으므로, 화면은 입력값을 그대로 둔 채 다시 보내면 된다(중복 저장 걱정 없음).
+
+**지출을 고치거나 지우면** 그 지출이 더해 둔 절약액만큼 `users.total_saved`(누적 절약액)도 맞춰진다.
+수정은 바뀐 차이만큼, 삭제는 전부 빠지고 0 아래로는 내려가지 않는다. EMA 와 목표 누적액은 되돌리지 않는다([`domain.md`](domain.md)).
+
 ### 예산
+
+화면은 가계부의 "예산 현황" 카드(`frontend/src/pages/Wallet/BudgetCard.jsx`)다. 우측 "예산 설정" 바로가기는
+`/wallet#budget` 으로 들어가 입력 칸을 바로 연다.
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
@@ -389,22 +428,25 @@ AI 가 이미지를 읽는 시간이라 크게 줄이기 어렵다. **진행 표
 
 ### 코인과 스탯이 생기는 공식
 
-| 값 | 계산 | 예시 |
-|---|---|---|
-| 절약액 | 직전까지의 평균 − 이번 지출 | 400,000 − 1,000 = 399,000 |
-| 코인 | 절약액 ÷ 10 | 39,900 |
-| 펫 스탯 | 절약액 ÷ 1,000 | 399 |
+PR #56(#58 로 머지)부터 코인과 펫 스탯은 **지출 저장 때가 아니라 하루 판정 때** 나온다. 지출의 `stat_delta` 는 항상 0 이다.
+하루 판정은 그날 지출 중 가장 강한 신호(RED > GRAY > GREEN)로 정하고 날짜마다 한 번만 지급한다.
 
-그래서 **큰 지출 한 건을 먼저 넣어 평균을 올리고, 그다음 작은 지출**을 넣으면 코인과 스탯이 한 번에 확보된다. 시연 계정을 만드는 가장 빠른 방법이다.
+| 그날 판정 | 코인 | 펫 스탯 (4개 스탯 각각) |
+|---|---|---|
+| GREEN | 500 | +11 |
+| GRAY | 250 | +6 |
+| RED | 100 | +2 |
+
+배치한 가구에 분양 보너스(%)가 있으면 해당 스탯에 그만큼 더 붙는다. 일반 계정은 **그날만, `vori.ai-judge.open-hour`(기본 20시) 이후에**
+판정할 수 있고, 관리자는 날짜와 시각 제한 없이 할 수 있다.
+
+예전처럼 지출 두 건으로 코인·스탯을 한 번에 만드는 방법은 더 이상 통하지 않는다. 시연 계정의 펫은 관리자 도구로 키운다.
 
 ```
-1) 기준선 올리기 — 표본이 적어 신호등은 GREEN, 절약은 0
-POST /api/expenses { "categoryId": 2, "amount": 400000, "item": "노트북", … }
+1) 하루 판정 — 판정 대상은 로그인한 본인이다. 관리자 계정으로 시연하면 지난 날짜도 날짜마다 1회 판정할 수 있다
+POST /api/daily-judgments?date=2026-09-28
 
-2) 크게 아끼기 — 코인 39,900 + 펫 스탯 399 (성체 기준 300 돌파)
-POST /api/expenses { "categoryId": 2, "amount": 1000, "item": "커피", … }
-
-3) 어드민 치트 — 펫을 스탯 정확히 300 인 ADULT 로 (어드민 계정으로 호출)
+2) 어드민 치트 — 펫을 스탯 정확히 300 인 ADULT 로 (어드민 계정으로 호출)
 POST /api/admin/users/{userId}/pet/grow?stage=ADULT
 ```
 

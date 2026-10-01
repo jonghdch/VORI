@@ -379,7 +379,11 @@ POST /api/auth/signup 성공
   → profileCompleted == false 이면 /signup/profile
   → tutorialDone == false 이면 /onboarding
   → 둘 다 완료면 /home
+  → 상태 조회 실패면 이동하지 않는다. 로그인 화면에 안내와 "다시 시도"를 띄우고
+    다시 시도는 로그인 없이 상태만 다시 묻는다
 ```
+
+상태 조회 실패를 "다 마침" 으로 보고 홈으로 보내면, 온보딩을 안 한 계정이 네트워크 오류 한 번으로 온보딩을 건너뛴다.
 
 ## UX 규칙
 

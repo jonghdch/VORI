@@ -359,6 +359,10 @@ VORI 시작하기
 | POST | `/api/onboarding/complete` | `tutorial_done = true` |
 | PATCH | `/api/tutorial/checklist/{key}` | 체크리스트 항목 완료. 후속 구현 후보 |
 
+현재 구현은 `/onboarding` 화면(`OnboardingPage`)의 첫 기록 버튼(목표에 따라 "첫 지출 기록하기"·"오늘 식비 기록하기" 등)과 "홈으로 가기" 에서 `POST /api/onboarding/complete` 를 부른다.
+**완료가 저장된 뒤에만 다음 화면으로 넘어간다.** 실패하면 그 자리에 안내를 띄우고 버튼을 다시 누르게 한다.
+실패한 채로 넘기면 서버에는 미완료로 남아 다음 로그인 때 이 화면으로 되돌아온다.
+
 ## 9. 구현 라이브러리 선택
 
 현재 VORI 는 React 앱이므로 인앱 하이라이트는 다음 중 하나가 적합하다.
