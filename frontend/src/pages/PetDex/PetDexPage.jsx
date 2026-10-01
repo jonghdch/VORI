@@ -1,132 +1,94 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import { listPets } from "../../api/pet";
+import { listTitles } from "../../api/titles";
 import { PET_CHANGED_EVENT, getMe } from "../../api/user";
-import {
-  DEX_TIER_LABEL,
-  DEX_TIERS,
-  PET_CATALOG,
-  STAGE_ORDER,
-} from "../../components/petCatalog";
-import { PetArt } from "../../components/petVisual";
+import { PET_CATALOG } from "../../components/petCatalog";
+import PetDexPanel, { buildStatusByKey } from "./PetDexPanel";
+import AchievementPanel from "../Achievement/AchievementPanel";
 import "../Home/HomeDashboard.css";
 import "./PetDexPage.css";
 
-/**
- * 종족별 사용자 상태를 계산한다.
- *  - raising : 지금 키우는 펫(released_at 이 비어 있는 펫)의 단계. 없으면 null.
- *  - doneCount : 다 키워서 분양한 횟수(released_at 이 있는 펫 = 성체 분양 완료).
- *  - reached : 지금까지 도달한 가장 높은 단계 인덱스(-1 = 아직 키워본 적 없음).
- */
-function buildStatusByKey(pets) {
-  const byKey = {};
-  for (const p of pets) {
-    const key = p.appearanceKey;
-    if (!byKey[key]) byKey[key] = { raising: null, doneCount: 0, reached: -1 };
-    const s = byKey[key];
-    if (p.releasedAt) {
-      s.doneCount += 1;
-      s.reached = Math.max(s.reached, STAGE_ORDER.indexOf("ADULT"));
-    } else {
-      s.raising = p.stage;
-      s.reached = Math.max(s.reached, STAGE_ORDER.indexOf(p.stage));
-    }
-  }
-  return byKey;
-}
+// 도감 = 펫 · 업적 · 칭호 한 화면. 위에 요약 세 칸, 그 아래 탭.
+// 탭은 ?tab= 으로 남겨 링크로 바로 열 수 있다 (/dex?tab=titles).
+const TABS = [
+  { id: "pets", label: "펫" },
+  { id: "achievements", label: "업적" },
+  { id: "titles", label: "칭호" },
+];
 
 function PetDexPage({ onLogout }) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const current = TABS.find((t) => t.id === searchParams.get("tab")) ?? TABS[0];
+  const selectTab = (id) => setSearchParams(id === TABS[0].id ? {} : { tab: id }, { replace: true });
+
+  // 세 탭이 같은 데이터를 보므로 여기서 한 번만 읽는다.
   const [pets, setPets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [tier, setTier] = useState("ALL");
+  const [titles, setTitles] = useState([]);
   // 관리자는 도감이 전부 열린 상태로 본다 — 관리자 혜택(코인 무제한·칭호 전부)과 같은 기조.
-  // 실제로 키운 기록(키우는 중·다 키움 배지)은 그대로 보여 주고, 잠금 표시만 걷는다.
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  // 펫·칭호는 따로 실패할 수 있어 에러도 따로 둔다 — 칭호만 실패해도 펫 탭에 에러가 뜨지 않게.
+  const [petError, setPetError] = useState(null);
+  const [titleError, setTitleError] = useState(null);
+
+  const loadPets = useCallback(() => listPets().then((data) => {
+    setPets(Array.isArray(data) ? data : []);
+    setPetError(null);
+  }), []);
+  const loadTitles = useCallback(() => listTitles().then((data) => {
+    setTitles(Array.isArray(data) ? data : []);
+    setTitleError(null);
+  }), []);
+
   useEffect(() => {
     let alive = true;
     getMe()
       .then((me) => alive && setIsAdmin(me?.role === "ADMIN"))
       .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  // 도감 카드에서 보고 있는 단계(종족별 STAGE_ORDER 인덱스). 없으면 도달한 가장 높은 단계를 보여준다.
-  const [viewingStage, setViewingStage] = useState({});
-
-  useEffect(() => {
-    let alive = true;
-    const load = () => listPets()
-      .then((data) => {
-        if (alive) setPets(Array.isArray(data) ? data : []);
-      });
-    const onPetChanged = () => load().catch(() => {});
+    // 둘 다 끝날 때까지 기다린다 — 하나가 먼저 실패해도 다른 쪽이 불러오는 중이면 로딩을 유지한다.
+    Promise.allSettled([loadPets(), loadTitles()]).then(([pets, titles]) => {
+      if (!alive) return;
+      const failed = [pets, titles].filter((r) => r.status === "rejected").map((r) => r.reason);
+      if (failed.some((e) => e?.status === 401)) {
+        navigate("/login", { replace: true });
+        return;
+      }
+      if (pets.status === "rejected") setPetError(pets.reason?.message || "도감을 불러오지 못했어요");
+      if (titles.status === "rejected") setTitleError(titles.reason?.message || "칭호를 불러오지 못했어요");
+      setLoading(false);
+    });
+    // 관리자 도구·분양 등으로 펫이 바뀌면 다시 읽는다
+    const onPetChanged = () => loadPets().catch(() => {});
     window.addEventListener(PET_CHANGED_EVENT, onPetChanged);
-    load()
-      .catch((e) => {
-        if (!alive) return;
-        if (e.status === 401) {
-          navigate("/login", { replace: true });
-          return;
-        }
-        setError(e.message || "펫 도감을 불러오지 못했어요");
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
     return () => {
       alive = false;
       window.removeEventListener(PET_CHANGED_EVENT, onPetChanged);
     };
-  }, [navigate]);
+  }, [loadPets, loadTitles, navigate]);
 
-  const statusByKey = useMemo(() => buildStatusByKey(pets), [pets]);
-
-  const raisingSpecies = useMemo(
-    () => PET_CATALOG.find((sp) => statusByKey[sp.appearanceKey]?.raising),
-    [statusByKey],
-  );
-  const doneKinds = useMemo(
-    () =>
-      PET_CATALOG.filter((sp) => statusByKey[sp.appearanceKey]?.doneCount > 0)
-        .length,
-    [statusByKey],
-  );
-
-  const visible =
-    tier === "ALL" ? PET_CATALOG : PET_CATALOG.filter((sp) => sp.tier === tier);
+  const acquiredCount = useMemo(() => titles.filter((t) => t.acquired).length, [titles]);
+  const doneKinds = useMemo(() => {
+    const statusByKey = buildStatusByKey(pets);
+    return PET_CATALOG.filter((sp) => statusByKey[sp.appearanceKey]?.doneCount > 0).length;
+  }, [pets]);
 
   return (
     <AppShell activeTop="raise" activeSide="dex" onLogout={onLogout}>
       <main className="home-main dex-main">
-        <header className="dex-head">
-          <h1 className="dex-title">
-            <span className="dex-title-badge" aria-hidden>
-              📖
-            </span>
-            펫 도감
-          </h1>
-          <p>
-            키울 수 있는 펫 {PET_CATALOG.length}종을 모두 모았어요. 지금 키우는 펫과
-            끝까지 키워 분양한 펫이 표시돼요.
-          </p>
-        </header>
+        <h1 className="dex-sr-title">도감</h1>
 
         <div className="dex-summary">
           <article className="dex-summary-card">
-            <p className="dex-summary-label">전체 펫 종류</p>
-            <p className="dex-summary-value">{PET_CATALOG.length}종</p>
+            <p className="dex-summary-label">달성 업적</p>
+            <p className="dex-summary-value">{loading ? "…" : `${acquiredCount} / ${titles.length}`}</p>
           </article>
           <article className="dex-summary-card">
-            <p className="dex-summary-label">키우는 중</p>
-            <p className="dex-summary-value">
-              {loading ? "…" : raisingSpecies ? raisingSpecies.name : "없음"}
-            </p>
+            <p className="dex-summary-label">획득 칭호</p>
+            <p className="dex-summary-value">{loading ? "…" : `${acquiredCount}개`}</p>
           </article>
           <article className="dex-summary-card">
             <p className="dex-summary-label">다 키운 펫</p>
@@ -140,129 +102,36 @@ function PetDexPage({ onLogout }) {
           </article>
         </div>
 
-        <div className="dex-filters" role="tablist" aria-label="등급 필터">
-          {["ALL", ...DEX_TIERS].map((t) => (
+        <div className="dex-tabs" role="tablist" aria-label="도감 구분">
+          {TABS.map((t) => (
             <button
-              key={t}
+              key={t.id}
               type="button"
               role="tab"
-              aria-selected={tier === t}
-              className={`dex-filter ${tier === t ? "is-active" : ""}`}
-              onClick={() => setTier(t)}
+              id={`dex-tab-${t.id}`}
+              aria-selected={current.id === t.id}
+              aria-controls="dex-panel"
+              className={`dex-tab ${current.id === t.id ? "is-active" : ""}`}
+              onClick={() => selectTab(t.id)}
             >
-              {t === "ALL" ? "전체" : DEX_TIER_LABEL[t]}
+              {t.label}
             </button>
           ))}
         </div>
 
-        {error && (
-          <div className="dex-notice" role="alert">
-            {error}
-          </div>
-        )}
-
-        <ul className="dex-grid">
-          {visible.map((sp) => {
-            const st = statusByKey[sp.appearanceKey];
-            const raising = st?.raising ?? null;
-            const doneCount = st?.doneCount ?? 0;
-            // 관리자: 전 단계 도달로 보고 잠금(흐림)을 걷는다. 배지는 실제 기록 그대로.
-            const reached = isAdmin ? STAGE_ORDER.length - 1 : (st?.reached ?? -1);
-            const owned = reached >= 0;
-            // 도달한 단계 안에서만 골라 볼 수 있다. 고른 적 없으면 가장 높은 단계.
-            const shownIndex = owned
-              ? Math.min(viewingStage[sp.appearanceKey] ?? reached, reached)
-              : -1;
-
-            return (
-              <li
-                key={sp.appearanceKey}
-                className={[
-                  "dex-card",
-                  raising ? "is-raising" : "",
-                  doneCount > 0 ? "is-done" : "",
-                  !owned ? "is-unowned" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                <div className="dex-card-badges">
-                  {raising && (
-                    <span className="dex-badge dex-badge--raising">키우는 중</span>
-                  )}
-                  {doneCount > 0 && (
-                    <span className="dex-badge dex-badge--done">
-                      다 키움{doneCount > 1 ? ` ×${doneCount}` : ""}
-                    </span>
-                  )}
-                  {isAdmin && !raising && doneCount === 0 && (
-                    <span className="dex-badge dex-badge--admin">관리자 열람</span>
-                  )}
-                </div>
-
-                <div className="dex-art">
-                  <PetArt
-                    appearanceKey={sp.appearanceKey}
-                    stage={owned ? STAGE_ORDER[shownIndex] : undefined}
-                    name={sp.name}
-                    className="dex-art-img"
-                    emojiClassName="dex-art-emoji"
-                  />
-                </div>
-
-                <div className="dex-card-top">
-                  <h2 className="dex-name">{sp.name}</h2>
-                  <span className={`dex-tier dex-tier--${sp.tier}`}>
-                    {DEX_TIER_LABEL[sp.tier]}
-                  </span>
-                </div>
-
-                <ol className="dex-stages" aria-label="성장 단계 — 도달한 단계를 누르면 그 모습을 볼 수 있어요">
-                  {STAGE_ORDER.map((stage, i) => {
-                    const isReached = i <= reached;
-                    const isViewing = i === shownIndex;
-                    return (
-                      <li
-                        key={stage}
-                        className={[
-                          "dex-stage",
-                          isReached ? "is-reached" : "",
-                          raising === stage ? "is-current" : "",
-                          isViewing ? "is-viewing" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                      >
-                        <button
-                          type="button"
-                          className="dex-stage-btn"
-                          disabled={!isReached}
-                          aria-pressed={isViewing}
-                          aria-label={`${sp.name} ${i + 1}차 모습 보기`}
-                          onClick={() =>
-                            setViewingStage((prev) => ({ ...prev, [sp.appearanceKey]: i }))
-                          }
-                        >
-                          {i + 1}차
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ol>
-
-                <p className="dex-status">
-                  {raising
-                    ? `지금 ${STAGE_ORDER.indexOf(raising) + 1}차 단계예요`
-                    : doneCount > 0
-                      ? "3차까지 키워 분양했어요"
-                      : isAdmin
-                        ? "관리자 — 전 단계 열람 가능"
-                        : "아직 키워보지 않았어요"}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
+        <div id="dex-panel" role="tabpanel" aria-labelledby={`dex-tab-${current.id}`}>
+          {current.id === "pets" ? (
+            <PetDexPanel pets={pets} isAdmin={isAdmin} error={petError} />
+          ) : (
+            <AchievementPanel
+              tab={current.id}
+              titles={titles}
+              loading={loading}
+              error={titleError}
+              reload={loadTitles}
+            />
+          )}
+        </div>
       </main>
       <AppRightSidebar />
     </AppShell>
