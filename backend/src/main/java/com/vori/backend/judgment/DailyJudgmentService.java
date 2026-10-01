@@ -45,6 +45,7 @@ public class DailyJudgmentService {
      * </pre>
      *
      * 운영 기본값은 20 이고, 시연이 끝나면 되돌린다.
+     * 관리자 계정은 이 값과 상관없이 언제든 판정할 수 있다(프런트 {@code canUseAiJudge} 와 같다).
      */
     @Value("${vori.ai-judge.open-hour:20}")
     private int openHour;
@@ -91,7 +92,8 @@ public class DailyJudgmentService {
         if (role != Role.ADMIN && !requestedDate.equals(today)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "다른 날짜의 판정은 관리자만 사용할 수 있어요.");
         }
-        if (now.getHour() < openHour) {
+        // 관리자는 시각 제한을 받지 않는다 — 화면(config.canUseAiJudge)과 같은 기준.
+        if (role != Role.ADMIN && now.getHour() < openHour) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "소비 판정은 매일 " + openHour + "시부터 자정까지 가능해요.");
         }
