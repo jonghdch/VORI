@@ -433,10 +433,29 @@
   box-shadow: inset 0 0 0 2px #a94444;
 }
 
+.ledger-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
 .ledger-cal-day {
   font-size: 13px;
   font-weight: 700;
   color: var(--home-text);
+}
+
+/* 판정 완료 체크 — 날짜 줄 오른쪽 끝, 신호색 셀 위에서도 보이게 짙은 초록 */
+.ledger-cal-judged {
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  background: var(--home-green-dark);
+  color: #fff;
+  flex-shrink: 0;
 }
 
 .ledger-cal-events {
