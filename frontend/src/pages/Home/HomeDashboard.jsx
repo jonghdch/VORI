@@ -280,9 +280,9 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   <span className="home-pet-level-label">Lv. {petLevel}</span>
                 </div>
               </div>
-              {/* 스탯 카드 — 흰 카드 + 수치 표시로 초록 배경 위에서도 눈에 띄게.
+              {/* 스탯 — 이름 / 막대 / 수치를 가로로 나란히. 카드 없이 배경 위에.
                   막대 길이는 네 스탯 중 가장 큰 값(최소 100) 기준 상대 비율. */}
-              <section className="home-pet-stats home-statcard" aria-label="펫 스탯">
+              <section className="home-pet-stats" aria-label="펫 스탯">
                 <ul className="home-stat-list">
                   {STAT_META.map((m) => {
                     const value = stats?.[m.key] ?? 0;
@@ -293,7 +293,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                         style={{ "--stat-color": m.color }}
                       >
                         <span className="home-stat-label">{m.label}</span>
-                        <div className="home-stat-track">
+                        <div className="home-stat-track" aria-hidden>
                           <div
                             className="home-stat-fill"
                             style={{ width: `${(Math.max(value, 0) / statScale) * 100}%` }}
