@@ -60,7 +60,6 @@ export default function JudgmentResults({ expenses, judgment }) {
         ))}
       </div>
       <p className="ledger-reward-note">보상은 지출 금액과 무관하며 하루 판정이 처음 완료될 때 한 번만 지급돼요. 스탯은 현재 키우는 펫이 있을 때 반영됩니다.</p>
-      {judgment?.alreadyJudged && <p role="status">이미 지급된 날짜라 보상을 다시 지급하지 않았어요.</p>}
     </section>
     {groups.map((group) => (
       <div key={group.signal} className="ledger-judgment-group">
