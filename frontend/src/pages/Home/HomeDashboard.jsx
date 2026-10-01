@@ -208,12 +208,14 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 {/* 원형 경험치 게이지 — 270° 아치(아래 90° 열림)가 보리를 감싼다.
                     프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
                     백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체. */}
-                <div
-                  className="home-pet-gauge"
-                  role="img"
-                  aria-label={`경험치 ${petExp}/100 (Lv. ${petLevel})`}
-                >
-                  <svg className="home-pet-gauge-ring" viewBox="0 0 120 120" aria-hidden>
+                <div className="home-pet-gauge">
+                  {/* 그림 역할은 링에만 — 게이지 전체를 img 로 두면 안쪽 칭호 버튼이 보조기기에서 사라진다 */}
+                  <svg
+                    className="home-pet-gauge-ring"
+                    viewBox="0 0 120 120"
+                    role="img"
+                    aria-label={`경험치 ${petExp}/100 (Lv. ${petLevel})`}
+                  >
                     {/* 채움 색 — 화면 왼쪽(시작) 연한 세이지 → 오른쪽 짙은 세이지. 랜딩 톤과 맞춤.
                         원이 135° 회전돼 있어 좌표도 회전 전 기준(대각선)으로 잡았다. */}
                     <defs>
@@ -248,9 +250,14 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                       emojiClassName="home-pet-emoji"
                     />
                   </div>
-                  <span className="home-pet-title-badge">
+                  <button
+                    type="button"
+                    className="home-pet-title-badge"
+                    onClick={() => navigate("/dex?tab=titles")}
+                    aria-label={`칭호 ${activeTitle?.name ?? "없음"} — 칭호 도감 열기`}
+                  >
                     {activeTitle?.name ?? "칭호 없음"}
-                  </span>
+                  </button>
                 </div>
                 <div className="home-pet-name-line">
                   <h2 className="home-pet-name">{activePet ? petDisplayName(activePet) : "보리"}</h2>
