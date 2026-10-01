@@ -23,7 +23,7 @@
 | 직업 | `job` |  | `VARCHAR(50)` | 튜토리얼 수집값 |
 | 월 소득 | `monthly_income` |  | `INT UNSIGNED` | 소비 기준 참고값 |
 | 활성 칭호 식별자 | `active_title_id` | FK | `BIGINT NULL` | → `user_titles(id)` |
-| 절약 누적액 | `total_saved` |  | `INT DEFAULT 0` | `saved_amount` 양수 누적 |
+| 절약 누적액 | `total_saved` |  | `INT DEFAULT 0` | `saved_amount` 양수 누적. 지출 수정·삭제 때 그만큼 조정(0 미만 불가) |
 | 게임머니 잔액 | `game_money` |  | `INT DEFAULT 0` | 현재 보유 게임머니 |
 | 튜토리얼 완료 여부 | `tutorial_done` |  | `BOOLEAN DEFAULT FALSE` | 튜토리얼 완료 여부 |
 | 권한 | `role` |  | `ENUM('USER','ADMIN') NOT NULL DEFAULT 'USER'` | 사용자 권한. Spring Security 의 `ROLE_USER`/`ROLE_ADMIN` 과 매핑 |
@@ -490,6 +490,9 @@ expenses.saved_amount = user_stat_stats.mean_ema - expenses.amount
 ```text
 saved = max(expenses.saved_amount, 0)
 users.total_saved += saved
+# 지출 수정: total_saved += max(새 saved, 0) - max(이전 saved, 0)   (0 미만이면 0)
+# 지출 삭제: total_saved -= max(이전 saved, 0)                    (0 미만이면 0)
+# goals.current_amount 는 수정·삭제 때 되돌리지 않는다 (domain.md "지출 수정·삭제 시 파생 값")
 
 # 해당 월의 전체 목표
 UPDATE goals

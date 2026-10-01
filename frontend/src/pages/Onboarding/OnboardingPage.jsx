@@ -32,6 +32,7 @@ function OnboardingPage() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     getOnboardingStatus()
@@ -50,15 +51,21 @@ function OnboardingPage() {
     return "첫 지출 기록하기";
   }, [profile?.monthlyGoal]);
 
+  // 완료가 저장된 뒤에만 넘어간다. 실패했는데 넘어가면 서버에는 미완료로 남아
+  // 다음 로그인 때 이 화면으로 되돌아온다.
   const finish = async (path) => {
     if (saving) return;
     setSaving(true);
+    setError("");
     try {
       await completeOnboarding();
-    } finally {
-      window.dispatchEvent(new Event("vori:onboarding-done"));
-      navigate(path);
+    } catch {
+      setError("시작 준비를 저장하지 못했어요. 잠시 후 다시 눌러 주세요.");
+      setSaving(false);
+      return;
     }
+    window.dispatchEvent(new Event("vori:onboarding-done"));
+    navigate(path);
   };
 
   if (loading || !status) return null;
@@ -108,6 +115,12 @@ function OnboardingPage() {
               <strong>{GOAL_LABEL[profile?.monthlyGoal] || "천천히 정하기"}</strong>
             </div>
           </div>
+
+          {error && (
+            <p className="signup-hint signup-hint-error" role="alert">
+              {error}
+            </p>
+          )}
 
           <div className="signup-actions">
             <button

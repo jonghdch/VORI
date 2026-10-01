@@ -164,7 +164,13 @@ public class ExpenseService {
         return ExpenseResponse.from(expense);
     }
 
-    /** 본인 지출의 내역명·금액 수정 후 현재 통계 기준으로 판정과 절약액을 다시 계산한다. */
+    /**
+     * 본인 지출의 내역명·금액 수정 후 현재 통계 기준으로 판정과 절약액을 다시 계산한다.
+     *
+     * 파생 상태 처리는 삭제(LedgerService.deleteExpense)와 같은 규칙을 따른다.
+     * - user.totalSaved — 이 지출이 더해 둔 절약액과 새 절약액의 차이만큼 맞춘다.
+     * - EMA(user_stat_stats)·goal 누적 — 보존. EMA 는 중간 항을 바꿀 수 없고, goal 은 그 시점의 이력이다.
+     */
     @Transactional
     public ExpenseResponse updateExpense(Long userId, Long expenseId, ExpenseUpdateRequest req) {
         Expense expense = expenseRepository.findById(expenseId)
@@ -197,9 +203,12 @@ public class ExpenseService {
         }
         if (Boolean.TRUE.equals(expense.getIsRecurring()) && signal == Signal.RED) signal = Signal.GRAY;
 
+        int previousSaved = expense.getSavedAmount() == null ? 0 : expense.getSavedAmount();
         int savedAmount = stats.getMeanEma().subtract(BigDecimal.valueOf(req.amount())).intValue();
         int statDelta = 0;
         expense.updateCalculations(zScore, signal, savedAmount, statDelta);
+        // 등록 때 양수 절약액만 누적했으므로 비교도 양수 부분끼리 한다.
+        adjustTotalSaved(userId, Math.max(savedAmount, 0) - Math.max(previousSaved, 0));
 
         // 수정 전 금액으로 만든 질문은 더 이상 유효하지 않다. 새 판정이 RED면 템플릿 질문을
         // 바로 다시 만들고, AI 문구는 커밋 후 비동기로 덮어쓴다.
@@ -217,6 +226,18 @@ public class ExpenseService {
                     expense.getStatType(), stats.getMeanEma(), signal));
         }
         return ExpenseResponse.from(expense);
+    }
+
+    /** 누적 절약액을 차이만큼 옮긴다. 줄일 때는 삭제와 같이 0 아래로 내려가지 않게 자른다. */
+    private void adjustTotalSaved(Long userId, int delta) {
+        if (delta == 0) return;
+        User user = userRepository.findById(userId).orElseThrow();
+        int current = user.getTotalSaved() == null ? 0 : user.getTotalSaved();
+        user.addTotalSaved(Math.max(delta, -current));
+        // 누적 절약액이 늘었으면 그 값을 조건으로 하는 칭호를 다시 본다.
+        if (delta > 0) {
+            eventPublisher.publishEvent(new TitleCheckEvent(userId, "EXPENSE_UPDATED"));
+        }
     }
 
     /**

@@ -7,6 +7,7 @@ import { getMonthlyJudgments } from "../../api/dailyJudgment";
 import { listInquiriesByDate } from "../../api/inquiries";
 import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
 import CoinIcon from "../../components/CoinIcon";
+import BudgetCard from "./BudgetCard";
 import "../Home/HomeDashboard.css";
 import "./WalletPage.css";
 
@@ -997,13 +998,10 @@ function WalletPage({ user, onLogout }) {
               )}
             </section>
 
-            {/* 예산 API 미구현 — 가짜 수치 대신 준비 중임을 명시 */}
-            <section className="home-card ledger-budget-card ledger-sec--sky">
-              <div className="ledger-budget-head">
-                <h2 className="home-card-title home-card-title--sm ledger-sec-title"><span className="ledger-sec-icon" aria-hidden>🎯</span>예산 현황</h2>
-              </div>
-              <p className="ledger-card-empty">예산 설정 기능을 준비 중이에요.</p>
-            </section>
+            <BudgetCard
+              yearMonth={`${viewYear}-${pad2(viewMonth)}`}
+              spent={loading ? null : monthExpenseTotal}
+            />
           </div>
         </div>
 

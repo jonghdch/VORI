@@ -60,8 +60,8 @@ function PetManagePage() {
     <div className="adm-page">
       <div className="admin-page-head">
         <div>
-          <h1 className="adm-title">펫 / 도감 관리</h1>
-          <p className="adm-sub">회원의 활성 펫 성장 단계를 운영합니다.</p>
+          <h1 className="adm-title">펫 성장 지원</h1>
+          <p className="adm-sub">시연·QA 를 위해 회원의 활성 펫을 원하는 단계까지 성장시킵니다.</p>
         </div>
         <RefreshButton onClick={load} disabled={loading || working !== null} />
       </div>
