@@ -1,4 +1,10 @@
+import { useState } from "react";
+import CoinIcon from "../../components/CoinIcon";
+
 const LABELS = { GREEN: "초록 · 합리적", GRAY: "노랑 · 보통", RED: "주황 · 주의" };
+// 목록에 보여 주는 묶음 순서.
+const SIGNAL_SEQUENCE = ["RED", "GRAY", "GREEN"];
+const itemSignal = (expense) => expense.signalFinal || expense.signalInitial || "GRAY";
 const REASONS = {
   CEREMONY: "경조사처럼 관계와 예의를 위해 필요한 지출로 인정되어 초록으로 조정됐어요.",
   EMERGENCY: "갑작스러운 상황에서 피하기 어려운 긴급 지출로 인정되어 초록으로 조정됐어요.",
@@ -24,6 +30,11 @@ export default function JudgmentResults({ expenses, judgment }) {
   const coin = judgment?.coinReward ?? 0;
   const stat = judgment?.statRewardPerType ?? 0;
   const statRewards = ["에너지", "매력", "지능", "지구력"];
+  // 신호별로 묶어 주의가 필요한 지출부터 본다. 묶음 안에서는 받은 순서를 지킨다.
+  const groups = SIGNAL_SEQUENCE
+    .map((groupSignal) => ({ signal: groupSignal, items: expenses.filter((e) => itemSignal(e) === groupSignal) }))
+    .filter((group) => group.items.length > 0);
+  const many = expenses.length > 1;
 
   return <div className="ledger-judgment-list">
     <section className="ledger-judgment-card ledger-reward-card" aria-label="일일 판정 보상">
@@ -36,7 +47,7 @@ export default function JudgmentResults({ expenses, judgment }) {
       </div>
       <div className="ledger-reward-grid">
         <div className="ledger-reward-item ledger-reward-item--coin">
-          <span className="ledger-reward-icon" aria-hidden="true">🪙</span>
+          <span className="ledger-reward-icon" aria-hidden="true"><CoinIcon /></span>
           <span>보유 코인</span>
           <strong>+{coin.toLocaleString("ko-KR")}</strong>
         </div>
@@ -49,11 +60,55 @@ export default function JudgmentResults({ expenses, judgment }) {
         ))}
       </div>
       <p className="ledger-reward-note">보상은 지출 금액과 무관하며 하루 판정이 처음 완료될 때 한 번만 지급돼요. 스탯은 현재 키우는 펫이 있을 때 반영됩니다.</p>
-      {judgment?.alreadyJudged && <p role="status">이미 지급된 날짜라 보상을 다시 지급하지 않았어요.</p>}
     </section>
-    {expenses.map((expense) => {
-      const itemSignal = expense.signalFinal || expense.signalInitial || "GRAY";
-      return <article key={expense.id} className="ledger-judgment-card"><div className="ledger-judgment-card-head"><div><strong>{expense.item || "지출"}</strong><span>{Number(expense.amount).toLocaleString("ko-KR")}원</span></div><span className={`ledger-signal-result ledger-signal-result--${itemSignal.toLowerCase()}`}>{LABELS[itemSignal]}</span></div><div className="ledger-judgment-reason"><span>판정 이유</span><p>{judgmentReason(expense, itemSignal)}</p></div></article>;
-    })}
+    {groups.map((group) => (
+      <div key={group.signal} className="ledger-judgment-group">
+        {/* 한 건뿐이면 나눌 것이 없으니 묶음 이름을 붙이지 않고, 접어 둘 이유도 없어 펼친 채로 보여 준다. */}
+        {many && (
+          <h3 className="ledger-judgment-group-title">
+            <span className={`ledger-signal-result ledger-signal-result--${group.signal.toLowerCase()}`}>
+              <span className="ledger-signal-dot" aria-hidden="true" />
+              {LABELS[group.signal]}
+              <span className="ledger-judgment-group-count">{group.items.length}건</span>
+            </span>
+          </h3>
+        )}
+        {group.items.map((expense) => (
+          <JudgmentCard key={expense.id} expense={expense} defaultOpen={!many} />
+        ))}
+      </div>
+    ))}
   </div>;
+}
+
+// 지출 한 건의 판정 카드. 머리줄(내역·금액·신호)을 누르면 판정 이유가 펼쳐진다.
+function JudgmentCard({ expense, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const signal = itemSignal(expense);
+  const reasonId = `judgment-reason-${expense.id}`;
+
+  return (
+    <article className="ledger-judgment-card ledger-judgment-card--toggle">
+      <button
+        type="button"
+        className="ledger-judgment-toggle"
+        aria-expanded={open}
+        aria-controls={reasonId}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="ledger-judgment-toggle-text">
+          <strong>{expense.item || "지출"}</strong>
+          <span>{Number(expense.amount).toLocaleString("ko-KR")}원</span>
+        </span>
+        <span className={`ledger-signal-result ledger-signal-result--${signal.toLowerCase()}`}>{LABELS[signal]}</span>
+        <span className="ledger-judgment-chevron" aria-hidden="true" />
+      </button>
+      {open && (
+        <div id={reasonId} className="ledger-judgment-reason">
+          <span>판정 이유</span>
+          <p>{judgmentReason(expense, signal)}</p>
+        </div>
+      )}
+    </article>
+  );
 }

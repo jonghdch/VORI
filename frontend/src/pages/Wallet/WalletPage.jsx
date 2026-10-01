@@ -6,6 +6,7 @@ import { getMonthlyLedger } from "../../api/ledger";
 import { getMonthlyJudgments } from "../../api/dailyJudgment";
 import { listInquiriesByDate } from "../../api/inquiries";
 import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
+import CoinIcon from "../../components/CoinIcon";
 import "../Home/HomeDashboard.css";
 import "./WalletPage.css";
 
@@ -81,6 +82,17 @@ function dayLabel(year, month, day) {
     new Date(year, month - 1, day),
   );
   return `${month}월 ${day}일 (${weekday})`;
+}
+
+// 판정이 끝난 날 — 날짜 숫자 오른쪽에 작은 체크
+function JudgedMark() {
+  return (
+    <span className="ledger-cal-judged" title="판정 완료" aria-label="판정 완료" role="img">
+      <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true">
+        <path d="M3.5 8.5 6.5 11.5 12.5 5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
 }
 
 function toIsoDate(year, month, day) {
@@ -539,7 +551,9 @@ function WalletPage({ user, onLogout }) {
                   const dayRows = rowsByDay.get(day) ?? [];
                   const daySignal = signalByDay.get(day)?.toLowerCase();
                   const isToday = day === todayDay;
-                  const isFuture = toIsoDate(viewYear, viewMonth, day) > todayIso;
+                  const dayIso = toIsoDate(viewYear, viewMonth, day);
+                  const isFuture = dayIso > todayIso;
+                  const isJudged = Boolean(judgmentsByDate[dayIso]);
                   return (
                     <button
                       key={day}
@@ -558,7 +572,10 @@ function WalletPage({ user, onLogout }) {
                       disabled={isFuture}
                       onClick={() => selectDay(day)}
                     >
-                      <span className="ledger-cal-day">{day}</span>
+                      <span className="ledger-cal-head">
+                        <span className="ledger-cal-day">{day}</span>
+                        {isJudged && <JudgedMark />}
+                      </span>
                       <div className="ledger-cal-events">
                         {dayRows.map((row) => (
                           <span
@@ -584,7 +601,9 @@ function WalletPage({ user, onLogout }) {
                   const dayRows = isCurrentMonth ? (rowsByDay.get(day) ?? []) : [];
                   const daySignal = isCurrentMonth ? signalByDay.get(day)?.toLowerCase() : null;
                   const isSelected = isCurrentMonth && selectedDay === day;
-                  const isFuture = toIsoDate(d.getFullYear(), d.getMonth() + 1, day) > todayIso;
+                  const dayIso = toIsoDate(d.getFullYear(), d.getMonth() + 1, day);
+                  const isFuture = dayIso > todayIso;
+                  const isJudged = isCurrentMonth && Boolean(judgmentsByDate[dayIso]);
 
                   if (!isCurrentMonth) {
                     return (
@@ -617,7 +636,10 @@ function WalletPage({ user, onLogout }) {
                       disabled={isFuture}
                       onClick={() => selectDay(day)}
                     >
-                      <span className="ledger-cal-day">{day}</span>
+                      <span className="ledger-cal-head">
+                        <span className="ledger-cal-day">{day}</span>
+                        {isJudged && <JudgedMark />}
+                      </span>
                       <div className="ledger-cal-events">
                         {dayRows.map((row) => (
                           <span
@@ -779,7 +801,7 @@ function WalletPage({ user, onLogout }) {
             <p className="ledger-day-reward-empty ledger-day-reward-error">{judgmentError}</p>
           ) : selectedJudgment ? (
             <div className="ledger-day-reward-values">
-              <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span>🪙 받은 코인</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
+              <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span><CoinIcon className="ledger-day-reward-coin" /> 받은 코인</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
               <div className="ledger-day-reward-value"><span>⚡ 에너지</span><strong>+{selectedJudgment.statRewardPerType || 0}</strong></div>
               <div className="ledger-day-reward-value"><span>✨ 매력</span><strong>+{selectedJudgment.statRewardPerType || 0}</strong></div>
               <div className="ledger-day-reward-value"><span>🧠 지능</span><strong>+{selectedJudgment.statRewardPerType || 0}</strong></div>
