@@ -31,28 +31,36 @@ function PetDexPage({ onLogout }) {
   // 관리자는 도감이 전부 열린 상태로 본다 — 관리자 혜택(코인 무제한·칭호 전부)과 같은 기조.
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // 펫·칭호는 따로 실패할 수 있어 에러도 따로 둔다 — 칭호만 실패해도 펫 탭에 에러가 뜨지 않게.
+  const [petError, setPetError] = useState(null);
+  const [titleError, setTitleError] = useState(null);
 
-  const loadPets = useCallback(() => listPets().then((data) => setPets(Array.isArray(data) ? data : [])), []);
-  const loadTitles = useCallback(() => listTitles().then((data) => setTitles(Array.isArray(data) ? data : [])), []);
+  const loadPets = useCallback(() => listPets().then((data) => {
+    setPets(Array.isArray(data) ? data : []);
+    setPetError(null);
+  }), []);
+  const loadTitles = useCallback(() => listTitles().then((data) => {
+    setTitles(Array.isArray(data) ? data : []);
+    setTitleError(null);
+  }), []);
 
   useEffect(() => {
     let alive = true;
     getMe()
       .then((me) => alive && setIsAdmin(me?.role === "ADMIN"))
       .catch(() => {});
-    Promise.all([loadPets(), loadTitles()])
-      .catch((e) => {
-        if (!alive) return;
-        if (e.status === 401) {
-          navigate("/login", { replace: true });
-          return;
-        }
-        setError(e.message || "도감을 불러오지 못했어요");
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
+    // 둘 다 끝날 때까지 기다린다 — 하나가 먼저 실패해도 다른 쪽이 불러오는 중이면 로딩을 유지한다.
+    Promise.allSettled([loadPets(), loadTitles()]).then(([pets, titles]) => {
+      if (!alive) return;
+      const failed = [pets, titles].filter((r) => r.status === "rejected").map((r) => r.reason);
+      if (failed.some((e) => e?.status === 401)) {
+        navigate("/login", { replace: true });
+        return;
+      }
+      if (pets.status === "rejected") setPetError(pets.reason?.message || "도감을 불러오지 못했어요");
+      if (titles.status === "rejected") setTitleError(titles.reason?.message || "칭호를 불러오지 못했어요");
+      setLoading(false);
+    });
     // 관리자 도구·분양 등으로 펫이 바뀌면 다시 읽는다
     const onPetChanged = () => loadPets().catch(() => {});
     window.addEventListener(PET_CHANGED_EVENT, onPetChanged);
@@ -113,13 +121,13 @@ function PetDexPage({ onLogout }) {
 
         <div id="dex-panel" role="tabpanel" aria-labelledby={`dex-tab-${current.id}`}>
           {current.id === "pets" ? (
-            <PetDexPanel pets={pets} isAdmin={isAdmin} error={error} />
+            <PetDexPanel pets={pets} isAdmin={isAdmin} error={petError} />
           ) : (
             <AchievementPanel
               tab={current.id}
               titles={titles}
               loading={loading}
-              error={error}
+              error={titleError}
               reload={loadTitles}
             />
           )}
