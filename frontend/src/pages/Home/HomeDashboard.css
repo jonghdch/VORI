@@ -1883,17 +1883,3 @@
   font-size: 12px;
   letter-spacing: 0;
 }
-
-/* 로그아웃 — 메뉴 칸 전체가 아니라 글자에만 커서가 바뀌고, 배경색도 생기지 않는다.
-   버튼을 글자 폭으로 줄여서 글자 밖은 눌리지 않게 한다. */
-.home-side-link.home-side-link--logout,
-.home-side-link.home-side-link--logout:hover,
-.home-side-link.home-side-link--logout:active {
-  display: inline-flex;
-  width: auto;
-  background: none;
-  box-shadow: none;
-}
-.home-side-link.home-side-link--logout:hover {
-  color: #3d3830;
-}
