@@ -4,7 +4,6 @@ import AppShell from "../../components/AppShell";
 import {
   PetArt,
   STAGE_LABEL,
-  VARIANT_LABEL,
   nextStage,
   petDisplayName,
 } from "../../components/petVisual";
@@ -23,6 +22,7 @@ import {
   isSurface,
 } from "../../components/furnitureVisual";
 import { PetActionMenu, PetReaction, REACTION_MS, pickLine } from "./PetInteraction";
+import PetHistoryPanel from "./PetHistoryPanel";
 import roomDefaultImage from "../../assets/backgrounds/room-default.png";
 import roomWoodImage from "../../assets/backgrounds/room-wood.png";
 import roomMintImage from "../../assets/backgrounds/room-mint.png";
@@ -79,9 +79,10 @@ const PANEL_TABS = [
   { id: "status", label: "펫 상태" },
   { id: "background", label: "방 색상" },
   { id: "furniture", label: "보유 가구" },
-  { id: "history", label: "펫 이력" },
   { id: "items", label: "아이템" },
 ];
+// 탭 줄 오른쪽 끝 "내역 보기" — 펫 이력·아이템 내역을 한곳에서 (PetHistoryPanel)
+const HISTORY_TAB = "history";
 
 function readStoredBackground() {
   try {
@@ -307,10 +308,6 @@ function PetPage({ user, onLogout }) {
     ? {
         id: String(pet.id),
         name: petDisplayName(pet),
-        // 이름을 지은 펫은 이름이 제목이 되므로, 종족은 여기 덧붙여 계속 보이게 한다
-        type: [pet.name ? pet.speciesName : null, STAGE_LABEL[pet.stage], VARIANT_LABEL[pet.variant]]
-          .filter(Boolean)
-          .join(" · "),
         appearanceKey: pet.appearanceKey,
         stage: pet.stage,
         color: PET_ACCENT,
@@ -562,25 +559,6 @@ function PetPage({ user, onLogout }) {
       onLogout={onLogout}
     >
       <main className="home-main pet-main">
-        <div className="pet-header">
-          <div>
-            <h1 className="pet-title">
-              <span className="pet-title-badge" aria-hidden>
-                🏠
-              </span>
-              <span className="pet-title-text">
-                {selectedPet
-                  ? `${nickname}님이 키우는 ${selectedPet.name}의 방`
-                  : `${nickname}님의 방`}
-              </span>
-            </h1>
-          </div>
-          {selectedPet && (
-            <div className="pet-header-status">
-              <span>{selectedPet.type}</span>
-            </div>
-          )}
-        </div>
 
         <div className="pet-myroom-layout">
           {/* 왼쪽: 방 */}
@@ -596,10 +574,15 @@ function PetPage({ user, onLogout }) {
               }
             >
               <div className="pet-room-top">
-                <div>
-                  <span className="pet-room-label">방 색상</span>
-                  <h2>{selectedBackground.name}</h2>
-                </div>
+                {/* 방 제목 — 펫이 있으면 "(펫 이름)의 방" */}
+                <h1 className="pet-title">
+                  <span className="pet-title-badge" aria-hidden>
+                    🏠
+                  </span>
+                  <span className="pet-title-text">
+                    {selectedPet ? `${selectedPet.name}의 방` : `${nickname}님의 방`}
+                  </span>
+                </h1>
                 <div className="pet-room-chips">
                   <ul className="pet-surface-chips pet-room-bonus-chips" aria-label="배치 가구 보너스">
                     <li className="pet-room-bonus-chip--release">분양가 +{roomBonus.release}%</li>
@@ -741,7 +724,7 @@ function PetPage({ user, onLogout }) {
             </section>
           </div>
 
-          {/* 오른쪽: 현재 펫 · 펫 상태 · 방 색상 · 보유 가구 · 펫 이력을 한 카드에서 탭으로 전환 */}
+          {/* 오른쪽: 현재 펫 · 펫 상태 · 방 색상 · 보유 가구 · 아이템 · 내역을 한 카드에서 탭으로 전환 */}
           <aside className="pet-myroom-side">
             <section className="home-card pet-panel pet-tab-card">
               <div className="pet-tab-bar" role="tablist" aria-label="마이룸 메뉴">
@@ -757,6 +740,15 @@ function PetPage({ user, onLogout }) {
                     {tab.label}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === HISTORY_TAB}
+                  className={`pet-tab-btn pet-tab-btn--history ${activeTab === HISTORY_TAB ? "is-active" : ""}`}
+                  onClick={() => setActiveTab(HISTORY_TAB)}
+                >
+                  내역 보기
+                </button>
               </div>
 
               {activeTab === "pet" && (
@@ -967,46 +959,7 @@ function PetPage({ user, onLogout }) {
                   {statItems.length === 0 ? <p className="pet-empty">보유한 아이템이 없어요. 출석 탭에서 출석 보상을 받아 보세요.</p> : <div className="pet-item-list">{statItems.map((item) => <article key={item.id} className="pet-item-card"><div><strong>{item.name}</strong><span>{STAT_LABEL[item.statType]} +{item.statDelta}</span></div><button type="button" disabled={itemBusy || !pet} onClick={() => handleUseItem(item)}>사용하기</button></article>)}</div>}
                 </div>
               )}
-              {activeTab === "history" && (
-                <div className="pet-tab-panel">
-                  <div className="pet-panel-head">
-                    <h2 className="home-card-title home-card-title--sm">펫 이력</h2>
-                    <span>{petHistory.length}마리</span>
-                  </div>
-                  {petHistory.length === 0 ? (
-                    <p className="pet-empty">아직 함께한 펫이 없어요.</p>
-                  ) : (
-                    <ul className="pet-history-list">
-                      {petHistory.map((p) => (
-                        <li key={p.id} className={`pet-history-item ${p.releasedAt ? "is-released" : ""}`}>
-                          <span className="pet-history-art">
-                            <PetArt
-                              appearanceKey={p.appearanceKey}
-                              stage={p.stage}
-                              name={p.speciesName}
-                              className="pet-history-image"
-                              emojiClassName="pet-history-emoji"
-                            />
-                          </span>
-                          <div className="pet-history-info">
-                            <strong>{petDisplayName(p)}</strong>
-                            <small>
-                              {[p.name ? p.speciesName : null, STAGE_LABEL[p.stage], VARIANT_LABEL[p.variant]]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </small>
-                          </div>
-                          <span className="pet-history-state">
-                            {p.releasedAt
-                              ? `${formatDate(p.releasedAt)} 분양 · ${coin(p.releaseValue)}`
-                              : "키우는 중"}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
+              {activeTab === HISTORY_TAB && <PetHistoryPanel petHistory={petHistory} />}
               {notice && (
                 <p
                   className={`pet-notice ${notice.kind === "err" ? "pet-notice--err" : ""}`}

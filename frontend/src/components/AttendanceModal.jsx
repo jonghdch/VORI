@@ -120,10 +120,6 @@ function AttendanceModal({ onClose }) {
     ],
     [firstWeekday, daysInMonth],
   );
-  const monthRewards = useMemo(
-    () => history.filter((item) => item.itemAwarded).sort((a, b) => a.date.localeCompare(b.date)),
-    [history],
-  );
 
   const changeMonth = (delta) => {
     const next = new Date(year, mon - 1 + delta, 1);
@@ -347,19 +343,6 @@ function AttendanceModal({ onClose }) {
           </ul>
         </section>
 
-        {monthRewards.length > 0 && (
-          <section className="attendance-rewards">
-            <h3 className="attendance-rewards-title">이번 달 받은 보상</h3>
-            <ul className="attendance-reward-list">
-              {monthRewards.map((item) => (
-                <li key={item.date}>
-                  <span className="attendance-reward-day">{Number(item.date.slice(-2))}일</span>
-                  {item.rewardName} +{item.rewardStatDelta}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
       </div>
     </div>
   );

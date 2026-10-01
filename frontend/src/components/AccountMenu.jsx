@@ -75,7 +75,16 @@ function AccountMenu({ onLogout }) {
                 {isAdmin && <em className="account-menu-role">관리자</em>}
               </strong>
               <small>{me?.email ?? ""}</small>
-              {title && <small className="account-menu-title">🏅 {title}</small>}
+              {title && (
+                <button
+                  type="button"
+                  className="account-menu-title"
+                  onClick={() => go("/dex?tab=titles")}
+                  aria-label={`칭호 ${title} — 칭호 도감 열기`}
+                >
+                  🏅 {title}
+                </button>
+              )}
             </div>
           </div>
 

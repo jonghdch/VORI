@@ -77,6 +77,7 @@
   max-width: 140px;
 }
 .home-account-title {
+  cursor: pointer;
   border-radius: 20px;
   background: var(--home-green-soft);
   color: var(--home-green-dark);
@@ -550,6 +551,13 @@
   color: var(--home-muted);
   background: var(--home-card-surface);
   white-space: nowrap;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+.home-pet-title-badge:hover {
+  border-color: var(--home-green-dark);
+  color: var(--home-green-dark);
 }
 
 /* 칭호 — 게이지 하단 열린 틈 중앙 */
@@ -1378,9 +1386,25 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 칭호 — 누르면 도감의 칭호 탭으로 간다 */
 .account-menu-title {
-  color: var(--home-green-dark) !important;
+  align-self: flex-start;
+  max-width: 100%;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--home-green-dark);
   font-weight: 700;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.account-menu-title:hover {
+  text-decoration: underline;
 }
 .account-menu-role {
   font-style: normal;
@@ -1882,18 +1906,4 @@
   margin-right: 4px;
   font-size: 12px;
   letter-spacing: 0;
-}
-
-/* 로그아웃 — 메뉴 칸 전체가 아니라 글자에만 커서가 바뀌고, 배경색도 생기지 않는다.
-   버튼을 글자 폭으로 줄여서 글자 밖은 눌리지 않게 한다. */
-.home-side-link.home-side-link--logout,
-.home-side-link.home-side-link--logout:hover,
-.home-side-link.home-side-link--logout:active {
-  display: inline-flex;
-  width: auto;
-  background: none;
-  box-shadow: none;
-}
-.home-side-link.home-side-link--logout:hover {
-  color: #3d3830;
 }
