@@ -47,6 +47,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
 
   // 키우는 펫(이름·외형·스탯) + 최신 일일 리포트(펫 말풍선). 둘 다 실패해도 홈은 떠야 하므로 조용히 fallback.
   const [activePet, setActivePet] = useState(null);
+  // 조회가 끝나기 전에는 "펫 없음" 안내를 띄우지 않는다 — 잠깐 떴다 사라지는 깜빡임 방지
+  const [petLoaded, setPetLoaded] = useState(false);
   const [dailyReport, setDailyReport] = useState(null);
   const [titles, setTitles] = useState([]);
   const [titlesLoading, setTitlesLoading] = useState(true);
@@ -55,7 +57,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     const loadPet = () =>
       getActivePet()
         .then((p) => alive && setActivePet(p))
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => alive && setPetLoaded(true));
     loadPet();
     window.addEventListener(PET_CHANGED_EVENT, loadPet);
     getLatestDailyReport()
@@ -182,6 +185,21 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               )}
             </div>
             <div className="home-pet-body">
+              {petLoaded && !activePet ? (
+                /* 키우는 펫이 없을 때(분양 직후·알 개봉 전) — 마이룸과 같은 안내 */
+                <div className="home-pet-empty">
+                  <strong>아직 키우는 펫이 없어요</strong>
+                  <p>상점에서 새 친구를 데려올 수 있어요.</p>
+                  <button
+                    type="button"
+                    className="home-btn home-btn-primary"
+                    onClick={() => navigate("/shop")}
+                  >
+                    상점 가기
+                  </button>
+                </div>
+              ) : (
+              <>
               <div className="home-pet-center">
                 {/* 원형 경험치 게이지 — 270° 아치(아래 90° 열림)가 보리를 감싼다.
                     프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
@@ -266,6 +284,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   })}
                 </ul>
               </section>
+              </>
+              )}
             </div>
           </section>
         </div>
