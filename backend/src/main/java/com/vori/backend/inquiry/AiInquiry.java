@@ -54,6 +54,31 @@ public class AiInquiry {
     @Column(name = "answered_at")
     private LocalDateTime answeredAt;
 
+    /**
+     * RED 판정 직후, 지출과 같은 트랜잭션에서 넣는 대기 질문. 문구는 템플릿이다.
+     *
+     * Gemini 가 만든 문구를 기다렸다가 넣으면 (1) 호출이 15초 재시도 끝에 실패한 지출은
+     * 영영 질문이 없고 (2) 그 사이 화면은 빈 목록을 본다. 행을 먼저 만들어 두면 둘 다
+     * 사라진다 — AI 문구는 나중에 {@link #refineQuestion} 으로 덮어쓴다.
+     * 어투는 GeminiClient.generateQuestion 프롬프트(반려 펫이 말을 걸듯이)에 맞춘다.
+     */
+    public static AiInquiry pending(Long expenseId, Long userId, String item, Integer amount) {
+        return AiInquiry.builder()
+                .expenseId(expenseId)
+                .userId(userId)
+                .question(templateQuestion(item, amount))
+                .signalAdjusted(false)
+                .askedAt(LocalDateTime.now())
+                .build();
+    }
+
+    /** 조사(은/는)를 붙이지 않는 문형을 써서 내역이 무엇이든 어색하지 않게 한다. */
+    static String templateQuestion(String item, Integer amount) {
+        String what = (item == null || item.isBlank()) ? "이번 지출" : "이번 " + item.trim();
+        String won = amount == null ? "" : String.format(java.util.Locale.KOREA, " %,d원", amount);
+        return what + won + ", 평소보다 큰 지출이었어. 어떤 일이었는지 가볍게 적어 줄래?";
+    }
+
     public void recordAnswer(String answerText, ReasonCategory reasonCategory, boolean signalAdjusted) {
         this.answerText = answerText;
         this.reasonCategory = reasonCategory;

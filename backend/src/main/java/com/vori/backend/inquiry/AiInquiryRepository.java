@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -28,6 +29,17 @@ public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT i FROM AiInquiry i WHERE i.id = :id")
     Optional<AiInquiry> findByIdForUpdate(@Param("id") Long id);
+
+    /**
+     * 아직 답하지 않은 질문의 문구만 AI 문구로 바꾼다. 조건 포함 UPDATE 한 번이라
+     * 읽고-고치고-저장하는 사이에 사용자가 답을 끝내도(answerInquiry) 그 답을
+     * 덮어쓰지 않고, 지출 수정으로 행이 지워졌으면 0행으로 끝난다.
+     * @return 바뀐 행 수(0 또는 1)
+     */
+    @org.springframework.transaction.annotation.Transactional
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE AiInquiry i SET i.question = :question WHERE i.id = :id AND i.answeredAt IS NULL")
+    int updateQuestionIfUnanswered(@Param("id") Long id, @Param("question") String question);
 
     /**
      * 주어진 expense 들의 AI 질문(inquiry) 배치 조회.

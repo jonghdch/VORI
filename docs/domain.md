@@ -147,7 +147,11 @@ new_sample_count = old_sample_count + 1
 5. saved_amount 계산
 6. AI 질문 필요?
    - 조건: signal_initial == RED AND is_recurring == FALSE
-   - YES → ai_inquiries INSERT (status: 대기), signal_final NULL 로 둠
+   - YES → ai_inquiries INSERT (status: 대기). signal_final 은 일단 signal_initial(RED)과
+     같게 두고, 답변이 들어오면 보정한다 (`Expense.updateCalculations` → `updateSignalFinal`)
+     - 질문 문구는 이 트랜잭션에서 **템플릿**으로 넣는다(`AiInquiry.pending`). 커밋 뒤
+       비동기로 Gemini 문구를 받아 덮어쓴다(`AiInquiryService.handleAnomalyEvent`).
+       Gemini 가 실패하면 템플릿 문구가 그대로 남는다 — 질문이 없는 RED 지출은 생기지 않는다.
    - NO  → signal_final = signal_initial (반복 결제 시 질문 생략)
 7. expenses UPDATE (계산된 값들 set)
 8. user_stat_stats UPDATE (EMA 갱신, sample_count++)
@@ -193,10 +197,10 @@ signal_initial = ? (z-score 기반)
     │
     ├── GREEN|GRAY → signal_final = signal_initial (AI 질문 X, 종료)
     │
-    └── RED → AI 질문 (ai_inquiries INSERT)
+    └── RED → AI 질문 (ai_inquiries INSERT — 템플릿 문구, AI 문구는 커밋 뒤 비동기 교체)
             │
             ▼
-      답변 대기... signal_final = NULL
+      답변 대기... signal_final = signal_initial (RED) 유지
             │
             ▼ (사용자 답변 들어옴)
       reason_category 분류 → 위 보정 표대로 signal_final 산정
