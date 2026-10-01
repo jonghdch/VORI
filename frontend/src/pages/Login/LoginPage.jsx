@@ -15,23 +15,48 @@ function LoginPage({ onLogin }) {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // 로그인은 됐지만 온보딩 상태를 못 읽은 계정 — "다시 시도" 가 상태만 다시 묻는다.
+  const [pendingUser, setPendingUser] = useState(null);
 
   // 로그인 뒤 갈 곳 — 이메일·구글 로그인이 같이 쓴다. 설문 전이면 설문, 튜토리얼 전이면 온보딩.
+  //
+  // 상태를 못 읽었으면 홈으로 보내지 않는다. 못 읽은 것을 "다 마쳤다" 로 치면 온보딩을 안 한
+  // 계정이 그대로 홈에 들어간다. 로그인 상태(onLogin)도 상태를 읽은 뒤에 올린다 — 먼저 올리면
+  // 설문 가드(App.js)가 화면을 다시 그려 이 화면의 안내가 사라진다.
   const afterLogin = async (user) => {
+    let status;
+    try {
+      status = await getOnboardingStatus();
+    } catch {
+      setPendingUser(user);
+      setError("로그인은 됐지만 계정 상태를 확인하지 못했어요.");
+      return;
+    }
+    setPendingUser(null);
     if (typeof onLogin === "function") onLogin(user);
-    const status = await getOnboardingStatus().catch(() => null);
-    if (status && !status.profileCompleted) {
+    if (!status?.profileCompleted) {
       navigate("/signup/profile");
-    } else if (status && !status.tutorialDone) {
+    } else if (!status.tutorialDone) {
       navigate("/onboarding");
     } else {
       navigate("/home");
     }
   };
 
+  const retryStatus = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await afterLogin(pendingUser);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setPendingUser(null);
     setLoading(true);
     try {
       await afterLogin(await login(email, password));
@@ -123,6 +148,19 @@ function LoginPage({ onLogin }) {
                 style={{ color: "#c0392b", margin: "4px 0 0", fontSize: "0.9rem" }}
               >
                 {error}
+                {pendingUser && (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      className="login-link"
+                      onClick={retryStatus}
+                      disabled={loading}
+                    >
+                      다시 시도
+                    </button>
+                  </>
+                )}
               </p>
             )}
 
@@ -141,7 +179,10 @@ function LoginPage({ onLogin }) {
               <div className="login-divider">또는</div>
               <GoogleSignInButton
                 onLogin={afterLogin}
-                onError={(msg) => setError(msg)}
+                onError={(msg) => {
+                  setPendingUser(null);
+                  setError(msg);
+                }}
               />
             </>
           )}
