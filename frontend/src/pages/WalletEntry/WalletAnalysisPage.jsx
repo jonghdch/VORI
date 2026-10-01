@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toIsoDate } from "./utils";
 import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
 import { listExpensesByDate } from "../../api/ledger";
-import { startDateJudgment } from "../../api/dailyJudgment";
+import { getDateJudgment, startDateJudgment } from "../../api/dailyJudgment";
 import JudgmentResults, { judgmentReason } from "./JudgmentResults";
 import { canUseAiJudge } from "../../config";
 import "./WalletEntry.css";
@@ -47,6 +47,10 @@ function WalletAnalysisPage({ user }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [waitingForQuestion, setWaitingForQuestion] = useState(false);
   const [questionPending, setQuestionPending] = useState(false);
+  // needsConfirm: 판정 전 확인 창을 띄울지. null 은 아직 모름(이미 판정한 날짜인지 조회 중) —
+  // 그동안은 "분석 중" 화면도 띄우지 않는다. confirmedDate: 확인 창에서 "판정하기"를 누른 날짜.
+  const [needsConfirm, setNeedsConfirm] = useState(null);
+  const [confirmedDate, setConfirmedDate] = useState(null);
   useEffect(() => {
     if (!isEventOpen) return;
     let cancelled = false;
@@ -58,6 +62,7 @@ function WalletAnalysisPage({ user }) {
     setLoadError(false);
     setWaitingForQuestion(false);
     setQuestionPending(false);
+    setNeedsConfirm(confirmedDate === dateStr ? false : null);
     setJudgment(null);
     setPage(1);
     setAnswers({});
@@ -110,11 +115,30 @@ function WalletAnalysisPage({ user }) {
         setLoading(false);
       }
     };
-    start();
+    // 판정 전 확인. 아직 판정하지 않은 날짜면 확인 창에서 "판정하기"를 눌러야 판정한다.
+    // 이미 판정한 날짜는 결과를 다시 보는 것이라 묻지 않는다.
+    const begin = async () => {
+      if (confirmedDate === dateStr) {
+        start();
+        return;
+      }
+      try {
+        const existing = await getDateJudgment(dateStr);
+        if (cancelled) return;
+        setNeedsConfirm(!existing);
+        if (existing) start();
+      } catch {
+        if (cancelled) return;
+        setNeedsConfirm(false);
+        setLoadError(true);
+        setLoading(false);
+      }
+    };
+    begin();
     return () => {
       cancelled = true;
     };
-  }, [dateStr, isEventOpen, reloadKey]);
+  }, [dateStr, isEventOpen, reloadKey, confirmedDate]);
 
   // 활성 시간대 밖이면 가계부로 돌려보낸다.
   if (!isEventOpen) {
@@ -170,7 +194,9 @@ function WalletAnalysisPage({ user }) {
 
       <main className="ledger-entry-main">
         <p className="ledger-subtitle">{dateStr} 소비 판정{user?.role === "ADMIN" ? " · 관리자 시연" : ""}</p>
-        {loading ? (
+        {needsConfirm === null ? null : needsConfirm ? (
+          <JudgeConfirmDialog onCancel={goBack} onConfirm={() => setConfirmedDate(dateStr)} />
+        ) : loading ? (
           <div className="ledger-center-y">
             <div className="ledger-title-block ledger-title-block-center">
               <h1 className="ledger-title">{waitingForQuestion ? "질문을 준비하고 있어요" : "분석 중이에요"}</h1>
@@ -425,6 +451,68 @@ function WalletAnalysisPage({ user }) {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+// 판정 전 확인 창. 판정은 하루에 한 번이라 실수로 시작하지 않게 한 번 묻는다.
+// Esc 는 "돌아가기"와 같다. 바깥을 눌러서는 닫히지 않는다.
+function JudgeConfirmDialog({ onCancel, onConfirm }) {
+  const titleId = useId();
+  const textId = useId();
+  const dialogRef = useRef(null);
+
+  // 창이 떠 있는 동안 뒤 화면이 스크롤되지 않게 한다.
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, []);
+
+  const onKeyDown = (event) => {
+    if (event.key === "Escape") {
+      onCancel();
+      return;
+    }
+    // Tab 이 창 밖(뒤 화면의 로고 버튼)으로 나가지 않게 창 안에서만 돈다.
+    if (event.key !== "Tab") return;
+    const focusable = dialogRef.current?.querySelectorAll("button");
+    if (!focusable || focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  return (
+    <div className="ledger-confirm-backdrop">
+      <div
+        ref={dialogRef}
+        className="ledger-confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={textId}
+        onKeyDown={onKeyDown}
+      >
+        <h2 id={titleId} className="ledger-confirm-title">하루에 한 번 판정할 수 있습니다.</h2>
+        <p id={textId} className="ledger-confirm-text">판정 시작할까요?</p>
+        <div className="ledger-confirm-actions">
+          <button type="button" className="ledger-back" onClick={onCancel}>
+            돌아가기
+          </button>
+          <button type="button" className="ledger-next" onClick={onConfirm} autoFocus>
+            판정하기
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
