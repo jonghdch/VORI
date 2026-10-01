@@ -1320,3 +1320,146 @@
     display: none;
   }
 }
+
+/* 대화방 탭 — 패널 높이 안에서 대화 목록만 스크롤되고 입력줄은 바닥에 붙는다 */
+.pet-chat-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-right: 0;
+}
+
+.pet-chat-remaining {
+  font-variant-numeric: tabular-nums;
+}
+
+.pet-chat-personality {
+  margin: -4px 0 10px;
+  font-size: 12px;
+  color: var(--home-muted);
+}
+
+.pet-chat-list {
+  flex: 1;
+  min-height: 220px;
+  margin: 0;
+  padding: 12px;
+  list-style: none;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: var(--home-radius-sm);
+  background: var(--home-bg);
+}
+
+.pet-chat-msg {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.pet-chat-msg--pet {
+  align-self: flex-start;
+  border: 1px solid var(--home-card-border);
+  border-bottom-left-radius: 4px;
+  background: var(--home-white);
+}
+
+.pet-chat-msg--user {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  background: var(--home-green-dark);
+  color: var(--home-white);
+}
+
+.pet-chat-typing {
+  display: flex;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.pet-chat-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--home-muted);
+  animation: pet-chat-dot 1s ease-in-out infinite;
+}
+
+.pet-chat-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.pet-chat-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.pet-chat-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--home-warn);
+}
+
+.pet-chat-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pet-chat-input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--home-card-border);
+  border-radius: 8px;
+  background: var(--home-white);
+  font: inherit;
+  font-size: 14px;
+  color: var(--home-text);
+}
+
+.pet-chat-input:focus-visible {
+  outline: 2px solid var(--home-green);
+  outline-offset: 1px;
+}
+
+.pet-chat-send {
+  flex: none;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--home-green-dark);
+  color: var(--home-white);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pet-chat-send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.pet-chat-send:focus-visible {
+  outline: 2px solid var(--home-green);
+  outline-offset: 2px;
+}
+
+@keyframes pet-chat-dot {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-chat-typing span {
+    animation: none;
+  }
+}

@@ -293,6 +293,34 @@ public class GeminiClient {
         }
     }
 
+    /**
+     * 여러 턴 대화. 캐릭터 설정·규칙은 systemInstruction 으로, 지난 대화는 user/model 역할로 넘긴다.
+     *
+     * <p>설정을 대화 본문에 섞지 않는 이유는, 사용자가 "앞의 지시는 무시해" 처럼 써도
+     * 같은 층위의 글로 다뤄지지 않게 하려는 것이다. 완전한 방어는 아니므로 규칙에도 따로 적는다.
+     *
+     * @param turns 오래된 것부터. 마지막은 사용자의 이번 말이어야 한다.
+     */
+    public String chat(String systemInstruction, List<ChatTurn> turns) {
+        List<Map<String, Object>> contents = turns.stream()
+                .map(t -> Map.<String, Object>of(
+                        "role", t.fromUser() ? "user" : "model",
+                        "parts", List.of(Map.of("text", t.text()))))
+                .toList();
+        Map<String, Object> body = Map.of(
+                "systemInstruction", Map.of("parts", List.of(Map.of("text", systemInstruction))),
+                "contents", contents);
+        try {
+            return extractText(generate(body, "petChat", restTemplate));
+        } catch (Exception e) {
+            log.error("Gemini 펫 대화 호출 실패", e);
+            throw new RuntimeException("AI 서비스 호출에 실패했습니다.");
+        }
+    }
+
+    /** 대화 한 턴. fromUser=false 는 펫(모델)의 말. */
+    public record ChatTurn(boolean fromUser, String text) {}
+
     private String callGemini(String text) {
         Map<String, Object> body = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", text))))

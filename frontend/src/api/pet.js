@@ -8,6 +8,8 @@
 //   PUT  /api/pets/{id}/name     펫 이름 짓기 (1~10자)
 //   POST /api/pets/{id}/release  성체 분양 → 게임머니 획득
 //   POST /api/pets/active/interact  상호작용 1회 → 1% 확률로 매력 +1
+//   GET  /api/pets/active/chat      대화창 상태 (성격·남은 횟수)
+//   POST /api/pets/active/chat      펫과 대화 한 마디
 import { get, post, put } from "./http";
 
 /**
@@ -54,3 +56,18 @@ export const releasePet = (petId) => post(`/pets/${petId}/release`);
  *   400 = 키우는 펫 없음
  */
 export const interactWithPet = () => post("/pets/active/interact");
+
+/**
+ * @typedef {{ reply:string|null, personality:string, remaining:number, dailyLimit:number }} PetChat
+ */
+
+/** 대화창용 지금 성격·오늘 남은 대화 횟수. @returns {Promise<PetChat>} 400 = 키우는 펫 없음 */
+export const getPetChatStatus = () => get("/pets/active/chat");
+
+/**
+ * 펫에게 한 마디. 대화 기록은 서버에 저장하지 않아 지난 대화를 함께 보낸다(최대 12턴).
+ * @param {string} message 1~200자
+ * @param {{ role:"user"|"pet", text:string }[]} history 오래된 것부터
+ * @returns {Promise<PetChat>} 429 = 오늘 횟수 소진, 503 = AI 호출 실패(횟수 차감 없음)
+ */
+export const chatWithPet = (message, history) => post("/pets/active/chat", { message, history });

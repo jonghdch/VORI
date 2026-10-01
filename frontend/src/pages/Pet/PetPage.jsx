@@ -24,6 +24,7 @@ import {
 } from "../../components/furnitureVisual";
 import { PetActionMenu, PetReaction, REACTION_MS, pickLine } from "./PetInteraction";
 import PetHistoryPanel from "./PetHistoryPanel";
+import PetChatPanel from "./PetChatPanel";
 import roomDefaultImage from "../../assets/backgrounds/room-default.png";
 import roomWoodImage from "../../assets/backgrounds/room-wood.png";
 import roomMintImage from "../../assets/backgrounds/room-mint.png";
@@ -77,6 +78,7 @@ const INITIAL_PET_POSITION = { x: 50, y: 62 };
 // 오른쪽 카드 하나에서 탭으로 전환해 보는 섹션들
 const PANEL_TABS = [
   { id: "pet", label: "현재 펫" },
+  { id: "chat", label: "대화방" },
   { id: "status", label: "펫 상태" },
   { id: "background", label: "방 색상" },
   { id: "furniture", label: "보유 가구" },
@@ -726,7 +728,7 @@ function PetPage({ user, onLogout }) {
             </section>
           </div>
 
-          {/* 오른쪽: 현재 펫 · 펫 상태 · 방 색상 · 보유 가구 · 아이템 · 내역을 한 카드에서 탭으로 전환 */}
+          {/* 오른쪽: 현재 펫 · 대화방 · 펫 상태 · 방 색상 · 보유 가구 · 아이템 · 내역을 한 카드에서 탭으로 전환 */}
           <aside className="pet-myroom-side">
             <section className="home-card pet-panel pet-tab-card">
               <div className="pet-tab-bar" role="tablist" aria-label="마이룸 메뉴">
@@ -820,6 +822,14 @@ function PetPage({ user, onLogout }) {
                   )}
                 </div>
               )}
+              {activeTab === "chat" &&
+                (pet ? (
+                  <PetChatPanel key={pet.id} pet={pet} />
+                ) : (
+                  <div className="pet-tab-panel">
+                    <p className="pet-empty">키우는 펫이 있어야 대화할 수 있어요.</p>
+                  </div>
+                ))}
               {activeTab === "status" && (
                 <div className="pet-tab-panel">
                   <div className="pet-panel-head">

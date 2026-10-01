@@ -1,6 +1,8 @@
 package com.vori.backend.pet;
 
 import com.vori.backend.auth.UserPrincipal;
+import com.vori.backend.pet.dto.PetChatRequest;
+import com.vori.backend.pet.dto.PetChatResponse;
 import com.vori.backend.pet.dto.PetInteractionResponse;
 import com.vori.backend.pet.dto.PetNameRequest;
 import com.vori.backend.pet.dto.PetResponse;
@@ -22,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 펫 조회·이름 짓기·분양·상호작용. 인증 필요(세션), 본인 데이터만.
+ * 펫 조회·이름 짓기·분양·상호작용·대화. 인증 필요(세션), 본인 데이터만.
  */
 @Slf4j
 @RestController
@@ -32,6 +34,7 @@ public class PetController {
 
     private final PetService petService;
     private final TitleService titleService;
+    private final PetChatService petChatService;
 
     /** GET /api/pets/active — 현재 키우는 펫. 없으면 본문 null(200). */
     @GetMapping("/active")
@@ -64,6 +67,24 @@ public class PetController {
             log.error("상호작용 칭호 평가 실패 — userId={}", userId, e);
             return result;
         }
+    }
+
+    /** GET /api/pets/active/chat — 대화창용 지금 성격과 오늘 남은 대화 횟수. 펫이 없으면 400. */
+    @GetMapping("/active/chat")
+    public PetChatResponse chatStatus(@AuthenticationPrincipal UserPrincipal principal) {
+        return petChatService.status(principal.getId());
+    }
+
+    /**
+     * POST /api/pets/active/chat — 키우는 펫과 대화 한 마디.
+     * 400 = 펫 없음·요청 형식 오류, 429 = 오늘 횟수 소진, 503 = AI 호출 실패(횟수는 차감 안 됨).
+     */
+    @PostMapping("/active/chat")
+    public PetChatResponse chat(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody PetChatRequest request
+    ) {
+        return petChatService.chat(principal.getId(), request);
     }
 
     /** PUT /api/pets/{id}/name — 키우는 펫의 이름 짓기(1~10자). 분양한 펫이면 409. */
