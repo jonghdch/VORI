@@ -58,6 +58,11 @@ public class Pet {
     @Builder.Default
     private Integer statEndurance = 0;
 
+    // 쓰다듬기·칭찬하기 등 상호작용 누적 횟수. 칭호 조건(PET_INTERACTIONS)의 기준값.
+    @Column(name = "interaction_count", nullable = false)
+    @Builder.Default
+    private Integer interactionCount = 0;
+
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "ENUM('INFANT','JUVENILE','ADULT')")
     @Builder.Default
@@ -136,6 +141,11 @@ public class Pet {
         this.statIq = base + (rem > 2 ? 1 : 0);
         this.statEndurance = base;
         this.stage = target;
+    }
+
+    /** 상호작용 1회를 센다. */
+    public void recordInteraction() {
+        this.interactionCount = nz(interactionCount) + 1;
     }
 
     /** 이름을 짓는다. 길이·공백 검사는 요청 DTO(PetNameRequest)가 맡는다. */

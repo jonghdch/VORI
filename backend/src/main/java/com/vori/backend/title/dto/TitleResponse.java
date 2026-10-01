@@ -20,18 +20,21 @@ public record TitleResponse(
         long current,         // 현재 지표값
         long threshold,       // 목표치
         int progressPct,
-        LocalDateTime acquiredAt
+        LocalDateTime acquiredAt,
+        boolean hidden        // 히든 칭호인지. 히든은 획득한 뒤에만 목록에 나온다.
 ) {
     public static TitleResponse acquired(Title title, UserTitle owned,
                                          TitleProgress p, boolean active) {
         return new TitleResponse(
                 owned.getId(), title.getCode(), title.getName(), title.getDescription(),
-                true, active, title.currentOf(p), title.getThreshold(), 100, owned.getAcquiredAt());
+                true, active, title.currentOf(p), title.getThreshold(), 100, owned.getAcquiredAt(),
+                title.isHidden());
     }
 
     public static TitleResponse locked(Title title, TitleProgress p) {
         return new TitleResponse(
                 null, title.getCode(), title.getName(), title.getDescription(),
-                false, false, title.currentOf(p), title.getThreshold(), title.progressPct(p), null);
+                false, false, title.currentOf(p), title.getThreshold(), title.progressPct(p), null,
+                title.isHidden());
     }
 }

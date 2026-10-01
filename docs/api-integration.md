@@ -218,6 +218,7 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 ```
 
 **미획득 칭호도 진행률과 함께 내려온다.** 잠금 아이콘만 띄우지 말고 `current / threshold` 진행 바를 그릴 것. 그게 다음 목표가 된다.
+단, **히든 칭호(`hidden: true`)는 획득한 뒤에만 목록에 나온다** — 따기 전에는 이름도 조건도 내려오지 않는다. 지금은 「사랑둥이」(한 펫과 상호작용 100회) 하나다.
 장착은 `{ "titleId": 8 }`, 해제는 `{ "titleId": null }`.
 
 ### 예산
@@ -307,7 +308,7 @@ const res = await fetch('http://localhost:8080/api/receipts', {
 | GET | `/api/pets/active` | 키우는 펫 (없으면 본문 없는 200) |
 | POST | `/api/pets/{id}/release` | 분양 · 성체 아니면 400 |
 | PUT | `/api/pets/{id}/name` | 펫 이름 짓기 · 요청 `{ name }`(1~10자, 앞뒤 공백 제외) · 응답 펫 · 규칙 위반 400 · 분양한 펫 409 |
-| POST | `/api/pets/active/interact` | 상호작용(쓰다듬기 등) 1회 · 1% 확률로 매력 +1 · 응답 `{ charmUp, pet }` · 펫 없으면 400 |
+| POST | `/api/pets/active/interact` | 상호작용(쓰다듬기 등) 1회 · 1% 확률로 매력 +1 · 응답 `{ charmUp, pet, newTitles }` — `newTitles` 는 이번 상호작용으로 받은 칭호 `[{ name, hidden }]`(대개 빈 배열) · 펫 없으면 400 |
 
 ```json
 [ { "grade": "BASIC",     "name": "기본 알",   "price": 2500,

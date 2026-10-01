@@ -255,6 +255,12 @@
   font-weight: 900;
 }
 
+/* 히든 칭호 표시 — 칭호 이름 옆 작은 배지 */
+.ach-hidden-badge {
+  margin-left: 8px;
+  vertical-align: 2px;
+}
+
 .ach-title-meta {
   margin: 4px 0 0;
   font-size: 12px;

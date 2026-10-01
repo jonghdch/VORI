@@ -24,6 +24,7 @@ public record PetResponse(
         int statIq,
         int statEndurance,
         int statTotal,
+        int interactionCount,
         LocalDateTime hatchedAt,
         LocalDateTime releasedAt,
         Integer releaseValue
@@ -43,6 +44,7 @@ public record PetResponse(
                 nz(p.getStatIq()),
                 nz(p.getStatEndurance()),
                 p.statTotal(),
+                nz(p.getInteractionCount()),
                 p.getHatchedAt(),
                 p.getReleasedAt(),
                 p.getReleaseValue());

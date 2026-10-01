@@ -11,6 +11,7 @@ import com.vori.backend.receipt.OcrStatus;
 import com.vori.backend.receipt.ReceiptOcrJobRepository;
 import com.vori.backend.theme.ThemeMaster;
 import com.vori.backend.theme.ThemeMasterRepository;
+import com.vori.backend.title.dto.GrantedTitle;
 import com.vori.backend.title.dto.TitleResponse;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
@@ -57,7 +58,10 @@ public class TitleService {
     private final ReceiptOcrJobRepository receiptOcrJobRepository;
     private final ThemeMasterRepository themeMasterRepository;
 
-    /** 전체 칭호 목록. 조회 시점에 평가를 겸해 놓친 획득을 메운다. 획득 → 미획득 순. */
+    /**
+     * 전체 칭호 목록. 조회 시점에 평가를 겸해 놓친 획득을 메운다. 획득 → 미획득 순.
+     * 히든 칭호는 획득한 뒤에만 나온다 — 따기 전에는 이름도 조건도 내려가지 않는다.
+     */
     @Transactional
     public List<TitleResponse> list(Long userId) {
         TitleProgress progress = collect(userId);
@@ -74,7 +78,7 @@ public class TitleService {
             UserTitle t = owned.get(title.getId());
             if (t != null) {
                 acquired.add(TitleResponse.acquired(title, t, progress, Objects.equals(t.getId(), activeId)));
-            } else {
+            } else if (!title.isHidden()) {
                 locked.add(TitleResponse.locked(title, progress));
             }
         }
@@ -121,10 +125,31 @@ public class TitleService {
         }
     }
 
+    /**
+     * 1씩 오르는 지표가 방금 value 가 됐을 때 부른다. 그 값이 목표치인 칭호가 있으면 바로 평가해
+     * 새로 받은 칭호를 돌려준다 — 호출한 쪽이 응답에 실어 획득 순간을 알릴 수 있다.
+     *
+     * 목표치에 닿지 않은 호출은 조회 한 번으로 끝난다. 상호작용처럼 자주 일어나는 동작마다
+     * 전체 평가(지표 수집 + 사용자 행 잠금)를 돌리지 않으려는 것이다. 여기서 놓친 획득은
+     * 다른 경로와 마찬가지로 목록 조회(list)가 메운다.
+     *
+     * 지표를 바꾼 트랜잭션이 커밋된 뒤에 호출할 것 — 아직 커밋되지 않은 값은 세지 못한다.
+     */
+    @Transactional
+    public List<GrantedTitle> grantOnReach(Long userId, TitleMetricType metricType, long value) {
+        if (!titleRepository.existsByEnabledTrueAndMetricTypeAndThreshold(metricType, value)) {
+            return List.of();
+        }
+        return grantNewlyAchieved(userId, collect(userId)).stream()
+                .map(title -> new GrantedTitle(title.getName(), title.isHidden()))
+                .toList();
+    }
+
     // ───── 내부 ─────
 
-    /** 조건을 만족했는데 아직 없는 칭호를 지급한다. 이미 가진 것은 건너뛴다(멱등). */
-    private void grantNewlyAchieved(Long userId, TitleProgress progress) {
+    /** 조건을 만족했는데 아직 없는 칭호를 지급하고, 새로 지급한 칭호를 돌려준다. 이미 가진 것은 건너뛴다(멱등). */
+    private List<Title> grantNewlyAchieved(Long userId, TitleProgress progress) {
+        List<Title> granted = new ArrayList<>();
         // 헤더와 칭호 화면의 동시 조회에서도 중복 지급을 막는다.
         User owner = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
@@ -148,7 +173,9 @@ public class TitleService {
 
             log.info("칭호 획득 — userId={}, title={}, unlocksThemeId={}",
                     userId, title.getName(), unlocksThemeId);
+            granted.add(title);
         }
+        return granted;
     }
 
     /**
@@ -177,7 +204,8 @@ public class TitleService {
                 gachaPullRepository.countByUserIdAndTier(userId, PetTier.S),
                 aiInquiryRepository.countByUserIdAndAnsweredAtIsNotNull(userId),
                 receiptOcrJobRepository.countByUserIdAndStatus(userId, OcrStatus.SUCCESS),
-                loginCount);
+                loginCount,
+                petRepository.maxInteractionCountByUserId(userId));
     }
 
     /** 칭호 마스터 전체 — 어드민·문서용. */
