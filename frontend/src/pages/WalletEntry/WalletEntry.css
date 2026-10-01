@@ -679,6 +679,91 @@
   padding-top: 14px;
   border-top: 1px solid #ebe7dd;
 }
+/* 신호별 묶음 — 묶음 이름은 왼쪽에 붙인 캡슐로 보여 준다. */
+.ledger-judgment-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ledger-judgment-group-title {
+  align-self: flex-start;
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.2;
+}
+.ledger-judgment-group-title .ledger-signal-result {
+  margin-bottom: 0;
+}
+.ledger-judgment-group-count {
+  font-weight: 600;
+  opacity: 0.75;
+}
+/* 판정 이유를 접었다 펴는 카드 — 머리줄 전체가 버튼이라 여백을 버튼 쪽으로 옮긴다. */
+.ledger-judgment-card--toggle {
+  padding: 0;
+}
+.ledger-judgment-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ledger-judgment-toggle:focus-visible {
+  outline: 2px solid #7c8b5c;
+  outline-offset: -2px;
+}
+.ledger-judgment-toggle-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.ledger-judgment-toggle-text strong {
+  overflow: hidden;
+  color: #2b2b2b;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ledger-judgment-toggle-text > span {
+  color: #6e6b65;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ledger-judgment-toggle .ledger-signal-result {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+.ledger-judgment-chevron {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin: 0 3px 4px;
+  border-right: 2px solid #8a867e;
+  border-bottom: 2px solid #8a867e;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+.ledger-judgment-toggle[aria-expanded="true"] .ledger-judgment-chevron {
+  margin-bottom: -4px;
+  transform: rotate(-135deg);
+}
+.ledger-judgment-card--toggle .ledger-judgment-reason {
+  margin: 0 20px 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledger-judgment-chevron {
+    transition: none;
+  }
+}
 .ledger-judgment-reason > span {
   color: #7c8b5c;
   font-size: 12px;
