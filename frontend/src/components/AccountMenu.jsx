@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AccountSummary from "./AccountSummary";
+import NotificationBell from "./NotificationBell";
 import { getMe } from "../api/user";
 import { listTitles } from "../api/titles";
 import { openAttendance } from "./AttendanceModal";
@@ -62,6 +63,7 @@ function AccountMenu({ onLogout }) {
   return (
     <div className="account-menu" ref={rootRef}>
       <AccountSummary onClick={() => setOpen((v) => !v)} />
+      <NotificationBell />
 
       {open && (
         <div className="account-menu-popover" role="dialog" aria-label="내 정보">

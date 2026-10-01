@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import AppRightSidebar from "../../components/AppRightSidebar";
@@ -7,10 +7,11 @@ import { getHomeSummary } from "../../api/home";
 import { getMonthlyLedger } from "../../api/ledger";
 import { getActivePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
-import { getLatestDailyReport, markDailyReportRead } from "../../api/report";
+import { getUnreadMonthlyReport } from "../../api/monthlyReports";
 import { listTitles } from "../../api/titles";
 import { PetArt, petDisplayName, levelProgressPct } from "../../components/petVisual";
 import { AI_ACTIVE_FROM_HOUR } from "../../config";
+import { NO_RECORD_LINE, SPENDING_LINES, monthlyReportLine, petTmiLines } from "../../components/petLines";
 import "./HomeDashboard.css";
 
 // 스탯 4종 표시 메타 — 값은 키우는 펫 본인의 스탯(PetResponse.stat*). 펫 화면과 같은 값이다.
@@ -45,11 +46,11 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     };
   }, []);
 
-  // 키우는 펫(이름·외형·스탯) + 최신 일일 리포트(펫 말풍선). 둘 다 실패해도 홈은 떠야 하므로 조용히 fallback.
+  // 키우는 펫(이름·외형·스탯) + 안 본 월간 리포트(펫 말풍선). 둘 다 실패해도 홈은 떠야 하므로 조용히 fallback.
   const [activePet, setActivePet] = useState(null);
   // 조회가 끝나기 전에는 "펫 없음" 안내를 띄우지 않는다 — 잠깐 떴다 사라지는 깜빡임 방지
   const [petLoaded, setPetLoaded] = useState(false);
-  const [dailyReport, setDailyReport] = useState(null);
+  const [unreadReport, setUnreadReport] = useState(null);
   const [titles, setTitles] = useState([]);
   const [titlesLoading, setTitlesLoading] = useState(true);
   useEffect(() => {
@@ -65,13 +66,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
         .catch(() => {});
     loadPet();
     window.addEventListener(PET_CHANGED_EVENT, loadPet);
-    getLatestDailyReport()
-      .then((r) => {
-        if (!alive) return;
-        setDailyReport(r);
-        // 화면에 보인 순간 읽음 처리 — 실패해도 표시엔 영향 없음
-        if (r && !r.readAt) markDailyReportRead(r.id).catch(() => {});
-      })
+    getUnreadMonthlyReport()
+      .then((r) => alive && setUnreadReport(r))
       .catch(() => {});
     listTitles()
       .then((data) => {
@@ -147,6 +143,22 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   // 스탯 막대 기준값 — 가장 큰 스탯(최소 100). 스탯이 100을 넘어도 막대끼리 비교가 된다.
   const statScale = Math.max(100, ...STAT_META.map((m) => stats?.[m.key] ?? 0));
 
+  // 말풍선 ③ 에 쓸 무작위 값 — 화면을 열 때 한 번만 정해 다시 그려져도 대사가 바뀌지 않게
+  const [bubbleSeed] = useState(() => Math.random());
+  const bubble = useMemo(() => {
+    if (loading) return { text: "오늘 소비를 살펴보고 있어요…" };
+    if ((spending?.today ?? 0) <= 0) return { text: NO_RECORD_LINE };
+    if (unreadReport) {
+      const month = Number(unreadReport.yearMonth.slice(5));
+      return { text: monthlyReportLine(month), link: `/report?month=${unreadReport.yearMonth}` };
+    }
+    const lines = [
+      ...SPENDING_LINES.map((l) => l.replace("{today}", won(spending.today))),
+      ...petTmiLines(activePet),
+    ];
+    return { text: lines[Math.floor(bubbleSeed * lines.length)] };
+  }, [loading, spending, unreadReport, activePet, bubbleSeed]);
+
   return (
     <AppShell
       activeTop="home"
@@ -169,23 +181,18 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 마이룸 가기 →
               </button>
             </div>
-            {/* 말풍선 — 일일 리포트의 AI 코멘트가 있으면 그걸, 없으면 오늘 지출 기반 문구 */}
-            <div className="home-pet-bubble">
-              {dailyReport?.aiComment ? (
-                <>
-                  <span className="home-pet-bubble-date">
-                    {dailyReport.reportDate.slice(5).replace("-", "/")} 리포트
-                  </span>
-                  {dailyReport.aiComment}
-                </>
-              ) : loading ? (
-                "오늘 소비를 살펴보고 있어요…"
-              ) : (spending?.today ?? 0) > 0 ? (
-                `오늘 ${won(spending.today)} 지출했어요. 저녁 8시에 같이 돌아봐요!`
-              ) : (
-                "오늘은 아직 지출 기록이 없어요. 첫 기록을 남겨볼까요?"
-              )}
-            </div>
+            {/* 말풍선 — ① 오늘 기록 없음 ② 안 본 월간 리포트 ③ 소비 이야기·펫 TMI (petLines.js) */}
+            {bubble.link ? (
+              <button
+                type="button"
+                className="home-pet-bubble home-pet-bubble--link"
+                onClick={() => navigate(bubble.link)}
+              >
+                {bubble.text}
+              </button>
+            ) : (
+              <div className="home-pet-bubble">{bubble.text}</div>
+            )}
             <div className="home-pet-body">
               {petLoaded && !activePet ? (
                 /* 키우는 펫이 없을 때(분양 직후·알 개봉 전) — 마이룸과 같은 안내 */
