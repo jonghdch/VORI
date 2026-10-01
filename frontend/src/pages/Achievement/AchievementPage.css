@@ -170,9 +170,10 @@
   background: #f5f6f2;
 }
 
+/* 이름이 160px 아래로 줄어들 상황이면 날짜·버튼을 다음 줄로 내린다 (이름이 글자 중간에서 끊기지 않게) */
 .ach-title-main {
   min-width: 0;
-  flex: 1;
+  flex: 1 1 160px;
 }
 
 .ach-title-name {
@@ -196,8 +197,17 @@
 
 .ach-title-actions {
   display: flex;
+  margin-left: auto;
+  align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.ach-title-date {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+  white-space: nowrap;
 }
 
 .ach-btn-sm {

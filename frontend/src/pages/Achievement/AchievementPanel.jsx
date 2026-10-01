@@ -182,7 +182,7 @@ function AchievementPanel({ tab, titles, loading, error, reload }) {
         <>
           <div className="ach-equipped">
             <div>
-              <p className="ach-equipped-label">현재 장착</p>
+              <p className="ach-equipped-label">장착중인 칭호</p>
               <p className="ach-equipped-name">
                 {activeTitle ? activeTitle.name : "장착된 칭호 없음"}
               </p>
@@ -221,14 +221,15 @@ function AchievementPanel({ tab, titles, loading, error, reload }) {
                           <span className="home-badge home-badge--prog ach-hidden-badge">히든</span>
                         )}
                       </p>
-                      <p className="ach-title-meta">
-                        {t.description}
-                        {t.acquiredAt
-                          ? ` · ${formatAcquiredAt(t.acquiredAt)} 획득`
-                          : ""}
-                      </p>
+                      <p className="ach-title-meta">{t.description}</p>
                     </div>
+                    {/* 획득 날짜는 오른쪽, 장착 버튼 바로 옆 */}
                     <div className="ach-title-actions">
+                      {t.acquiredAt && (
+                        <span className="ach-title-date">
+                          {formatAcquiredAt(t.acquiredAt)} 획득
+                        </span>
+                      )}
                       {t.active ? (
                         <span className="home-badge home-badge--done">장착 중</span>
                       ) : (

@@ -1,67 +1,93 @@
-.settings {
-  min-height: 100vh;
-  background: #f5f3ee;
+/* 환경설정 — 단색 면만 쓴다 (그라데이션·그림자 없음) */
+.settings-main.home-main {
+  max-width: 960px;
+  min-width: 0;
   color: #2b2b2b;
-  font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
-    "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
-  display: flex;
-  flex-direction: column;
 }
-.settings button,
-.settings input,
-.settings select {
+/* 스크롤은 되지만 스크롤바는 보이지 않게 — 데스크톱은 본문, 모바일(≤1024px)은 셸이 스크롤된다 */
+.settings-main.home-main,
+.home-shell:has(.settings-main) {
+  scrollbar-width: none;
+}
+.settings-main.home-main::-webkit-scrollbar,
+.home-shell:has(.settings-main)::-webkit-scrollbar {
+  display: none;
+}
+.settings-main button,
+.settings-main input,
+.settings-main select {
   font-family: inherit;
 }
-
-/* ───── 헤더 ───── */
-.settings-header {
-  width: 100%;
-  padding: 16px 32px;
-  border-bottom: 1px solid #e2dfd7;
-  background: #fbfaf6;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.settings-logo-btn {
-  border: 0;
-  background: transparent;
-  font-weight: 800;
-  font-size: 22px;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  color: #2b2b2b;
-}
-.settings-logo-btn:hover {
-  color: #7c8b5c;
-}
-.settings-header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.settings-title {
+  margin: 0 0 24px;
+  font-size: 25px;
+  font-weight: 700;
 }
 
-/* ───── 본문 ───── */
-.settings-main {
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 48px 24px 96px;
+/* ───── 사이드바 + 본문 ───── */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.settings-nav {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 6px;
 }
-/* 카드 밖, 콘텐츠 컬럼(720px) 우측 정렬 */
+/* 직사각형 + 둥근 모서리, 단색 면 */
+.settings-nav-btn {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid #e2dfd7;
+  border-radius: 8px;
+  background: #fbfaf6;
+  color: #56524c;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.settings-nav-btn:hover {
+  background: #f0eee8;
+  color: #2b2b2b;
+}
+.settings-nav-btn.is-active {
+  border-color: #3a3835;
+  background: #3a3835;
+  color: #fff;
+}
+.settings-nav-btn:focus-visible {
+  outline: 2px solid #7c8b5c;
+  outline-offset: 2px;
+}
+
+.settings-panel {
+  min-width: 0;
+  display: grid;
+  gap: 20px;
+}
+.settings-panel-head h2 {
+  margin: 0 0 6px;
+  font-size: 19px;
+}
+.settings-panel-head p {
+  margin: 0;
+  color: #6e6b65;
+  font-size: 14px;
+}
+
+/* ───── 기본 설정 탭 ───── */
+.settings-general {
+  display: grid;
+  gap: 20px;
+}
 .settings-save-bar {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
-  align-self: flex-end;
-}
-.settings-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0;
 }
 .settings-section {
   background: #fbfaf6;
@@ -96,27 +122,6 @@
   align-items: center;
   gap: 8px;
 }
-.settings-divider {
-  height: 1px;
-  background: #e8e4db;
-}
-.settings-link-btn {
-  border: 0;
-  background: transparent;
-  color: #56524c;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 8px 2px;
-}
-.settings-link-btn:hover {
-  color: #7c8b5c;
-}
-.settings-link-btn span {
-  font-size: 20px;
-  line-height: 0;
-  vertical-align: -2px;
-}
 .settings-select {
   padding: 8px 12px;
   border: 1px solid #d8d4ca;
@@ -127,19 +132,17 @@
 }
 .settings-saved {
   font-size: 13px;
-  color: #7c8b5c;
+  color: #647944;
 }
-
 .settings-save-btn {
-  padding: 12px 28px;
+  padding: 11px 20px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   background: #3a3835;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 .settings-save-btn:hover:not(:disabled) {
   background: #2b2b2b;
@@ -147,5 +150,25 @@
 .settings-save-btn:disabled {
   background: #c9c5bd;
   cursor: not-allowed;
-  box-shadow: none;
+}
+
+/* 좁은 화면 — 사이드바를 위쪽 가로 줄로 */
+@media (max-width: 720px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .settings-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .settings-nav-btn {
+    width: auto;
+    text-align: center;
+  }
+  .settings-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
 }
