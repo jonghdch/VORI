@@ -5,437 +5,57 @@ import SiteHeader from "../../components/SiteHeader";
 import boriImage from "../../assets/pets/bori.png";
 import "./LandingPage.css";
 
-// 브라우저 창 크롬(신호등 + 타이틀) + 본문. 각 step 미디어 슬롯을 채우는 목업.
 function MockWindow({ label, children }) {
-  return (
-    <div className="landing-mock">
-      <div className="landing-mock-bar">
-        <span className="landing-mock-dot landing-mock-dot--r" />
-        <span className="landing-mock-dot landing-mock-dot--y" />
-        <span className="landing-mock-dot landing-mock-dot--g" />
-        <span className="landing-mock-bar-title">{label}</span>
-      </div>
-      <div className="landing-mock-body">{children}</div>
-    </div>
-  );
+  return <div className="landing-mock"><div className="landing-mock-bar"><span className="landing-mock-dot landing-mock-dot--r" /><span className="landing-mock-dot landing-mock-dot--y" /><span className="landing-mock-dot landing-mock-dot--g" /><span className="landing-mock-bar-title">{label}</span></div><div className="landing-mock-body">{children}</div></div>;
 }
 
-// ① 지출 + 사유 입력 폼
 function MockEntry() {
-  return (
-    <MockWindow label="오늘 지출 · 새 기록">
-      <div className="landing-mock-row">
-        <span className="landing-mock-label">내역</span>
-        <span className="landing-mock-input">점심에 친구랑 파스타</span>
-      </div>
-      <div className="landing-mock-row">
-        <span className="landing-mock-label">금액</span>
-        <span className="landing-mock-input landing-mock-amount">18,000원</span>
-      </div>
-      <div className="landing-mock-row">
-        <span className="landing-mock-label">분류</span>
-        <span className="landing-mock-chip">식비 · 외식</span>
-      </div>
-      <div className="landing-mock-reason">
-        <span className="landing-mock-label">사유</span>
-        <p>오랜만에 만난 친구라 기분 좋게 썼어요.</p>
-      </div>
-    </MockWindow>
-  );
+  return <MockWindow label="오늘 지출 · 새 기록"><div className="landing-mock-row"><span className="landing-mock-label">내역</span><span className="landing-mock-input">친구와 저녁 파스타</span></div><div className="landing-mock-row"><span className="landing-mock-label">금액</span><span className="landing-mock-input landing-mock-amount">18,000원</span></div><div className="landing-mock-row"><span className="landing-mock-label">분류</span><span className="landing-mock-chip">식비 · 외식</span></div><div className="landing-mock-reason"><span className="landing-mock-label">메모</span><p>오랜만에 만난 친구와 함께한 저녁</p></div></MockWindow>;
 }
 
-// ② AI 시그널 판정 결과
 function MockVerdict() {
-  return (
-    <MockWindow label="AI 합리성 판정">
-      <div className="landing-mock-verdict">
-        <span className="landing-mock-signals" aria-hidden>
-          <span className="landing-mock-sig landing-mock-sig--on" />
-          <span className="landing-mock-sig landing-mock-sig--gray" />
-          <span className="landing-mock-sig landing-mock-sig--red" />
-        </span>
-        <strong className="landing-mock-verdict-text">합리적</strong>
-      </div>
-      <ul className="landing-mock-reasons">
-        <li>예산 안에서 쓴 지출이에요</li>
-        <li>평소 외식 패턴과 비슷해요</li>
-        <li>적어둔 사유가 분명해요</li>
-      </ul>
-    </MockWindow>
-  );
+  return <MockWindow label="오늘의 소비 판정"><div className="landing-mock-verdict"><span className="landing-mock-signals" aria-hidden><span className="landing-mock-sig landing-mock-sig--on" /><span className="landing-mock-sig landing-mock-sig--gray" /><span className="landing-mock-sig landing-mock-sig--red" /></span><strong className="landing-mock-verdict-text">합리적인 소비</strong></div><ul className="landing-mock-reasons"><li>평소 외식 범위와 비슷해요</li><li>소비한 이유가 분명해요</li><li>이번 달 흐름에서 무리가 없어요</li></ul></MockWindow>;
 }
 
-// ③ 펫 성장 (스탯 상승)
 function MockGrowth() {
-  const stats = [
-    { label: "에너지", pct: 72 },
-    { label: "매력", pct: 58 },
-    { label: "지능", pct: 66 },
-    { label: "지구력", pct: 80 },
-  ];
-  return (
-    <MockWindow label="보리의 방">
-      <div className="landing-mock-pet">
-        <span className="landing-mock-pet-avatar">
-          <img src={boriImage} alt="" />
-        </span>
-        <span className="landing-mock-pet-meta">
-          <span className="landing-mock-pet-name">보리</span>
-          <span className="landing-mock-pet-sub">합리적인 하루를 보냈어요</span>
-        </span>
-        <span className="landing-mock-grow">스탯 +2</span>
-      </div>
-      <ul className="landing-mock-stats">
-        {stats.map((s) => (
-          <li key={s.label}>
-            <span>{s.label}</span>
-            <span className="landing-mock-track">
-              <span
-                className="landing-mock-fill"
-                style={{ width: `${s.pct}%` }}
-              />
-            </span>
-            <span className="landing-mock-val">{s.pct}</span>
-          </li>
-        ))}
-      </ul>
-    </MockWindow>
-  );
+  const stats = [{ label: "에너지", pct: 72 }, { label: "매력", pct: 58 }, { label: "지능", pct: 66 }, { label: "지구력", pct: 80 }];
+  return <MockWindow label="보리의 방"><div className="landing-mock-pet"><span className="landing-mock-pet-avatar"><img src={boriImage} alt="" /></span><span className="landing-mock-pet-meta"><span className="landing-mock-pet-name">보리</span><span className="landing-mock-pet-sub">오늘도 함께 성장했어요</span></span><span className="landing-mock-grow">스탯 +2</span></div><ul className="landing-mock-stats">{stats.map((stat) => <li key={stat.label}><span>{stat.label}</span><span className="landing-mock-track"><span className="landing-mock-fill" style={{ width: `${stat.pct}%` }} /></span><span className="landing-mock-val">{stat.pct}</span></li>)}</ul></MockWindow>;
 }
 
-// FAQ 한 항목 단위 컴포넌트.
-// 클릭하면 부드럽게 펼쳐지고 닫혀요. (grid-template-rows 트릭 사용)
+function HeroPreview() {
+  return <div className="landing-studio-preview"><div className="landing-studio-preview-head"><span>오늘의 소비</span><span className="landing-studio-live"><i /> 분석 완료</span></div><div className="landing-studio-preview-body"><div className="landing-studio-score"><span className="landing-studio-score-ring">A</span><div><strong>좋은 흐름이에요</strong><p>내 기준에 맞게 소비했어요</p></div></div><div className="landing-studio-preview-row"><span>친구와 저녁</span><strong>18,000원</strong><em>합리적</em></div><div className="landing-studio-preview-row"><span>교통카드 충전</span><strong>30,000원</strong><em>합리적</em></div><div className="landing-studio-pet-card"><img src={boriImage} alt="보리" /><div><small>오늘의 성장</small><strong>에너지 +2</strong></div><span>Lv. 3</span></div></div></div>;
+}
+
 function FaqItem({ question, children }) {
   const [open, setOpen] = useState(false);
-  return (
-    <div className={`landing-faq-item ${open ? "is-open" : ""}`}>
-      <button
-        type="button"
-        className="landing-faq-q"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
-        <span>{question}</span>
-        <span className="landing-faq-icon" aria-hidden>＋</span>
-      </button>
-      <div className="landing-faq-a-wrap">
-        <div className="landing-faq-a-inner">
-          <p className="landing-faq-a">{children}</p>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className={`landing-faq-item ${open ? "is-open" : ""}`}><button type="button" className="landing-faq-q" onClick={() => setOpen((value) => !value)} aria-expanded={open}><span>{question}</span><span className="landing-faq-icon" aria-hidden>＋</span></button><div className="landing-faq-a-wrap"><div className="landing-faq-a-inner"><p className="landing-faq-a">{children}</p></div></div></div>;
 }
 
 function LandingStepCard({ number, title, desc, mock }) {
-  return (
-    <motion.div
-      className="landing-step"
-      initial={{ opacity: 0.08, y: 56 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.016 }}
-      viewport={{ once: true, amount: 0.36 }}
-      transition={{
-        opacity: { duration: 0.72, ease: [0.22, 1, 0.36, 1] },
-        y: { duration: 0.72, ease: [0.22, 1, 0.36, 1] },
-        scale: { duration: 0.16, ease: "easeOut" },
-      }}
-    >
-      <div className="landing-step-text">
-        <div className="landing-step-head">
-          <div className="landing-step-num">{number}</div>
-          <h3 className="landing-step-title">{title}</h3>
-        </div>
-        <p className="landing-step-desc">{desc}</p>
-      </div>
-      <div className="landing-step-media">{mock}</div>
-    </motion.div>
-  );
+  return <motion.article className="landing-step" initial={{ opacity: 0, y: 36 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}><div className="landing-step-text"><div className="landing-step-head"><div className="landing-step-num">{number}</div><h3 className="landing-step-title">{title}</h3></div><p className="landing-step-desc">{desc}</p></div><div className="landing-step-media">{mock}</div></motion.article>;
 }
 
-// 로그인 전 메인(랜딩) 페이지.
-// 페이지 단위로 폴더를 잡아뒀어요: src/pages/<페이지이름>/<페이지이름>.jsx
-// 이 파일 하나만 수정하면 이 페이지의 내용이 바뀝니다.
+const FEATURES = [
+  { icon: "✎", title: "빠른 소비 기록", desc: "내역과 금액만 적으면 카테고리를 자동으로 분류하고, 영수증 사진도 읽어드려요." },
+  { icon: "◎", title: "내 기준의 소비 판정", desc: "남과 비교하지 않고 나의 평소 소비 패턴을 기준으로 초록·회색·빨강 신호를 보여줘요." },
+  { icon: "✦", title: "이유를 묻는 AI", desc: "예외적인 지출에는 혼내는 대신 왜 필요했는지 묻고, 답변을 반영해 다시 판단해요." },
+  { icon: "↗", title: "눈에 보이는 성장", desc: "아낀 금액은 펫의 네 가지 스탯과 게임머니로 이어져 기록을 계속할 이유가 생겨요." },
+  { icon: "▦", title: "주간·월간 리포트", desc: "흩어진 기록을 기간별로 모아 자주 쓰는 곳과 소비 흐름을 한눈에 확인해요." },
+  { icon: "⌂", title: "마이룸과 도감", desc: "펫을 키우고 방을 꾸미며 칭호를 모으는 재미가 꾸준한 소비 습관을 만들어줘요." },
+];
 
 function LandingPage({ user, onLogout }) {
   const navigate = useNavigate();
-  const goSignup = () => navigate("/signup");
-  const goStory = () => navigate("/story");
-  return (
-    <div className="landing">
-      <SiteHeader user={user} onLogout={onLogout} />
-
-      {/* ───────── 히어로 (큰 타이틀 영역) ───────── */}
-      <section className="landing-hero">
-        {/* 배경 이미지(가로로 눕혀서 사용). public/images/hero-bg.jpg 를 바꾸면 됩니다. */}
-        <img
-          className="landing-hero-bg"
-          src={`${process.env.PUBLIC_URL}/images/hero-bg.jpg`}
-          alt=""
-          aria-hidden
-        />
-        <div className="landing-hero-inner">
-          <div className="landing-hero-text">
-            <h1 className="landing-title">
-              펫과 함께 자라는<br />
-              <span className="landing-title-accent">똑똑한 소비 습관</span>
-            </h1>
-            <p className="landing-subtitle">
-              지출에 사유를 적으면, AI가 합리적인 소비였는지 알려줘요.<br />
-              현명하게 쓸수록 펫이 무럭무럭 자랍니다.
-            </p>
-            <div className="landing-cta-row">
-              <button
-                className="landing-btn landing-btn-primary landing-btn-lg"
-                type="button"
-                onClick={goSignup}
-              >
-                지금 펫과 함께 시작하기
-              </button>
-              <button
-                className="landing-btn landing-btn-ghost landing-btn-lg"
-                type="button"
-                onClick={goStory}
-              >
-                스토리 보기
-              </button>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ───────── 우리 이야기 (간단 한 단락) ───────── */}
-      <section className="landing-story">
-        <div className="landing-story-inner">
-          <span className="landing-story-eyebrow">우리 이야기</span>
-          <h2 className="landing-story-title">
-            지출이 부담이 아닌,<br />
-            펫과의 작은 일과가 되도록
-          </h2>
-          <p className="landing-story-body">
-            가계부는 결과가 잘 보이지 않아서 금세 지칩니다. VORI는 매일의 작은
-            선택이 펫의 성장으로 이어지도록 만들었어요. 합리적인 소비는
-            기록 그 자체로 보상이 되고, 그렇지 않은 날에는 펫이 가볍게
-            귀띔해줍니다. 가계부의 부담을 덜고, 키우는 재미로 이어가는 것 —
-            그게 VORI 가 지향하는 모습입니다.
-          </p>
-          <p className="landing-story-meta">졸업작품 · VORI Team</p>
-        </div>
-      </section>
-
-      {/* ───────── AI 질문 예시 ───────── */}
-      <section className="landing-ai-prompts">
-        <div className="landing-section-head">
-          <h2 className="landing-section-title">기록을 돌아보게 하는 질문</h2>
-          <p className="landing-section-sub">
-            VORI 는 혼내기보다, 소비 뒤에 있던 이유를 다시 꺼내볼 수 있게 물어봐요.
-          </p>
-        </div>
-        <div className="landing-ai-prompt-grid">
-          <article className="landing-ai-prompt">
-            <div className="landing-ai-prompt-meta">평소보다 많은 카페 지출</div>
-            <p className="landing-ai-prompt-text">
-              “이번 주 카페 지출이 평소보다 조금 늘었어요. 작업이나 약속처럼
-              꼭 필요했던 이유가 있었나요?”
-            </p>
-          </article>
-          <article className="landing-ai-prompt landing-ai-prompt--accent">
-            <div className="landing-ai-prompt-meta">배달비가 줄어든 날</div>
-            <p className="landing-ai-prompt-text">
-              “오늘은 배달 대신 직접 챙겨 먹은 기록이 보여요. 이런 선택을
-              도와준 상황이 있었나요?”
-            </p>
-          </article>
-          <article className="landing-ai-prompt">
-            <div className="landing-ai-prompt-meta">갑작스러운 쇼핑</div>
-            <p className="landing-ai-prompt-text">
-              “예산보다 큰 쇼핑이 있었어요. 오래 고민했던 물건인지,
-              순간적인 기분 전환이었는지 알려줄래요?”
-            </p>
-          </article>
-        </div>
-      </section>
-
-      {/* ───────── 핵심 기능 카드 ───────── */}
-      <section id="features" className="landing-features">
-        <div className="landing-section-head">
-          <h2 className="landing-section-title">가계부, 그 이상의 경험</h2>
-          <p className="landing-section-sub">
-            가계부, 펫 육성, AI 코칭이 하나로 연결돼 있어요.
-          </p>
-        </div>
-        <div className="landing-feature-grid">
-          <article className="landing-feature-card">
-            <div className="landing-feature-head">
-              <div className="landing-feature-icon landing-icon-green">💰</div>
-              <h3 className="landing-feature-title">사유 가계부</h3>
-            </div>
-            <p className="landing-feature-desc">
-              지출 금액과 함께 "왜 썼는지"를 남겨요.
-              나중에 다시 봤을 때 패턴이 보입니다.
-            </p>
-          </article>
-          <article className="landing-feature-card">
-            <div className="landing-feature-head">
-              <div className="landing-feature-icon landing-icon-purple">🏷️</div>
-              <h3 className="landing-feature-title">카테고리 자동 분류</h3>
-            </div>
-            <p className="landing-feature-desc">
-              지출 내용을 적기만 하면 AI가 식비·문화·고정비 등으로
-              알아서 분류해줘요. 매번 카테고리를 고를 필요가 없습니다.
-            </p>
-          </article>
-          <article className="landing-feature-card">
-            <div className="landing-feature-head">
-              <div className="landing-feature-icon landing-icon-orange">🤖</div>
-              <h3 className="landing-feature-title">AI 합리성 판정</h3>
-            </div>
-            <p className="landing-feature-desc">
-              4가지 알고리즘이 지출을 분석해
-              🟢 합리적 / ⚪ 중립 / 🔴 과소비 시그널을 줍니다.
-            </p>
-          </article>
-          <article className="landing-feature-card">
-            <div className="landing-feature-head">
-              <div className="landing-feature-icon landing-icon-yellow">🌱</div>
-              <h3 className="landing-feature-title">펫 키우기</h3>
-            </div>
-            <p className="landing-feature-desc">
-              합리적인 소비를 할수록 펫의 스탯이 오르고
-              새로운 성장 단계로 진화해요.
-            </p>
-          </article>
-          <article className="landing-feature-card">
-            <div className="landing-feature-head">
-              <div className="landing-feature-icon landing-icon-blue">🏠</div>
-              <h3 className="landing-feature-title">마이룸 & 업적</h3>
-            </div>
-            <p className="landing-feature-desc">
-              아낀 만큼 상점에서 아이템을 사고
-              나만의 방을 꾸미며 업적을 모아보세요.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      {/* ───────── 이용 방법 3단계 ───────── */}
-      <section id="how" className="landing-how">
-        <div className="landing-section-head">
-          <h2 className="landing-section-title">이렇게 사용해요</h2>
-          <p className="landing-section-sub">
-            세 단계면 펫과 함께하는 소비 일기가 시작돼요.
-          </p>
-        </div>
-        <div className="landing-step-row">
-          <LandingStepCard
-            number="01"
-            title="지출 + 사유 입력"
-            desc={
-              <>
-                오늘 쓴 돈과 이유를 한 줄로 적어요.<br />
-                "점심에 친구랑 파스타" 처럼 자유롭게.
-              </>
-            }
-            mock={<MockEntry />}
-          />
-          <LandingStepCard
-            number="02"
-            title="AI가 시그널 판정"
-            desc={
-              <>
-                과거 소비, 예산, 패턴을 함께 보고
-                합리성을 판단해 알려드려요.
-              </>
-            }
-            mock={<MockVerdict />}
-          />
-          <LandingStepCard
-            number="03"
-            title="펫이 성장"
-            desc={
-              <>
-                에너지·매력·지능·지구력 스탯이 오르고,
-                마이룸에서 결과를 확인해요.
-              </>
-            }
-            mock={<MockGrowth />}
-          />
-        </div>
-      </section>
-
-      {/* ───────── FAQ ───────── */}
-      <section className="landing-faq">
-        <div className="landing-section-head">
-          <h2 className="landing-section-title">자주 묻는 질문</h2>
-          <p className="landing-section-sub">
-            궁금한 것들을 모아뒀어요. 더 있으면 언제든 문의해 주세요.
-          </p>
-        </div>
-        <div className="landing-faq-list">
-          <FaqItem question="VORI 는 무료인가요?">
-            네, 가입과 기본 기능은 모두 무료예요. 졸업작품 단계라 별도의
-            결제 절차 없이 모든 기능을 사용해보실 수 있습니다.
-          </FaqItem>
-          <FaqItem question="내 지출 데이터는 안전한가요?">
-            지출 내역은 본인 계정에만 연결되며, 분석 외 다른 목적으로는
-            사용하지 않아요. 비밀번호는 암호화하여 저장하고, 통신 구간도
-            모두 HTTPS 로 보호됩니다.
-          </FaqItem>
-          <FaqItem question="AI 는 어떤 기준으로 합리성을 판정하나요?">
-            사용자의 예산, 과거 소비 패턴, 카테고리별 평균, 그리고 입력한
-            사유 텍스트 네 가지를 함께 봅니다. 단일 알고리즘이 아니라 네
-            가지 관점이 교차 검증된 결과를 시그널로 보여드려요.
-          </FaqItem>
-          <FaqItem question="PC 와 모바일 모두 되나요?">
-            네, 웹 브라우저 기반이라 PC, 태블릿, 모바일 어디서든 동일한
-            계정으로 사용하실 수 있습니다.
-          </FaqItem>
-        </div>
-      </section>
-
-      {/* ───────── 하단 CTA ───────── */}
-      <section className="landing-bottom-cta">
-        <div className="landing-bottom-cta-inner">
-          <h2 className="landing-bottom-cta-title">
-            오늘부터 펫과 함께해볼까요?
-          </h2>
-          <p className="landing-bottom-cta-sub">
-            가입은 30초, 첫 지출 기록부터 펫이 반응합니다.
-          </p>
-          <button
-            className="landing-btn landing-btn-primary landing-btn-lg"
-            type="button"
-            onClick={goSignup}
-          >
-            시작하기
-          </button>
-        </div>
-      </section>
-
-
-      {/* ───────── 푸터 ───────── */}
-      <footer id="team" className="landing-footer">
-        <div className="landing-footer-inner">
-          <div className="landing-footer-brand">
-            <div className="landing-logo landing-logo-sm">VORI</div>
-            <p className="landing-footer-desc">
-              AI 스토리텔링 가계부 · 펫 육성 서비스
-            </p>
-          </div>
-          <div className="landing-footer-meta">
-            <div className="landing-footer-legal">
-              <a href="/terms">이용약관</a>
-              <span aria-hidden>·</span>
-              <a href="/privacy">개인정보처리방침</a>
-            </div>
-            <span>졸업작품 © 2026 VORI Team</span>
-            <span>문의 : vori@example.com</span>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
+  const startPath = user ? "/home" : "/signup";
+  return <div className="landing landing-studio"><SiteHeader user={user} onLogout={onLogout} /><main>
+    <section className="landing-studio-hero"><img className="landing-studio-hero-bg" src={`${process.env.PUBLIC_URL}/images/hero-bg.jpg`} alt="" aria-hidden /><div className="landing-studio-hero-shade" /><div className="landing-studio-container landing-studio-hero-grid"><motion.div className="landing-studio-hero-copy" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}><span className="landing-studio-kicker">AI CONSUMPTION JOURNAL</span><h1>쓴 돈을 기록하면,<br /><strong>내 소비가 이해되기 시작해요.</strong></h1><p>VORI는 금액만 세는 가계부가 아니에요. 나의 평소 패턴과 소비 이유를 함께 살피고, 더 나은 선택을 펫의 성장으로 돌려드립니다.</p><div className="landing-studio-tags"><span>#자동분류</span><span>#AI판정</span><span>#펫성장</span><span>#소비리포트</span></div><div className="landing-studio-actions"><button type="button" className="landing-studio-primary" onClick={() => navigate(startPath)}>{user ? "내 기록 보러가기" : "무료로 시작하기"} <span>→</span></button><button type="button" className="landing-studio-secondary" onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>사용 방법 보기</button></div></motion.div><motion.div className="landing-studio-hero-visual" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.12 }}><HeroPreview /></motion.div></div></section>
+    <section className="landing-studio-facts" aria-label="VORI 핵심 특징"><div className="landing-studio-container landing-studio-facts-grid"><div><strong>3단계</strong><span>기록부터 성장까지</span></div><div><strong>3가지</strong><span>소비 시그널</span></div><div><strong>4종</strong><span>펫 성장 스탯</span></div><div><strong>16종</strong><span>함께할 펫</span></div></div></section>
+    <section id="features" className="landing-studio-services"><div className="landing-studio-container"><div className="landing-studio-section-head"><span>WHAT VORI DOES</span><h2><em>소비 기록</em>이 습관이 되도록</h2><p>입력의 번거로움은 줄이고, 기록 뒤에 돌아오는 가치는 더 분명하게 만들었어요.</p></div><div className="landing-studio-service-grid">{FEATURES.map((feature, index) => <motion.article key={feature.title} className="landing-studio-service-card" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ duration: 0.5, delay: index * 0.05 }}><span className="landing-studio-service-icon">{feature.icon}</span><h3>{feature.title}</h3><p>{feature.desc}</p><span className="landing-studio-card-index">0{index + 1}</span></motion.article>)}</div></div></section>
+    <section className="landing-studio-value"><div className="landing-studio-container landing-studio-value-grid"><div className="landing-studio-value-copy"><span className="landing-studio-kicker">AFTER RECORDING</span><h2>기록으로 끝나지 않고,<br /><strong>다음 선택까지 이어져요.</strong></h2><p>오늘의 소비를 이해하고, 내일의 기준을 만들고, 그 과정이 보리의 성장으로 남습니다.</p><button type="button" onClick={() => navigate("/story")}>VORI 이야기 보기 <span>→</span></button></div><div className="landing-studio-value-list"><article><span>01</span><div><h3>평소의 나와 비교</h3><p>고정된 정답 대신 개인별 소비 평균과 변화 흐름을 사용해요.</p></div></article><article><span>02</span><div><h3>맥락까지 다시 판단</h3><p>경조사, 긴급 지출, 자기투자처럼 금액만으로 알 수 없는 이유를 반영해요.</p></div></article><article><span>03</span><div><h3>성장으로 돌아오는 보상</h3><p>합리적인 선택과 절약이 펫 스탯, 게임머니, 업적으로 연결돼요.</p></div></article></div></div></section>
+    <section id="how" className="landing-how landing-studio-how"><div className="landing-studio-section-head"><span>HOW IT WORKS</span><h2>딱 세 단계면 충분해요</h2><p>복잡한 설정 없이 오늘 쓴 돈부터 가볍게 시작하세요.</p></div><div className="landing-step-row"><LandingStepCard number="01" title="오늘의 소비를 기록해요" desc="내역과 금액을 적으면 VORI가 카테고리를 자동으로 찾아요." mock={<MockEntry />} /><LandingStepCard number="02" title="내 기준으로 살펴봐요" desc="평소 패턴에서 벗어난 지출은 이유까지 듣고 시그널을 정해요." mock={<MockVerdict />} /><LandingStepCard number="03" title="좋은 선택이 성장해요" desc="절약한 만큼 펫의 스탯이 오르고 새로운 성장 단계가 열려요." mock={<MockGrowth />} /></div></section>
+    <section className="landing-faq landing-studio-faq"><div className="landing-studio-section-head"><span>FAQ</span><h2>시작하기 전에 궁금한 점</h2></div><div className="landing-faq-list"><FaqItem question="VORI는 무료인가요?">네. 현재 가입과 제공되는 기본 기능은 별도 결제 없이 사용할 수 있어요.</FaqItem><FaqItem question="AI는 어떤 기준으로 판단하나요?">사용자별 카테고리 소비 평균과 변화량을 먼저 계산하고, 예외적인 지출에는 사용자가 적은 이유를 추가로 반영해요.</FaqItem><FaqItem question="처음 가입하면 기록이 없어도 괜찮나요?">소비 프로필로 초기 기준을 부드럽게 잡고, 실제 기록이 쌓일수록 나에게 맞는 기준으로 조정돼요.</FaqItem><FaqItem question="모바일에서도 사용할 수 있나요?">네. 별도 앱 설치 없이 모바일과 PC 웹 브라우저에서 사용할 수 있어요.</FaqItem></div></section>
+    <section className="landing-studio-final"><div className="landing-studio-container"><span>READY TO START?</span><h2>오늘 쓴 돈 하나부터,<br />보리와 함께 기록해보세요.</h2><p>몇 분이면 내 소비 기준이 준비됩니다.</p><button type="button" onClick={() => navigate(startPath)}>{user ? "VORI로 돌아가기" : "무료로 시작하기"} <span>→</span></button></div></section>
+  </main><footer id="team" className="landing-footer"><div className="landing-footer-inner"><div className="landing-footer-brand"><div className="landing-logo landing-logo-sm">VORI</div><p className="landing-footer-desc">AI 소비 기록 · 펫 성장 서비스</p></div><div className="landing-footer-meta"><div className="landing-footer-legal"><a href="/terms">이용약관</a><span aria-hidden>·</span><a href="/privacy">개인정보처리방침</a></div><span>졸업작품 © 2026 VORI Team</span></div></div></footer></div>;
 }
 
 export default LandingPage;
