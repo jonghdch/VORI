@@ -16,8 +16,10 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -150,17 +152,26 @@ public class GeminiClient {
      * 음수인 날의 "챙겨야 할 일이 많았던" 은 지시하지 않은 표현이다 — 사유를 모른다는 제약을
      * 모델이 문장으로 옮긴 것이라, 이 제약이 실제로 전달되고 있다는 신호로 본다.
      *
-     * <p>한계: 어제 무엇을 샀는지도, AI 가 인정한 지출이 있었는지도 모른다. 그 맥락을 넘겨주면
-     * 코멘트가 훨씬 구체적이어지지만 시그니처·호출부·스케줄러를 함께 고쳐야 해서 미뤄 뒀다.
+     * <p><b>사용자가 직접 밝힌 지출 이유를 넘긴다(2026-10-01).</b> 예전엔 AI 질문에 "친구 결혼식이었어"
+     * 라고 답해도 다음 날 펫은 그걸 모른 채 금액만 보고 말했다. 이제 그날 답한 질문의 <b>분류</b>
+     * ({@link ReasonCategory})를 받아, 필요한 데 쓴 날이었다는 걸 아는 듯 말할 수 있다.
+     * <ul>
+     *   <li><b>답변 원문은 넘기지 않는다.</b> 분류만으로 충분하고, 원문을 주면 "친구 결혼식 축하해!" 처럼
+     *       되짚는데 같은 경조사가 장례식일 수도 있다. 사적인 내용을 펫이 다시 꺼낼 이유도 없다.</li>
+     *   <li>분류 이름도 판단이 섞이지 않은 말로 옮긴다 — IMPULSE 는 "충동구매" 가 아니라 "사고 싶어서 산 것".</li>
+     *   <li>이유를 모르는 지출이 여전히 대부분이라(질문은 빨강에만 나간다) 위의 "짐작하지 않는다" 는 그대로다.</li>
+     * </ul>
      *
-     * @param petName 말하는 주체가 될 펫 종족명. 펫이 없으면 null.
+     * <p>2026-10-01 실측(gemini-3.6-flash, 셋 다 절약액 음수):
+     * <ul>
+     *   <li>경조사 → "어제는 따로 챙겨야 할 자리가 있어서 평소보다 바쁘게 다녀왔나 보네…" — 축하·위로 없음</li>
+     *   <li>갑작스러운 일 → "…갑자기 챙겨야 할 일이 있었나 보던데 너 별일 없이 괜찮은 거지?" — 안부만</li>
+     *   <li>사고 싶어서 산 것 → "어제는 네 눈길을 사로잡은 게 있어서…" — 나무람 없음</li>
+     * </ul>
+     * 예전엔 셋 다 같은 "나갈 데가 있었나 보네" 결이었다. 마지막 경우에 예시 문장의 "챙겨야 할 일" 이
+     * 섞여 들어오는 건 남은 약점이다.
      */
-    public String generateDailyComment(String petName, int expenseTotal, int incomeTotal,
-                                       int savedAmount, int statDelta) {
-        String intro = (petName == null || petName.isBlank())
-                ? "너는 사용자의 절약을 돕는 반려 펫이야."
-                : "너는 사용자가 키우는 반려 펫 '" + petName + "'야.";
-
+    public String generateDailyComment(DailyCommentInput in) {
         String prompt = String.format("""
                 %s 어제 하루를 지켜봤고, 지금 사용자에게 말을 건다.
 
@@ -169,28 +180,76 @@ public class GeminiClient {
                 - 수입 합계: %,d원
                 - 평소 소비 패턴 대비 절약액: %,d원 (음수면 평소보다 더 썼다는 뜻)
                 - 그래서 오른 내 스탯: %d
+                - 사용자가 직접 밝힌 지출 이유: %s
 
                 한국어 2문장으로 코멘트를 써.
 
                 규칙:
                 1. 숫자를 그대로 나열하지 마. 이야기하듯 말해.
                 2. 절약액이 양수면 마음껏 기뻐하고 자랑해. 스탯이 올랐으면 그것도 같이 신나 해.
-                3. 절약액이 음수여도 잘못했다고 전제하지 마. 너는 이유를 모른다.
+                3. 절약액이 음수여도 잘못했다고 전제하지 마. 이유를 다 알지는 못해.
                    병원에 갔을 수도, 장례식에 다녀왔을 수도 있어.
                    - '내일은 더 잘할 수 있을 거야', '조금만 아껴보자' 처럼 반성을 요구하는 말을 쓰지 마.
-                   - 무슨 일이 있었는지 모르니 짐작해서 위로하지도 마.
+                   - 모르는 일을 짐작해서 위로하지도 마.
                    - 그냥 곁에 있는 말을 해.
                 4. 가르치려 들지 마. 절약 조언이나 훈수 금지.
                 5. 이모지는 최대 1개.
                 6. 사용자는 '너', '네' 로 불러. 친구처럼 편하게. '주인' 이라는 말은 쓰지 마.
+                7. 지출 이유가 있으면 그걸 알고 있다는 듯 한마디 해도 돼. 단,
+                   - 이유를 적힌 그대로 읽지 말고, 무슨 일이었는지 더 짐작하지 마.
+                   - 경조사는 기쁜 일인지 슬픈 일인지 몰라. 축하도 위로도 하지 말고 챙길 일이 있었다는 정도로만.
+                   - 갑작스러운 일은 무슨 일인지 묻지 말고 괜찮은지 안부만.
+                   - 사고 싶어서 산 것은 나무라지 마. 굳이 꺼내지 않아도 돼.
 
                 절약액이 음수인 날은 이런 결로:
                 "어제는 평소보다 나갈 데가 있었나 보네. 나는 오늘도 여기서 기다리고 있을게 🌱"
 
                 코멘트만 출력해.""",
-                intro, expenseTotal, incomeTotal, savedAmount, statDelta
+                introFor(in.petName(), in.speciesName()),
+                in.expenseTotal(), in.incomeTotal(), in.savedAmount(), in.statDelta(),
+                describeReasons(in.reasons())
         );
         return callGemini(prompt);
+    }
+
+    /**
+     * 일일 코멘트 입력.
+     *
+     * @param petName     사용자가 지어 준 펫 이름. 아직 없으면 null.
+     * @param speciesName 펫 종족명. 펫이 없으면 null.
+     * @param reasons     그날 AI 질문에 답해 분류된 지출 이유(답한 것만). 없으면 빈 목록.
+     */
+    public record DailyCommentInput(String petName, String speciesName,
+                                    int expenseTotal, int incomeTotal, int savedAmount, int statDelta,
+                                    List<ReasonCategory> reasons) {}
+
+    /** 펫이 누구로서 말하는지. 이름이 있으면 "강아지 '콩이'", 없으면 종족명, 펫이 없으면 일반 펫. */
+    static String introFor(String petName, String speciesName) {
+        boolean hasName = petName != null && !petName.isBlank();
+        boolean hasSpecies = speciesName != null && !speciesName.isBlank();
+        if (hasName && hasSpecies) return "너는 사용자가 키우는 " + speciesName + " '" + petName + "'야.";
+        if (hasName || hasSpecies) return "너는 사용자가 키우는 반려 펫 '" + (hasName ? petName : speciesName) + "'야.";
+        return "너는 사용자의 절약을 돕는 반려 펫이야.";
+    }
+
+    /** 판단이 섞이지 않은 말로 옮긴 사유 이름. 프롬프트 전용. */
+    private static final Map<ReasonCategory, String> REASON_LABEL = Map.of(
+            ReasonCategory.CEREMONY, "경조사(결혼식·장례식 등)",
+            ReasonCategory.EMERGENCY, "갑작스러운 일(병원·사고 등)",
+            ReasonCategory.SELF_INVEST, "배우거나 자신을 위해 쓴 것(공부·자기계발 등)",
+            ReasonCategory.SOCIAL, "사람을 만나는 일(모임·회식 등)",
+            ReasonCategory.IMPULSE, "사고 싶어서 산 것",
+            ReasonCategory.ETC, "기타");
+
+    /** 예: "경조사(결혼식·장례식 등) 1건, 사고 싶어서 산 것 2건". 없으면 "없음". */
+    static String describeReasons(List<ReasonCategory> reasons) {
+        if (reasons == null || reasons.isEmpty()) return "없음";
+        Map<ReasonCategory, Long> counts = reasons.stream()
+                .collect(Collectors.groupingBy(r -> r, () -> new EnumMap<>(ReasonCategory.class),
+                        Collectors.counting()));
+        return counts.entrySet().stream()
+                .map(e -> REASON_LABEL.get(e.getKey()) + " " + e.getValue() + "건")
+                .collect(Collectors.joining(", "));
     }
 
     public ReasonCategory classifyAnswer(String question, String answer) {
