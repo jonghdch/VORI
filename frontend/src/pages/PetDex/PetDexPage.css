@@ -2,6 +2,47 @@
   padding-bottom: 48px;
 }
 
+/* 화면 제목은 사이드바가 보여 주므로 보조기기용으로만 둔다 */
+.dex-sr-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* 요약 아래 탭 — 펫 · 업적 · 칭호 */
+.dex-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.dex-tab {
+  border: 1px solid var(--home-border);
+  background: var(--home-white);
+  color: var(--home-muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 10px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.dex-tab.is-active {
+  background: var(--home-green);
+  border-color: var(--home-green);
+  color: #fff;
+}
+
+.dex-tab:focus-visible {
+  outline: 2px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
 .dex-head {
   margin-bottom: 20px;
 }
@@ -29,6 +70,7 @@
   transform: rotate(-7deg);
   box-shadow: 0 3px 0 rgba(79, 127, 179, 0.4), 0 5px 10px rgba(79, 127, 179, 0.2);
 }
+
 
 .dex-head p {
   margin: 8px 0 0;

@@ -401,7 +401,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             <button
               type="button"
               className="home-btn home-btn-primary home-btn-block"
-              onClick={() => navigate("/titles")}
+              onClick={() => navigate("/dex?tab=achievements")}
             >
               ▶ 더 많은 업적 확인하기
             </button>
