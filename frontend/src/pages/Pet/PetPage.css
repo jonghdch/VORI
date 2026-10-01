@@ -580,43 +580,9 @@
   line-height: 1.45;
 }
 
-.pet-status-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px;
-  margin-bottom: 16px;
-  border-radius: var(--home-radius-sm);
-  background: var(--home-green-soft);
-}
-
-.pet-status-summary strong {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 18px;
-  font-weight: 900;
-  color: var(--home-text);
-}
-
-.pet-status-summary p {
-  margin: 0;
-  color: var(--home-muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.pet-status-image {
-  width: 70px;
-  height: 70px;
-  object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 8px 10px rgba(61, 56, 48, 0.14));
-}
-
 .pet-status-list {
   list-style: none;
-  margin: 0;
+  margin: 16px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -804,10 +770,6 @@
 }
 .pet-profile-emoji {
   font-size: 40px;
-  line-height: 1;
-}
-.pet-status-emoji {
-  font-size: 44px;
   line-height: 1;
 }
 

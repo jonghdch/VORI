@@ -77,9 +77,8 @@ const INITIAL_PET_POSITION = { x: 50, y: 62 };
 
 // 오른쪽 카드 하나에서 탭으로 전환해 보는 섹션들
 const PANEL_TABS = [
-  { id: "pet", label: "현재 펫" },
+  { id: "pet", label: "펫 상태" },
   { id: "chat", label: "대화방" },
-  { id: "status", label: "펫 상태" },
   { id: "background", label: "방 색상" },
   { id: "furniture", label: "보유 가구" },
   { id: "items", label: "아이템" },
@@ -728,7 +727,7 @@ function PetPage({ user, onLogout }) {
             </section>
           </div>
 
-          {/* 오른쪽: 현재 펫 · 대화방 · 펫 상태 · 방 색상 · 보유 가구 · 아이템 · 내역을 한 카드에서 탭으로 전환 */}
+          {/* 오른쪽: 펫 상태 · 대화방 · 방 색상 · 보유 가구 · 아이템 · 내역을 한 카드에서 탭으로 전환 */}
           <aside className="pet-myroom-side">
             <section className="home-card pet-panel pet-tab-card">
               <div className="pet-tab-bar" role="tablist" aria-label="마이룸 메뉴">
@@ -758,7 +757,7 @@ function PetPage({ user, onLogout }) {
               {activeTab === "pet" && (
                 <div className="pet-tab-panel">
                   <div className="pet-panel-head">
-                    <h2 className="home-card-title home-card-title--sm">현재 펫</h2>
+                    <h2 className="home-card-title home-card-title--sm">펫 상태</h2>
                     <span>{pet ? "한 마리만 키우는 중" : petLoading ? "불러오는 중…" : "펫 없음"}</span>
                   </div>
                   {petError && <p className="pet-inline-error">{petError}</p>}
@@ -813,6 +812,28 @@ function PetPage({ user, onLogout }) {
                           </button>
                         )}
                       </div>
+
+                      {/* 누적 스탯 — 합리적인 지출을 기록하면 자란다 */}
+                      <ul className="pet-status-list" aria-label="누적 스탯">
+                        {STAT_META.map((meta) => {
+                          const value = pet?.[meta.key] ?? 0;
+                          const width = Math.min(Math.max(value, 0), 100);
+                          return (
+                            <li key={meta.key}>
+                              <div className="pet-status-row">
+                                <span>{meta.label}</span>
+                                <strong>{value}</strong>
+                              </div>
+                              <div className="pet-status-track">
+                                <div
+                                  className="pet-status-fill"
+                                  style={{ width: `${width}%`, background: meta.color }}
+                                />
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
                     </>
                   )}
                   {!pet && !petLoading && !petError && (
@@ -830,49 +851,6 @@ function PetPage({ user, onLogout }) {
                     <p className="pet-empty">키우는 펫이 있어야 대화할 수 있어요.</p>
                   </div>
                 ))}
-              {activeTab === "status" && (
-                <div className="pet-tab-panel">
-                  <div className="pet-panel-head">
-                    <h2 className="home-card-title home-card-title--sm">펫 상태</h2>
-                    <span>누적 스탯</span>
-                  </div>
-                  <div className="pet-status-summary">
-                    <div>
-                      <strong>{selectedPet?.name ?? "펫"}</strong>
-                      <p>합리적인 지출을 기록하면 스탯이 자라요.</p>
-                    </div>
-                    {selectedPet && (
-                      <PetArt
-                        appearanceKey={selectedPet.appearanceKey}
-                        stage={selectedPet.stage}
-                        name={selectedPet.name}
-                        className="pet-status-image"
-                        emojiClassName="pet-status-emoji"
-                      />
-                    )}
-                  </div>
-                  <ul className="pet-status-list">
-                    {STAT_META.map((meta) => {
-                      const value = pet?.[meta.key] ?? 0;
-                      const width = Math.min(Math.max(value, 0), 100);
-                      return (
-                        <li key={meta.key}>
-                          <div className="pet-status-row">
-                            <span>{meta.label}</span>
-                            <strong>{value}</strong>
-                          </div>
-                          <div className="pet-status-track">
-                            <div
-                              className="pet-status-fill"
-                              style={{ width: `${width}%`, background: meta.color }}
-                            />
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
               {activeTab === "background" && (
                 <div className="pet-tab-panel">
                   <div className="pet-panel-head">
