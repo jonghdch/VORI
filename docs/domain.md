@@ -158,10 +158,25 @@ new_sample_count = old_sample_count + 1
 9. saved = max(saved_amount, 0)
    - users.total_saved += saved
    - goals UPDATE (해당 year_month, category_id 매칭 + ACTIVE 인 행들 current_amount += saved)
-10. stat_delta > 0 면:
-    - pets UPDATE (해당 사용자의 활성 펫의 stat_<type> += stat_delta)
-    - pet_growth_logs INSERT (reason='EXPENSE_SAVING')
+10. stat_delta 는 0 으로 저장한다 — 코인·펫 스탯은 지출 때 주지 않는다
+    (PR #56 이후 하루 판정 `DailyJudgmentService.judgeDate` 가 지급. reason='DAILY_JUDGMENT')
 ```
+
+작성 화면은 여러 행을 `POST /api/ledger/entries` 한 번으로 보낸다(`LedgerService.saveEntries`). 행마다 위 흐름을 그대로
+밟지만 전부 **한 트랜잭션**이라, 한 행이라도 실패하면 앞 행의 INSERT·EMA·누적 절약액까지 모두 되돌아간다.
+AI 질문 생성·칭호 평가는 커밋 뒤에 돌므로 되돌아간 저장에 대해서는 일어나지 않는다.
+
+### 지출 수정·삭제 시 파생 값
+
+| 값 | 수정 (`ExpenseService.updateExpense`) | 삭제 (`LedgerService.deleteExpense`) |
+|---|---|---|
+| `z_score`·`signal`·`saved_amount` | 지금 EMA 기준으로 다시 계산 | 행과 함께 삭제 |
+| `users.total_saved` | `max(새 saved, 0) − max(이전 saved, 0)` 만큼 조정. 0 아래로는 내리지 않음 | 이전 saved 만큼 차감. 0 아래로는 내리지 않음 |
+| `user_stat_stats` (EMA) | 그대로 — 시계열 지표라 중간 항을 바꿀 수 없음 | 그대로 |
+| `goals.current_amount` | 그대로 — "그 시점에 일어난 이력" 으로 취급 | 그대로 |
+| AI 질문 | 기존 질문 삭제 후 새 판정이 RED 면 다시 생성 | 행과 함께 삭제(FK `ON DELETE CASCADE`) |
+
+수정으로 누적 절약액이 늘면 칭호 조건을 다시 본다(`TitleCheckEvent`).
 
 AI 답변이 나중에 들어오면:
 ```
