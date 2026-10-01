@@ -13,10 +13,7 @@ import {
 import { categorizeRemote } from "../../api/categorize";
 import { MAX_RECEIPT_BYTES, prepareReceiptImage, uploadReceipt } from "../../api/receipt";
 import {
-  createExpense,
-  createIncome,
-  createSaving,
-  updateExpense,
+  saveLedgerEntries,
   listCategoryTree,
   listExpensesByDate,
   listIncomesByDate,
@@ -314,56 +311,47 @@ function WalletEntryPage({ user }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
-  // 백엔드에 모든 행 저장. 한 건이라도 실패하면 전체 중단하고 에러 표시.
-  // 성공한 행에는 즉시 dbId 를 박아 retry 시 중복 저장 방지.
+  // 지출·수입·저축을 한 요청으로 저장한다. 서버가 한 트랜잭션으로 처리하므로
+  // 하나라도 실패하면 아무것도 저장되지 않고, 고쳐서 다시 눌러도 중복되지 않는다.
   const goNext = async () => {
     if (!canProceed || submitting) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      for (const r of expense) {
-        if ((r.dbId && !r.isEditing) || isRowEmpty(r)) continue;
-        if (!r.categoryId) {
-          throw new Error(`"${r.name}" 카테고리를 분류하지 못했어요. 잠시 후 다시 시도해주세요.`);
-        }
-        const payload = {
-          item: r.name.trim(),
-          amount: r.amount,
-          categoryId: r.categoryId,
-          paymentMethod: r.paymentMethod,
-          spentAt: `${dateStr}T00:00:00`,
-        };
-        const saved = r.isEditing
-          ? await updateExpense(r.dbId, payload)
-          : await createExpense(payload);
-        setExpense((rows) =>
-          rows.map((rr) => (rr.id === r.id ? { ...rr, dbId: saved.id } : rr)),
-        );
+      const expenseRows = expense.filter(
+        (r) => !isRowEmpty(r) && (!r.dbId || r.isEditing),
+      );
+      const unclassified = expenseRows.find((r) => !r.categoryId);
+      if (unclassified) {
+        throw new Error(`"${unclassified.name}" 카테고리를 분류하지 못했어요. 잠시 후 다시 시도해주세요.`);
       }
-      for (const r of income) {
-        if (r.dbId || isRowEmpty(r)) continue;
-        const saved = await createIncome({
-          item: r.name.trim(),
-          amount: r.amount,
-          source: r.categoryEnum || "OTHER",
-          paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
-          receivedAt: dateStr,
+      const incomeRows = income.filter((r) => !r.dbId && !isRowEmpty(r));
+      const savingRows = savings.filter((r) => !r.dbId && !isRowEmpty(r));
+
+      if (expenseRows.length + incomeRows.length + savingRows.length > 0) {
+        await saveLedgerEntries({
+          expenses: expenseRows.map((r) => ({
+            id: r.isEditing ? r.dbId : null,
+            item: r.name.trim(),
+            amount: Number(r.amount),
+            categoryId: r.categoryId,
+            paymentMethod: r.paymentMethod,
+            spentAt: `${dateStr}T00:00:00`,
+          })),
+          incomes: incomeRows.map((r) => ({
+            item: r.name.trim(),
+            amount: Number(r.amount),
+            source: r.categoryEnum || "OTHER",
+            paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
+            receivedAt: dateStr,
+          })),
+          savings: savingRows.map((r) => ({
+            item: r.name.trim(),
+            amount: Number(r.amount),
+            savingType: r.categoryEnum || "DEPOSIT",
+            savedAt: dateStr,
+          })),
         });
-        setIncome((rows) =>
-          rows.map((rr) => (rr.id === r.id ? { ...rr, dbId: saved.id } : rr)),
-        );
-      }
-      for (const r of savings) {
-        if (r.dbId || isRowEmpty(r)) continue;
-        const saved = await createSaving({
-          item: r.name.trim(),
-          amount: r.amount,
-          savingType: r.categoryEnum || "DEPOSIT",
-          savedAt: dateStr,
-        });
-        setSavings((rows) =>
-          rows.map((rr) => (rr.id === r.id ? { ...rr, dbId: saved.id } : rr)),
-        );
       }
       // 성공 — draft 비움. 다음 mount 에서는 DB fetch 로 폼 채움 (정확한 dbId 포함).
       clearDraft();

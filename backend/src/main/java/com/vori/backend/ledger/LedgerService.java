@@ -3,9 +3,19 @@ package com.vori.backend.ledger;
 import com.vori.backend.category.CategoryRepository;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.ExpenseRepository;
+import com.vori.backend.expense.ExpenseService;
+import com.vori.backend.expense.dto.ExpenseCreateRequest;
+import com.vori.backend.expense.dto.ExpenseResponse;
+import com.vori.backend.expense.dto.ExpenseUpdateRequest;
 import com.vori.backend.income.IncomeRepository;
+import com.vori.backend.income.IncomeService;
+import com.vori.backend.income.dto.IncomeResponse;
 import com.vori.backend.inquiry.AiInquiry;
 import com.vori.backend.inquiry.AiInquiryRepository;
+import com.vori.backend.ledger.dto.LedgerSaveRequest;
+import com.vori.backend.ledger.dto.LedgerSaveResponse;
+import com.vori.backend.savings.SavingService;
+import com.vori.backend.savings.dto.SavingResponse;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +42,9 @@ public class LedgerService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final AiInquiryRepository aiInquiryRepository;
+    private final ExpenseService expenseService;
+    private final IncomeService incomeService;
+    private final SavingService savingService;
 
     /** 해당 월(yyyy-MM) 의 본인 지출+수입을 날짜 오름차순으로 병합. */
     @Transactional(readOnly = true)
@@ -73,6 +86,46 @@ public class LedgerService {
 
         rows.sort(Comparator.comparing(LedgerResponse::date));
         return rows;
+    }
+
+    /**
+     * 작성 화면의 지출·수입·저축을 한 트랜잭션으로 저장한다.
+     *
+     * 화면이 행마다 따로 요청하면 중간에 하나가 실패했을 때 앞의 행은 이미 저장돼 있다.
+     * 사용자는 "저장 실패" 를 보는데 DB 에는 일부가 들어가 있고, 그 행들의 EMA·누적 절약액도
+     * 이미 반영된 상태다. 여기서 묶으면 하나라도 실패할 때 전부 되돌아간다.
+     *
+     * 각 행의 처리는 단건 API 가 쓰는 서비스에 그대로 맡긴다 — 규칙이 두 곳으로 갈라지지 않는다.
+     * 그 서비스들의 @Transactional 은 이 트랜잭션에 합류하고, AI 질문·칭호 이벤트는 커밋 뒤에
+     * 나가므로 되돌아간 저장에 대해서는 나가지 않는다.
+     */
+    @Transactional
+    public LedgerSaveResponse saveEntries(Long userId, LedgerSaveRequest req) {
+        List<ExpenseResponse> expenses = new ArrayList<>();
+        for (LedgerSaveRequest.ExpenseEntry e : req.expenses()) {
+            expenses.add(e.id() == null ? createExpense(userId, e) : updateExpense(userId, e));
+        }
+        List<IncomeResponse> incomes = req.incomes().stream()
+                .map(i -> incomeService.createIncome(userId, i))
+                .toList();
+        List<SavingResponse> savings = req.savings().stream()
+                .map(s -> savingService.createSaving(userId, s))
+                .toList();
+        return new LedgerSaveResponse(expenses, incomes, savings);
+    }
+
+    private ExpenseResponse createExpense(Long userId, LedgerSaveRequest.ExpenseEntry e) {
+        return expenseService.createExpense(userId, new ExpenseCreateRequest(
+                e.categoryId(), e.amount(), e.item(), e.spentAt(), null, e.paymentMethod(), null, null));
+    }
+
+    private ExpenseResponse updateExpense(Long userId, LedgerSaveRequest.ExpenseEntry e) {
+        // 단건 수정(ExpenseUpdateRequest)은 결제수단이 필수다. 여기서는 등록과 한 목록이라 직접 본다.
+        if (e.paymentMethod() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "결제수단을 선택해주세요.");
+        }
+        return expenseService.updateExpense(userId, e.id(), new ExpenseUpdateRequest(
+                e.item(), e.amount(), e.categoryId(), e.paymentMethod()));
     }
 
     /**
