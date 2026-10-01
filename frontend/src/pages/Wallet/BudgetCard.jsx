@@ -22,6 +22,9 @@ function BudgetCard({ yearMonth, spent }) {
   const sectionRef = useRef(null);
   const inputRef = useRef(null);
   const handledNav = useRef(null);
+  // 마지막으로 보낸 조회의 번호. 저장·해제가 시작되면 올려서, 그 전에 나간 조회 응답이
+  // 늦게 와도 저장 결과를 덮어쓰지 못하게 한다.
+  const latestRequest = useRef(0);
   const { hash, key: navKey } = useLocation();
 
   // 달을 넘긴 직후에는 이전 달 응답이 남아 있다 — 지금 달 것이 아니면 없는 것으로 본다.
@@ -30,13 +33,15 @@ function BudgetCard({ yearMonth, spent }) {
 
   useEffect(() => {
     if (spent == null) return undefined;
-    let alive = true;
+    const request = ++latestRequest.current;
+    const isLatest = () => request === latestRequest.current;
     setLoadError(null);
     getBudget(yearMonth)
-      .then((b) => alive && setBudget(b))
-      .catch((e) => alive && setLoadError(e.message || "예산을 불러오지 못했어요."));
+      .then((b) => isLatest() && setBudget(b))
+      .catch((e) => isLatest() && setLoadError(e.message || "예산을 불러오지 못했어요."));
     return () => {
-      alive = false;
+      // 달이 바뀌거나 화면을 떠나면 이 응답은 버린다.
+      if (isLatest()) latestRequest.current += 1;
     };
   }, [yearMonth, spent, attempt]);
 
@@ -75,6 +80,7 @@ function BudgetCard({ yearMonth, spent }) {
     }
     setSaving(true);
     setFormError(null);
+    latestRequest.current += 1;
     try {
       setBudget(await saveBudget(yearMonth, amount));
       setEditing(false);
@@ -89,6 +95,7 @@ function BudgetCard({ yearMonth, spent }) {
     if (saving) return;
     setSaving(true);
     setFormError(null);
+    latestRequest.current += 1;
     try {
       await deleteBudget(yearMonth);
       setBudget({
