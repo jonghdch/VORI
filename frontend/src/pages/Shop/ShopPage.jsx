@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import PurchaseHistoryModal from "../../components/PurchaseHistoryModal";
+import CoinIcon from "../../components/CoinIcon";
 import { PetArt, STAGE_LABEL, TIER_LABEL, VARIANT_LABEL } from "../../components/petVisual";
 import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
@@ -330,8 +331,13 @@ function ShopPage({ user, onLogout }) {
               </svg>
               구매 내역
             </button>
-            <div className="shop-coin-badge" aria-live="polite">
-              보유 코인 {loading ? "…" : unlimitedCoins ? "∞" : gameMoney.toLocaleString("ko-KR")}
+            <div
+              className="shop-coin-badge"
+              aria-live="polite"
+              aria-label={`보유 코인 ${loading ? "확인 중" : unlimitedCoins ? "무제한" : gameMoney.toLocaleString("ko-KR")}`}
+            >
+              <CoinIcon className="shop-coin-badge-icon" />
+              {loading ? "…" : unlimitedCoins ? "∞" : gameMoney.toLocaleString("ko-KR")}
             </div>
           </div>
 
@@ -501,7 +507,6 @@ function ShopPage({ user, onLogout }) {
           <section className="home-card shop-result" aria-live="polite">
             <div className="shop-section-head">
               <h2 className="home-card-title home-card-title--sm">새로 태어난 친구</h2>
-              {result && <span>잔여 {unlimitedCoins ? "∞ 코인" : coin(result.remainGameMoney)}</span>}
             </div>
             {result ? (
               <div className="shop-result-body">
