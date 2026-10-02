@@ -27,7 +27,9 @@ function PetHistoryPanel({ petHistory }) {
             key={tab.id}
             type="button"
             role="tab"
+            id={`pet-history-tab-${tab.id}`}
             aria-selected={view === tab.id}
+            aria-controls={view === tab.id ? `pet-history-panel-${tab.id}` : undefined}
             className={`pet-subtab-btn ${view === tab.id ? "is-active" : ""}`}
             onClick={() => setView(tab.id)}
           >
@@ -35,7 +37,9 @@ function PetHistoryPanel({ petHistory }) {
           </button>
         ))}
       </div>
-      {view === "pets" ? <PetHistoryList petHistory={petHistory} /> : <ItemHistoryList />}
+      <div id={`pet-history-panel-${view}`} role="tabpanel" aria-labelledby={`pet-history-tab-${view}`}>
+        {view === "pets" ? <PetHistoryList petHistory={petHistory} /> : <ItemHistoryList />}
+      </div>
     </div>
   );
 }
