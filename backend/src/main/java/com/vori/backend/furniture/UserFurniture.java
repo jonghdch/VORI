@@ -36,7 +36,7 @@ public class UserFurniture {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false,
-        columnDefinition = "ENUM('BED','WALLPAPER','FLOOR','MIRROR','VANITY','PICTURE','BOARD','SHELF','DRAWER','COMPUTER')")
+        columnDefinition = "ENUM('BED','WALLPAPER','FLOOR','MIRROR','VANITY','PICTURE','BOARD','SHELF','DRAWER','COMPUTER','TENT','PICNIC_MAT','CAMPFIRE','HAMMOCK','PARASOL','CAMP_CHAIR','CANOPY_BED','TEA_TABLE','FIREPLACE','ROCKING_CHAIR','TREASURE_CHEST','SLEEP_CAPSULE','TELESCOPE','SWIM_TUBE','BEACH_BALL','LEATHER_SOFA','GLASS_TABLE','LANTERN','ICEBOX','SAFE','DESK','FRIDGE','EMPTY_DESK')")
     private FurnitureCategory category;
 
     @Enumerated(EnumType.STRING)

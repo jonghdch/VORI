@@ -280,6 +280,126 @@
   height: 184px;
 }
 
+.pet-placed-item--tent {
+  width: 220px;
+  height: 220px;
+}
+
+.pet-placed-item--picnic_mat {
+  width: 200px;
+  height: 200px;
+}
+
+.pet-placed-item--campfire {
+  width: 150px;
+  height: 150px;
+}
+
+.pet-placed-item--hammock {
+  width: 240px;
+  height: 163px;
+}
+
+.pet-placed-item--parasol {
+  width: 200px;
+  height: 200px;
+}
+
+.pet-placed-item--camp_chair {
+  width: 150px;
+  height: 150px;
+}
+
+.pet-placed-item--canopy_bed {
+  width: 260px;
+  height: 239px;
+}
+
+.pet-placed-item--tea_table {
+  width: 170px;
+  height: 170px;
+}
+
+.pet-placed-item--fireplace {
+  width: 200px;
+  height: 200px;
+}
+
+.pet-placed-item--rocking_chair {
+  width: 160px;
+  height: 160px;
+}
+
+.pet-placed-item--treasure_chest {
+  width: 140px;
+  height: 140px;
+}
+
+.pet-placed-item--sleep_capsule {
+  width: 220px;
+  height: 220px;
+}
+
+.pet-placed-item--telescope {
+  width: 170px;
+  height: 170px;
+}
+
+.pet-placed-item--swim_tube {
+  width: 140px;
+  height: 140px;
+}
+
+.pet-placed-item--beach_ball {
+  width: 100px;
+  height: 100px;
+}
+
+.pet-placed-item--computer {
+  width: 170px;
+  height: 170px;
+}
+
+.pet-placed-item--leather_sofa {
+  width: 220px;
+  height: 220px;
+}
+
+.pet-placed-item--glass_table {
+  width: 180px;
+  height: 180px;
+}
+
+.pet-placed-item--lantern {
+  width: 110px;
+  height: 110px;
+}
+
+.pet-placed-item--icebox {
+  width: 150px;
+  height: 150px;
+}
+
+.pet-placed-item--safe {
+  width: 160px;
+  height: 160px;
+}
+
+.pet-placed-item--desk {
+  width: 200px;
+  height: 200px;
+}
+
+.pet-placed-item--fridge {
+  width: 220px;
+  height: 220px;
+}
+
+.pet-placed-item--empty_desk {
+  width: 220px;
+  height: 220px;
+}
+
 .pet-placed-item.is-dragging {
   cursor: grabbing;
   z-index: 9;
@@ -747,6 +867,13 @@
   display: block;
 }
 .pet-furniture-bonus-help { margin: -2px 0 14px; color: var(--home-muted); font-size: 12px; line-height: 1.55; }
+/* 보유 가구 테마 칩 — 가진 가구의 테마만 나온다. 상점 가구 탭의 칩(.shop-chip)과 같은 모양. */
+.pet-furniture-themes { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.pet-theme-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border: 1px solid var(--home-card-border); border-radius: 999px; background: var(--home-card-surface); color: var(--home-muted); font-family: inherit; font-size: 12px; font-weight: 800; line-height: 1; white-space: nowrap; cursor: pointer; transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease; }
+.pet-theme-chip:hover { border-color: var(--home-green); }
+.pet-theme-chip.is-active { border-color: var(--home-green-dark); background: var(--home-green-soft); color: var(--home-green-dark); }
+.pet-theme-chip:focus-visible { outline: 2px solid var(--home-green-dark); outline-offset: 2px; }
+.pet-theme-chip span { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; opacity: 0.7; }
 .pet-attendance-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid #d9e7d2; border-radius: 12px; background: #f5faef; }
 .pet-attendance-card strong { display: block; color: var(--home-green-dark); }
 .pet-attendance-card p { margin: 5px 0 0; color: var(--home-muted); font-size: 13px; }
