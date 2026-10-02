@@ -116,6 +116,26 @@ def msg(res):
     return res.get("message") if isinstance(res, dict) else res
 
 
+def complete_onboarding(user):
+    """가입 직후 온보딩 설문을 끝낸다. 안 하면 로그인 때 설문 화면으로 튕긴다(App.js OnboardingGate).
+
+    한 끼 식비는 UNKNOWN 으로 둔다 — 식비(ENERGY) 기준선은 씨딩하지 않아야 각본 1·2번의
+    z=2.263·코인 63,537 같은 실측값이 그대로 유지된다. 월 수입은 필수라 넣지만 쇼핑·문화·생활
+    타입에만 영향을 주고 각본은 전부 식비라 무관하다.
+    """
+    code, res = user.call("POST", "/api/onboarding/spending-profile", {
+        "monthlyIncome": 800000,
+        "monthlyBudgetBand": "UNKNOWN", "mealCostBand": "UNKNOWN",
+        "primarySpendArea": "FOOD_CAFE", "spendingHabit": "UNKNOWN", "monthlyGoal": "GROW_PET"})
+    if code != 200:
+        print(f"온보딩 설문 저장 실패: {code} {msg(res)}")
+        sys.exit(1)
+    code, res = user.call("POST", "/api/onboarding/complete")
+    if code not in (200, 204):
+        print(f"온보딩 완료 처리 실패: {code} {msg(res)}")
+        sys.exit(1)
+
+
 def seed(email):
     user = Session()
     code, res = user.call("POST", "/api/auth/signup", {
@@ -126,6 +146,7 @@ def seed(email):
         sys.exit(1)
     user_id = res["id"]
     user.call("POST", "/api/auth/login", {"email": email, "password": PW})
+    complete_onboarding(user)
     print(f"계정 생성 — id={user_id}  {email} / {PW}\n")
 
     # ── 지출 9건 ──

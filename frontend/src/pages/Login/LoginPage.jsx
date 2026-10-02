@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 import { login } from "../../api/auth";
+import GoogleSignInButton from "../../components/GoogleSignInButton";
+import { getOnboardingStatus } from "../../api/onboarding";
 
 // 로그인 페이지.
 // - POST /api/auth/login 호출, 세션 쿠키(JSESSIONID)로 인증 유지.
-// - 성공 시 /home 으로 이동.
+// - 성공 시 온보딩 상태를 보고 이어 할 화면으로 이동.
 function LoginPage({ onLogin }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -13,15 +15,51 @@ function LoginPage({ onLogin }) {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // 로그인은 됐지만 온보딩 상태를 못 읽은 계정 — "다시 시도" 가 상태만 다시 묻는다.
+  const [pendingUser, setPendingUser] = useState(null);
+
+  // 로그인 뒤 갈 곳 — 이메일·구글 로그인이 같이 쓴다. 설문 전이면 설문, 튜토리얼 전이면 온보딩.
+  //
+  // 상태를 못 읽었으면 홈으로 보내지 않는다. 못 읽은 것을 "다 마쳤다" 로 치면 온보딩을 안 한
+  // 계정이 그대로 홈에 들어간다. 로그인 상태(onLogin)도 상태를 읽은 뒤에 올린다 — 먼저 올리면
+  // 설문 가드(App.js)가 화면을 다시 그려 이 화면의 안내가 사라진다.
+  const afterLogin = async (user) => {
+    let status;
+    try {
+      status = await getOnboardingStatus();
+    } catch {
+      setPendingUser(user);
+      setError("로그인은 됐지만 계정 상태를 확인하지 못했어요.");
+      return;
+    }
+    setPendingUser(null);
+    if (typeof onLogin === "function") onLogin(user);
+    if (!status?.profileCompleted) {
+      navigate("/signup/profile");
+    } else if (!status.tutorialDone) {
+      navigate("/onboarding");
+    } else {
+      navigate("/home");
+    }
+  };
+
+  const retryStatus = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await afterLogin(pendingUser);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setPendingUser(null);
     setLoading(true);
     try {
-      const user = await login(email, password);
-      if (typeof onLogin === "function") onLogin(user);
-      navigate("/home");
+      await afterLogin(await login(email, password));
     } catch (err) {
       setError(err.message || "로그인 중 오류가 발생했어요");
     } finally {
@@ -110,6 +148,19 @@ function LoginPage({ onLogin }) {
                 style={{ color: "#c0392b", margin: "4px 0 0", fontSize: "0.9rem" }}
               >
                 {error}
+                {pendingUser && (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      className="login-link"
+                      onClick={retryStatus}
+                      disabled={loading}
+                    >
+                      다시 시도
+                    </button>
+                  </>
+                )}
               </p>
             )}
 
@@ -122,8 +173,19 @@ function LoginPage({ onLogin }) {
             </button>
           </form>
 
-          {/* 소셜 로그인 — 백엔드 OAuth 미구현. 동작 없는 버튼을 노출하지 않고,
-              구현되면 이 자리에 되살린다. */}
+          {/* 구글 로그인 — REACT_APP_GOOGLE_CLIENT_ID 가 있을 때만 버튼이 그려진다 */}
+          {process.env.REACT_APP_GOOGLE_CLIENT_ID && (
+            <>
+              <div className="login-divider">또는</div>
+              <GoogleSignInButton
+                onLogin={afterLogin}
+                onError={(msg) => {
+                  setPendingUser(null);
+                  setError(msg);
+                }}
+              />
+            </>
+          )}
 
           {/* ───────── 회원가입 안내 ───────── */}
           <p className="login-signup">

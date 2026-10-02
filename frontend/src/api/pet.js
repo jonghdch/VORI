@@ -5,16 +5,19 @@
 //   POST /api/eggs/{id}/open     가챠 개봉 → 펫 지급
 //   GET  /api/pets/active        키우는 펫 (없으면 null)
 //   GET  /api/pets               보유·분양 이력 전체
+//   PUT  /api/pets/{id}/name     펫 이름 짓기 (1~10자)
 //   POST /api/pets/{id}/release  성체 분양 → 게임머니 획득
-import { get, post } from "./http";
+//   POST /api/pets/active/interact  상호작용 1회 → 1% 확률로 매력 +1
+import { get, post, put } from "./http";
 
 /**
  * @typedef {{ grade:string, name:string, price:number, probabilities:Record<string,number> }} EggProduct
  * @typedef {{ id:number, gradeName:string, price:number, purchasedAt:string, openedAt:string|null, opened:boolean }} Egg
  * @typedef {{
- *   id:number, speciesId:number, speciesName:string, tier:string, appearanceKey:string,
+ *   id:number, name:string|null, speciesId:number, speciesName:string, tier:string, appearanceKey:string,
  *   variant:"NORMAL"|"IRO"|"ALIEN", stage:"INFANT"|"JUVENILE"|"ADULT",
  *   statEnergy:number, statCharm:number, statIq:number, statEndurance:number, statTotal:number,
+ *   interactionCount:number,
  *   hatchedAt:string, releasedAt:string|null, releaseValue:number|null
  * }} Pet
  */
@@ -38,5 +41,16 @@ export const getActivePet = () => get("/pets/active");
 /** @returns {Promise<Pet[]>} */
 export const listPets = () => get("/pets");
 
+/** @returns {Promise<Pet>} 400 = 이름 규칙 위반(1~10자), 409 = 이미 분양한 펫 */
+export const namePet = (petId, name) => put(`/pets/${petId}/name`, { name });
+
 /** @returns {Promise<Pet>} 400 = 성체 아님, 409 = 이미 분양 */
 export const releasePet = (petId) => post(`/pets/${petId}/release`);
+
+/**
+ * 키우는 펫과 상호작용(쓰다듬기 등) 1회. 당첨 추첨은 서버가 한다.
+ * newTitles 는 이번 상호작용으로 새로 받은 칭호 — 대개 비어 있고, 히든 칭호는 여기서 처음 드러난다.
+ * @returns {Promise<{ charmUp:boolean, pet:Pet, newTitles:{ name:string, hidden:boolean }[] }>}
+ *   400 = 키우는 펫 없음
+ */
+export const interactWithPet = () => post("/pets/active/interact");

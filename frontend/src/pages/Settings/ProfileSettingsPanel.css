@@ -1,0 +1,18 @@
+.profile-settings { display: grid; gap: 20px; }
+.profile-form { padding: 24px; border: 1px solid #e2dfd7; border-radius: 14px; background: #fbfaf6; display: grid; gap: 20px; }
+.profile-form label { display: grid; gap: 8px; color: #44413c; font-size: 14px; font-weight: 600; }
+.profile-form input { box-sizing: border-box; width: 100%; border: 1px solid #d8d4ca; border-radius: 8px; background: #fff; padding: 11px 12px; color: #2b2b2b; font: inherit; font-weight: 400; }
+.profile-form input:focus { border-color: #7c8b5c; outline: 2px solid rgba(124, 139, 92, .16); }
+.profile-form input:disabled { background: #f0eee8; color: #8a867e; cursor: not-allowed; }
+.profile-form small { color: #817d75; font-size: 12px; font-weight: 400; }
+.profile-form b { margin-left: 4px; color: #a95c53; font-size: 11px; }
+.profile-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.profile-money-input { position: relative; }
+.profile-money-input input { padding-right: 36px; }
+.profile-money-input em { position: absolute; right: 13px; top: 11px; color: #6e6b65; font-size: 14px; font-style: normal; font-weight: 400; }
+.profile-message { margin: -4px 0 0; font-size: 13px; }
+.profile-message.error { color: #b24e45; }.profile-message.success { color: #647944; }
+.profile-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.profile-actions button { border-radius: 9px; padding: 11px 20px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.profile-cancel { border: 1px solid #d8d4ca; background: #fff; color: #56524c; }.profile-save { border: 0; background: #3a3835; color: #fff; }.profile-save:disabled { background: #c9c5bd; cursor: not-allowed; }
+@media (max-width: 560px) { .profile-form { padding: 20px; }.profile-form-grid { grid-template-columns: 1fr; } }

@@ -10,6 +10,10 @@ group = 'com.vori'
 version = '0.0.1-SNAPSHOT'
 description = 'Vori 백엔드'
 
+// OneDrive가 프로젝트 안의 build/ 산출물을 온라인 전용 파일로 바꾸면 Gradle이 스냅샷을 읽지 못한다.
+// 소스와 분리한 로컬 임시 폴더를 사용해 동기화 상태와 관계없이 빌드한다.
+layout.buildDirectory.set(file("${System.getProperty('java.io.tmpdir')}/vori-gradle-build"))
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(17)
@@ -39,6 +43,11 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+
+	// bootRun 과 같은 이유로 작업 디렉터리를 repo 루트로 둔다(아래 bootRun 주석 참조).
+	// 이게 없으면 BackendApplicationTests(컨텍스트 로드)가 .env 를 못 읽어
+	// "Access denied ... (using password: NO)" 로 실패한다.
+	workingDir = projectDir.parentFile
 }
 
 // .env 는 repo 루트에 있고 application.properties 의 spring.config.import 가

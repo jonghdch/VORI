@@ -2,16 +2,75 @@
   padding-bottom: 48px;
 }
 
+/* 화면 제목은 사이드바가 보여 주므로 보조기기용으로만 둔다 */
+.dex-sr-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* 요약 아래 탭 — 펫 · 업적 · 칭호 */
+.dex-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.dex-tab {
+  border: 1px solid var(--home-border);
+  background: var(--home-white);
+  color: var(--home-muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 10px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.dex-tab.is-active {
+  background: var(--home-green);
+  border-color: var(--home-green);
+  color: #fff;
+}
+
+.dex-tab:focus-visible {
+  outline: 2px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
 .dex-head {
   margin-bottom: 20px;
 }
 
-.dex-head h1 {
+.dex-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
-  font-size: 26px;
+  font-size: 27px;
   font-weight: 900;
+  letter-spacing: -0.02em;
   color: var(--home-text);
 }
+
+/* 제목 배지 — 출석(초록 발자국)·업적(금색 메달)과 같은 자리, 도감은 파란 책으로 구분 */
+.dex-title-badge {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, #8bb3dd 0%, #6b9bd1 55%, #4f7fb3 100%);
+  font-size: 19px;
+  transform: rotate(-7deg);
+  box-shadow: 0 3px 0 rgba(79, 127, 179, 0.4), 0 5px 10px rgba(79, 127, 179, 0.2);
+}
+
 
 .dex-head p {
   margin: 8px 0 0;
@@ -149,6 +208,11 @@
   border: 1px solid #c8ddb8;
 }
 
+.dex-badge--admin {
+  background: #fbe9c9;
+  color: #9a6b12;
+}
+
 .dex-art {
   width: 112px;
   height: 112px;
@@ -221,23 +285,47 @@
 
 .dex-stage {
   flex: 1;
+  display: flex;
+}
+
+/* 단계 버튼 — 도달한 단계만 눌러서 그 모습을 볼 수 있다 */
+.dex-stage-btn {
+  flex: 1;
   padding: 5px 0;
+  border: 0;
   border-radius: 8px;
   background: #eef1ea;
   color: #a3a89b;
+  font: inherit;
   font-size: 11px;
   font-weight: 800;
   text-align: center;
+  cursor: not-allowed;
 }
 
-.dex-stage.is-reached {
+.dex-stage.is-reached .dex-stage-btn {
   background: var(--home-green-soft);
   color: var(--home-green-dark);
+  cursor: pointer;
 }
 
-.dex-stage.is-current {
+.dex-stage.is-current .dex-stage-btn {
   background: var(--home-green);
   color: #fff;
+}
+
+/* 지금 도감 그림으로 보고 있는 단계 */
+.dex-stage.is-viewing .dex-stage-btn {
+  box-shadow: inset 0 0 0 2px var(--home-green-dark);
+}
+
+.dex-stage.is-reached .dex-stage-btn:hover {
+  filter: brightness(0.96);
+}
+
+.dex-stage-btn:focus-visible {
+  outline: 2px solid var(--home-green-dark);
+  outline-offset: 2px;
 }
 
 .dex-status {
@@ -255,5 +343,266 @@
 
   .dex-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+/* ── 도감 카드 → 상세 링크 ── */
+.dex-card-link {
+  color: inherit;
+  text-decoration: none;
+}
+/* 카드 전체를 누를 수 있게 — 단계 버튼은 z-index 로 위에 둔다 */
+.dex-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.dex-card:has(.dex-card-link:hover) {
+  border-color: var(--home-green);
+  box-shadow: 0 8px 20px rgba(45, 51, 40, 0.1);
+}
+.dex-card:has(.dex-card-link:focus-visible) {
+  outline: 2px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+.dex-card-link:focus-visible {
+  outline: none;
+}
+.dex-card .dex-stages {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── 펫 상세 ── */
+.dexd-back {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: var(--home-green-dark);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.dexd-back:hover {
+  text-decoration: underline;
+}
+
+.dexd-hero {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+
+.dexd-art {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f3f5ee;
+  overflow: hidden;
+}
+.dexd-art-img {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.dexd-art-emoji {
+  font-size: 96px;
+  line-height: 1;
+}
+
+.dexd-badges {
+  position: static;
+  margin-bottom: 8px;
+}
+
+.dexd-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--home-text);
+}
+
+.dexd-lead {
+  margin: 8px 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--home-muted);
+  line-height: 1.5;
+}
+
+.dexd-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dexd-stage-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 72px;
+  padding: 8px 14px;
+  border: 1px solid var(--home-card-border);
+  border-radius: 12px;
+  background: var(--home-white);
+  color: var(--home-muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.dexd-stage-btn small {
+  font-size: 11px;
+  font-weight: 700;
+}
+.dexd-stage-btn.is-reached {
+  color: var(--home-text);
+}
+.dexd-stage-btn.is-viewing {
+  border-color: var(--home-green);
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+}
+.dexd-stage-btn.is-current small {
+  color: var(--home-green-dark);
+}
+.dexd-stage-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.dexd-stage-btn:focus-visible {
+  outline: 2px solid var(--home-green-dark);
+  outline-offset: 2px;
+}
+
+.dexd-records {
+  margin-top: 20px;
+}
+.dexd-records-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dexd-records-head span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--home-muted);
+}
+.dexd-records-head .home-card-title {
+  margin-bottom: 12px;
+}
+
+.dexd-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 0 6px;
+  text-align: center;
+}
+.dexd-empty p {
+  margin: 0;
+  color: var(--home-muted);
+  font-size: 14px;
+}
+
+.dexd-record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dexd-record {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--home-radius-sm);
+  border: 1px solid var(--home-card-border);
+  background: #fff;
+}
+.dexd-record.is-raising {
+  border-color: var(--home-green);
+  background: var(--home-green-soft);
+}
+.dexd-record-art {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #f3f5ee;
+}
+.dexd-record-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.dexd-record-emoji {
+  font-size: 28px;
+  line-height: 1;
+}
+.dexd-record-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.dexd-record-info strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+}
+.dexd-record-info small {
+  font-size: 12px;
+  color: var(--home-muted);
+}
+.dexd-record-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--home-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .dexd-hero {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .dexd-name {
+    justify-content: center;
+  }
+  .dexd-stages {
+    justify-content: center;
+  }
+  .dexd-record {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+  .dexd-record-state {
+    grid-column: 2;
+    white-space: normal;
   }
 }

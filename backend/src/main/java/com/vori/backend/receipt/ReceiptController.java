@@ -36,13 +36,13 @@ public class ReceiptController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam("file") MultipartFile file
     ) {
-        return receiptService.process(principal.getUser().getId(), file);
+        return receiptService.process(principal.getId(), file);
     }
 
     /** GET /api/receipts — 내 인식 이력(최신순). */
     @GetMapping
     public List<ReceiptOcrResponse> mine(@AuthenticationPrincipal UserPrincipal principal) {
-        return receiptService.listMine(principal.getUser().getId());
+        return receiptService.listMine(principal.getId());
     }
 
     /** GET /api/receipts/{id} — 단건. 성공 건이면 품목 목록까지 함께 반환. */
@@ -51,6 +51,6 @@ public class ReceiptController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long id
     ) {
-        return receiptService.get(principal.getUser().getId(), id);
+        return receiptService.get(principal.getId(), id);
     }
 }

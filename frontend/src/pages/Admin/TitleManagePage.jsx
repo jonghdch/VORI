@@ -20,6 +20,7 @@ const METRICS = [
   { value: "AI_ANSWERS", label: "AI 질문 답변 수" },
   { value: "RECEIPT_SCANS", label: "영수증 인식 성공 수" },
   { value: "LOGIN_COUNT", label: "로그인 횟수" },
+  { value: "PET_INTERACTIONS", label: "펫 상호작용 수(한 마리 최대)" },
 ];
 const METRIC_LABEL = Object.fromEntries(METRICS.map((m) => [m.value, m.label]));
 
@@ -276,7 +277,10 @@ function TitleManagePage() {
                   <tr key={t.id} className={t.enabled ? "" : "title-row--off"}>
                     <td className="num">{t.sortOrder}</td>
                     <td>
-                      <span className="adm-cell-main">{t.name}</span>
+                      <span className="adm-cell-main">
+                        {t.name}
+                        {t.hidden && " (히든)"}
+                      </span>
                       <span className="adm-cell-sub">{t.code}</span>
                     </td>
                     <td>

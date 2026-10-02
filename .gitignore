@@ -45,3 +45,5 @@ server.log
 # 개인 AI 환경 메모리 (팀 공유 X)
 CLAUDE.md
 PHASES.md
+# AI 도구가 만든 시안·캡처 폴더 (팀 공유 X)
+Claude outputs/

@@ -13,3 +13,8 @@ export const getMe = () => get("/users/me");
 
 // 환경설정의 프로필 수정. 변경된 사용자 정보를 받아 헤더에도 바로 반영한다.
 export const updateMe = (profile) => put("/users/me", profile);
+
+
+/** 펫(종족·단계·유무)이 바뀐 뒤 마이룸·도감·홈에 다시 읽으라고 알린다. 관리자 도구가 부른다. */
+export const PET_CHANGED_EVENT = "vori:pet-changed";
+export const notifyPetChanged = () => window.dispatchEvent(new Event(PET_CHANGED_EVENT));

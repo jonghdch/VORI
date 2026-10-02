@@ -32,6 +32,10 @@ public class Pet {
     @Column(name = "species_id", nullable = false)
     private Long speciesId;
 
+    // 사용자가 지어 준 이름(1~10자). NULL = 아직 이름을 짓지 않음 — 화면이 이름 짓기 팝업을 띄운다.
+    @Column(length = 10)
+    private String name;
+
     @Column(name = "egg_id", unique = true)
     private Long eggId;
 
@@ -53,6 +57,11 @@ public class Pet {
     @Column(name = "stat_endurance")
     @Builder.Default
     private Integer statEndurance = 0;
+
+    // 쓰다듬기·칭찬하기 등 상호작용 누적 횟수. 칭호 조건(PET_INTERACTIONS)의 기준값.
+    @Column(name = "interaction_count", nullable = false)
+    @Builder.Default
+    private Integer interactionCount = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "ENUM('INFANT','JUVENILE','ADULT')")
@@ -78,6 +87,21 @@ public class Pet {
             case IQ         -> this.statIq         += delta;
             case ENDURANCE  -> this.statEndurance  += delta;
         }
+    }
+
+    /** 스탯 상한 100까지만 올리고 실제 반영된 수치를 돌려준다. */
+    public int addStatUpToMax(com.vori.backend.common.StatType statType, int delta) {
+        int current = statValue(statType);
+        int applied = Math.max(0, Math.min(delta, 100 - current));
+        addStat(statType, applied);
+        return applied;
+    }
+
+    public int statValue(com.vori.backend.common.StatType statType) {
+        return switch (statType) {
+            case ENERGY -> nz(statEnergy); case CHARM -> nz(statCharm);
+            case IQ -> nz(statIq); case ENDURANCE -> nz(statEndurance);
+        };
     }
 
     /** 해당 단계가 되기 위한 최소 스탯 합. 임계값이 여기 한 곳에만 있도록 밖에서도 이걸 쓴다. */
@@ -107,6 +131,41 @@ public class Pet {
         if (next.ordinal() > this.stage.ordinal()) {
             this.stage = next;
         }
+    }
+
+    // ───── 관리자 도구 전용 (AdminPetService) ─────
+    // 일반 흐름에서는 종족·변종은 부화 때 정해지고 단계는 상향만 한다. 아래 둘은 시연·QA 에서
+    // 모든 종족·단계를 화면에서 확인하려고 관리자에게만 연 경로다. 호출부가 권한을 보장한다.
+
+    /** 종족·변종을 바꾼다. 스탯·단계는 그대로. */
+    public void changeAppearance(Long speciesId, PetVariant variant) {
+        this.speciesId = speciesId;
+        this.variant = variant == null ? PetVariant.NORMAL : variant;
+    }
+
+    /**
+     * 단계를 강제로 맞춘다. 스탯 합을 그 단계의 최소값으로 4등분해 채우므로
+     * evaluateStage() 를 다시 돌려도 같은 단계가 나온다(내려가는 전이도 허용).
+     */
+    public void forceStage(PetStage target) {
+        int total = minStatTotalFor(target);
+        int base = total / 4;
+        int rem = total % 4;
+        this.statEnergy = base + (rem > 0 ? 1 : 0);
+        this.statCharm = base + (rem > 1 ? 1 : 0);
+        this.statIq = base + (rem > 2 ? 1 : 0);
+        this.statEndurance = base;
+        this.stage = target;
+    }
+
+    /** 상호작용 1회를 센다. */
+    public void recordInteraction() {
+        this.interactionCount = nz(interactionCount) + 1;
+    }
+
+    /** 이름을 짓는다. 길이·공백 검사는 요청 DTO(PetNameRequest)가 맡는다. */
+    public void rename(String name) {
+        this.name = name;
     }
 
     public boolean isReleased() {

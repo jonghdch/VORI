@@ -109,18 +109,26 @@ React Router v7 (`BrowserRouter`) 사용. SPA 이지만 URL 이 페이지마다 
 ### 회원 가입·로그인
 ```
 회원가입 폼 → POST /api/auth/signup → users INSERT + user_stat_stats 4행 INSERT
-           → 자동 login → JSESSIONID 발급 → 랜딩 진입
+           → 자동 login → JSESSIONID 발급 → /signup/profile (소비 프로필 설문)
+
+로그인 → GET /api/onboarding/status
+      → 설문 전이면 /signup/profile, 온보딩 전이면 /onboarding, 다 끝났으면 /home
+      → 상태를 못 읽으면 이동하지 않고 로그인 화면에 "다시 시도" (상태만 다시 묻는다)
 ```
 
-### 지출 기록 (구현됨 · 지출→스탯→시그널→AI 사유까지. 저축·펫 성장 후속 연동은 진행 중)
+### 지출 기록 (구현됨)
 ```
-지출 입력 → expenses INSERT
+작성 화면 → POST /api/ledger/entries (지출·수입·저축을 한 트랜잭션으로)
+        → 지출마다 expenses INSERT (id 가 있으면 수정)
         → user_stat_stats EMA 갱신 (스탯 단위)
         → z_score 계산 → signal_initial 산정
-        → signal_initial ∈ {RED, GRAY} 면 → AI 질문 (ai_inquiries INSERT)
+        → signal_initial == RED 이고 반복 결제가 아니면 → AI 질문 (ai_inquiries INSERT)
         → 사용자 사유 응답 → reason_category 분류 → signal_final 보정
         → saved_amount > 0 면 → users.total_saved 누적 + goals.current_amount 누적
-        → stat_delta = floor(saved_amount/1000) → pets.stat_<type> 증가 + pet_growth_logs INSERT
+        → 하나라도 실패하면 위 전부 롤백
+
+하루 판정 → POST /api/daily-judgments (일반 계정은 그날, 20시부터)
+        → 그날 지출 중 가장 강한 신호로 판정 → 코인 + 펫 4개 스탯 지급 + pet_growth_logs INSERT
 ```
 
 ### 영수증 OCR (Phase 2 — 미구현)

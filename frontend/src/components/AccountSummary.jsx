@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMe } from "../api/user";
 import { listTitles } from "../api/titles";
+import CoinIcon from "./CoinIcon";
 
-export default function AccountSummary() {
+// onClick 을 주면 클릭 시 그걸 부르고(헤더 아래 내 정보 상자 — AccountMenu), 없으면 프로필 설정으로 간다.
+export default function AccountSummary({ onClick } = {}) {
   const navigate = useNavigate();
   const [account, setAccount] = useState(null);
   const [title, setTitle] = useState(null);
@@ -37,10 +39,24 @@ export default function AccountSummary() {
   if (error) return <button className="home-account-summary" onClick={() => window.dispatchEvent(new Event("vori:account-updated"))}>내 정보 다시 불러오기</button>;
   if (!account) return <span className="home-account-summary" role="status">내 정보 불러오는 중…</span>;
   return (
-    <button type="button" className="home-account-summary" onClick={() => navigate("/settings/profile")} aria-label={`${title}, ${account.nickname}, 보유 코인 ${account.role === "ADMIN" ? "무제한" : account.gameMoney}. 프로필 설정 열기`}>
-      <span className="home-account-title" title={title}>{title}</span>
+    <button type="button" className="home-account-summary" onClick={onClick ?? (() => navigate("/settings/profile"))} aria-haspopup={onClick ? "dialog" : undefined} aria-label={`${title}, ${account.nickname}, 보유 코인 ${account.role === "ADMIN" ? "무제한" : account.gameMoney}. ${onClick ? "내 정보 열기" : "프로필 설정 열기"}`}>
+      {/* 버튼 안이라 버튼을 겹칠 수 없다 — 칭호 글자를 누르면 내 정보 상자 대신 도감의 칭호 탭으로 간다.
+          키보드로는 내 정보 상자의 칭호(🏅) 버튼으로 같은 곳에 갈 수 있다. */}
+      <span
+        className="home-account-title"
+        title={`${title} — 칭호 도감`}
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate("/dex?tab=titles");
+        }}
+      >
+        {title}
+      </span>
       <strong className="home-account-nickname" title={account.nickname}>{account.nickname}</strong>
-      <span className="home-account-coins">{account.role === "ADMIN" ? "∞" : (account.gameMoney ?? 0).toLocaleString("ko-KR")} 코인</span>
+      <span className="home-account-coins">
+        <CoinIcon className="home-account-coin-icon" />
+        {account.role === "ADMIN" ? "∞" : (account.gameMoney ?? 0).toLocaleString("ko-KR")}
+      </span>
     </button>
   );
 }

@@ -8,6 +8,7 @@ import com.vori.backend.expense.dto.ExpenseUpdateRequest;
 import com.vori.backend.goal.Goal;
 import com.vori.backend.goal.GoalRepository;
 import com.vori.backend.goal.GoalStatus;
+import com.vori.backend.inquiry.AiInquiry;
 import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.pet.GrowthReason;
 import com.vori.backend.pet.Pet;
@@ -45,8 +46,13 @@ public class ExpenseService {
     private final ApplicationEventPublisher eventPublisher;
     private final SignalConfigService signalConfigService;
     private final AiInquiryRepository aiInquiryRepository;
+    private final com.vori.backend.pet.PetStatRewardService statRewardService;
 
-    private static final int N_MIN = 5;
+    /**
+     * 판정에 필요한 최소 표본 수. 이보다 적으면 z 를 계산하지 않고 GREEN.
+     * 온보딩 씨딩(BaselineSeeder)이 초기값을 넣을 때 표본 수를 이 값으로 두어 첫 지출부터 판정이 돌게 한다.
+     */
+    public static final int N_MIN = 5;
     // Z_GREEN / Z_RED 임계값은 signal_config 테이블(관리자 조정) 에서 읽는다. SignalConfigService 참조.
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
     // expenses.z_score 는 DECIMAL(6,3) — 담을 수 있는 한계. clampZScore 참조.
@@ -84,6 +90,9 @@ public class ExpenseService {
                 .memo(req.memo())
                 .isRecurring(req.isRecurring())
                 .build());
+
+        // 새 기록을 남긴 즉시 주는 습관 보상. 수정·삭제에는 다시 지급하지 않는다.
+        userRepository.findById(userId).orElseThrow().addGameMoney(100);
 
         UserStatStats stats = userStatStatsRepository
                 .findByUserIdAndStatType(userId, category.getStatType())
@@ -138,10 +147,16 @@ public class ExpenseService {
         // 두 건 중 한 번씩 이유를 캐묻는 앱은 쓰이지 않는다.
         //
         // 반복 결제는 사용자의 의식적 결정이 아니므로 여전히 스킵한다.
+        //
+        // 질문 행은 여기서(같은 트랜잭션) 템플릿 문구로 먼저 만든다. AI 문구는 커밋 뒤
+        // AiInquiryService.handleAnomalyEvent 가 비동기로 덮어쓴다. Gemini 가 실패해도
+        // 질문이 남고, 저장 직후 열리는 분석 화면이 빈 목록을 보지 않는다.
         boolean skipAiQuestion = Boolean.TRUE.equals(req.isRecurring());
         if (signal == Signal.RED && !skipAiQuestion) {
+            AiInquiry pending = aiInquiryRepository.save(
+                    AiInquiry.pending(expense.getId(), userId, req.item(), req.amount()));
             eventPublisher.publishEvent(new ExpenseAnomalyEvent(
-                    expense.getId(), userId, req.item(), req.amount(),
+                    pending.getId(), expense.getId(), userId, req.item(), req.amount(),
                     category.getStatType(), stats.getMeanEma(), signal
             ));
         }
@@ -153,7 +168,13 @@ public class ExpenseService {
         return ExpenseResponse.from(expense);
     }
 
-    /** 본인 지출의 내역명·금액 수정 후 현재 통계 기준으로 판정과 절약액을 다시 계산한다. */
+    /**
+     * 본인 지출의 내역명·금액 수정 후 현재 통계 기준으로 판정과 절약액을 다시 계산한다.
+     *
+     * 파생 상태 처리는 삭제(LedgerService.deleteExpense)와 같은 규칙을 따른다.
+     * - user.totalSaved — 이 지출이 더해 둔 절약액과 새 절약액의 차이만큼 맞춘다.
+     * - EMA(user_stat_stats)·goal 누적 — 보존. EMA 는 중간 항을 바꿀 수 없고, goal 은 그 시점의 이력이다.
+     */
     @Transactional
     public ExpenseResponse updateExpense(Long userId, Long expenseId, ExpenseUpdateRequest req) {
         Expense expense = expenseRepository.findById(expenseId)
@@ -186,18 +207,41 @@ public class ExpenseService {
         }
         if (Boolean.TRUE.equals(expense.getIsRecurring()) && signal == Signal.RED) signal = Signal.GRAY;
 
+        int previousSaved = expense.getSavedAmount() == null ? 0 : expense.getSavedAmount();
         int savedAmount = stats.getMeanEma().subtract(BigDecimal.valueOf(req.amount())).intValue();
         int statDelta = 0;
         expense.updateCalculations(zScore, signal, savedAmount, statDelta);
+        // 등록 때 양수 절약액만 누적했으므로 비교도 양수 부분끼리 한다.
+        adjustTotalSaved(userId, Math.max(savedAmount, 0) - Math.max(previousSaved, 0));
 
-        // 수정 전 금액으로 만든 질문은 더 이상 유효하지 않다. 새 판정이 RED면 커밋 후 다시 생성한다.
-        aiInquiryRepository.findByExpenseId(expenseId).ifPresent(aiInquiryRepository::delete);
+        // 수정 전 금액으로 만든 질문은 더 이상 유효하지 않다. 새 판정이 RED면 템플릿 질문을
+        // 바로 다시 만들고, AI 문구는 커밋 후 비동기로 덮어쓴다.
+        // flush: expense_id 가 UNIQUE 라, Hibernate 가 INSERT 를 DELETE 보다 먼저 내보내면
+        // 같은 expense_id 로 두 행이 겹쳐 제약 위반이 난다.
+        aiInquiryRepository.findByExpenseId(expenseId).ifPresent(old -> {
+            aiInquiryRepository.delete(old);
+            aiInquiryRepository.flush();
+        });
         if (signal == Signal.RED && !Boolean.TRUE.equals(expense.getIsRecurring())) {
+            AiInquiry pending = aiInquiryRepository.save(AiInquiry.pending(
+                    expense.getId(), userId, expense.getItem(), expense.getAmount()));
             eventPublisher.publishEvent(new ExpenseAnomalyEvent(
-                    expense.getId(), userId, expense.getItem(), expense.getAmount(),
+                    pending.getId(), expense.getId(), userId, expense.getItem(), expense.getAmount(),
                     expense.getStatType(), stats.getMeanEma(), signal));
         }
         return ExpenseResponse.from(expense);
+    }
+
+    /** 누적 절약액을 차이만큼 옮긴다. 줄일 때는 삭제와 같이 0 아래로 내려가지 않게 자른다. */
+    private void adjustTotalSaved(Long userId, int delta) {
+        if (delta == 0) return;
+        User user = userRepository.findById(userId).orElseThrow();
+        int current = user.getTotalSaved() == null ? 0 : user.getTotalSaved();
+        user.addTotalSaved(Math.max(delta, -current));
+        // 누적 절약액이 늘었으면 그 값을 조건으로 하는 칭호를 다시 본다.
+        if (delta > 0) {
+            eventPublisher.publishEvent(new TitleCheckEvent(userId, "EXPENSE_UPDATED"));
+        }
     }
 
     /**
@@ -261,7 +305,7 @@ public class ExpenseService {
         if (pets.isEmpty()) return 0;
 
         Pet pet = pets.get(0);
-        pet.addStat(statType, statDelta);
+        int applied = statRewardService.grant(pet, userId, statType, statDelta);
         pet.evaluateStage(); // 스탯 합이 임계값을 넘었으면 INFANT→JUVENILE→ADULT 로 승급
 
         petGrowthLogRepository.save(PetGrowthLog.builder()
@@ -269,7 +313,7 @@ public class ExpenseService {
                 .userId(userId)
                 .expenseId(expenseId)
                 .statType(statType)
-                .delta(statDelta)
+                .delta(applied)
                 .savedAmount(savedAmount)
                 .reason(GrowthReason.EXPENSE_SAVING)
                 .createdAt(LocalDateTime.now())

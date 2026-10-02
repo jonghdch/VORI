@@ -17,6 +17,7 @@ public record AdminTitleResponse(
         TitleMetricType metricType,
         long threshold,
         boolean enabled,
+        boolean hidden,
         int sortOrder,
         long holderCount,
         String unlocksThemeName,
@@ -27,6 +28,7 @@ public record AdminTitleResponse(
         return new AdminTitleResponse(
                 t.getId(), t.getCode(), t.getName(), t.getDescription(),
                 t.getMetricType(), t.getThreshold(), Boolean.TRUE.equals(t.getEnabled()),
+                t.isHidden(),
                 t.getSortOrder() == null ? 0 : t.getSortOrder(),
                 holderCount, unlocksThemeName, t.getCreatedAt(), t.getUpdatedAt());
     }

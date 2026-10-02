@@ -28,8 +28,13 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
+    // NULL = 구글로만 가입한 계정(비밀번호 없음). V26 참조.
+    @Column(name = "password_hash", length = 255)
     private String passwordHash;
+
+    // 구글 계정 고유 식별자(ID 토큰의 sub). NULL = 구글 미연결. 이메일이 아니라 이걸로 매칭한다.
+    @Column(name = "google_sub", unique = true, length = 64)
+    private String googleSub;
 
     @Column(nullable = false, length = 30)
     private String nickname;
@@ -101,6 +106,16 @@ public class User {
         this.age = age;
         this.job = job;
         this.monthlyIncome = monthlyIncome;
+    }
+
+    /** 온보딩 설문에서 받은 월 수입. 프로필 설정의 updateProfile 과 같은 컬럼을 쓴다. */
+    public void updateMonthlyIncome(Integer monthlyIncome) {
+        this.monthlyIncome = monthlyIncome;
+    }
+
+    /** 온보딩 튜토리얼 완료. */
+    public void markTutorialDone() {
+        this.tutorialDone = true;
     }
 
     /** 칭호 장착. null 이면 해제. 소유 여부 검증은 호출부(TitleService)가 한다. */

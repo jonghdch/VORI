@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toIsoDate } from "./utils";
 import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
 import { listExpensesByDate } from "../../api/ledger";
-import { startDateJudgment } from "../../api/dailyJudgment";
+import { getDateJudgment, startDateJudgment } from "../../api/dailyJudgment";
 import JudgmentResults, { judgmentReason } from "./JudgmentResults";
 import { canUseAiJudge } from "../../config";
 import "./WalletEntry.css";
@@ -38,19 +38,31 @@ function WalletAnalysisPage({ user }) {
   // 클라이언트도 skip 해 불필요한 round-trip 차단.
   const submittedRef = useRef(new Set());
 
-  // mount 시 fetch. Gemini 비동기 (질문 생성에 보통 5~10s) 라 즉시 응답엔 비어있음.
-  // 2s 간격으로 최대 6번 polling — 첫 호출 + 5회 retry = 최대 10s 대기.
+  // mount 시 fetch. 질문 행은 지출 저장과 같은 트랜잭션에서 템플릿 문구로 만들어지므로
+  // 첫 조회에 잡힌다. 질문 없는 RED 지출이 보이면(저장 직후 아주 짧은 창, 또는 이 방식
+  // 이전에 Gemini 가 실패해 질문이 아예 없는 옛 기록) 2s 간격으로 두 번만 더 물어보고,
+  // 그래도 없으면 빈 화면 대신 그 사실을 알린다(questionPending). 옛 기록은 다시 열어도
+  // 질문이 생기지 않으므로 오래 기다리게 하지 않는다.
   // reloadKey: 에러 화면의 "다시 시도"가 이 effect 를 재실행시키는 트리거.
   const [reloadKey, setReloadKey] = useState(0);
+  const [waitingForQuestion, setWaitingForQuestion] = useState(false);
+  const [questionPending, setQuestionPending] = useState(false);
+  // needsConfirm: 판정 전 확인 창을 띄울지. null 은 아직 모름(이미 판정한 날짜인지 조회 중) —
+  // 그동안은 "분석 중" 화면도 띄우지 않는다. confirmedDate: 확인 창에서 "판정하기"를 누른 날짜.
+  const [needsConfirm, setNeedsConfirm] = useState(null);
+  const [confirmedDate, setConfirmedDate] = useState(null);
   useEffect(() => {
     if (!isEventOpen) return;
     let cancelled = false;
     let attempts = 0;
-    const MAX_RETRIES = 5;
+    const MAX_RETRIES = 2;
     const RETRY_INTERVAL_MS = 2000;
     setLoading(true);
     setLoadProgress(8);
     setLoadError(false);
+    setWaitingForQuestion(false);
+    setQuestionPending(false);
+    setNeedsConfirm(confirmedDate === dateStr ? false : null);
     setJudgment(null);
     setPage(1);
     setAnswers({});
@@ -64,12 +76,20 @@ function WalletAnalysisPage({ user }) {
         ]);
         if (cancelled) return;
         setExpenses(expenseData);
-        if (data.length === 0 && expenseData.some((e) => e.signalFinal === "RED" && !e.reasonCategory && !e.isRecurring) && attempts < MAX_RETRIES) {
+        // 질문 행이 있는 지출은 빼고 본다 — 같은 날 RED 가 둘인데 하나만 질문이 없는 경우도 잡는다.
+        const asked = new Set(data.map((inq) => inq.expenseId));
+        const redWithoutQuestion = expenseData.some(
+          (e) => e.signalInitial === "RED" && !e.isRecurring && !e.reasonCategory && !asked.has(e.id)
+        );
+        if (redWithoutQuestion && attempts < MAX_RETRIES) {
           attempts++;
-          setLoadProgress(45 + attempts * 8);
+          setWaitingForQuestion(true);
+          // 45% 에서 시작해 마지막 재시도에 95% 근처까지. 100% 는 결과가 났을 때만.
+          setLoadProgress(45 + Math.round((attempts / MAX_RETRIES) * 50));
           setTimeout(tryFetch, RETRY_INTERVAL_MS);
           return;
         }
+        setQuestionPending(redWithoutQuestion);
         setInquiries(data);
         setLoadProgress(100);
         setLoading(false);
@@ -95,11 +115,30 @@ function WalletAnalysisPage({ user }) {
         setLoading(false);
       }
     };
-    start();
+    // 판정 전 확인. 아직 판정하지 않은 날짜면 확인 창에서 "판정하기"를 눌러야 판정한다.
+    // 이미 판정한 날짜는 결과를 다시 보는 것이라 묻지 않는다.
+    const begin = async () => {
+      if (confirmedDate === dateStr) {
+        start();
+        return;
+      }
+      try {
+        const existing = await getDateJudgment(dateStr);
+        if (cancelled) return;
+        setNeedsConfirm(!existing);
+        if (existing) start();
+      } catch {
+        if (cancelled) return;
+        setNeedsConfirm(false);
+        setLoadError(true);
+        setLoading(false);
+      }
+    };
+    begin();
     return () => {
       cancelled = true;
     };
-  }, [dateStr, isEventOpen, reloadKey]);
+  }, [dateStr, isEventOpen, reloadKey, confirmedDate]);
 
   // 활성 시간대 밖이면 가계부로 돌려보낸다.
   if (!isEventOpen) {
@@ -155,12 +194,16 @@ function WalletAnalysisPage({ user }) {
 
       <main className="ledger-entry-main">
         <p className="ledger-subtitle">{dateStr} 소비 판정{user?.role === "ADMIN" ? " · 관리자 시연" : ""}</p>
-        {loading ? (
+        {needsConfirm === null ? null : needsConfirm ? (
+          <JudgeConfirmDialog onCancel={goBack} onConfirm={() => setConfirmedDate(dateStr)} />
+        ) : loading ? (
           <div className="ledger-center-y">
             <div className="ledger-title-block ledger-title-block-center">
-              <h1 className="ledger-title">분석 중이에요</h1>
+              <h1 className="ledger-title">{waitingForQuestion ? "질문을 준비하고 있어요" : "분석 중이에요"}</h1>
               <p className="ledger-subtitle">
-                AI가 예외적인 지출을 살펴보고 있어요. 잠시만 기다려주세요.
+                {waitingForQuestion
+                  ? "평소보다 큰 지출이 있어서 물어볼 말을 고르는 중이에요. 조금만 더 기다려 주세요."
+                  : "AI가 예외적인 지출을 살펴보고 있어요. 잠시만 기다려주세요."}
               </p>
               <div
                 className="ledger-judgment-progress"
@@ -212,7 +255,7 @@ function WalletAnalysisPage({ user }) {
             <div className="ledger-actions">
               <div className="ledger-actions-row">
                 <button type="button" className="ledger-back" onClick={goBack}>
-                  가계부로 돌아가기
+                  돌아가기
                 </button>
                 <button
                   type="button"
@@ -227,7 +270,7 @@ function WalletAnalysisPage({ user }) {
         ) : total === 0 ? (
           // ───── AI 질문 없음 — 무지출 또는 오늘 소비의 최종 신호 안내 ─────
           <div className="ledger-center-y">
-            <div className="ledger-title-block">
+            <div className="ledger-title-block ledger-title-block--result">
               <div className={`ledger-signal-result ledger-signal-result--${dailySignal.toLowerCase()}`}>
                 <span className="ledger-signal-dot" aria-hidden />
                 <strong>{signalLabel(dailySignal)}</strong>
@@ -239,13 +282,17 @@ function WalletAnalysisPage({ user }) {
                 {judgedExpenseCount === 0
                   ? "지출이 없어 초록으로 표시했어요. 지급 보상은 아래에서 확인하세요."
                   : dailySignal === "GREEN"
-                    ? "모든 지출이 초록으로 분류됐어요. 항목별 판정 근거를 확인해 보세요."
+                    ? "모든 지출이 초록으로 분류됐어요. 항목별로 판정 이유를 확인해 보세요."
                     : dailySignal === "GRAY"
-                      ? "주황 지출이 포함되어 있어요. 하루 색상은 빨강, 주황, 초록 순으로 가장 주의가 필요한 지출을 따라요."
+                      ? "노랑 지출이 포함되어 있어요. 하루 색상은 빨강, 노랑, 초록 순으로 가장 주의가 필요한 지출을 따라요."
                       : "빨강 지출이 포함되어 있어요. 아래 항목별 금액 비교와 사유를 확인해 보세요."}
               </p>
             </div>
-            {judgment?.alreadyJudged && <p className="ledger-hint">이미 판정한 날짜예요. 현재 지출의 결과와 기존 지급 내역을 보여드려요.</p>}
+            {questionPending && (
+              <p className="ledger-hint">
+                질문이 없는 빨강 지출이 있어요. 아래 항목별 판정을 확인하고, 사유를 남기고 싶으면 가계부에서 그 지출을 수정해 주세요.
+              </p>
+            )}
             <JudgmentResults expenses={expenses} judgment={judgment} />
             <div className="ledger-actions">
               <div className="ledger-actions-row">
@@ -279,7 +326,7 @@ function WalletAnalysisPage({ user }) {
                 </span>
               </h1>
               <p className="ledger-subtitle">
-                예외적인 지출이 있어 어떤 이유로 지출하게 되었는지 작성해주세요
+                평소보다 큰 지출이 있어 소비한 이유를 기록해주세요. AI가 사유를 평가해 판정에 반영해요.
               </p>
             </div>
 
@@ -408,6 +455,68 @@ function WalletAnalysisPage({ user }) {
   );
 }
 
+// 판정 전 확인 창. 판정은 하루에 한 번이라 실수로 시작하지 않게 한 번 묻는다.
+// Esc 는 "돌아가기"와 같다. 바깥을 눌러서는 닫히지 않는다.
+function JudgeConfirmDialog({ onCancel, onConfirm }) {
+  const titleId = useId();
+  const textId = useId();
+  const dialogRef = useRef(null);
+
+  // 창이 떠 있는 동안 뒤 화면이 스크롤되지 않게 한다.
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, []);
+
+  const onKeyDown = (event) => {
+    if (event.key === "Escape") {
+      onCancel();
+      return;
+    }
+    // Tab 이 창 밖(뒤 화면의 로고 버튼)으로 나가지 않게 창 안에서만 돈다.
+    if (event.key !== "Tab") return;
+    const focusable = dialogRef.current?.querySelectorAll("button");
+    if (!focusable || focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  return (
+    <div className="ledger-confirm-backdrop">
+      <div
+        ref={dialogRef}
+        className="ledger-confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={textId}
+        onKeyDown={onKeyDown}
+      >
+        <h2 id={titleId} className="ledger-confirm-title">하루에 한 번 판정할 수 있습니다.</h2>
+        <p id={textId} className="ledger-confirm-text">판정 시작할까요?</p>
+        <div className="ledger-confirm-actions">
+          <button type="button" className="ledger-back" onClick={onCancel}>
+            돌아가기
+          </button>
+          <button type="button" className="ledger-next" onClick={onConfirm} autoFocus>
+            판정하기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function paymentLabel(pm) {
   switch (pm) {
     case "CASH": return "현금";
@@ -431,7 +540,7 @@ function getDailySignal(expenses) {
 function signalLabel(signal) {
   if (signal === "GREEN") return "초록 · 절약";
   if (signal === "RED") return "빨강 · 과소비";
-  return "주황 · 보통";
+  return "노랑 · 보통";
 }
 
 export default WalletAnalysisPage;

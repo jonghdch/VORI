@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 영수증 사진 → 가계부 입력값 추출.
+ * 영수증 사진·결제 내역 캡처 → 가계부 입력값 추출.
  *
  * 이미지는 저장하지 않는다. 메모리에서 Gemini 로 넘기고 결과만 남긴다 —
  * 가계부에 필요한 건 추출된 데이터이고, 영수증에는 카드번호 뒷자리 같은 정보가 남아 있다.
@@ -77,11 +77,18 @@ public class ReceiptService {
             return fail(job.getId(), "인식 결과를 해석하지 못했습니다.", e);
         }
 
+        // 여러 건이 찍힌 캡처는 프롬프트가 값을 비우게 했지만, 모델이 하나를 골라 채워 와도 쓰지 않는다 —
+        // 사용자가 원한 건인지 알 수 없는 금액이 지출 행에 조용히 들어가는 게 더 나쁘다.
+        boolean multiple = extracted.isMultiple();
+
         // 3) 결과 저장 — 짧은 쓰기
         return transactionTemplate.execute(tx -> {
             ReceiptOcrJob fresh = receiptOcrJobRepository.findById(job.getId()).orElseThrow();
-            fresh.markSuccess(raw, extracted.totalAmount(), parseDate(extracted.date()),
-                    trim(extracted.itemLabel(), 100), LocalDateTime.now());
+            fresh.markSuccess(raw,
+                    multiple ? null : extracted.totalAmount(),
+                    multiple ? null : parseDate(extracted.date()),
+                    multiple ? null : trim(extracted.itemLabel(), 100),
+                    LocalDateTime.now());
             // 인식 성공 건수가 바뀌었으므로 칭호 조건을 다시 본다
             eventPublisher.publishEvent(new TitleCheckEvent(userId, "RECEIPT_SCANNED"));
             return ReceiptOcrResponse.of(fresh, extracted);

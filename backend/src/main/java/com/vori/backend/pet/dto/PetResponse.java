@@ -7,10 +7,12 @@ import java.time.LocalDateTime;
 
 /**
  * 펫 1마리의 화면 표현. appearanceKey 로 프론트가 이미지 asset 을 찾는다.
+ * name 은 사용자가 지어 준 이름 — 아직 짓지 않았으면 null 이고, 프론트가 이름 짓기 팝업을 띄운다.
  * statTotal 은 4대 스탯 합(진화 기준값) — 프론트가 다시 더하지 않도록 서버가 내려준다.
  */
 public record PetResponse(
         Long id,
+        String name,
         Long speciesId,
         String speciesName,
         String tier,
@@ -22,6 +24,7 @@ public record PetResponse(
         int statIq,
         int statEndurance,
         int statTotal,
+        int interactionCount,
         LocalDateTime hatchedAt,
         LocalDateTime releasedAt,
         Integer releaseValue
@@ -29,6 +32,7 @@ public record PetResponse(
     public static PetResponse of(Pet p, PetSpecies s) {
         return new PetResponse(
                 p.getId(),
+                p.getName(),
                 p.getSpeciesId(),
                 s == null ? null : s.getName(),
                 s == null ? null : s.getTier().name(),
@@ -40,6 +44,7 @@ public record PetResponse(
                 nz(p.getStatIq()),
                 nz(p.getStatEndurance()),
                 p.statTotal(),
+                nz(p.getInteractionCount()),
                 p.getHatchedAt(),
                 p.getReleasedAt(),
                 p.getReleaseValue());

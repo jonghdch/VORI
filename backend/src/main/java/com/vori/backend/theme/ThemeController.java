@@ -23,6 +23,6 @@ public class ThemeController {
     /** GET /api/themes — 테마별 해금 여부·배치 개수·세트 발동 여부. 발동 중인 것부터. */
     @GetMapping
     public List<ThemeResponse> list(@AuthenticationPrincipal UserPrincipal principal) {
-        return themeService.list(principal.getUser().getId());
+        return themeService.list(principal.getId());
     }
 }

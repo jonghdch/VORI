@@ -12,6 +12,7 @@ import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -44,7 +45,7 @@ class DailyJudgmentServiceTest {
         when(furniture.findByUserIdAndPositionXIsNotNullAndPositionYIsNotNull(1L)).thenReturn(List.of());
         when(judgments.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        DailyJudgmentResponse result = service.judgeDate(user, date);
+        DailyJudgmentResponse result = service.judgeDate(user.getId(), user.getRole(), date);
 
         assertEquals(500, result.coinReward());
         assertEquals(11, result.statRewardPerType());
@@ -63,7 +64,7 @@ class DailyJudgmentServiceTest {
         when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
         when(judgments.findByUserIdAndJudgmentDate(1L, date)).thenReturn(Optional.of(existing));
 
-        DailyJudgmentResponse result = service.judgeDate(user, date);
+        DailyJudgmentResponse result = service.judgeDate(user.getId(), user.getRole(), date);
 
         assertTrue(result.alreadyJudged());
         assertEquals(0, user.getGameMoney());
@@ -75,8 +76,38 @@ class DailyJudgmentServiceTest {
     void regularUserCannotJudgeAnotherDate() {
         User user = User.builder().id(2L).role(Role.USER).build();
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
-                () -> service.judgeDate(user, LocalDate.now().minusDays(1)));
+                () -> service.judgeDate(user.getId(), user.getRole(), LocalDate.now().minusDays(1)));
         assertEquals(403, error.getStatusCode().value());
         verifyNoInteractions(expenses, judgments, users, pets, growthLogs, furniture);
+    }
+
+    @Test
+    void regularUserCannotJudgeBeforeOpenHour() {
+        // 24 는 어느 시각에 돌려도 "아직 안 열림" 이다.
+        ReflectionTestUtils.setField(service, "openHour", 24);
+        User user = User.builder().id(2L).role(Role.USER).build();
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.judgeDate(user.getId(), user.getRole(), LocalDate.now()));
+
+        assertEquals(403, error.getStatusCode().value());
+        verifyNoInteractions(expenses, judgments, users, pets, growthLogs, furniture);
+    }
+
+    @Test
+    void adminCanJudgeBeforeOpenHour() {
+        // 화면(config.canUseAiJudge)은 관리자를 시각과 상관없이 들여보낸다. 서버도 같아야 한다.
+        ReflectionTestUtils.setField(service, "openHour", 24);
+        LocalDate date = LocalDate.now().minusDays(8);
+        User admin = User.builder().id(3L).role(Role.ADMIN).gameMoney(0).build();
+        DailyJudgment existing = DailyJudgment.builder().userId(3L).judgmentDate(date)
+                .signal(Signal.GREEN).expenseCount(0).coinReward(500).statRewardPerType(11)
+                .judgedAt(java.time.LocalDateTime.now()).build();
+        when(users.findByIdForUpdate(3L)).thenReturn(Optional.of(admin));
+        when(judgments.findByUserIdAndJudgmentDate(3L, date)).thenReturn(Optional.of(existing));
+
+        DailyJudgmentResponse result = service.judgeDate(admin.getId(), admin.getRole(), date);
+
+        assertTrue(result.alreadyJudged());
     }
 }

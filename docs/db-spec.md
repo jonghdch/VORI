@@ -1,6 +1,6 @@
 # VORI DB 테이블 명세
 
-최신 MVP 기준 테이블 명세. 실제 적용된 스키마는 `backend/src/main/resources/db/migration/V1__init.sql`.
+최신 MVP 기준 테이블 명세. 실제 적용된 스키마는 `backend/src/main/resources/db/migration/V1__init.sql` 이후 Flyway 마이그레이션 전체.
 
 본문 = 현재 진실 (최신 컬럼 명세).
 하단 변경 이력 (#1 ~ #11) = 각 결정의 사유·스냅샷.
@@ -15,14 +15,15 @@
 |---|---|---|---|---|
 | 사용자 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 사용자 고유 번호 |
 | 이메일 | `email` | UQ | `VARCHAR(100) NOT NULL` | 로그인 이메일 |
-| 비밀번호 해시 | `password_hash` |  | `VARCHAR(255) NOT NULL` | bcrypt 등 해시 결과 |
+| 비밀번호 해시 | `password_hash` |  | `VARCHAR(255) NULL` | bcrypt 등 해시 결과. NULL = 구글로만 가입한 계정 (V19) |
+| 구글 계정 식별자 | `google_sub` |  | `VARCHAR(64) NULL UNIQUE` | 구글 ID 토큰의 `sub`. NULL = 구글 미연결. 이메일이 아니라 이 값으로 매칭 (V19) |
 | 닉네임 | `nickname` |  | `VARCHAR(30) NOT NULL` | 화면 표시 이름 |
 | 이름 | `name` |  | `VARCHAR(30)` | 튜토리얼 수집값 |
 | 나이 | `age` |  | `TINYINT UNSIGNED` | 튜토리얼 수집값 |
 | 직업 | `job` |  | `VARCHAR(50)` | 튜토리얼 수집값 |
 | 월 소득 | `monthly_income` |  | `INT UNSIGNED` | 소비 기준 참고값 |
 | 활성 칭호 식별자 | `active_title_id` | FK | `BIGINT NULL` | → `user_titles(id)` |
-| 절약 누적액 | `total_saved` |  | `INT DEFAULT 0` | `saved_amount` 양수 누적 |
+| 절약 누적액 | `total_saved` |  | `INT DEFAULT 0` | `saved_amount` 양수 누적. 지출 수정·삭제 때 그만큼 조정(0 미만 불가) |
 | 게임머니 잔액 | `game_money` |  | `INT DEFAULT 0` | 현재 보유 게임머니 |
 | 튜토리얼 완료 여부 | `tutorial_done` |  | `BOOLEAN DEFAULT FALSE` | 튜토리얼 완료 여부 |
 | 권한 | `role` |  | `ENUM('USER','ADMIN') NOT NULL DEFAULT 'USER'` | 사용자 권한. Spring Security 의 `ROLE_USER`/`ROLE_ADMIN` 과 매핑 |
@@ -33,7 +34,27 @@
 
 ---
 
-### 2. 절약 목표 `goals`
+### 2. 소비 프로필 `user_spending_profiles`
+
+회원가입 직후 5단계 선택형으로 받는 초기 소비 프로필. 실제 지출 내역을 만들지 않고, 신규 사용자의 초기 기준선과 온보딩 개인화에 쓴다.
+
+| 논리명 | 물리명 | 키 | 타입 | 설명 |
+|---|---|---|---|---|
+| 사용자 식별자 | `user_id` | PK/FK | `BIGINT` | → `users(id)` `ON DELETE CASCADE` |
+| 생활비 규모 | `monthly_budget_band` |  | `VARCHAR(30) NOT NULL` | `UNDER_20`, `BAND_20_40`, `BAND_40_70`, `OVER_70`, `UNKNOWN` |
+| 식비 기준 | `meal_cost_band` |  | `VARCHAR(30) NOT NULL` | `UNDER_7`, `MEAL_7_10`, `MEAL_10_15`, `OVER_15`, `UNKNOWN` |
+| 자주 쓰는 영역 | `primary_spend_area` |  | `VARCHAR(30) NOT NULL` | 첫 기록 추천·온보딩 문구 개인화 |
+| 소비 습관 | `spending_habit` |  | `VARCHAR(30) NOT NULL` | AI 질문 톤·목표 추천 후보 |
+| 이번 달 목표 | `monthly_goal` |  | `VARCHAR(30) NOT NULL` | 온보딩 마지막 CTA 개인화 |
+| 기준선 반영 여부 | `baseline_applied` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | `user_stat_stats` 초기값 반영 여부 |
+| 생성 일시 | `created_at` |  | `DATETIME NOT NULL` | 생성 시각 |
+| 수정 일시 | `updated_at` |  | `DATETIME NOT NULL` | 수정 시각 |
+
+마이그레이션: `V23__user_spending_profiles.sql`.
+
+---
+
+### 3. 절약 목표 `goals`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -66,7 +87,7 @@ UNIQUE KEY uq_goals_user_month_category (user_id, year_month, category_id)
 
 ---
 
-### 3. 월 예산 `monthly_budgets`
+### 4. 월 예산 `monthly_budgets`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -85,7 +106,7 @@ UNIQUE(user_id, year_month)
 
 ## 도메인 2 — 소비·판정·리포트
 
-### 4. 카테고리 `categories`
+### 5. 카테고리 `categories`
 
 지출 카테고리를 대분류 + 상세 2단 트리로 관리합니다. 대분류와 상세 모두 같은 테이블에 저장합니다.
 
@@ -119,7 +140,7 @@ UNIQUE(parent_id, name)
 
 ---
 
-### 5. 지출 `expenses`
+### 6. 지출 `expenses`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -163,7 +184,7 @@ CONSTRAINT fk_expenses_category
 
 ---
 
-### 6. 수입 `incomes`
+### 7. 수입 `incomes`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -195,7 +216,7 @@ CONSTRAINT fk_incomes_user
 
 ---
 
-### 7. 스탯별 EMA 통계 `user_stat_stats`
+### 8. 스탯별 EMA 통계 `user_stat_stats`
 
 스탯 단위로 지출 분포의 EMA 통계를 유지. 두 용도 겸함:
 - **펫 스탯 점수 환산** — 절약액 → 스탯 변동(`stat_delta`) 계산
@@ -229,7 +250,7 @@ EMA 갱신·z 점수 계산·표본 수 가드 등 **계산 로직은 Service �
 
 ---
 
-### 8. AI 사유 질문 `ai_inquiries`
+### 9. AI 사유 질문 `ai_inquiries`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -262,7 +283,7 @@ WHERE user_id = ?
 
 ---
 
-### 9. 영수증 OCR 작업 `receipt_ocr_jobs`
+### 10. 영수증 OCR 작업 `receipt_ocr_jobs`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -289,7 +310,7 @@ INDEX(expense_id)
 
 ---
 
-### 10. 일일 리포트 `daily_reports`
+### 11. 일일 리포트 `daily_reports`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -315,7 +336,7 @@ UNIQUE(user_id, report_date)
 
 ## 도메인 3 — 펫·알·가챠·성장
 
-### 11. 펫 도감 `pet_species`
+### 12. 펫 도감 `pet_species`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -327,19 +348,21 @@ UNIQUE(user_id, report_date)
 
 ---
 
-### 12. 펫 `pets`
+### 13. 펫 `pets`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
 | 펫 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 펫 고유 번호 |
 | 사용자 식별자 | `user_id` | FK, IDX | `BIGINT NOT NULL` | → `users(id)` |
 | 종족 식별자 | `species_id` | FK | `BIGINT NOT NULL` | → `pet_species(id)` |
+| 펫 이름 | `name` |  | `VARCHAR(10) NULL` | 사용자가 지어 준 이름(1~10자). NULL이면 아직 이름을 짓지 않은 펫 |
 | 알 식별자 | `egg_id` | FK, UQ | `BIGINT NULL` | → `eggs(id)`, 시작 펫이면 NULL |
 | 부화 일시 | `hatched_at` |  | `DATETIME NULL` | 부화 시각 |
 | 에너지 스탯 | `stat_energy` |  | `INT DEFAULT 0` | `ENERGY` 절약 성장값 |
 | 매력 스탯 | `stat_charm` |  | `INT DEFAULT 0` | `CHARM` 절약 성장값 |
 | 지능 스탯 | `stat_iq` |  | `INT DEFAULT 0` | `IQ` 절약 성장값 |
 | 지구력 스탯 | `stat_endurance` |  | `INT DEFAULT 0` | `ENDURANCE` 절약 성장값 |
+| 상호작용 횟수 | `interaction_count` |  | `INT NOT NULL DEFAULT 0` | 쓰다듬기 등 상호작용 누적 횟수. 칭호 조건(`PET_INTERACTIONS`) 기준값 |
 | 성장 단계 | `stage` |  | `ENUM('INFANT','JUVENILE','ADULT') DEFAULT 'INFANT'` | 성장 단계 |
 | 변종 종류 | `variant` |  | `ENUM('NORMAL','IRO','ALIEN') DEFAULT 'NORMAL'` | 변종 |
 | 생성 일시 | `created_at` |  | `DATETIME NOT NULL` | 생성 시각 |
@@ -352,9 +375,11 @@ UNIQUE(user_id, report_date)
 INDEX(user_id, released_at)
 ```
 
+`name` 추가 마이그레이션: `V25__pet_name.sql`. `interaction_count` 추가 마이그레이션: `V28__pet_interaction_hidden_title.sql`(칭호 마스터 `titles` 의 `hidden` 컬럼·`PET_INTERACTIONS` 지표·히든 칭호 「사랑둥이」도 같은 파일).
+
 ---
 
-### 13. 알 `eggs`
+### 14. 알 `eggs`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -368,7 +393,7 @@ INDEX(user_id, released_at)
 
 ---
 
-### 14. 가챠 결과 `gacha_pulls`
+### 15. 가챠 결과 `gacha_pulls`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -380,7 +405,7 @@ INDEX(user_id, released_at)
 
 ---
 
-### 15. 펫 성장 로그 `pet_growth_logs`
+### 16. 펫 성장 로그 `pet_growth_logs`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -399,7 +424,7 @@ INDEX(user_id, released_at)
 
 ## 도메인 4 — 꾸미기·칭호
 
-### 16. 테마 `theme_master`
+### 17. 테마 `theme_master`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -411,7 +436,7 @@ INDEX(user_id, released_at)
 
 ---
 
-### 17. 사용자 가구 `user_furniture`
+### 18. 사용자 가구 `user_furniture`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -429,7 +454,7 @@ INDEX(user_id, released_at)
 
 ---
 
-### 18. 사용자 칭호 `user_titles`
+### 19. 사용자 칭호 `user_titles`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -465,6 +490,9 @@ expenses.saved_amount = user_stat_stats.mean_ema - expenses.amount
 ```text
 saved = max(expenses.saved_amount, 0)
 users.total_saved += saved
+# 지출 수정: total_saved += max(새 saved, 0) - max(이전 saved, 0)   (0 미만이면 0)
+# 지출 삭제: total_saved -= max(이전 saved, 0)                    (0 미만이면 0)
+# goals.current_amount 는 수정·삭제 때 되돌리지 않는다 (domain.md "지출 수정·삭제 시 파생 값")
 
 # 해당 월의 전체 목표
 UPDATE goals

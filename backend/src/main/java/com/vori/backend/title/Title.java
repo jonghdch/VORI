@@ -39,7 +39,7 @@ public class Title {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "metric_type", nullable = false, columnDefinition = "ENUM('TOTAL_SAVED','EXPENSE_COUNT','GOALS_ACHIEVED','PETS_RELEASED','S_TIER_PETS','AI_ANSWERS','RECEIPT_SCANS','LOGIN_COUNT')")
+    @Column(name = "metric_type", nullable = false, columnDefinition = "ENUM('TOTAL_SAVED','EXPENSE_COUNT','GOALS_ACHIEVED','PETS_RELEASED','S_TIER_PETS','AI_ANSWERS','RECEIPT_SCANS','LOGIN_COUNT','PET_INTERACTIONS')")
     private TitleMetricType metricType;
 
     @Column(nullable = false)
@@ -47,6 +47,10 @@ public class Title {
 
     @Column(nullable = false)
     private Boolean enabled;
+
+    // 히든 칭호 — 따기 전에는 사용자 칭호 목록에 내려가지 않는다(TitleService.list).
+    @Column(nullable = false)
+    private Boolean hidden;
 
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
@@ -57,13 +61,13 @@ public class Title {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    /** 어드민 생성용. created/updated 는 지금 시각. */
+    /** 어드민 생성용. created/updated 는 지금 시각. 히든 칭호는 마이그레이션으로만 넣는다. */
     public static Title create(String code, String name, String description,
                                TitleMetricType metricType, long threshold,
                                boolean enabled, int sortOrder) {
         LocalDateTime now = LocalDateTime.now();
         return new Title(null, code, name, description, metricType, threshold,
-                enabled, sortOrder, now, now);
+                enabled, false, sortOrder, now, now);
     }
 
     /**
@@ -79,6 +83,10 @@ public class Title {
         this.enabled = enabled;
         this.sortOrder = sortOrder;
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public boolean isHidden() {
+        return Boolean.TRUE.equals(hidden);
     }
 
     public long currentOf(TitleProgress progress) {

@@ -14,5 +14,6 @@ public record TitleProgress(
         long sTierPets,       // 뽑은 S 등급 펫 수
         long aiAnswers,       // 답변을 마친 AI 질문 수
         long receiptScans,    // 인식에 성공한 영수증 수
-        long loginCount       // 누적 로그인 횟수
+        long loginCount,      // 누적 로그인 횟수
+        long petInteractions  // 가장 많이 상호작용한 펫의 상호작용 횟수
 ) {}

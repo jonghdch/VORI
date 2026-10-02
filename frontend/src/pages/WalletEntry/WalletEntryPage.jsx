@@ -13,10 +13,8 @@ import {
 import { categorizeRemote } from "../../api/categorize";
 import { MAX_RECEIPT_BYTES, prepareReceiptImage, uploadReceipt } from "../../api/receipt";
 import {
-  createExpense,
-  createIncome,
-  createSaving,
-  updateExpense,
+  saveLedgerEntries,
+  deleteExpense,
   listCategoryTree,
   listExpensesByDate,
   listIncomesByDate,
@@ -39,8 +37,7 @@ function WalletEntryPage({ user }) {
   // 쿼리를 직접 수정해도 미래 날짜에는 가계부를 작성할 수 없다.
   const dateStr =
     requestedDateIsValid && requestedDate <= todayStr ? requestedDate : todayStr;
-  const editExpenseId = Number(params.get("editExpenseId")) || null;
-  const isEditMode = editExpenseId != null;
+  const isEditMode = params.get("edit") === "true";
   const past = isPastDate(dateStr);
 
   // 같은 날짜의 입력값을 sessionStorage 에 보관 — Step 2/3 갔다 와도 유지.
@@ -50,12 +47,19 @@ function WalletEntryPage({ user }) {
   // 앞 사람의 입력이 그대로 떠오르고, 그 행이 dbId 를 달고 있어 "저장됨" 으로까지 표시된다
   // (실제로는 이 계정에 없는 지출이다). 시연 리허설을 다른 계정으로 해 본 뒤 무대 계정으로
   // 로그인하면 바로 겪는다.
-  const storageKey = `ledger-entry-${user?.id ?? "anon"}-${dateStr}${isEditMode ? `-edit-${editExpenseId}` : ""}`;
+  const storageKey = `ledger-entry-${user?.id ?? "anon"}-${dateStr}${isEditMode ? "-edit" : ""}`;
   const loadDraft = () => {
     try {
       const raw = sessionStorage.getItem(storageKey);
       if (!raw) return null;
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      // 저장된 행의 dbId 를 임시저장하면 삭제 뒤에도 과거 행이 되살아나 404가 난다.
+      // 임시저장은 아직 서버에 저장하지 않은 행만 보관한다.
+      return {
+        income: (parsed.income || []).filter((row) => !row.dbId),
+        expense: (parsed.expense || []).filter((row) => !row.dbId),
+        savings: (parsed.savings || []).filter((row) => !row.dbId),
+      };
     } catch {
       return null;
     }
@@ -105,13 +109,19 @@ function WalletEntryPage({ user }) {
     };
   }, []);
 
-  // 변경마다 저장
+  // 아직 서버에 없는 행만 임시저장한다. DB 행은 매 진입 때 서버에서 새로 읽는다.
   useEffect(() => {
     try {
-      sessionStorage.setItem(
-        storageKey,
-        JSON.stringify({ income, expense, savings }),
-      );
+      const draftRows = {
+        income: income.filter((row) => !row.dbId),
+        expense: expense.filter((row) => !row.dbId),
+        savings: savings.filter((row) => !row.dbId),
+      };
+      if (draftRows.income.length || draftRows.expense.length || draftRows.savings.length) {
+        sessionStorage.setItem(storageKey, JSON.stringify(draftRows));
+      } else {
+        sessionStorage.removeItem(storageKey);
+      }
     } catch {}
   }, [income, expense, savings, storageKey]);
 
@@ -122,23 +132,10 @@ function WalletEntryPage({ user }) {
     } catch {}
   };
 
-  // mount (또는 dateStr 변경) 시 DB 에서 그 날짜 기존 데이터 fetch.
-  // draft 에 실제 입력값이 있으면 draft 우선. 빈 draft (기본 빈 행만) 은 fetch.
+  // mount (또는 dateStr 변경) 시 DB 에서 그 날짜 기존 데이터를 항상 fetch한다.
+  // 서버 행과 아직 저장하지 않은 임시 행을 함께 보여 준다.
   useEffect(() => {
-    // mount 시점의 closure draft 가 아니라 fresh 한 sessionStorage 를 다시 읽음.
-    // (직전 setState 가 즉시 sessionStorage 에 write 되므로 closure 는 stale)
     const fresh = loadDraft();
-    const hasContent = (rows) =>
-      Array.isArray(rows) &&
-      rows.some(
-        (r) => (r.name && r.name.trim()) || (r.amount && String(r.amount).trim()),
-      );
-    const draftHasContent =
-      fresh &&
-      (hasContent(fresh.income) ||
-        hasContent(fresh.expense) ||
-        hasContent(fresh.savings));
-    if (draftHasContent) return;
     let cancelled = false;
     (async () => {
       try {
@@ -148,10 +145,9 @@ function WalletEntryPage({ user }) {
           isEditMode ? Promise.resolve([]) : listSavingsByDate(dateStr),
         ]);
         if (cancelled) return;
-        if (exps.length + incs.length + savs.length === 0) return;
         const next = (e) => nextId.current++;
         setExpense(
-          exps.filter((e) => !isEditMode || e.id === editExpenseId).map((e) => ({
+          [...exps.map((e) => ({
             id: next(),
             dbId: e.id,
             paymentMethod: e.paymentMethod || "CREDIT",
@@ -159,28 +155,30 @@ function WalletEntryPage({ user }) {
             amount: String(e.amount),
             categoryId: e.categoryId,
             categoryTouched: true, // 저장된 카테고리 — 자동분류로 덮지 않음
-            isEditing: isEditMode && e.id === editExpenseId,
-          })),
+            // 같은 날짜를 다시 열면 저장된 지출도 바로 고칠 수 있게 한다.
+            // 수정 링크의 쿼리가 사라져도 읽기 전용 행으로 잠기지 않는다.
+            isEditing: true,
+          })), ...(fresh?.expense || [])],
         );
         setIncome(
-          incs.map((i) => ({
+          [...incs.map((i) => ({
             id: next(),
             dbId: i.id,
             name: i.item,
             amount: String(i.amount),
             categoryEnum: i.source,
             sourceTouched: true,
-          })),
+          })), ...(fresh?.income || [])],
         );
         setSavings(
-          savs.map((s) => ({
+          [...savs.map((s) => ({
             id: next(),
             dbId: s.id,
             name: s.item,
             amount: String(s.amount),
             categoryEnum: s.savingType,
             sourceTouched: true,
-          })),
+          })), ...(fresh?.savings || [])],
         );
       } catch {
         // fetch 실패는 무시 — 빈 폼으로 시작
@@ -190,12 +188,51 @@ function WalletEntryPage({ user }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateStr, editExpenseId, isEditMode]);
+  }, [dateStr, isEditMode]);
 
 
   const addRow = (setter) => setter((rows) => [...rows, newRow()]);
   const removeRow = (setter, id) =>
     setter((rows) => rows.filter((r) => r.id !== id));
+
+  const deleteExpenseRow = async (row) => {
+    if (row.dbId) {
+      if (!window.confirm(`'${row.name || "이 지출"}'을 삭제할까요?`)) return;
+      try {
+        await deleteExpense(row.dbId);
+      } catch (error) {
+        setSubmitError(error.message || "지출을 삭제하지 못했어요.");
+        return;
+      }
+    }
+    removeRow(setExpense, row.id);
+  };
+
+  // 현재 카드의 금액 입력이 끝나면 이미 만들어져 있는 다음 빈 카드로만 이동한다.
+  // 새 카드를 자동 생성하지는 않는다. 섹션 표시 순서(수입 → 지출 → 저축)를 그대로 따른다.
+  const focusNextEmptyCard = (currentType, currentId) => {
+    const orderedRows = [
+      ...income.map((row) => ({ ...row, entryType: "income" })),
+      ...expense.map((row) => ({ ...row, entryType: "expense" })),
+      ...savings.map((row) => ({ ...row, entryType: "savings" })),
+    ];
+    const currentIndex = orderedRows.findIndex(
+      (row) => row.entryType === currentType && row.id === currentId,
+    );
+    if (currentIndex < 0) return;
+    const current = orderedRows[currentIndex];
+    if (!(current.name || "").trim() || !String(current.amount || "").trim()) return;
+
+    const nextEmpty = orderedRows
+      .slice(currentIndex + 1)
+      .find((row) => !row.dbId && !(row.name || "").trim() && !String(row.amount || "").trim());
+    if (!nextEmpty) return;
+
+    const input = document.querySelector(
+      `[data-entry-type="${nextEmpty.entryType}"][data-row-id="${nextEmpty.id}"] [data-entry-field="name"]`,
+    );
+    input?.focus();
+  };
 
   // ── 영수증 OCR ──────────────────────────────────────────────────────────
   // 인식 결과를 바로 저장하지 않고 지출 행으로 채워만 준다. 흐린 영수증은 일부만
@@ -211,7 +248,7 @@ function WalletEntryPage({ user }) {
     if (!file) return;
 
     setReceiptBusy(true);
-    setReceiptNotice({ kind: "info", text: "영수증을 읽는 중이에요. 10~15초쯤 걸려요." });
+    setReceiptNotice({ kind: "info", text: "사진을 읽는 중이에요. 10~15초쯤 걸려요." });
     try {
       // 업로드 전에 긴 변 2048px 로 줄인다. 용량이 큰 원본일수록 인식이 느려진다 — prepareReceiptImage 참조.
       const photo = await prepareReceiptImage(file);
@@ -227,11 +264,17 @@ function WalletEntryPage({ user }) {
       const r = await uploadReceipt(photo);
 
       // 영수증이 아니거나 판독 불가여도 200 이 온다 — 값이 비었는지로 판단한다.
+      // 사진 종류(sourceType)로 이유를 나눠 안내한다. 여러 건이 찍힌 캡처는 서버가 값을 비워 보낸다.
       if (r.amount == null && !r.item) {
-        setReceiptNotice({
-          kind: "err",
-          text: r.errorMessage || "영수증을 읽지 못했어요. 더 밝은 곳에서 다시 찍어보세요.",
-        });
+        const source = r.extracted?.sourceType;
+        const text =
+          r.errorMessage ||
+          (source === "MULTIPLE"
+            ? "결제가 여러 건 보여요. 한 건만 보이게 잘라서 다시 올려주세요."
+            : source === "NOT_PAYMENT"
+              ? "결제 내역이 보이지 않아요. 취소·환불·입금 내역은 지출로 채우지 않아요."
+              : "사진을 읽지 못했어요. 더 밝은 곳에서 다시 찍거나 캡처를 다시 올려주세요.");
+        setReceiptNotice({ kind: "err", text });
         return;
       }
 
@@ -248,14 +291,14 @@ function WalletEntryPage({ user }) {
         },
       ]);
 
-      // 영수증 날짜가 지금 보는 날짜와 다르면 알려만 준다. 날짜를 임의로 바꾸면
+      // 사진 속 날짜가 지금 보는 날짜와 다르면 알려만 준다. 날짜를 임의로 바꾸면
       // 이미 입력한 다른 행들이 엉뚱한 날짜로 저장된다.
       const other = r.date && r.date !== dateStr;
       setReceiptNotice({
         kind: other ? "warn" : "ok",
         text: other
-          ? `영수증 날짜는 ${r.date} 예요. 지금은 ${dateStr} 을 작성 중이라 금액만 채웠어요.`
-          : "영수증을 읽었어요. 금액과 항목을 확인해주세요.",
+          ? `사진 속 날짜는 ${r.date} 예요. 지금은 ${dateStr} 을 작성 중이라 금액만 채웠어요.`
+          : "사진을 읽었어요. 금액과 항목을 확인해주세요.",
       });
     } catch (err) {
       setReceiptNotice({ kind: "err", text: err.message });
@@ -282,56 +325,47 @@ function WalletEntryPage({ user }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
-  // 백엔드에 모든 행 저장. 한 건이라도 실패하면 전체 중단하고 에러 표시.
-  // 성공한 행에는 즉시 dbId 를 박아 retry 시 중복 저장 방지.
+  // 지출·수입·저축을 한 요청으로 저장한다. 서버가 한 트랜잭션으로 처리하므로
+  // 하나라도 실패하면 아무것도 저장되지 않고, 고쳐서 다시 눌러도 중복되지 않는다.
   const goNext = async () => {
     if (!canProceed || submitting) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      for (const r of expense) {
-        if ((r.dbId && !r.isEditing) || isRowEmpty(r)) continue;
-        if (!r.categoryId) {
-          throw new Error(`"${r.name}" 카테고리를 분류하지 못했어요. 잠시 후 다시 시도해주세요.`);
-        }
-        const payload = {
-          item: r.name.trim(),
-          amount: r.amount,
-          categoryId: r.categoryId,
-          paymentMethod: r.paymentMethod,
-          spentAt: `${dateStr}T00:00:00`,
-        };
-        const saved = r.isEditing
-          ? await updateExpense(r.dbId, payload)
-          : await createExpense(payload);
-        setExpense((rows) =>
-          rows.map((rr) => (rr.id === r.id ? { ...rr, dbId: saved.id } : rr)),
-        );
+      const expenseRows = expense.filter(
+        (r) => !isRowEmpty(r) && (!r.dbId || r.isEditing),
+      );
+      const unclassified = expenseRows.find((r) => !r.categoryId);
+      if (unclassified) {
+        throw new Error(`"${unclassified.name}" 카테고리를 분류하지 못했어요. 잠시 후 다시 시도해주세요.`);
       }
-      for (const r of income) {
-        if (r.dbId || isRowEmpty(r)) continue;
-        const saved = await createIncome({
-          item: r.name.trim(),
-          amount: r.amount,
-          source: r.categoryEnum || "OTHER",
-          paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
-          receivedAt: dateStr,
+      const incomeRows = income.filter((r) => !r.dbId && !isRowEmpty(r));
+      const savingRows = savings.filter((r) => !r.dbId && !isRowEmpty(r));
+
+      if (expenseRows.length + incomeRows.length + savingRows.length > 0) {
+        await saveLedgerEntries({
+          expenses: expenseRows.map((r) => ({
+            id: r.isEditing ? r.dbId : null,
+            item: r.name.trim(),
+            amount: Number(r.amount),
+            categoryId: r.categoryId,
+            paymentMethod: r.paymentMethod,
+            spentAt: `${dateStr}T00:00:00`,
+          })),
+          incomes: incomeRows.map((r) => ({
+            item: r.name.trim(),
+            amount: Number(r.amount),
+            source: r.categoryEnum || "OTHER",
+            paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
+            receivedAt: dateStr,
+          })),
+          savings: savingRows.map((r) => ({
+            item: r.name.trim(),
+            amount: Number(r.amount),
+            savingType: r.categoryEnum || "DEPOSIT",
+            savedAt: dateStr,
+          })),
         });
-        setIncome((rows) =>
-          rows.map((rr) => (rr.id === r.id ? { ...rr, dbId: saved.id } : rr)),
-        );
-      }
-      for (const r of savings) {
-        if (r.dbId || isRowEmpty(r)) continue;
-        const saved = await createSaving({
-          item: r.name.trim(),
-          amount: r.amount,
-          savingType: r.categoryEnum || "DEPOSIT",
-          savedAt: dateStr,
-        });
-        setSavings((rows) =>
-          rows.map((rr) => (rr.id === r.id ? { ...rr, dbId: saved.id } : rr)),
-        );
       }
       // 성공 — draft 비움. 다음 mount 에서는 DB fetch 로 폼 채움 (정확한 dbId 포함).
       clearDraft();
@@ -374,8 +408,9 @@ function WalletEntryPage({ user }) {
           </p>
         </div>
 
-        {/* 영수증 OCR. 줄여서 보내도 인식에 6~13초 걸려서 진행 표시가 필수다 —
-            아무 표시 없이 기다리게 하면 멈춘 것처럼 보인다. */}
+        {/* 영수증·결제 캡처 OCR. 줄여서 보내도 인식에 6~13초 걸려서 진행 표시가 필수다 —
+            아무 표시 없이 기다리게 하면 멈춘 것처럼 보인다. 종이 영수증이 없는 결제가 많아
+            카드 승인 문자·결제 완료·이체 완료 캡처도 받는다(중간발표 상호평가). */}
         {!isEditMode && <section className="ledger-receipt">
           <input
             ref={receiptInput}
@@ -391,7 +426,7 @@ function WalletEntryPage({ user }) {
             onClick={() => receiptInput.current?.click()}
             disabled={receiptBusy}
           >
-            {receiptBusy ? "영수증 읽는 중…" : "📷 영수증 사진으로 채우기"}
+            {receiptBusy ? "사진 읽는 중…" : "📷 영수증·결제 캡처로 채우기"}
           </button>
           {receiptNotice && (
             <p className={`ledger-receipt-notice ledger-receipt-notice--${receiptNotice.kind}`}>
@@ -411,6 +446,7 @@ function WalletEntryPage({ user }) {
                 type="income"
                 onChange={(patch) => updateRow(setIncome, row.id, patch)}
                 onDelete={() => removeRow(setIncome, row.id)}
+                onComplete={() => focusNextEmptyCard("income", row.id)}
               />
             ))}
           </section>
@@ -427,7 +463,8 @@ function WalletEntryPage({ user }) {
                 type="expense"
                 expenseCatOptions={expenseCatOptions}
                 onChange={(patch) => updateRow(setExpense, row.id, patch)}
-                onDelete={() => removeRow(setExpense, row.id)}
+                onDelete={() => deleteExpenseRow(row)}
+                onComplete={() => focusNextEmptyCard("expense", row.id)}
               />
             ))}
           </section>
@@ -444,6 +481,7 @@ function WalletEntryPage({ user }) {
                 type="savings"
                 onChange={(patch) => updateRow(setSavings, row.id, patch)}
                 onDelete={() => removeRow(setSavings, row.id)}
+                onComplete={() => focusNextEmptyCard("savings", row.id)}
               />
             ))}
           </section>
@@ -486,7 +524,7 @@ function WalletEntryPage({ user }) {
             <button
               type="button"
               className="ledger-back"
-              onClick={() => navigate(isEditMode ? "/wallet" : "/home")}
+              onClick={() => navigate("/wallet")}
               disabled={submitting}
             >
               돌아가기
@@ -506,7 +544,16 @@ function WalletEntryPage({ user }) {
   );
 }
 
-function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }) {
+function EntryRow({
+  num,
+  row,
+  type,
+  expenseCatOptions = [],
+  onChange,
+  onDelete,
+  onComplete,
+}) {
+  const amountInputRef = useRef(null);
   // 이미 DB 에 저장된 행 — 수정/삭제 API 가 없어서 여기서 고쳐도 반영되지 않는다.
   // 수정 가능한 척하지 않도록 읽기 전용으로 잠그고 "저장됨" 표시.
   const saved = Boolean(row.dbId);
@@ -580,7 +627,11 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
     );
 
   return (
-    <div className="ledger-entry-row">
+    <div
+      className="ledger-entry-row"
+      data-entry-type={type}
+      data-row-id={row.id}
+    >
       <div className="ledger-row-head">
         <span className="ledger-row-num">{String(num).padStart(2, "0")}</span>
         {/* 결제수단은 지출만. 수입은 "어디서 받았나"(출처), 저축은 유형만 고른다. */}
@@ -600,8 +651,7 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
           </span>
         )}
         {categoryControl}
-        {/* 저장된 행은 삭제 API 가 없어 로컬에서만 지워지는 가짜 삭제가 됨 — 버튼 숨김 */}
-        {!saved && (
+        {(type === "expense" || !saved) && (
           <button
             type="button"
             className="ledger-row-del"
@@ -617,12 +667,19 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
         <input
           type="text"
           className="ledger-row-input"
+          data-entry-field="name"
           value={row.name}
           onChange={(e) => onChange({
             name: e.target.value,
             ...(type === "expense" ? { categoryTouched: false } : {}),
           })}
           disabled={locked}
+          enterKeyHint="next"
+          onKeyDown={(e) => {
+            if (e.key !== "Enter" || e.nativeEvent?.isComposing) return;
+            e.preventDefault();
+            amountInputRef.current?.focus();
+          }}
           placeholder={
             type === "income"
               ? "예: 6월 월급, 엄마 용돈"
@@ -634,14 +691,22 @@ function EntryRow({ num, row, type, expenseCatOptions = [], onChange, onDelete }
         <span className="ledger-row-label">금액</span>
         <div className="ledger-row-input-wrap">
           <input
+            ref={amountInputRef}
             type="text"
             inputMode="numeric"
             className="ledger-row-input"
+            data-entry-field="amount"
             value={row.amount ? Number(row.amount).toLocaleString("ko-KR") : ""}
             onChange={(e) =>
               onChange({ amount: e.target.value.replace(/[^\d]/g, "") })
             }
             disabled={locked}
+            enterKeyHint="next"
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" || e.nativeEvent?.isComposing) return;
+              e.preventDefault();
+              onComplete?.();
+            }}
           />
           <span className="ledger-row-unit">원</span>
         </div>
