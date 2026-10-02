@@ -476,7 +476,7 @@ UNIQUE(user_id, title_id)
 UNIQUE(user_id, equip_order)  -- NULL 은 여러 개 가능
 ```
 
-`users.active_title_id`(옛 칭호 장착)는 V30 부터 읽지 않는다. 컬럼 삭제는 다음 단계. 헤더 칭호 배지도 없앴고, 대신 유저가 장착한 업적 3개를 내 정보 상자에 보여 준다(`equip_order`, `PUT /api/titles/equipped`).
+`users.active_title_id`(옛 칭호 장착)는 V30 부터 읽지 않는다. 컬럼 삭제는 다음 단계. 헤더 칭호 배지도 없앴고, 대신 유저가 장착한 업적 3개를 내 정보 상자에 보여 준다(`equip_order`, `PUT /api/achievements/equipped`).
 
 ---
 

@@ -312,7 +312,7 @@ PROCESSING → SUCCESS
 - 분양한 펫은 판정하지 않는다. 분양(일반·관리자 펫 비우기 모두) 직전에 마지막으로 판정하고, 그 칭호와 장착 칭호가 펫 기록에 고정된다. 도감 상세의 기록 카드에서 볼 수 있다.
 - 판정 시점: 상호작용·분양·관리자 펫 도구는 그 자리에서, 지출 저장·하루 판정·출석 아이템·AI 답변은 커밋 뒤에(`PetTitleCheckEvent`). 칭호 탭을 열 때도 다시 본다.
 - 칭호 장착: 키우는 펫이 딴 칭호 중 하나를 장착한다(`pets.equipped_title_award_id`, `PUT /api/pets/{id}/equipped-title`). 홈 배지에 보이고, 장착 안 했거나 펫이 없으면 "칭호 없음".
-- 업적 장착: 딴 업적을 3개까지 장착한다(`user_titles.equip_order`, `PUT /api/titles/equipped`). 내 정보 상자 3칸과 업적 탭 위쪽 3칸에 보인다. 헤더에는 칭호·업적 배지를 두지 않는다.
+- 업적 장착: 딴 업적을 3개까지 장착한다(`user_titles.equip_order`, `PUT /api/achievements/equipped`). 내 정보 상자 3칸과 업적 탭 위쪽 3칸에 보인다. 헤더에는 칭호·업적 배지를 두지 않는다.
 - 히든 업적·칭호는 따기 전에도 카드로 보이지만 조건은 가린다. 서버가 설명을 "???" 로, 현재값·목표치를 0 으로 보내고 달성률만 알려 준다.
 - 펫 칭호를 따면 알림(`PET_TITLE_ACQUIRED`)을 보낸다. 같은 칭호라도 펫이 다르면 다른 알림이다(dedupe 키 `pet-title:{petId}:{titleId}`).
 
