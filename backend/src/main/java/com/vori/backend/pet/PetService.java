@@ -6,9 +6,12 @@ import com.vori.backend.furniture.UserFurnitureRepository;
 import com.vori.backend.pet.dto.PetInteractionResponse;
 import com.vori.backend.notification.NotificationService;
 import com.vori.backend.pet.dto.PetResponse;
+import com.vori.backend.pettitle.PetTitleService;
+import com.vori.backend.pettitle.dto.PetTitleSummary;
 import com.vori.backend.theme.ThemeMaster;
 import com.vori.backend.theme.ThemeMasterRepository;
 import com.vori.backend.title.TitleCheckEvent;
+import com.vori.backend.title.dto.GrantedTitle;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +48,7 @@ public class PetService {
     private final PetGrowthLogRepository petGrowthLogRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final NotificationService notificationService;
+    private final PetTitleService petTitleService;
 
     // 분양가 = EXP(스탯 합 × 10) × (1 + (개별 가구 보너스합 + 테마 세트 보너스합)/100)
 
@@ -61,7 +65,7 @@ public class PetService {
         List<Pet> pets = petRepository.findByUserIdAndReleasedAtIsNull(userId);
         if (pets.isEmpty()) return null;
         Pet pet = pets.get(0);
-        return PetResponse.of(pet, findSpecies(pet.getSpeciesId()));
+        return toResponse(pet);
     }
 
     /** 보유·분양 이력 전체 (최신순). */
@@ -69,8 +73,11 @@ public class PetService {
     public List<PetResponse> listAll(Long userId) {
         List<Pet> pets = petRepository.findByUserIdOrderByCreatedAtDesc(userId);
         Map<Long, PetSpecies> speciesById = loadSpecies(pets);
+        Map<Long, List<PetTitleSummary>> titlesByPet =
+                petTitleService.summariesByPet(pets.stream().map(Pet::getId).toList());
         return pets.stream()
-                .map(p -> PetResponse.of(p, speciesById.get(p.getSpeciesId())))
+                .map(p -> PetResponse.of(p, speciesById.get(p.getSpeciesId()),
+                        titlesByPet.getOrDefault(p.getId(), List.of())))
                 .toList();
     }
 
@@ -86,7 +93,7 @@ public class PetService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 분양한 펫입니다");
         }
         pet.rename(name);
-        return PetResponse.of(pet, findSpecies(pet.getSpeciesId()));
+        return toResponse(pet);
     }
 
     /**
@@ -108,6 +115,9 @@ public class PetService {
                     HttpStatus.BAD_REQUEST, PetLevel.MAX_LEVEL + "레벨을 달성한 펫만 분양할 수 있습니다");
         }
 
+        // 분양하면 판정하지 않으므로, 마지막으로 칭호를 본 뒤 그 기록을 펫에 고정한다
+        petTitleService.evaluate(pet);
+
         int value = calculateReleaseValue(userId, pet);
 
         User user = userRepository.findByIdForUpdate(userId)
@@ -121,12 +131,14 @@ public class PetService {
         // 분양 횟수가 바뀌었으므로 칭호 조건을 다시 본다
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "PET_RELEASED"));
 
-        return PetResponse.of(pet, findSpecies(pet.getSpeciesId()));
+        return toResponse(pet);
     }
 
     /**
      * 펫 상호작용(쓰다듬기·칭찬하기 등) 1회. 1% 확률로 매력이 1 오른다.
      * 추첨은 서버에서 한다 — 클라이언트가 당첨 여부를 정하면 요청만 조작해 스탯을 올릴 수 있다.
+     * 상호작용 횟수·매력 보너스로 펫 칭호가 채워지면 그 자리에서 지급하고 응답에 싣는다 — 히든 칭호는
+     * 목록에 없던 것이라 획득 순간을 알려주지 않으면 사용자가 알 길이 없다.
      */
     @Transactional
     public PetInteractionResponse interact(Long userId) {
@@ -166,8 +178,8 @@ public class PetService {
             log.info("펫 상호작용 매력 보너스 — userId={}, petId={}, charm={}",
                     userId, pet.getId(), pet.getStatCharm());
         }
-        return new PetInteractionResponse(
-                charmUp, PetResponse.of(pet, findSpecies(pet.getSpeciesId())), List.of());
+        List<GrantedTitle> newTitles = petTitleService.evaluate(pet);
+        return new PetInteractionResponse(charmUp, toResponse(pet), newTitles);
     }
 
     /**
@@ -213,6 +225,12 @@ public class PetService {
             }
         }
         return total;
+    }
+
+    /** 칭호를 실은 펫 응답. */
+    private PetResponse toResponse(Pet pet) {
+        return PetResponse.of(pet, findSpecies(pet.getSpeciesId()),
+                petTitleService.summariesByPet(List.of(pet.getId())).getOrDefault(pet.getId(), List.of()));
     }
 
     private PetSpecies findSpecies(Long speciesId) {

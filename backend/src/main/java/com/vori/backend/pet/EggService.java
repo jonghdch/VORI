@@ -39,6 +39,7 @@ public class EggService {
     private final GachaPullRepository gachaPullRepository;
     private final GachaService gachaService;
     private final ObjectMapper objectMapper;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     /** 상점 상품 목록. 가격·확률은 EggGrade 가 단일 출처. */
     public List<EggProductResponse> listProducts() {
@@ -126,6 +127,8 @@ public class EggService {
                 .build());
 
         egg.markOpened(now);
+        // 부화한 펫 수가 바뀌었으므로 업적(새 식구)을 다시 본다
+        eventPublisher.publishEvent(new com.vori.backend.title.TitleCheckEvent(userId, "PET_HATCHED"));
 
         int remain = userRepository.findById(userId)
                 .map(u -> u.getGameMoney() == null ? 0 : u.getGameMoney())

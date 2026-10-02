@@ -28,7 +28,7 @@ class AiInquiryPendingQuestionTest {
     private final AiInquiryRepository repo = mock(AiInquiryRepository.class);
     private final GeminiClient gemini = mock(GeminiClient.class);
     private final AiInquiryService service = new AiInquiryService(
-            repo, null, null, gemini, null);
+            repo, null, null, gemini, null, null);
 
     private static ExpenseAnomalyEvent event() {
         return new ExpenseAnomalyEvent(11L, 7L, 3L, "결혼식 축의금", 200_000, StatType.ENERGY,

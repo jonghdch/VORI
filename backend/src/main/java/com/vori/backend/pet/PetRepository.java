@@ -12,6 +12,13 @@ public interface PetRepository extends JpaRepository<Pet, Long> {
 
     List<Pet> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+    /** 부화한(받은) 펫 수 — 시작 펫 포함. "새 식구" 업적. */
+    long countByUserId(Long userId);
+
+    /** 졸업(분양)시킨 서로 다른 종 수 — "도감 수집가" 업적. */
+    @Query("SELECT COUNT(DISTINCT p.speciesId) FROM Pet p WHERE p.userId = :userId AND p.releasedAt IS NOT NULL")
+    long countGraduatedSpeciesByUserId(@Param("userId") Long userId);
+
     /** 분양한 펫 수 — 펫 관련 칭호 조건. */
     long countByUserIdAndReleasedAtIsNotNull(Long userId);
 

@@ -39,7 +39,7 @@ public class Title {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "metric_type", nullable = false, columnDefinition = "ENUM('TOTAL_SAVED','EXPENSE_COUNT','GOALS_ACHIEVED','PETS_RELEASED','S_TIER_PETS','AI_ANSWERS','RECEIPT_SCANS','LOGIN_COUNT','PET_INTERACTIONS')")
+    @Column(name = "metric_type", nullable = false, columnDefinition = "ENUM('TOTAL_SAVED','EXPENSE_COUNT','GOALS_ACHIEVED','PETS_RELEASED','S_TIER_PETS','AI_ANSWERS','RECEIPT_SCANS','LOGIN_COUNT','PET_INTERACTIONS','PETS_HATCHED','SPECIES_GRADUATED','PET_TITLES_TOTAL','PET_TITLE_KINDS','PET_TITLES_ON_ONE_PET','HIDDEN_PET_TITLES')")
     private TitleMetricType metricType;
 
     @Column(nullable = false)
@@ -48,7 +48,7 @@ public class Title {
     @Column(nullable = false)
     private Boolean enabled;
 
-    // 히든 칭호 — 따기 전에는 사용자 칭호 목록에 내려가지 않는다(TitleService.list).
+    // 히든 업적 — 따기 전에는 조건을 가리고 달성률만 보여 준다(TitleResponse.locked).
     @Column(nullable = false)
     private Boolean hidden;
 

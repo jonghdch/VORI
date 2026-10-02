@@ -21,6 +21,7 @@ public class AttendanceService {
     private final PetRepository pets;
     private final PetGrowthLogRepository growthLogs;
     private final com.vori.backend.notification.NotificationService notificationService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public AttendanceResponse today(Long userId) {
@@ -93,6 +94,7 @@ public class AttendanceService {
         pet.evaluateStage();
         notificationService.petGrew(userId, pet, levelBefore);
         growthLogs.save(PetGrowthLog.builder().petId(pet.getId()).userId(userId).statType(statType).delta(delta).savedAmount(0).reason(GrowthReason.ATTENDANCE_ITEM).createdAt(LocalDateTime.now()).build());
+        eventPublisher.publishEvent(new com.vori.backend.pettitle.PetTitleCheckEvent(userId, "ATTENDANCE_ITEM"));
     }
 
     private int currentStreak(Long userId, LocalDate end) {

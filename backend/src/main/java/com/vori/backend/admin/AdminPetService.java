@@ -1,5 +1,6 @@
 package com.vori.backend.admin;
 
+import com.vori.backend.pettitle.PetTitleService;
 import com.vori.backend.common.StatType;
 import com.vori.backend.pet.GrowthReason;
 import com.vori.backend.pet.Pet;
@@ -40,6 +41,7 @@ public class AdminPetService {
     private final PetRepository petRepository;
     private final PetSpeciesRepository petSpeciesRepository;
     private final PetGrowthLogRepository petGrowthLogRepository;
+    private final PetTitleService petTitleService;
 
     /** 대상 사용자의 활성 펫을 지정한 레벨까지 성장시킨다(30 = 졸업). 이미 그 이상이면 그대로. */
     @Transactional
@@ -75,6 +77,7 @@ public class AdminPetService {
 
         distribute(pet, userId, target - current);
         pet.evaluateStage();
+        petTitleService.evaluate(pet); // 진화 레벨을 넘겼으면 진화 칭호
 
         log.warn("[ADMIN] 펫 스탯 강제 성장(시연용) — userId={}, petId={}, {} -> {}, stage={}",
                 userId, pet.getId(), current, pet.statTotal(), pet.getStage());
@@ -132,6 +135,7 @@ public class AdminPetService {
         }
         Pet pet = pets.get(0);
         pet.forceLevel(level);
+        petTitleService.evaluate(pet); // 내려간 경우에도 이미 딴 칭호는 회수하지 않는다
         log.warn("[ADMIN] 펫 레벨 강제 설정(시연용) — userId={}, petId={}, level={}, statTotal={}",
                 userId, pet.getId(), pet.level(), pet.statTotal());
         return PetResponse.of(pet, findSpecies(pet));
@@ -149,6 +153,7 @@ public class AdminPetService {
         }
         Pet pet = pets.get(0);
         pet.forceStage(stage);
+        petTitleService.evaluate(pet);
         log.warn("[ADMIN] 펫 단계 강제 설정(시연용) — userId={}, petId={}, stage={}, statTotal={}",
                 userId, pet.getId(), pet.getStage(), pet.statTotal());
         return PetResponse.of(pet, findSpecies(pet));
@@ -163,6 +168,7 @@ public class AdminPetService {
         List<Pet> pets = petRepository.findByUserIdAndReleasedAtIsNull(userId);
         if (pets.isEmpty()) return;
         Pet pet = pets.get(0);
+        petTitleService.evaluate(pet); // 일반 분양과 같이, 내보내기 전에 마지막으로 칭호를 본다
         pet.release(0, LocalDateTime.now());
         log.warn("[ADMIN] 펫 비우기(시연용) — userId={}, petId={}", userId, pet.getId());
     }

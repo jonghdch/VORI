@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
 
 /**
  * 사용자가 획득한 칭호. UNIQUE(user_id, title_id) — 같은 칭호 중복 획득 X.
- * 일부 칭호는 unlocks_theme_id 로 특정 테마를 해제. users.active_title_id 가 현재 장착 칭호.
+ * 일부 칭호는 unlocks_theme_id 로 특정 테마를 해제. (지금은 "업적" — 칭호는 펫이 얻는다, pettitle 패키지)
+ * equipOrder 1~3 이면 장착한 업적이다(내 정보 상자 3칸).
  * 획득 조건은 unlock_condition JSON 에 기록 (감사·표시용).
  */
 @Entity
@@ -42,4 +43,12 @@ public class UserTitle {
 
     @Column(name = "acquired_at", nullable = false)
     private LocalDateTime acquiredAt;
+
+    // 장착 순서(1~3) — 내 정보 상자 칸 순서. NULL = 장착 안 함.
+    @Column(name = "equip_order", columnDefinition = "TINYINT")
+    private Integer equipOrder;
+
+    public void equip(Integer order) {
+        this.equipOrder = order;
+    }
 }

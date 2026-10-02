@@ -13,6 +13,9 @@ public interface PetGrowthLogRepository extends JpaRepository<PetGrowthLog, Long
 
     List<PetGrowthLog> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+    /** 이 펫이 받은 reason 성장 건수 — 펫 칭호(CHARM_BONUS)용. */
+    long countByPetIdAndReason(Long petId, GrowthReason reason);
+
     /** 이 펫이 from 이후 받은 reason 성장 건수 — 상호작용 보너스 하루 상한용. */
     long countByPetIdAndReasonAndCreatedAtGreaterThanEqual(Long petId, GrowthReason reason, java.time.LocalDateTime from);
 

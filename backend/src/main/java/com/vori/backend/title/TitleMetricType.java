@@ -15,7 +15,13 @@ public enum TitleMetricType {
     AI_ANSWERS(TitleProgress::aiAnswers),
     RECEIPT_SCANS(TitleProgress::receiptScans),
     LOGIN_COUNT(TitleProgress::loginCount),
-    PET_INTERACTIONS(TitleProgress::petInteractions);
+    PET_INTERACTIONS(TitleProgress::petInteractions),
+    PETS_HATCHED(TitleProgress::petsHatched),
+    SPECIES_GRADUATED(TitleProgress::speciesGraduated),
+    PET_TITLES_TOTAL(TitleProgress::petTitlesTotal),
+    PET_TITLE_KINDS(TitleProgress::petTitleKinds),
+    PET_TITLES_ON_ONE_PET(TitleProgress::petTitlesOnOnePet),
+    HIDDEN_PET_TITLES(TitleProgress::hiddenPetTitles);
 
     private final ToLongFunction<TitleProgress> current;
 
