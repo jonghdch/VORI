@@ -13,6 +13,7 @@ const TYPE_TONE = {
   MONTHLY_REPORT: "report",
   JUDGMENT_OPEN: "judgment",
   TITLE_ACQUIRED: "title",
+  PET_TITLE_ACQUIRED: "title",
   PET_EVOLVED: "pet",
   PET_GRADUATE_READY: "pet",
 };

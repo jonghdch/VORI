@@ -7,9 +7,10 @@ import { PetArt, STAGE_LABEL, TIER_LABEL, VARIANT_LABEL } from "../../components
 import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
 import { getMe, notifyPetChanged } from "../../api/user";
-import { CATEGORY_LABEL, FurnitureArt, STAT_LABEL, isSurface } from "../../components/furnitureVisual";
+import { isSurface } from "../../components/furnitureVisual";
 import { EGG_IMAGE, eggImageFor } from "../../components/eggVisual";
 import useMediaQuery from "../../components/useMediaQuery";
+import FurnitureBrowser from "./FurnitureBrowser";
 import shopBackgroundImage from "../../assets/shop/shop-background.png";
 import furnitureIconImage from "../../assets/shop/furniture-icon.png";
 import "../Home/HomeDashboard.css";
@@ -24,11 +25,9 @@ const GRADE_COPY = {
 
 const TIER_ORDER = ["S", "A", "B", "C"];
 
-// 가구 진열대는 알 진열대처럼 한 번에 3개씩 보여주고, 화살표로 넘긴다.
-const FURNITURE_PER_PAGE = 3;
-
-// 세로로 든 휴대폰처럼 좁은 화면에서는 알·가구 모두 1개씩 보여준다 — 3개를 세로로
+// 세로로 든 휴대폰처럼 좁은 화면에서는 알을 1개씩 보여준다 — 3개를 세로로
 // 쌓으면 간판을 덮고 잘린다. ShopPage.css 의 진열대 미디어 쿼리와 같은 값이어야 한다.
+// (가구는 넘겨 보지 않고 FurnitureBrowser 가 전부 펼쳐 보여준다.)
 const NARROW_QUERY = "(max-width: 720px)";
 
 const coin = (n) => `${(n ?? 0).toLocaleString("ko-KR")} 코인`;
@@ -48,7 +47,7 @@ function paginate(items, start, perPage) {
   };
 }
 
-// 양옆 화살표로 넘기는 진열대. noun 은 화살표 안내 문구("이전 가구 보기")에 쓴다.
+// 양옆 화살표로 넘기는 진열대. noun 은 화살표 안내 문구("이전 알 보기")에 쓴다.
 function PagedShelf({ id, labelledBy, noun, pager, onMove, showIndicator, children }) {
   return (
     <div className="shop-paged-stage" id={id} role="tabpanel" aria-labelledby={labelledBy}>
@@ -103,6 +102,7 @@ function ShopPage({ user, onLogout }) {
   const [furnitureProducts, setFurnitureProducts] = useState([]);
   const [myFurniture, setMyFurniture] = useState([]);
   const [furnitureError, setFurnitureError] = useState(null);
+  const [furnitureLoading, setFurnitureLoading] = useState(true);
 
   // 상점 이미지 안 진열대에 무엇을 보여줄지 — "egg"(알 상점) | "furniture"(가구 상점)
   // /shop?tab=furniture 로 들어오면 가구 상점부터 연다 (마이룸의 "가구 상점 가기").
@@ -112,7 +112,6 @@ function ShopPage({ user, onLogout }) {
   );
   // 진열대에서 지금 보는 쪽의 첫 상품 순번 (paginate 참고)
   const [eggStart, setEggStart] = useState(0);
-  const [furnitureStart, setFurnitureStart] = useState(0);
   const narrow = useMediaQuery(NARROW_QUERY);
 
   // 구매 내역 팝업 — 닫힐 때 포커스 복귀는 모달이 맡는다(열기 전 포커스로 되돌림)
@@ -133,9 +132,13 @@ function ShopPage({ user, onLogout }) {
   // 가구는 알과 별도로 불러 한쪽이 실패해도 다른 쪽은 뜨게 한다.
   useEffect(() => {
     let alive = true;
-    reloadFurniture().catch((e) => {
-      if (alive && e.status !== 401) setFurnitureError(e.message || "가구를 불러오지 못했어요");
-    });
+    reloadFurniture()
+      .catch((e) => {
+        if (alive && e.status !== 401) setFurnitureError(e.message || "가구를 불러오지 못했어요");
+      })
+      .finally(() => {
+        if (alive) setFurnitureLoading(false);
+      });
     return () => {
       alive = false;
     };
@@ -230,7 +233,6 @@ function ShopPage({ user, onLogout }) {
 
   // 벽지·바닥(방 전체에 깔리는 면)은 상점 진열대에 올리지 않는다
   const shelfFurniture = furnitureProducts.filter((item) => !isSurface(item.category));
-  const furniturePager = paginate(shelfFurniture, furnitureStart, narrow ? 1 : FURNITURE_PER_PAGE);
   // 알은 넓은 화면에서 전부 한 줄에 놓고(넘기지 않음), 좁은 화면에서만 1개씩 넘긴다
   const eggPager = paginate(products, eggStart, 1);
 
@@ -289,7 +291,7 @@ function ShopPage({ user, onLogout }) {
     >
       <main className="home-main shop-main">
         <section
-          className="shop-hero"
+          className={`shop-hero ${shopTab === "furniture" ? "shop-hero--furniture" : ""}`}
           style={{ backgroundImage: `url(${shopBackgroundImage})` }}
           aria-label="VORI 상점"
         >
@@ -394,69 +396,18 @@ function ShopPage({ user, onLogout }) {
             ))}
 
           {shopTab === "furniture" && (
-            <PagedShelf
+            <FurnitureBrowser
               id="shop-panel-furniture"
               labelledBy="shop-tab-furniture"
-              noun="가구"
-              pager={furniturePager}
-              onMove={setFurnitureStart}
-              showIndicator={shelfFurniture.length > 0}
-            >
-              {furnitureError && (
-                <p className="shop-shelf-state shop-shelf-state--error">{furnitureError}</p>
-              )}
-              {!furnitureError && furnitureProducts.length === 0 && (
-                <p className="shop-shelf-state">가구를 불러오는 중…</p>
-              )}
-              {furniturePager.visible.map((item) => {
-                const affordable = unlimitedCoins || gameMoney >= item.price;
-                const isBusy = busy === `furniture:${item.code}`;
-                const owned = ownedCountByName[item.name] || 0;
-                return (
-                  <article
-                    key={item.code}
-                    className={`shop-display-item shop-furniture-item ${item.locked ? "is-locked" : ""}`}
-                  >
-                    <div className="shop-display-image-wrap">
-                      <FurnitureArt
-                        category={item.category}
-                        name={item.name}
-                        className="shop-display-image"
-                        emojiClassName="shop-furniture-emoji"
-                      />
-                    </div>
-                    <div className="shop-display-info">
-                      <h2>{item.name}</h2>
-                      {owned > 0 && <em className="shop-furniture-owned">보유 {owned}</em>}
-                      <p>
-                        {CATEGORY_LABEL[item.category] ?? item.category} ·{" "}
-                        {STAT_LABEL[item.statTarget] ?? item.statTarget} · 분양가 +{item.releaseBonusPct}%
-                      </p>
-                      {item.themeName && (
-                        <small className="shop-furniture-theme">
-                          {item.themeName} 테마
-                          {item.themeSetBonusPct != null && ` · 세트 +${item.themeSetBonusPct}%`}
-                        </small>
-                      )}
-                      {item.locked && (
-                        <small className="shop-furniture-lock">
-                          🔒 칭호 "{item.unlockTitleName ?? "?"}" 획득 시 해금
-                        </small>
-                      )}
-                      <strong>{coin(item.price)}</strong>
-                      <button
-                        type="button"
-                        className="home-btn home-btn-primary shop-buy-btn"
-                        disabled={item.locked || !affordable || busy !== null}
-                        onClick={() => handleBuyFurniture(item)}
-                      >
-                        {isBusy ? "구매 중…" : item.locked ? "잠김" : affordable ? "구매하기" : "코인 부족"}
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </PagedShelf>
+              products={shelfFurniture}
+              loading={furnitureLoading}
+              error={furnitureError}
+              ownedCountByName={ownedCountByName}
+              gameMoney={gameMoney}
+              unlimitedCoins={unlimitedCoins}
+              busy={busy}
+              onBuy={handleBuyFurniture}
+            />
           )}
         </section>
 

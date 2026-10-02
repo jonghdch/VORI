@@ -362,7 +362,8 @@ UNIQUE(user_id, report_date)
 | 매력 스탯 | `stat_charm` |  | `INT DEFAULT 0` | `CHARM` 절약 성장값 |
 | 지능 스탯 | `stat_iq` |  | `INT DEFAULT 0` | `IQ` 절약 성장값 |
 | 지구력 스탯 | `stat_endurance` |  | `INT DEFAULT 0` | `ENDURANCE` 절약 성장값 |
-| 상호작용 횟수 | `interaction_count` |  | `INT NOT NULL DEFAULT 0` | 쓰다듬기 등 상호작용 누적 횟수. 칭호 조건(`PET_INTERACTIONS`) 기준값 |
+| 상호작용 횟수 | `interaction_count` |  | `INT NOT NULL DEFAULT 0` | 쓰다듬기 등 상호작용 누적 횟수. 펫 칭호 조건(`INTERACTIONS`) 기준값 |
+| 장착 칭호 | `equipped_title_award_id` | FK | `BIGINT NULL` | → `pet_title_awards(id)` ON DELETE SET NULL. 이 펫이 딴 칭호 중 장착한 1개(홈 배지에 보임). NULL = 장착 안 함 |
 | 성장 단계 | `stage` |  | `ENUM('INFANT','JUVENILE','ADULT') DEFAULT 'INFANT'` | 성장 단계 |
 | 변종 종류 | `variant` |  | `ENUM('NORMAL','IRO','ALIEN') DEFAULT 'NORMAL'` | 변종 |
 | 생성 일시 | `created_at` |  | `DATETIME NOT NULL` | 생성 시각 |
@@ -375,7 +376,7 @@ UNIQUE(user_id, report_date)
 INDEX(user_id, released_at)
 ```
 
-`name` 추가 마이그레이션: `V25__pet_name.sql`. `interaction_count` 추가 마이그레이션: `V28__pet_interaction_hidden_title.sql`(칭호 마스터 `titles` 의 `hidden` 컬럼·`PET_INTERACTIONS` 지표·히든 칭호 「사랑둥이」도 같은 파일).
+`equipped_title_award_id` 추가 마이그레이션: `V41__pet_titles.sql`(이름은 `V43__equip_naming.sql` 에서 `featured_…` → `equipped_…`). `name` 추가 마이그레이션: `V25__pet_name.sql`. `interaction_count` 추가 마이그레이션: `V28__pet_interaction_hidden_title.sql`(칭호 마스터 `titles` 의 `hidden` 컬럼·`PET_INTERACTIONS` 지표·히든 칭호 「사랑둥이」도 같은 파일).
 
 ---
 
@@ -422,7 +423,9 @@ INDEX(user_id, released_at)
 
 ---
 
-## 도메인 4 — 꾸미기·칭호
+## 도메인 4 — 꾸미기·업적·칭호
+
+업적은 유저가, 칭호는 펫이 얻는다(V41). 업적 테이블 이름은 옛 "칭호" 시절의 `titles`·`user_titles` 를 그대로 쓴다.
 
 ### 17. 테마 `theme_master`
 
@@ -432,7 +435,7 @@ INDEX(user_id, released_at)
 | 테마 이름 | `name` | UQ | `VARCHAR(50) NOT NULL` | 테마 이름 |
 | 세트 보너스율 | `set_bonus_pct` |  | `DECIMAL(5,2) DEFAULT 0` | 세트 효과 보너스율 |
 | 세트 필요 개수 | `required_count` |  | `TINYINT DEFAULT 3` | 세트 효과 필요 개수 |
-| 잠금 해제 칭호 | `unlock_title_id` | FK → `titles.id` | `BIGINT NULL` | 이 칭호가 있으면 테마 해제. V15 에서 이름(`unlock_title_name`) 연결을 id 로 교체 |
+| 잠금 해제 업적 | `unlock_title_id` | FK → `titles.id` | `BIGINT NULL` | 이 업적이 있으면 테마 해제. V15 에서 이름(`unlock_title_name`) 연결을 id 로 교체 |
 
 ---
 
@@ -443,7 +446,7 @@ INDEX(user_id, released_at)
 | 보유 가구 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 보유 가구 고유 번호 |
 | 사용자 식별자 | `user_id` | FK | `BIGINT NOT NULL` | → `users(id)` |
 | 가구 이름 | `name` |  | `VARCHAR(50) NOT NULL` | 보유한 가구 이름 |
-| 가구 카테고리 | `category` |  | `ENUM('BED','WALLPAPER','FLOOR','MIRROR','VANITY','PICTURE','BOARD','SHELF','DRAWER','COMPUTER') NOT NULL` | 가구 종류 |
+| 가구 카테고리 | `category` |  | `ENUM('BED','WALLPAPER','FLOOR','MIRROR','VANITY','PICTURE','BOARD','SHELF','DRAWER','COMPUTER','TENT','PICNIC_MAT','CAMPFIRE','HAMMOCK','PARASOL','CAMP_CHAIR','CANOPY_BED','TEA_TABLE','FIREPLACE','ROCKING_CHAIR','TREASURE_CHEST','SLEEP_CAPSULE','TELESCOPE','SWIM_TUBE','BEACH_BALL','LEATHER_SOFA','GLASS_TABLE','LANTERN','ICEBOX','SAFE','DESK','FRIDGE','EMPTY_DESK') NOT NULL` | 가구 종류 |
 | 대상 스탯 | `stat_target` |  | `ENUM('ENERGY','CHARM','IQ','ENDURANCE') NOT NULL` | 보너스 대상 스탯 |
 | 분양 보너스율 | `release_bonus_pct` |  | `DECIMAL(5,2) DEFAULT 0` | 분양가 보너스율 |
 | 테마 식별자 | `theme_id` | FK | `BIGINT NULL` | → `theme_master(id)` |
@@ -454,22 +457,82 @@ INDEX(user_id, released_at)
 
 ---
 
-### 19. 사용자 칭호 `user_titles`
+### 19. 사용자 업적 `user_titles`
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
-| 사용자 칭호 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 보유 칭호 고유 번호 |
+| 사용자 업적 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 보유 업적 고유 번호 |
 | 사용자 식별자 | `user_id` | FK, UQ복합 | `BIGINT NOT NULL` | → `users(id)` |
-| 칭호 이름 | `name` | UQ복합 | `VARCHAR(50) NOT NULL` | 사용자가 획득한 칭호 이름 |
-| 잠금 해제 조건 | `unlock_condition` |  | `JSON NULL` | 칭호 획득 조건 기록용 |
-| 잠금 해제 테마 식별자 | `unlocks_theme_id` | FK | `BIGINT NULL` | → `theme_master(id)` |
+| 업적 식별자 | `title_id` | FK, UQ복합 | `BIGINT NOT NULL` | → `titles(id)` ON DELETE RESTRICT (V11 에서 `name` 대신) |
+| 잠금 해제 조건 | `unlock_condition` |  | `JSON NULL` | 획득 시점 근거 `{code, threshold, value}` |
+| 잠금 해제 테마 식별자 | `unlocks_theme_id` | FK | `BIGINT NULL` | → `theme_master(id)`. 기록용 — 해금 판정은 `theme_master.unlock_title_id` |
 | 획득 일시 | `acquired_at` |  | `DATETIME NOT NULL` | 획득 시각 |
+| 장착 순서 | `equip_order` | UQ복합 | `TINYINT NULL` | 장착한 업적의 칸 순서(1~3, 내 정보 상자 3칸). NULL = 장착 안 함 (V42 추가, V43 에서 `showcase_order` → `equip_order`) |
 
 제약:
 
 ```sql
-UNIQUE(user_id, name)
+UNIQUE(user_id, title_id)
+UNIQUE(user_id, equip_order)  -- NULL 은 여러 개 가능
 ```
+
+`users.active_title_id`(옛 칭호 장착)는 V41 부터 읽지 않는다. 장착해 둔 값은 V44 에서 업적 장착 첫 칸으로 옮겼다. 컬럼 삭제는 다음 단계. 헤더 칭호 배지도 없앴고, 대신 유저가 장착한 업적 3개를 내 정보 상자에 보여 준다(`equip_order`, `PUT /api/achievements/equipped`).
+
+---
+
+### 20. 업적 마스터 `titles`
+
+| 논리명 | 물리명 | 키 | 타입 | 설명 |
+|---|---|---|---|---|
+| 업적 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | |
+| 코드 | `code` | UQ | `VARCHAR(50) NOT NULL` | 고정 코드. 생성 뒤 바꾸지 않는다 |
+| 이름 | `name` |  | `VARCHAR(50) NOT NULL` | |
+| 설명 | `description` |  | `VARCHAR(200) NOT NULL` | 조건 문구 |
+| 지표 | `metric_type` |  | `ENUM(...) NOT NULL` | `TitleMetricType` 과 짝. V41 에서 `PETS_HATCHED`·`SPECIES_GRADUATED`·`PET_TITLES_TOTAL`·`PET_TITLE_KINDS`·`PET_TITLES_ON_ONE_PET`·`HIDDEN_PET_TITLES` 추가 |
+| 목표치 | `threshold` |  | `BIGINT NOT NULL` | 지표가 이 값 이상이면 달성 |
+| 활성 | `enabled` |  | `BOOLEAN NOT NULL DEFAULT TRUE` | 끄면 판정·목록에서 빠진다 |
+| 히든 | `hidden` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | 따기 전에는 조건을 가리고(설명 "???") 달성률만 보여 준다 (V28) |
+| 정렬 | `sort_order` |  | `INT NOT NULL DEFAULT 0` | |
+
+V41 에서 「사랑둥이」(`PET_LOVELY`)는 펫 칭호로 옮기면서 `enabled = FALSE` 로 껐다(획득 기록은 남김).
+
+---
+
+### 21. 펫 칭호 마스터 `pet_titles` (V41)
+
+| 논리명 | 물리명 | 키 | 타입 | 설명 |
+|---|---|---|---|---|
+| 펫 칭호 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | |
+| 코드 | `code` | UQ | `VARCHAR(50) NOT NULL` | |
+| 이름 | `name` |  | `VARCHAR(50) NOT NULL` | |
+| 설명 | `description` |  | `VARCHAR(200) NOT NULL` | |
+| 지표 | `metric_type` |  | `ENUM('LEVEL','INTERACTIONS','AI_ANSWERS','CHARM_BONUS') NOT NULL` | `PetTitleMetricType` 과 짝. 모두 "이 펫" 기준 |
+| 목표치 | `threshold` |  | `BIGINT NOT NULL` | |
+| 활성 | `enabled` |  | `BOOLEAN NOT NULL DEFAULT TRUE` | |
+| 히든 | `hidden` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | 따기 전에는 조건을 가리고(설명 "???") 달성률만 보여 준다 |
+| 정렬 | `sort_order` |  | `INT NOT NULL DEFAULT 0` | |
+
+시드: 첫 진화(Lv 5) · 어엿한 어른(Lv 15) · 사랑둥이(상호작용 100) · 수다쟁이(AI 답변 100) · 행운의 매력(매력 보너스 10, 히든).
+
+---
+
+### 22. 펫 칭호 획득 `pet_title_awards` (V41)
+
+| 논리명 | 물리명 | 키 | 타입 | 설명 |
+|---|---|---|---|---|
+| 획득 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 칭호를 장착할 때 쓰는 값 |
+| 펫 식별자 | `pet_id` | FK, UQ복합 | `BIGINT NOT NULL` | → `pets(id)` ON DELETE CASCADE |
+| 펫 칭호 식별자 | `pet_title_id` | FK, UQ복합 | `BIGINT NOT NULL` | → `pet_titles(id)` ON DELETE RESTRICT |
+| 잠금 해제 조건 | `unlock_condition` |  | `JSON NULL` | 획득 시점 근거 `{code, threshold, value}` |
+| 획득 일시 | `acquired_at` |  | `DATETIME NOT NULL` | |
+
+제약:
+
+```sql
+UNIQUE(pet_id, pet_title_id)
+```
+
+한 번 딴 칭호는 회수하지 않는다. 분양한 펫의 칭호는 그대로 기록으로 남는다.
 
 ---
 

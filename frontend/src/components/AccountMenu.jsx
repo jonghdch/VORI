@@ -3,14 +3,15 @@ import { useNavigate } from "react-router-dom";
 import AccountSummary from "./AccountSummary";
 import NotificationBell from "./NotificationBell";
 import { getMe } from "../api/user";
-import { listTitles } from "../api/titles";
+import { listAchievements } from "../api/achievements";
+import AchievementSlots from "./AchievementSlots";
 import { openAttendance } from "./AttendanceModal";
 
 const coin = (n) => (n ?? 0).toLocaleString("ko-KR");
 
 /**
- * 헤더 계정 영역 — AccountSummary(칭호·닉네임·코인)를 그대로 쓰고, 누르면 그 바로 아래에
- * 내 정보 상자를 띄운다. 상자에서 프로필 수정(→ /settings/profile)·관리자 페이지·로그아웃.
+ * 헤더 계정 영역 — AccountSummary(닉네임·코인)를 그대로 쓰고, 누르면 그 바로 아래에
+ * 내 정보 상자를 띄운다. 상자에서 올린 업적 3칸·프로필 수정(→ /settings/profile)·관리자 페이지·로그아웃.
  *
  * 헤더 표시 자체는 AccountSummary 가 맡고, 이 컴포넌트는 열림/닫힘과 상자 내용만 담당한다.
  * 상자 데이터는 열릴 때만 읽는다 — 헤더가 이미 읽은 것과 같은 API 지만, 열 때 최신 값을 보여주는 편이
@@ -21,17 +22,16 @@ function AccountMenu({ onLogout }) {
   const rootRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [me, setMe] = useState(null);
-  const [title, setTitle] = useState(null);
+  const [achievements, setAchievements] = useState([]);
 
   useEffect(() => {
     if (!open) return undefined;
     let alive = true;
-    Promise.all([getMe(), listTitles().catch(() => [])])
-      .then(([user, titles]) => {
+    Promise.all([getMe(), listAchievements().catch(() => [])])
+      .then(([user, list]) => {
         if (!alive) return;
         setMe(user);
-        const active = Array.isArray(titles) ? titles.find((t) => t.active) : titles?.active;
-        setTitle(active?.name || "칭호 없음");
+        setAchievements(Array.isArray(list) ? list : []);
       })
       .catch(() => {});
 
@@ -55,6 +55,11 @@ function AccountMenu({ onLogout }) {
   const initial = nickname.trim().charAt(0).toUpperCase() || "V";
   const coinText = isAdmin ? "∞" : coin(me?.gameMoney);
 
+  // 업적 칸 3개(AchievementSlots) — 올린 업적을 순서대로 채우고, 남는 칸은 빈 칸
+  const shown = achievements
+    .filter((a) => a.equipOrder != null)
+    .sort((a, b) => a.equipOrder - b.equipOrder);
+
   const go = (path) => {
     setOpen(false);
     navigate(path);
@@ -77,18 +82,11 @@ function AccountMenu({ onLogout }) {
                 {isAdmin && <em className="account-menu-role">관리자</em>}
               </strong>
               <small>{me?.email ?? ""}</small>
-              {title && (
-                <button
-                  type="button"
-                  className="account-menu-title"
-                  onClick={() => go("/dex?tab=titles")}
-                  aria-label={`칭호 ${title} — 칭호 도감 열기`}
-                >
-                  🏅 {title}
-                </button>
-              )}
             </div>
           </div>
+
+          {/* 장착한 업적 3칸 — 보기만 한다. 장착·해제는 도감 업적 탭에서(빈 칸을 누르면 그리로 간다) */}
+          <AchievementSlots shown={shown} onEmptyClick={() => go("/dex?tab=achievements")} />
 
           <dl className="account-menu-stats">
             <div>

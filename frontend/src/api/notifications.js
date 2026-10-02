@@ -7,7 +7,7 @@
 import { del, get, post } from "./http";
 
 /**
- * @typedef {{ id:number, type:"MONTHLY_REPORT"|"TITLE_ACQUIRED"|"PET_EVOLVED"|"PET_GRADUATE_READY"|"JUDGMENT_OPEN",
+ * @typedef {{ id:number, type:"MONTHLY_REPORT"|"TITLE_ACQUIRED"|"PET_TITLE_ACQUIRED"|"PET_EVOLVED"|"PET_GRADUATE_READY"|"JUDGMENT_OPEN",
  *   title:string, body:string|null, link:string|null, createdAt:string, read:boolean }} AppNotification
  */
 

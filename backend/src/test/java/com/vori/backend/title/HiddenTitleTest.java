@@ -5,16 +5,15 @@ import com.vori.backend.goal.GoalRepository;
 import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.pet.GachaPullRepository;
 import com.vori.backend.pet.PetRepository;
+import com.vori.backend.pettitle.PetTitleAwardRepository;
 import com.vori.backend.receipt.ReceiptOcrJobRepository;
 import com.vori.backend.theme.ThemeMasterRepository;
-import com.vori.backend.title.dto.GrantedTitle;
 import com.vori.backend.title.dto.TitleResponse;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,8 +27,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 히든 칭호(사랑둥이)와 펫 상호작용 지표 검증. 히든 칭호는 따기 전에는 목록에 새어 나가면 안 되고,
- * 조건을 채운 순간에는 바로 지급돼 화면에 알릴 수 있어야 한다.
+ * 히든 업적 목록 노출과 업적 지표 검증. 히든 업적은 따기 전에는 목록에 새어 나가면 안 된다.
+ * (사랑둥이를 그 자리에서 지급하던 grantOnReach 는 펫 칭호로 옮겼다 — PetTitleServiceTest.)
  * Spring 컨텍스트·DB 없이 도는 순수 단위 테스트.
  */
 class HiddenTitleTest {
@@ -41,6 +40,7 @@ class HiddenTitleTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final PetRepository petRepository = mock(PetRepository.class);
     private final ThemeMasterRepository themeMasterRepository = mock(ThemeMasterRepository.class);
+    private final PetTitleAwardRepository petTitleAwardRepository = mock(PetTitleAwardRepository.class);
     private final TitleService service = new TitleService(
             userTitleRepository,
             titleRepository,
@@ -52,7 +52,8 @@ class HiddenTitleTest {
             mock(AiInquiryRepository.class),
             mock(ReceiptOcrJobRepository.class),
             themeMasterRepository,
-            mock(com.vori.backend.notification.NotificationService.class));
+            mock(com.vori.backend.notification.NotificationService.class),
+            petTitleAwardRepository);
 
     private final Title lovely = title(1L, "PET_LOVELY", "사랑둥이", TitleMetricType.PET_INTERACTIONS, 100, true);
     private final Title recordStart = title(2L, "RECORD_START", "기록의 시작", TitleMetricType.EXPENSE_COUNT, 10, false);
@@ -75,13 +76,18 @@ class HiddenTitleTest {
     }
 
     @Test
-    @DisplayName("못 딴 히든 칭호는 목록에 나오지 않는다")
-    void lockedHiddenTitleIsNotListed() {
+    @DisplayName("못 딴 히든 업적은 목록에 나오되 조건을 가리고 달성률만 보여 준다")
+    void lockedHiddenTitleIsMasked() {
         when(petRepository.maxInteractionCountByUserId(USER_ID)).thenReturn(99L);
 
         List<TitleResponse> titles = service.list(USER_ID);
 
-        assertThat(titles).extracting(TitleResponse::code).containsExactly("RECORD_START");
+        TitleResponse hidden = titles.stream().filter(t -> t.code().equals("PET_LOVELY")).findFirst().orElseThrow();
+        assertThat(hidden.description()).isEqualTo("???");
+        assertThat(hidden.current()).isZero();
+        assertThat(hidden.threshold()).isZero();
+        assertThat(hidden.progressPct()).isEqualTo(99);
+        assertThat(hidden.acquired()).isFalse();
         verify(userTitleRepository, never()).save(any());
     }
 
@@ -103,47 +109,44 @@ class HiddenTitleTest {
     }
 
     @Test
-    @DisplayName("상호작용이 목표치에 닿는 순간 칭호를 지급하고 그 이름을 돌려준다")
-    void grantsWhenInteractionCountReachesThreshold() {
-        when(titleRepository.existsByEnabledTrueAndMetricTypeAndThreshold(TitleMetricType.PET_INTERACTIONS, 100L))
-                .thenReturn(true);
-        when(petRepository.maxInteractionCountByUserId(USER_ID)).thenReturn(100L);
+    @DisplayName("펫이 칭호를 처음 얻으면 \"첫 칭호\" 업적을 받는다 — 업적이 펫 칭호 수를 센다")
+    void petTitleCountAchievement() {
+        Title firstPetTitle = title(3L, "PET_TITLE_FIRST", "첫 칭호", TitleMetricType.PET_TITLES_TOTAL, 1, false);
+        when(titleRepository.findByEnabledTrueOrderBySortOrderAscIdAsc()).thenReturn(List.of(firstPetTitle));
+        when(petTitleAwardRepository.countByUserId(USER_ID)).thenReturn(1L);
 
-        List<GrantedTitle> granted = service.grantOnReach(USER_ID, TitleMetricType.PET_INTERACTIONS, 100);
+        service.list(USER_ID);
 
-        assertThat(granted).containsExactly(new GrantedTitle("사랑둥이", true));
-        ArgumentCaptor<UserTitle> saved = ArgumentCaptor.forClass(UserTitle.class);
-        verify(userTitleRepository).save(saved.capture());
-        assertThat(saved.getValue().getUserId()).isEqualTo(USER_ID);
-        assertThat(saved.getValue().getTitle()).isSameAs(lovely);
+        verify(userTitleRepository).save(org.mockito.ArgumentMatchers.argThat(
+                (UserTitle t) -> t.getTitle() == firstPetTitle && t.getUserId() == USER_ID));
     }
 
     @Test
-    @DisplayName("목표치에 닿지 않은 횟수에서는 평가를 건너뛴다")
-    void skipsEvaluationOffThreshold() {
-        when(petRepository.maxInteractionCountByUserId(USER_ID)).thenReturn(57L);
+    @DisplayName("딴 업적을 3개까지, 고른 순서대로 장착한다")
+    void equipUpToThreeInOrder() {
+        UserTitle a = UserTitle.builder().id(51L).userId(USER_ID).title(recordStart).acquiredAt(LocalDateTime.now()).build();
+        UserTitle b = UserTitle.builder().id(52L).userId(USER_ID).title(lovely).acquiredAt(LocalDateTime.now()).equipOrder(1).build();
+        when(userTitleRepository.findByUserId(USER_ID)).thenReturn(List.of(a, b));
 
-        List<GrantedTitle> granted = service.grantOnReach(USER_ID, TitleMetricType.PET_INTERACTIONS, 57);
+        service.equip(USER_ID, List.of(51L));
 
-        assertThat(granted).isEmpty();
-        verify(userRepository, never()).findByIdForUpdate(any());
-        verify(userTitleRepository, never()).save(any());
+        assertThat(a.getEquipOrder()).isEqualTo(1);
+        assertThat(b.getEquipOrder()).isNull(); // 목록에서 빠진 업적은 장착 해제된다
+        // 동시 요청이 순서를 엉키게 하지 않도록 사용자 행을 잠근다
+        verify(userRepository, org.mockito.Mockito.atLeastOnce()).findByIdForUpdate(USER_ID);
     }
 
     @Test
-    @DisplayName("이미 가진 칭호는 목표치에 다시 닿아도 또 주지 않는다")
-    void doesNotGrantTwice() {
-        when(titleRepository.existsByEnabledTrueAndMetricTypeAndThreshold(TitleMetricType.PET_INTERACTIONS, 100L))
-                .thenReturn(true);
-        when(petRepository.maxInteractionCountByUserId(USER_ID)).thenReturn(150L);
-        when(userTitleRepository.findByUserIdAndTitleId(USER_ID, 1L))
-                .thenReturn(Optional.of(UserTitle.builder().id(50L).userId(USER_ID).title(lovely).build()));
+    @DisplayName("업적은 4개 이상 장착할 수 없고, 딴 적 없는 업적도 장착할 수 없다")
+    void equipRejectsTooManyOrForeign() {
+        UserTitle a = UserTitle.builder().id(51L).userId(USER_ID).title(recordStart).acquiredAt(LocalDateTime.now()).build();
+        when(userTitleRepository.findByUserId(USER_ID)).thenReturn(List.of(a));
 
-        // 다른 펫이 100회째를 채운 경우 — 사용자는 이미 칭호가 있다
-        List<GrantedTitle> granted = service.grantOnReach(USER_ID, TitleMetricType.PET_INTERACTIONS, 100);
-
-        assertThat(granted).isEmpty();
-        verify(userTitleRepository, never()).save(any());
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.equip(USER_ID, List.of(1L, 2L, 3L, 4L)))
+                .hasMessageContaining("3개까지");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.equip(USER_ID, List.of(99L)))
+                .hasMessageContaining("획득한 업적만");
+        assertThat(a.getEquipOrder()).isNull();
     }
 
     @Test
@@ -154,6 +157,6 @@ class HiddenTitleTest {
     }
 
     private static TitleProgress progressWithInteractions(long count) {
-        return new TitleProgress(0, 0, 0, 0, 0, 0, 0, 0, count);
+        return new TitleProgress(0, 0, 0, 0, 0, 0, 0, 0, count, 0, 0, 0, 0, 0, 0);
     }
 }

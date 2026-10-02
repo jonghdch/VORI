@@ -70,26 +70,11 @@
   cursor: pointer;
   padding: 4px 0;
 }
-.home-account-title, .home-account-nickname {
+.home-account-nickname {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 140px;
-}
-/* 홈 펫 카드의 칭호 배지(.home-pet-title-badge)와 같은 모양 */
-.home-account-title {
-  cursor: pointer;
-  border: 1px solid var(--home-card-border);
-  border-radius: 999px;
-  background: var(--home-card-surface);
-  color: var(--home-muted);
-  padding: 3px 12px;
-  font-size: 12px;
-  font-weight: 700;
-}
-.home-account-title:hover {
-  border-color: var(--home-green-dark);
-  color: var(--home-green-dark);
 }
 .home-account-coins {
   flex-shrink: 0;
@@ -1552,25 +1537,72 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* 칭호 — 누르면 도감의 칭호 탭으로 간다 */
-.account-menu-title {
-  align-self: flex-start;
-  max-width: 100%;
-  border: 0;
+/* 업적 칸 3개 — 빈 칸을 누르면 도감 업적 탭으로 간다 */
+.account-menu-slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
+.account-menu-slot {
+  position: relative;
+  min-width: 0;
+  height: 64px;
+  border-radius: 12px;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px;
+}
+.account-menu-slot.is-filled {
+  border: 1px solid var(--home-card-border);
+  background: var(--home-card-surface);
+}
+.account-menu-slot.is-empty {
+  border: 1px dashed var(--home-card-border);
   background: none;
-  padding: 0;
-  font: inherit;
-  font-size: 12px;
+  color: var(--home-muted);
+  font-size: 20px;
+  cursor: pointer;
+}
+.account-menu-slot.is-empty.is-static {
+  cursor: default;
+}
+.account-menu-slot.is-empty:not(.is-static):hover {
+  border-color: var(--home-green);
   color: var(--home-green-dark);
-  font-weight: 700;
-  text-align: left;
+}
+.account-menu-slot-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.account-menu-slot-name {
+  max-width: 100%;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--home-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.account-menu-slot-remove {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  border: 0;
+  background: none;
+  padding: 0 2px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--home-muted);
   cursor: pointer;
 }
-.account-menu-title:hover {
-  text-decoration: underline;
+.account-menu-slot-remove:hover:not(:disabled) {
+  color: var(--home-text);
 }
 .account-menu-role {
   font-style: normal;

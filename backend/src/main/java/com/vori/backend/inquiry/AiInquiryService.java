@@ -35,6 +35,7 @@ public class AiInquiryService {
     private final CategoryRepository categoryRepository;
     private final GeminiClient geminiClient;
     private final TransactionTemplate transactionTemplate;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     /** 특정 날짜의 미답변 inquiry 목록 — Step 2 화면용. */
     @Transactional(readOnly = true)
     public List<InquiryResponse> listPendingByDate(Long userId, LocalDate date) {
@@ -143,6 +144,8 @@ public class AiInquiryService {
 
             fresh.recordAnswer(req.answerText(), reason, adjusted);
             expense.updateSignalFinal(newSignal);
+            // 커밋 뒤 펫 칭호(AI 답변 수)를 본다
+            eventPublisher.publishEvent(new com.vori.backend.pettitle.PetTitleCheckEvent(userId, "AI_ANSWERED"));
         });
     }
 

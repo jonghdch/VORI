@@ -4,8 +4,10 @@ package com.vori.backend.notification;
 public enum NotificationType {
     /** 월간(보이는) 리포트 정산 도착 */
     MONTHLY_REPORT,
-    /** 새 칭호 획득 */
+    /** 새 업적 획득 (titles — 코드 이름은 옛 "칭호" 그대로) */
     TITLE_ACQUIRED,
+    /** 펫이 새 칭호 획득 */
+    PET_TITLE_ACQUIRED,
     /** 펫 진화(2차·3차) */
     PET_EVOLVED,
     /** 펫 30레벨 — 졸업(분양) 가능 */

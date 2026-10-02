@@ -58,10 +58,14 @@ public class Pet {
     @Builder.Default
     private Integer statEndurance = 0;
 
-    // 쓰다듬기·칭찬하기 등 상호작용 누적 횟수. 칭호 조건(PET_INTERACTIONS)의 기준값.
+    // 쓰다듬기·칭찬하기 등 상호작용 누적 횟수. 펫 칭호 조건(INTERACTIONS)의 기준값.
     @Column(name = "interaction_count", nullable = false)
     @Builder.Default
     private Integer interactionCount = 0;
+
+    // 장착한 칭호 — 이 펫이 딴 칭호(pet_title_awards) 중 유저가 장착한 1개. NULL = 장착 안 함.
+    @Column(name = "equipped_title_award_id")
+    private Long equippedTitleAwardId;
 
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "ENUM('INFANT','JUVENILE','ADULT')")
@@ -171,6 +175,11 @@ public class Pet {
     /** 상호작용 1회를 센다. */
     public void recordInteraction() {
         this.interactionCount = nz(interactionCount) + 1;
+    }
+
+    /** 칭호를 장착하거나(awardId) 해제한다(null). 이 펫의 칭호인지는 PetTitleService 가 확인한다. */
+    public void equipTitle(Long awardId) {
+        this.equippedTitleAwardId = awardId;
     }
 
     /** 이름을 짓는다. 길이·공백 검사는 요청 DTO(PetNameRequest)가 맡는다. */
