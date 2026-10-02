@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -68,6 +69,10 @@ public class User {
     @Builder.Default
     private Integer gameMoney = 0;
 
+    // 지출 기록 습관 보상(코인)을 마지막으로 준 날. 하루 한 번만 주려고 지출 행이 아니라 여기 남긴다.
+    @Column(name = "last_record_reward_on")
+    private LocalDate lastRecordRewardOn;
+
     @Column(name = "tutorial_done")
     @Builder.Default
     private Boolean tutorialDone = false;
@@ -127,6 +132,17 @@ public class User {
     public void addGameMoney(int amount) {
         if (amount < 0) throw new IllegalArgumentException("적립액은 음수일 수 없습니다: " + amount);
         this.gameMoney = (this.gameMoney == null ? 0 : this.gameMoney) + amount;
+    }
+
+    /**
+     * 지출 기록 습관 보상. 그날 이미 받았으면 주지 않는다.
+     * 지출을 지워도 이 날짜는 그대로라 등록→삭제를 반복해 코인을 모을 수 없다.
+     */
+    public boolean grantDailyRecordReward(LocalDate today, int amount) {
+        if (today.equals(lastRecordRewardOn)) return false;
+        lastRecordRewardOn = today;
+        addGameMoney(amount);
+        return true;
     }
 
     /**

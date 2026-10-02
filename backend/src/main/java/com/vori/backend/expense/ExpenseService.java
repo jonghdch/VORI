@@ -54,6 +54,8 @@ public class ExpenseService {
      * 온보딩 씨딩(BaselineSeeder)이 초기값을 넣을 때 표본 수를 이 값으로 두어 첫 지출부터 판정이 돌게 한다.
      */
     public static final int N_MIN = 5;
+    /** 하루 첫 지출 기록에 주는 코인. */
+    private static final int RECORD_REWARD_COINS = 100;
     // Z_GREEN / Z_RED 임계값은 signal_config 테이블(관리자 조정) 에서 읽는다. SignalConfigService 참조.
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
     // expenses.z_score 는 DECIMAL(6,3) — 담을 수 있는 한계. clampZScore 참조.
@@ -92,8 +94,10 @@ public class ExpenseService {
                 .isRecurring(req.isRecurring())
                 .build());
 
-        // 새 기록을 남긴 즉시 주는 습관 보상. 수정·삭제에는 다시 지급하지 않는다.
-        userRepository.findById(userId).orElseThrow().addGameMoney(100);
+        // 기록 습관 보상 — 하루 첫 기록에만 준다. 지급일을 사용자에 남겨 삭제 후 재등록으로 다시 받지 못한다.
+        // 같은 날 동시 등록이 둘 다 받지 않게 사용자 행을 잠근다.
+        userRepository.findByIdForUpdate(userId).orElseThrow()
+                .grantDailyRecordReward(java.time.LocalDate.now(), RECORD_REWARD_COINS);
 
         UserStatStats stats = userStatStatsRepository
                 .findByUserIdAndStatType(userId, category.getStatType())
