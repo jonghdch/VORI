@@ -40,6 +40,7 @@ import { get, post, patch } from "./http";
  *   statTarget: string,
  *   releaseBonusPct: number,
  *   price: number,
+ *   themeId: number|null,      // theme_master.id — 이름은 listThemes() 결과에서 id 로 찾는다. 테마 없는 가구는 null
  *   positionX: number|null,    // 미배치면 null
  *   positionY: number|null,
  *   placed: boolean,
