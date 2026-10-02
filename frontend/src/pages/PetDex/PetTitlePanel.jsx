@@ -32,7 +32,7 @@ const progressText = (item) => (item.hidden
  * 도감의 "칭호" 탭 — 지금 키우는 펫의 칭호 과제. 칭호는 펫이 얻고, 펫이 바뀌면 과제는 0부터 다시 시작한다.
  * 딴 칭호 중 하나를 장착하면 홈 배지에 보인다. 졸업한 펫의 칭호는 펫 탭의 상세 기록에서 본다.
  */
-function PetTitlePanel() {
+function PetTitlePanel({ knownTitleCount, onTitlesChanged }) {
   const navigate = useNavigate();
   const [board, setBoard] = useState(null);
   const [error, setError] = useState(null);
@@ -45,6 +45,13 @@ function PetTitlePanel() {
       setError(null);
     })
     .catch((e) => setError(e.message || "칭호를 불러오지 못했어요")), []);
+
+  // 조회하면서 서버가 놓친 칭호를 지급했으면, 도감 요약("획득 칭호")이 아는 수와 달라진다 — 그때만 다시 읽게 한다
+  const acquiredCount = board?.petId != null ? board.titles.filter((t) => t.acquired).length : null;
+  useEffect(() => {
+    if (acquiredCount == null || knownTitleCount == null) return;
+    if (acquiredCount !== knownTitleCount) onTitlesChanged?.();
+  }, [acquiredCount, knownTitleCount, onTitlesChanged]);
 
   useEffect(() => {
     load();
@@ -63,11 +70,10 @@ function PetTitlePanel() {
     setBusy(true);
     setNotice(null);
     try {
+      // 응답이 갱신된 칭호 과제다. 장착은 획득 칭호 수를 바꾸지 않으므로 도감 요약은 다시 읽지 않는다.
+      // 홈 배지는 홈에 들어갈 때 펫을 새로 읽는다.
       setBoard(await equipPetTitle(board.petId, awardId));
       setNotice({ kind: "ok", text: awardId ? "칭호를 장착했어요. 홈에서 보여요." : "칭호 장착을 해제했어요." });
-      // 홈 배지·내 정보 상자·도감 요약이 장착 칭호를 다시 읽게 한다
-      window.dispatchEvent(new Event(PET_CHANGED_EVENT));
-      window.dispatchEvent(new Event("vori:account-updated"));
     } catch (e) {
       setNotice({ kind: "err", text: e.message || "칭호를 장착하지 못했어요" });
     } finally {

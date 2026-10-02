@@ -72,6 +72,11 @@ function PetDexPage({ onLogout }) {
     };
   }, [loadPets, loadTitles, navigate]);
 
+  // 칭호 탭이 열리며 놓친 칭호가 지급될 수 있다 — 칭호 탭이 아는 수와 다를 때만 펫 목록을 다시 읽는다
+  const reloadPetsQuietly = useCallback(() => { loadPets().catch(() => {}); }, [loadPets]);
+  // 펫 목록을 아직 못 읽었으면 null — 비교하지 않는다
+  const activePetTitleCount = loading ? null : (pets.find((p) => !p.releasedAt)?.titles?.length ?? 0);
+
   const acquiredCount = useMemo(() => titles.filter((t) => t.acquired).length, [titles]);
   // 칭호는 펫이 얻는다 — 지금까지 키운 모든 펫이 딴 칭호 수
   const petTitleCount = useMemo(() => pets.reduce((sum, p) => sum + (p.titles?.length ?? 0), 0), [pets]);
@@ -127,9 +132,9 @@ function PetDexPage({ onLogout }) {
           {current.id === "pets" ? (
             <PetDexPanel pets={pets} isAdmin={isAdmin} error={petError} />
           ) : current.id === "achievements" ? (
-            <AchievementPanel titles={titles} loading={loading} error={titleError} reload={loadTitles} />
+            <AchievementPanel titles={titles} loading={loading} error={titleError} onChange={setTitles} />
           ) : (
-            <PetTitlePanel />
+            <PetTitlePanel knownTitleCount={activePetTitleCount} onTitlesChanged={reloadPetsQuietly} />
           )}
         </div>
       </main>

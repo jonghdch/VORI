@@ -65,10 +65,10 @@ function formatProgressText(item) {
 }
 
 /**
- * 도감의 "업적" 탭 — 유저가 쌓는 업적(서버 titles). 목록은 PetDexPage 가 불러 준다.
+ * 도감의 "업적" 탭 — 유저가 쌓는 업적. 목록은 PetDexPage 가 불러 주고, 장착하면 onChange(갱신된 목록).
  * 칭호는 펫이 얻는 것이라 칭호 탭(PetTitlePanel)이 따로 그린다.
  */
-function AchievementPanel({ titles, loading, error, reload }) {
+function AchievementPanel({ titles, loading, error, onChange }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
 
@@ -84,8 +84,8 @@ function AchievementPanel({ titles, loading, error, reload }) {
     setBusy(true);
     setNotice(null);
     try {
-      await equipAchievements(next);
-      await reload();
+      // 장착 응답이 갱신된 목록이다 — 다시 조회하지 않고 바로 반영한다(조회만 실패해 옛 목록으로 다음 장착을 계산하는 일이 없게)
+      onChange(await equipAchievements(next));
     } catch (e) {
       setNotice(e.message || "업적을 장착하지 못했어요");
     } finally {
