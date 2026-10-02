@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AccountSummary from "./AccountSummary";
 import NotificationBell from "./NotificationBell";
 import { getMe } from "../api/user";
-import { listTitles } from "../api/titles";
+import { listAchievements } from "../api/achievements";
 import AchievementSlots from "./AchievementSlots";
 import { openAttendance } from "./AttendanceModal";
 
@@ -27,7 +27,7 @@ function AccountMenu({ onLogout }) {
   useEffect(() => {
     if (!open) return undefined;
     let alive = true;
-    Promise.all([getMe(), listTitles().catch(() => [])])
+    Promise.all([getMe(), listAchievements().catch(() => [])])
       .then(([user, list]) => {
         if (!alive) return;
         setMe(user);

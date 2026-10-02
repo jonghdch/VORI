@@ -8,7 +8,7 @@ import { getMonthlyLedger } from "../../api/ledger";
 import { getActivePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
 import { getUnreadMonthlyReport } from "../../api/monthlyReports";
-import { listTitles } from "../../api/titles";
+import { listAchievements } from "../../api/achievements";
 import { PetArt, petDisplayName, levelProgressPct } from "../../components/petVisual";
 import { AI_ACTIVE_FROM_HOUR } from "../../config";
 import { NO_RECORD_LINE, SPENDING_LINES, monthlyReportLine, petTmiLines } from "../../components/petLines";
@@ -86,7 +86,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     getUnreadMonthlyReport()
       .then((r) => alive && setUnreadReport(r))
       .catch(() => {});
-    listTitles()
+    listAchievements()
       .then((data) => {
         if (alive) setTitles(Array.isArray(data) ? data : []);
       })

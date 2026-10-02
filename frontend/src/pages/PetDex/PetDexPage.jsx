@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import { listPets } from "../../api/pet";
-import { listTitles } from "../../api/titles";
+import { listAchievements } from "../../api/achievements";
 import { PET_CHANGED_EVENT, getMe } from "../../api/user";
 import { PET_CATALOG } from "../../components/petCatalog";
 import PetDexPanel, { buildStatusByKey } from "./PetDexPanel";
@@ -41,7 +41,7 @@ function PetDexPage({ onLogout }) {
     setPets(Array.isArray(data) ? data : []);
     setPetError(null);
   }), []);
-  const loadTitles = useCallback(() => listTitles().then((data) => {
+  const loadTitles = useCallback(() => listAchievements().then((data) => {
     setTitles(Array.isArray(data) ? data : []);
     setTitleError(null);
   }), []);

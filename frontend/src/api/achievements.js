@@ -1,7 +1,7 @@
-// 업적 API 클라이언트. 서버 경로·필드 이름은 옛 이름("titles")을 그대로 쓴다.
+// 업적 API 클라이언트. (서버 코드·테이블 이름은 옛 "titles" 그대로다.)
 // 칭호는 펫이 얻는 것으로 바뀌어 api/petTitles.js 가 따로 다룬다.
-//   GET /api/titles          업적 획득·미획득 전부 (미획득은 진행률 포함, 달성 근접 순)
-//   PUT /api/titles/equipped 업적 장착 (최대 3개, 내 정보 상자 3칸)
+//   GET /api/achievements          업적 획득·미획득 전부 (미획득은 진행률 포함, 달성 근접 순)
+//   PUT /api/achievements/equipped 업적 장착 (최대 3개, 내 정보 상자 3칸)
 import { get, put } from "./http";
 
 /**
@@ -32,7 +32,7 @@ import { get, put } from "./http";
  *
  * @returns {Promise<Title[]>}
  */
-export const listTitles = () => get("/titles");
+export const listAchievements = () => get("/achievements");
 
 /** 장착할 수 있는 업적 수(내 정보 상자 3칸). 서버(TitleService.EQUIP_LIMIT)와 같은 값. */
 export const EQUIP_LIMIT = 3;
@@ -43,4 +43,4 @@ export const EQUIP_LIMIT = 3;
  * @param {number[]} ids
  * @returns {Promise<Title[]>}
  */
-export const equipAchievements = (ids) => put("/titles/equipped", { ids });
+export const equipAchievements = (ids) => put("/achievements/equipped", { ids });

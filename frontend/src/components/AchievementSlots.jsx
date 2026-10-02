@@ -1,4 +1,4 @@
-import { EQUIP_LIMIT } from "../api/titles";
+import { EQUIP_LIMIT } from "../api/achievements";
 
 /**
  * 장착한 업적 칸 3개 — 내 정보 상자(AccountMenu)와 도감 업적 탭(AchievementPanel)이 같이 쓴다.

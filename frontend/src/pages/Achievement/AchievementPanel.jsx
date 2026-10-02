@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { EQUIP_LIMIT, equipAchievements } from "../../api/titles";
+import { EQUIP_LIMIT, equipAchievements } from "../../api/achievements";
 import AchievementSlots from "../../components/AchievementSlots";
 import "./AchievementPage.css";
 

@@ -15,17 +15,17 @@ import java.util.List;
 
 /**
  * 업적 조회(코드 이름은 옛 "칭호" 그대로). 인증 필요(세션), 본인 데이터만.
- * 업적 장착은 PUT /api/titles/equipped, 펫 칭호 장착은 PUT /api/pets/{id}/equipped-title.
+ * 업적 장착은 PUT /api/achievements/equipped, 펫 칭호 장착은 PUT /api/pets/{id}/equipped-title.
  */
 @RestController
-@RequestMapping("/api/titles")
+@RequestMapping("/api/achievements")
 @RequiredArgsConstructor
 public class TitleController {
 
     private final TitleService titleService;
 
     /**
-     * GET /api/titles
+     * GET /api/achievements
      * 획득한 칭호와 아직 못 딴 칭호를 함께 반환한다(미획득은 진행률 포함, 달성 근접 순).
      * 조회 시점에 조건을 다시 평가하므로, 이벤트를 놓쳤더라도 여기서 지급된다.
      */
@@ -34,7 +34,7 @@ public class TitleController {
         return titleService.list(principal.getId());
     }
 
-    /** PUT /api/titles/equipped — 업적 장착(최대 3개, 칸 순서대로). body {ids:[...]}, 빈 목록이면 모두 장착 해제. */
+    /** PUT /api/achievements/equipped — 업적 장착(최대 3개, 칸 순서대로). body {ids:[...]}, 빈 목록이면 모두 장착 해제. */
     @PutMapping("/equipped")
     public List<TitleResponse> equip(
             @AuthenticationPrincipal UserPrincipal principal,

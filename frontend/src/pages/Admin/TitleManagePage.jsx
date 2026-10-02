@@ -147,7 +147,7 @@ function TitleManagePage() {
     <div className="adm-page">
       <div className="admin-page-head">
         <div>
-          <h1 className="adm-title">업적 / 칭호 관리</h1>
+          <h1 className="adm-title">업적 관리</h1>
           <p className="adm-sub">
             칭호 마스터를 추가·수정하고 활성 여부를 바꿉니다. 지급 판정은 활성 칭호만 봅니다.{" "}
             {!loading && !error && (
