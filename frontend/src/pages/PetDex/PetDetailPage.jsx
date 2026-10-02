@@ -201,7 +201,7 @@ function PetDetailPage({ onLogout }) {
                         {formatDate(p.releasedAt)} 분양 · <CoinIcon /> {(p.releaseValue ?? 0).toLocaleString("ko-KR")}
                       </>
                     ) : (
-                      <Link to="/raise" className="home-link-btn">
+                      <Link to="/myroom" className="home-link-btn">
                         마이룸에서 보기 →
                       </Link>
                     )}

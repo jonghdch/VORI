@@ -701,8 +701,8 @@ function PetPage({ user, onLogout }) {
 
   return (
     <AppShell
-      activeTop="raise"
-      activeSide="raise"
+      activeTop="myroom"
+      activeSide="myroom"
       user={user}
       onLogout={onLogout}
     >

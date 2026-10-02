@@ -89,7 +89,7 @@ const ADMIN_PAGES = {
 //   /wallet/new/confirm     Step 2 (확인)
 //   /wallet/analysis        소비 분석 (오후 8시~자정 이벤트, ledger-ai-card 진입)
 //   /report                 소비 리포트 (플레이스홀더)
-//   /raise                  마이룸 (펫 키우기)
+//   /myroom                 마이룸 (펫 키우기)
 //   /dex                    펫 도감
 //   /shop                   상점
 //   /settings               환경설정 → /settings/profile 로 보냄
@@ -279,13 +279,15 @@ function App() {
             }
           />
           <Route
-            path="/raise"
+            path="/myroom"
             element={
               <ProtectedRoute user={user} authLoading={authLoading}>
                 <PetPage user={user} onLogout={handleLogout} />
               </ProtectedRoute>
             }
           />
+          {/* 이전 주소로 들어온 링크·알림은 새 마이룸 주소로 보낸다. */}
+          <Route path="/raise" element={<Navigate to="/myroom" replace />} />
           <Route
             path="/dex"
             element={
