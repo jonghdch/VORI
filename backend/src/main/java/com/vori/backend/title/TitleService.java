@@ -104,6 +104,8 @@ public class TitleService {
         if (ids.stream().distinct().count() != ids.size()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "같은 업적을 두 번 장착할 수 없습니다");
         }
+        // 같은 사용자의 장착 요청이 겹치면 순서가 엉키므로(UNIQUE(user_id, equip_order)) 사용자 행을 잠그고 처리한다
+        userRepository.findByIdForUpdate(userId);
         List<UserTitle> owned = userTitleRepository.findByUserId(userId);
         Map<Long, UserTitle> byId = owned.stream()
                 .collect(java.util.stream.Collectors.toMap(UserTitle::getId, t -> t));

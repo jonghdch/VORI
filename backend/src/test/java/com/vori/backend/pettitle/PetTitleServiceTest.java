@@ -99,7 +99,7 @@ class PetTitleServiceTest {
 
         assertThat(board.petId()).isEqualTo(2L);
         // 레벨은 새 펫도 1부터라 진화 과제는 1, 나머지 횟수 과제는 0
-        assertThat(board.titles()).filteredOn(t -> !t.metricType().equals("LEVEL"))
+        assertThat(board.titles()).filteredOn(t -> !"LEVEL".equals(t.metricType()))
                 .extracting(PetTitleItem::current).containsOnly(0L);
         assertThat(board.titles()).extracting(PetTitleItem::acquired).containsOnly(false);
         // 이전 펫 시절의 답변을 세지 않도록, 구간 시작이 이 펫의 부화 시각이어야 한다
@@ -165,6 +165,7 @@ class PetTitleServiceTest {
         PetTitleItem masked = service.board(USER_ID).titles().stream()
                 .filter(t -> t.code().equals("PET_LUCKY_CHARM")).findFirst().orElseThrow();
         assertThat(masked.description()).isEqualTo("???");
+        assertThat(masked.metricType()).isNull(); // 지표 종류로 조건을 짐작하지 못하게
         assertThat(masked.current()).isZero();
         assertThat(masked.threshold()).isZero();
         assertThat(masked.progressPct()).isEqualTo(30);

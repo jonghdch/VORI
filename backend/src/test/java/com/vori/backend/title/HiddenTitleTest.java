@@ -132,6 +132,8 @@ class HiddenTitleTest {
 
         assertThat(a.getEquipOrder()).isEqualTo(1);
         assertThat(b.getEquipOrder()).isNull(); // 목록에서 빠진 업적은 장착 해제된다
+        // 동시 요청이 순서를 엉키게 하지 않도록 사용자 행을 잠근다
+        verify(userRepository, org.mockito.Mockito.atLeastOnce()).findByIdForUpdate(USER_ID);
     }
 
     @Test

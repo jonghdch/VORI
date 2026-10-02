@@ -213,13 +213,13 @@ public class PetTitleService {
         return pet.getHatchedAt() != null ? pet.getHatchedAt() : pet.getCreatedAt();
     }
 
-    /** 못 딴 히든 칭호는 조건을 가린다 — 설명은 "???", 현재값·목표치는 0, 달성률만 보낸다. */
+    /** 못 딴 히든 칭호는 조건을 가린다 — 설명은 "???", 지표 종류는 null, 현재값·목표치는 0, 달성률만 보낸다. */
     static final String HIDDEN_DESCRIPTION = "???";
 
     private static PetTitleItem item(PetTitle t, PetTitleProgress progress, PetTitleAward award, Long equippedAwardId) {
         boolean acquired = award != null;
         if (t.isHidden() && !acquired) {
-            return new PetTitleItem(t.getCode(), t.getName(), HIDDEN_DESCRIPTION, t.getMetricType().name(),
+            return new PetTitleItem(t.getCode(), t.getName(), HIDDEN_DESCRIPTION, null,
                     true, 0, 0, t.progressPct(progress), false, null, null, false);
         }
         return new PetTitleItem(t.getCode(), t.getName(), t.getDescription(), t.getMetricType().name(),
