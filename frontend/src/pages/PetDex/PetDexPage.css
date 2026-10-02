@@ -576,6 +576,28 @@
   font-size: 12px;
   color: var(--home-muted);
 }
+/* 펫이 얻은 칭호 — 기록 카드 안의 작은 알약들 */
+.dexd-record-titles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.dexd-record-title {
+  padding: 2px 8px;
+  border: 1px solid var(--home-card-border);
+  border-radius: 999px;
+  background: var(--home-card-surface);
+  color: var(--home-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.dexd-record-title.is-equipped {
+  border-color: var(--home-green);
+  color: var(--home-green-dark);
+}
 .dexd-record-state {
   display: inline-flex;
   align-items: center;

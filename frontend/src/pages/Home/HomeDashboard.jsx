@@ -148,7 +148,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   const stats = activePet;
   const spending = summary?.spending;
   const recent = summary?.recentExpenses ?? [];
-  const activeTitle = titles.find((title) => title.active);
+  // 칭호는 펫이 얻는다 — 키우는 펫이 장착한 칭호. 장착하지 않았으면 "칭호 없음".
+  const equippedTitle = activePet?.equippedTitle ?? null;
   const achievementPreview = (
     titles.some((title) => title.acquired)
       ? titles.filter((title) => title.acquired)
@@ -297,9 +298,9 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                     type="button"
                     className="home-pet-title-badge"
                     onClick={() => navigate("/dex?tab=titles")}
-                    aria-label={`칭호 ${activeTitle?.name ?? "없음"} — 칭호 도감 열기`}
+                    aria-label={`장착 칭호 ${equippedTitle?.name ?? "없음"} — 칭호 도감 열기`}
                   >
-                    {activeTitle?.name ?? "칭호 없음"}
+                    {equippedTitle?.name ?? "칭호 없음"}
                   </button>
                   <h2 className="home-pet-name">{activePet ? petDisplayName(activePet) : "보리"}</h2>
                   <span className="home-pet-level-label">Lv. {petLevel}</span>

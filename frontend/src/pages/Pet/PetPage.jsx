@@ -520,10 +520,12 @@ function PetPage({ user, onLogout }) {
           );
           messages.push(`${petDisplayName(result.pet)}의 매력이 1 올랐어요!`);
         }
-        // 상호작용 횟수로 받는 칭호 — 히든 칭호는 목록에 없던 것이라 여기서 알려줘야 한다
-        for (const title of result.newTitles ?? []) {
+        // 상호작용으로 펫이 얻은 칭호 — 히든 칭호는 목록에 없던 것이라 여기서 알려줘야 한다
+        const newTitles = result.newTitles ?? [];
+        if (newTitles.length > 0) setPet(result.pet);
+        for (const title of newTitles) {
           messages.push(
-            `${title.hidden ? "히든 칭호" : "칭호"} 「${title.name}」 획득! 업적/칭호 화면에서 장착할 수 있어요.`,
+            `${petDisplayName(result.pet)}이(가) ${title.hidden ? "히든 칭호" : "칭호"} 「${title.name}」를 얻었어요! 도감 칭호 탭에서 장착할 수 있어요.`,
           );
         }
         if (messages.length > 0) setNotice({ kind: "ok", text: messages.join(" ") });

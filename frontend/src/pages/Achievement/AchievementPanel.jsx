@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { setActiveTitle } from "../../api/titles";
+import { EQUIP_LIMIT, equipAchievements } from "../../api/titles";
+import AchievementSlots from "../../components/AchievementSlots";
 import "./AchievementPage.css";
 
 function categoryForCode(code) {
@@ -7,18 +8,22 @@ function categoryForCode(code) {
   if (code.startsWith("SAVER_")) return "절약";
   if (code.startsWith("RECORD_")) return "기록";
   if (code.startsWith("GOAL_")) return "목표";
-  if (code.startsWith("PET_")) return "펫";
+  // 펫 칭호 수를 세는 업적 — 칭호는 펫이 얻는다(도감 칭호 탭)
+  if (code.startsWith("PET_TITLE_") || code === "PET_ALLROUNDER" || code === "PET_SECRET_FOUND") return "칭호";
+  if (code.startsWith("PET_") || code.startsWith("DEX_")) return "펫";
   if (code === "LUCKY") return "가챠";
   if (code === "TALKATIVE") return "AI";
   if (code === "SCAN_MASTER") return "영수증";
   return "기타";
 }
 
-const CATEGORY_ORDER = ["시작", "절약", "기록", "목표", "펫", "가챠", "AI", "영수증", "기타"];
+const CATEGORY_ORDER = ["시작", "절약", "기록", "목표", "펫", "칭호", "가챠", "AI", "영수증", "기타"];
 
 function formatProgressText(item) {
   const { code, current, threshold, acquired } = item;
   if (acquired) return "달성 완료";
+  // 못 딴 히든 업적은 서버가 조건을 가려서 보낸다 — 달성률만
+  if (item.hidden) return `${item.progressPct}%`;
 
   if (code.startsWith("SAVER_")) {
     return `${current.toLocaleString("ko-KR")}원 / ${threshold.toLocaleString("ko-KR")}원`;
@@ -31,6 +36,15 @@ function formatProgressText(item) {
   }
   if (code === "PET_LOVELY") {
     return `${current}회 / ${threshold}회 상호작용`;
+  }
+  if (code === "PET_NEW_FAMILY") {
+    return `${current}마리 / ${threshold}마리 부화`;
+  }
+  if (code.startsWith("DEX_")) {
+    return `${current}종 / ${threshold}종 졸업`;
+  }
+  if (code.startsWith("PET_TITLE_") || code === "PET_ALLROUNDER" || code === "PET_SECRET_FOUND") {
+    return `${current}개 / ${threshold}개`;
   }
   if (code.startsWith("PET_")) {
     return `${current}마리 / ${threshold}마리 분양`;
@@ -50,29 +64,34 @@ function formatProgressText(item) {
   return `${current} / ${threshold}`;
 }
 
-function formatAcquiredAt(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
-}
-
 /**
- * 도감의 "업적"·"칭호" 탭 — 같은 칭호 목록을 두 관점으로 보여 준다.
- * tab: "achievements" | "titles". 목록(titles)은 PetDexPage 가 불러 주고, 장착을 바꾸면 reload 로 다시 받는다.
+ * 도감의 "업적" 탭 — 유저가 쌓는 업적(서버 titles). 목록은 PetDexPage 가 불러 준다.
+ * 칭호는 펫이 얻는 것이라 칭호 탭(PetTitlePanel)이 따로 그린다.
  */
-function AchievementPanel({ tab, titles, loading, error, reload }) {
+function AchievementPanel({ titles, loading, error, reload }) {
+  const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
-  const [busyId, setBusyId] = useState(null);
 
-  const activeTitle = useMemo(
-    () => titles.find((t) => t.active) || null,
+  // 장착한 업적(내 정보 상자에 보이는 3칸) — 순서대로
+  const equippedList = useMemo(
+    () => titles.filter((t) => t.equipOrder != null).sort((a, b) => a.equipOrder - b.equipOrder),
     [titles],
   );
+
+  const toggleEquip = async (item) => {
+    const ids = equippedList.map((t) => t.id);
+    const next = item.equipOrder != null ? ids.filter((id) => id !== item.id) : [...ids, item.id];
+    setBusy(true);
+    setNotice(null);
+    try {
+      await equipAchievements(next);
+      await reload();
+    } catch (e) {
+      setNotice(e.message || "업적을 장착하지 못했어요");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const groupedAchievements = useMemo(() => {
     const map = new Map();
@@ -87,62 +106,35 @@ function AchievementPanel({ tab, titles, loading, error, reload }) {
     }));
   }, [titles]);
 
-  const acquiredTitles = useMemo(
-    () => titles.filter((t) => t.acquired),
-    [titles],
-  );
-
-  const handleEquip = async (titleId) => {
-    setNotice(null);
-    setBusyId(titleId);
-    try {
-      await setActiveTitle(titleId);
-      await reload();
-      setNotice({ kind: "ok", text: "칭호를 장착했어요. 홈 화면에서 확인할 수 있어요." });
-    } catch (e) {
-      setNotice({
-        kind: "err",
-        text: e.message || "칭호를 장착하지 못했어요",
-      });
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const handleUnequip = async () => {
-    setNotice(null);
-    setBusyId("none");
-    try {
-      await setActiveTitle(null);
-      await reload();
-      setNotice({ kind: "ok", text: "칭호 장착을 해제했어요." });
-    } catch (e) {
-      setNotice({
-        kind: "err",
-        text: e.message || "장착 해제에 실패했어요",
-      });
-    } finally {
-      setBusyId(null);
-    }
-  };
-
   return (
     <>
-      {notice && (
-        <div className={`ach-notice ach-notice--${notice.kind}`} role="status">
-          {notice.text}
-        </div>
-      )}
-
       {error && (
         <div className="ach-notice ach-notice--err" role="alert">
           {error}
         </div>
       )}
+      {notice && (
+        <div className="ach-notice ach-notice--err" role="alert">
+          {notice}
+        </div>
+      )}
+      {!loading && (
+        <>
+          <p className="ach-equip-hint">
+            업적은 {EQUIP_LIMIT}개까지 장착할 수 있어요 · {equippedList.length} / {EQUIP_LIMIT}
+          </p>
+          <AchievementSlots
+            shown={equippedList}
+            disabled={busy}
+            onRemove={toggleEquip}
+            className="ach-equip-slots"
+          />
+        </>
+      )}
 
       {loading ? (
         <p className="ach-empty">불러오는 중…</p>
-      ) : tab === "achievements" ? (
+      ) : (
         groupedAchievements.map(({ category, items }) => (
           <section key={category} className="ach-section">
             <h2 className="ach-section-title">{category}</h2>
@@ -161,7 +153,7 @@ function AchievementPanel({ tab, titles, loading, error, reload }) {
                     </span>
                   </div>
                   <p className="ach-card-desc">
-                    {item.hidden ? "히든 업적 · " : "달성 시 "}칭호 「{item.name}」 획득
+                    {item.hidden ? "히든 업적 · " : ""}업적 「{item.name}」
                   </p>
                   <div className="ach-progress-row">
                     <span>달성도</span>
@@ -173,82 +165,21 @@ function AchievementPanel({ tab, titles, loading, error, reload }) {
                       style={{ width: `${item.progressPct}%` }}
                     />
                   </div>
+                  {item.acquired && (
+                    <button
+                      type="button"
+                      className={`ach-equip-btn ${item.equipOrder != null ? "is-on" : ""}`}
+                      disabled={busy || (item.equipOrder == null && equippedList.length >= EQUIP_LIMIT)}
+                      onClick={() => toggleEquip(item)}
+                    >
+                      {item.equipOrder != null ? "장착 해제" : "장착하기"}
+                    </button>
+                  )}
                 </article>
               ))}
             </div>
           </section>
         ))
-      ) : (
-        <>
-          <div className="ach-equipped">
-            <div>
-              <p className="ach-equipped-label">장착중인 칭호</p>
-              <p className="ach-equipped-name">
-                {activeTitle ? activeTitle.name : "장착된 칭호 없음"}
-              </p>
-            </div>
-            {activeTitle && (
-              <div className="ach-title-actions">
-                <button
-                  type="button"
-                  className="ach-btn-sm ach-btn-ghost"
-                  disabled={busyId !== null}
-                  onClick={handleUnequip}
-                >
-                  장착 해제
-                </button>
-              </div>
-            )}
-          </div>
-
-          <section className="ach-section">
-            <h2 className="ach-section-title">획득한 칭호</h2>
-            {acquiredTitles.length === 0 ? (
-              <p className="ach-empty">
-                아직 획득한 칭호가 없어요. 업적 탭에서 진행 중인 목표를 확인해 보세요.
-              </p>
-            ) : (
-              <ul className="ach-title-row">
-                {acquiredTitles.map((t) => (
-                  <li
-                    key={t.code}
-                    className={`ach-title-item ${t.active ? "is-active" : ""}`}
-                  >
-                    <div className="ach-title-main">
-                      <p className="ach-title-name">
-                        {t.name}
-                        {t.hidden && (
-                          <span className="home-badge home-badge--prog ach-hidden-badge">히든</span>
-                        )}
-                      </p>
-                      <p className="ach-title-meta">{t.description}</p>
-                    </div>
-                    {/* 획득 날짜는 오른쪽, 장착 버튼 바로 옆 */}
-                    <div className="ach-title-actions">
-                      {t.acquiredAt && (
-                        <span className="ach-title-date">
-                          {formatAcquiredAt(t.acquiredAt)} 획득
-                        </span>
-                      )}
-                      {t.active ? (
-                        <span className="home-badge home-badge--done">장착 중</span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="ach-btn-sm ach-btn-equip"
-                          disabled={busyId !== null}
-                          onClick={() => handleEquip(t.id)}
-                        >
-                          장착하기
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </>
       )}
     </>
   );

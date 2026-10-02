@@ -21,6 +21,12 @@ const METRICS = [
   { value: "RECEIPT_SCANS", label: "영수증 인식 성공 수" },
   { value: "LOGIN_COUNT", label: "로그인 횟수" },
   { value: "PET_INTERACTIONS", label: "펫 상호작용 수(한 마리 최대)" },
+  { value: "PETS_HATCHED", label: "부화한 펫 수(시작 펫 포함)" },
+  { value: "SPECIES_GRADUATED", label: "졸업시킨 서로 다른 종 수" },
+  { value: "PET_TITLES_TOTAL", label: "펫들이 얻은 칭호 합계" },
+  { value: "PET_TITLE_KINDS", label: "얻은 서로 다른 공개 펫 칭호 수" },
+  { value: "PET_TITLES_ON_ONE_PET", label: "한 펫이 얻은 칭호 최대 개수" },
+  { value: "HIDDEN_PET_TITLES", label: "얻은 히든 펫 칭호 수" },
 ];
 const METRIC_LABEL = Object.fromEntries(METRICS.map((m) => [m.value, m.label]));
 

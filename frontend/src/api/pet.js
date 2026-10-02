@@ -20,7 +20,9 @@ import { get, post, put } from "./http";
  *   variant:"NORMAL"|"IRO"|"ALIEN", stage:"INFANT"|"JUVENILE"|"ADULT",
  *   statEnergy:number, statCharm:number, statIq:number, statEndurance:number, statTotal:number,
  *   interactionCount:number,
- *   hatchedAt:string, releasedAt:string|null, releaseValue:number|null
+ *   hatchedAt:string, releasedAt:string|null, releaseValue:number|null,
+ *   titles:{ awardId:number, code:string, name:string, hidden:boolean, acquiredAt:string }[],  // 이 펫이 딴 칭호
+ *   equippedTitle:{ awardId:number, code:string, name:string, hidden:boolean, acquiredAt:string }|null  // 장착한 칭호
  * }} Pet
  */
 
@@ -51,7 +53,7 @@ export const releasePet = (petId) => post(`/pets/${petId}/release`);
 
 /**
  * 키우는 펫과 상호작용(쓰다듬기 등) 1회. 당첨 추첨은 서버가 한다.
- * newTitles 는 이번 상호작용으로 새로 받은 칭호 — 대개 비어 있고, 히든 칭호는 여기서 처음 드러난다.
+ * newTitles 는 이번 상호작용으로 펫이 새로 받은 칭호 — 대개 비어 있고, 히든 칭호는 여기서 처음 드러난다.
  * @returns {Promise<{ charmUp:boolean, pet:Pet, newTitles:{ name:string, hidden:boolean }[] }>}
  *   400 = 키우는 펫 없음
  */
