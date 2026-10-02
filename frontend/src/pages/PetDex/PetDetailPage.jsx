@@ -77,7 +77,7 @@ function PetDetailPage({ onLogout }) {
   const shownIndex = owned ? Math.min(viewing ?? reached, reached) : -1;
 
   return (
-    <AppShell activeTop="raise" activeSide="dex" onLogout={onLogout}>
+    <AppShell activeTop="" activeSide="dex" onLogout={onLogout}>
       <main className="home-main dex-main">
         <Link to="/dex" className="dexd-back">
           ← 도감
