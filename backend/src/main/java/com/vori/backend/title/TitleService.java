@@ -7,11 +7,11 @@ import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.pet.GachaPullRepository;
 import com.vori.backend.pet.PetRepository;
 import com.vori.backend.pet.PetTier;
+import com.vori.backend.pettitle.PetTitleAwardRepository;
 import com.vori.backend.receipt.OcrStatus;
 import com.vori.backend.receipt.ReceiptOcrJobRepository;
 import com.vori.backend.theme.ThemeMaster;
 import com.vori.backend.theme.ThemeMasterRepository;
-import com.vori.backend.title.dto.GrantedTitle;
 import com.vori.backend.title.dto.TitleResponse;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
@@ -29,7 +29,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * 칭호 획득·장착.
@@ -57,10 +56,12 @@ public class TitleService {
     private final AiInquiryRepository aiInquiryRepository;
     private final ReceiptOcrJobRepository receiptOcrJobRepository;
     private final ThemeMasterRepository themeMasterRepository;
+    private final com.vori.backend.notification.NotificationService notificationService;
+    private final PetTitleAwardRepository petTitleAwardRepository;
 
     /**
      * 전체 칭호 목록. 조회 시점에 평가를 겸해 놓친 획득을 메운다. 획득 → 미획득 순.
-     * 히든 칭호는 획득한 뒤에만 나온다 — 따기 전에는 이름도 조건도 내려가지 않는다.
+     * 못 딴 히든 업적도 목록에 나오지만 조건은 가린다 — 설명 "???" 와 달성률만 내려간다.
      */
     @Transactional
     public List<TitleResponse> list(Long userId) {
@@ -69,16 +70,14 @@ public class TitleService {
 
         Map<Long, UserTitle> owned = userTitleRepository.findByUserId(userId).stream()
                 .collect(java.util.stream.Collectors.toMap(t -> t.getTitle().getId(), t -> t, (a, b) -> a));
-        Long activeId = userRepository.findById(userId)
-                .map(User::getActiveTitleId).orElse(null);
 
         List<TitleResponse> acquired = new ArrayList<>();
         List<TitleResponse> locked = new ArrayList<>();
         for (Title title : titleRepository.findByEnabledTrueOrderBySortOrderAscIdAsc()) {
             UserTitle t = owned.get(title.getId());
             if (t != null) {
-                acquired.add(TitleResponse.acquired(title, t, progress, Objects.equals(t.getId(), activeId)));
-            } else if (!title.isHidden()) {
+                acquired.add(TitleResponse.acquired(title, t, progress));
+            } else {
                 locked.add(TitleResponse.locked(title, progress));
             }
         }
@@ -89,23 +88,37 @@ public class TitleService {
         return acquired;
     }
 
-    /** 칭호 장착. titleId 가 null 이면 해제. */
+    /** 장착할 수 있는 업적 수(내 정보 상자 3칸). */
+    public static final int EQUIP_LIMIT = 3;
+
+    /**
+     * 업적을 장착한다. userTitleIds 순서가 칸 순서이고, 빈 목록이면 모두 장착 해제.
+     * 본인이 딴 업적만, 최대 3개까지.
+     */
     @Transactional
-    public void setActive(Long userId, Long titleId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
-
-        if (titleId == null) {
-            user.setActiveTitle(null);
-            return;
+    public List<TitleResponse> equip(Long userId, List<Long> userTitleIds) {
+        List<Long> ids = userTitleIds == null ? List.of() : userTitleIds;
+        if (ids.size() > EQUIP_LIMIT) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "업적은 " + EQUIP_LIMIT + "개까지 장착할 수 있습니다");
         }
-
-        UserTitle title = userTitleRepository.findById(titleId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "칭호를 찾을 수 없습니다"));
-        if (!title.getUserId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "획득한 칭호만 장착할 수 있습니다");
+        if (ids.stream().distinct().count() != ids.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "같은 업적을 두 번 장착할 수 없습니다");
         }
-        user.setActiveTitle(titleId);
+        // 같은 사용자의 장착 요청이 겹치면 순서가 엉키므로(UNIQUE(user_id, equip_order)) 사용자 행을 잠그고 처리한다
+        userRepository.findByIdForUpdate(userId);
+        List<UserTitle> owned = userTitleRepository.findByUserId(userId);
+        Map<Long, UserTitle> byId = owned.stream()
+                .collect(java.util.stream.Collectors.toMap(UserTitle::getId, t -> t));
+        if (!byId.keySet().containsAll(ids)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "획득한 업적만 장착할 수 있습니다");
+        }
+        // UNIQUE(user_id, equip_order) 라 먼저 모두 비우고 반영한 뒤 새 순서를 매긴다
+        owned.forEach(t -> t.equip(null));
+        userTitleRepository.flush();
+        for (int i = 0; i < ids.size(); i++) {
+            byId.get(ids.get(i)).equip(i + 1);
+        }
+        return list(userId);
     }
 
     /**
@@ -123,26 +136,6 @@ public class TitleService {
         } catch (Exception e) {
             log.error("칭호 평가 실패 — userId={}, reason={}", event.userId(), event.reason(), e);
         }
-    }
-
-    /**
-     * 1씩 오르는 지표가 방금 value 가 됐을 때 부른다. 그 값이 목표치인 칭호가 있으면 바로 평가해
-     * 새로 받은 칭호를 돌려준다 — 호출한 쪽이 응답에 실어 획득 순간을 알릴 수 있다.
-     *
-     * 목표치에 닿지 않은 호출은 조회 한 번으로 끝난다. 상호작용처럼 자주 일어나는 동작마다
-     * 전체 평가(지표 수집 + 사용자 행 잠금)를 돌리지 않으려는 것이다. 여기서 놓친 획득은
-     * 다른 경로와 마찬가지로 목록 조회(list)가 메운다.
-     *
-     * 지표를 바꾼 트랜잭션이 커밋된 뒤에 호출할 것 — 아직 커밋되지 않은 값은 세지 못한다.
-     */
-    @Transactional
-    public List<GrantedTitle> grantOnReach(Long userId, TitleMetricType metricType, long value) {
-        if (!titleRepository.existsByEnabledTrueAndMetricTypeAndThreshold(metricType, value)) {
-            return List.of();
-        }
-        return grantNewlyAchieved(userId, collect(userId)).stream()
-                .map(title -> new GrantedTitle(title.getName(), title.isHidden()))
-                .toList();
     }
 
     // ───── 내부 ─────
@@ -174,6 +167,12 @@ public class TitleService {
             log.info("칭호 획득 — userId={}, title={}, unlocksThemeId={}",
                     userId, title.getName(), unlocksThemeId);
             granted.add(title);
+            // 관리자는 시연용으로 칭호를 한꺼번에 받으므로 알림을 쌓지 않는다
+            if (!admin) {
+                notificationService.notify(userId, com.vori.backend.notification.NotificationType.TITLE_ACQUIRED,
+                        "새 칭호 「" + title.getName() + "」를 얻었어요", title.getDescription(),
+                        "/dex?tab=titles", "title:" + title.getId());
+            }
         }
         return granted;
     }
@@ -205,7 +204,13 @@ public class TitleService {
                 aiInquiryRepository.countByUserIdAndAnsweredAtIsNotNull(userId),
                 receiptOcrJobRepository.countByUserIdAndStatus(userId, OcrStatus.SUCCESS),
                 loginCount,
-                petRepository.maxInteractionCountByUserId(userId));
+                petRepository.maxInteractionCountByUserId(userId),
+                petRepository.countByUserId(userId),
+                petRepository.countGraduatedSpeciesByUserId(userId),
+                petTitleAwardRepository.countByUserId(userId),
+                petTitleAwardRepository.countPublicKindsByUserId(userId),
+                petTitleAwardRepository.countPerPetByUserId(userId).stream().findFirst().orElse(0L),
+                petTitleAwardRepository.countHiddenByUserId(userId));
     }
 
     /** 칭호 마스터 전체 — 어드민·문서용. */

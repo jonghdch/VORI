@@ -79,7 +79,7 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 
 | 코드 | 언제 | message 예시 | 화면에서 |
 |---|---|---|---|
-| 400 | 코인 부족 · 검증 실패 · 성체 아닌 펫 분양 | `코인이 부족합니다` | 토스트로 `message` 노출 |
+| 400 | 코인 부족 · 검증 실패 · 30레벨 미만 펫 분양 | `코인이 부족합니다` | 토스트로 `message` 노출 |
 | 401 | 로그인하지 않음 · 세션 만료 | (본문 없음) | 로그인 화면으로 이동 |
 | 403 | 잠긴 테마 가구 구매 · 남의 데이터 접근 | `'절약 새싹' 칭호를 획득해야…` | 해금 조건 안내 |
 | 404 | 없는 id 로 조회·수정 | `칭호를 찾을 수 없습니다` | 목록 새로고침 |
@@ -129,8 +129,8 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 2. `POST /api/ledger/entries`
    작성 화면의 지출·수입·저축을 **한 번에** 보낸다. 서버가 한 트랜잭션으로 저장하므로, 하나라도 실패하면
    아무것도 저장되지 않는다([가계부](#가계부) 엔드포인트 참조). 한 건만 넣을 때는 `POST /api/expenses` 를 써도 된다.
-3. `GET /api/titles`
-   지출 등록 직후 칭호가 새로 붙었을 수 있다. `acquired` 가 바뀐 항목을 축하 연출에 쓴다.
+3. `GET /api/achievements`
+   지출 등록 직후 업적이 새로 붙었을 수 있다. `acquired` 가 바뀐 항목을 축하 연출에 쓴다.
 
 ### 영수증 스캔
 
@@ -200,28 +200,29 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 
 벽지·바닥(`PLAIN_WALLPAPER`, `WOOD_FLOOR`)은 `themeName` 이 `null` 이다. 좌표 처리가 아직 정해지지 않아 일부러 테마에서 뺐다.
 
-### 칭호
+### 업적과 칭호
+
+업적은 유저가, 칭호는 펫이 얻는다(V41). 업적 서버 코드·테이블 이름은 옛 "칭호" 시절의 `titles` 를 그대로 쓴다.
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/api/titles` | 13개 전부 (획득 먼저, 미획득은 달성 근접 순) |
-| PUT | `/api/titles/active` | 장착 · 204 · `titleId` null 이면 해제 |
+| GET | `/api/achievements` | 업적 전부 (획득 먼저, 미획득은 달성 근접 순). 못 딴 히든은 설명 `"???"`, `current`·`threshold` 0, `progressPct` 만 |
+| PUT | `/api/achievements/equipped` | 업적 장착 · body `{ "ids": [...] }` (획득한 업적 id, 칸 순서대로, 최대 3개, 빈 배열이면 모두 해제) · 갱신된 목록 |
+| GET | `/api/pet-titles` | 키우는 펫의 칭호 과제와 진행도. 펫이 없으면 `petId` null + 과제 0% |
+| PUT | `/api/pets/{id}/equipped-title` | 칭호 장착 · body `{ "awardId": n }` (null 이면 해제) · 분양한 펫이면 409 |
 
 ```json
 [
   { "id": 8, "code": "SAVER_SPROUT", "name": "절약 새싹", "description": "누적 절약 10만원",
-    "acquired": true, "active": false,
-    "current": 2160124, "threshold": 100000, "progressPct": 100,
-    "acquiredAt": "2026-09-08T10:54:41" },
-  { "id": null, "code": "RECORD_STEADY", "name": "꾸준한 기록가", "description": "지출 50건 기록",
-    "acquired": false, "active": false,
-    "current": 10, "threshold": 50, "progressPct": 20,
-    "acquiredAt": null }
+    "acquired": true, "current": 2160124, "threshold": 100000, "progressPct": 100,
+    "acquiredAt": "2026-09-08T10:54:41", "hidden": false, "equipOrder": 1 }
 ]
 ```
 
-**미획득 칭호도 진행률과 함께 내려온다.** 잠금 아이콘만 띄우지 말고 `current / threshold` 진행 바를 그릴 것. 그게 다음 목표가 된다.
-단, **히든 칭호(`hidden: true`)는 획득한 뒤에만 목록에 나온다** — 따기 전에는 이름도 조건도 내려오지 않는다. 지금은 「사랑둥이」(한 펫과 상호작용 100회) 하나다.
+펫 응답(`GET /api/pets`, `/api/pets/active`)에는 그 펫이 딴 칭호 `titles` 와 장착 칭호 `equippedTitle` 이 실린다.
+
+**미획득 업적·칭호도 진행률과 함께 내려온다.** 잠금 아이콘만 띄우지 말고 `current / threshold` 진행 바를 그릴 것. 그게 다음 목표가 된다.
+단, **못 딴 히든(`hidden: true`)은 조건을 가린 채 내려온다** — 이름은 보이지만 설명은 `"???"`, `current`·`threshold` 는 0, 칭호는 `metricType` 도 null 이다. `progressPct` 로 달성률만 그린다. 지금 히든은 업적 「비밀 발견」, 펫 칭호 「행운의 매력」이다.
 장착은 `{ "titleId": 8 }`, 해제는 `{ "titleId": null }`.
 
 ### 가계부
@@ -344,8 +345,8 @@ const res = await fetch('http://localhost:8080/api/receipts', {
 | GET | `/api/eggs/products` | 등급별 가격 · 확률 |
 | POST | `/api/eggs/buy?grade=BASIC` | 구매 (펫이 있어도 가능) |
 | POST | `/api/eggs/{id}/open` | 개봉 · **펫이 있으면 409** |
-| GET | `/api/pets/active` | 키우는 펫 (없으면 본문 없는 200) |
-| POST | `/api/pets/{id}/release` | 분양 · 성체 아니면 400 |
+| GET | `/api/pets/active` | 키우는 펫 (없으면 본문 없는 200) · `exp`(스탯 합 × 10)·`level`·`levelExp`·`levelExpNeeded`·`maxLevel` 포함 |
+| POST | `/api/pets/{id}/release` | 분양(졸업) · 30레벨 미만이면 400 |
 | PUT | `/api/pets/{id}/name` | 펫 이름 짓기 · 요청 `{ name }`(1~10자, 앞뒤 공백 제외) · 응답 펫 · 규칙 위반 400 · 분양한 펫 409 |
 | POST | `/api/pets/active/interact` | 상호작용(쓰다듬기 등) 1회 · 1% 확률로 매력 +1 · 응답 `{ charmUp, pet, newTitles }` — `newTitles` 는 이번 상호작용으로 받은 칭호 `[{ name, hidden }]`(대개 빈 배열) · 펫 없으면 400 |
 

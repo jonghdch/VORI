@@ -30,7 +30,9 @@ class DailyJudgmentServiceTest {
     private final PetRepository pets = mock(PetRepository.class);
     private final PetGrowthLogRepository growthLogs = mock(PetGrowthLogRepository.class);
     private final UserFurnitureRepository furniture = mock(UserFurnitureRepository.class);
-    private final DailyJudgmentService service = new DailyJudgmentService(judgments, expenses, users, pets, growthLogs, furniture);
+    private final DailyJudgmentService service = new DailyJudgmentService(judgments, expenses, users, pets, growthLogs, furniture,
+            mock(com.vori.backend.notification.NotificationService.class),
+            mock(org.springframework.context.ApplicationEventPublisher.class));
 
     @Test
     void greenDailyJudgmentGivesFixedCoinsAndAllFourStats() {

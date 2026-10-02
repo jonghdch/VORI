@@ -32,6 +32,8 @@ class PetNameTest {
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
     private final PetRepository petRepository = mock(PetRepository.class);
+    private final com.vori.backend.pettitle.PetTitleService petTitleService =
+            mock(com.vori.backend.pettitle.PetTitleService.class);
     private final PetService service = new PetService(
             petRepository,
             mock(PetSpeciesRepository.class),
@@ -39,7 +41,9 @@ class PetNameTest {
             mock(UserFurnitureRepository.class),
             mock(ThemeMasterRepository.class),
             mock(PetGrowthLogRepository.class),
-            mock(ApplicationEventPublisher.class));
+            mock(ApplicationEventPublisher.class),
+            mock(com.vori.backend.notification.NotificationService.class),
+            petTitleService);
 
     private boolean valid(String name) {
         return validator.validate(new PetNameRequest(name)).isEmpty();

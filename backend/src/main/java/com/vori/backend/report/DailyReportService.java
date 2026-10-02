@@ -248,7 +248,7 @@ public class DailyReportService {
                     pet.getId(),
                     species == null ? null : species.getName(),
                     species == null ? null : species.getAppearanceKey(),
-                    pet.getStage().name(),
+                    pet.displayStage().name(),
                     pet.getStatEnergy(), pet.getStatCharm(),
                     pet.getStatIq(), pet.getStatEndurance(),
                     pet.statTotal()));

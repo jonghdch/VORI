@@ -178,8 +178,22 @@ function PetDetailPage({ onLogout }) {
                       {VARIANT_LABEL[p.variant] && <span className="dex-badge dex-badge--done">{VARIANT_LABEL[p.variant]}</span>}
                     </strong>
                     <small>
-                      {STAGE_LABEL[p.stage]} · 경험치 {p.statTotal} · {formatDate(p.hatchedAt)} 부화
+                      {STAGE_LABEL[p.stage]} · Lv. {p.level} · {formatDate(p.hatchedAt)} 부화
                     </small>
+                    {/* 이 펫이 얻은 칭호 — 분양한 펫이면 분양 순간의 기록. ★ = 장착한 칭호 */}
+                    {p.titles?.length > 0 && (
+                      <ul className="dexd-record-titles" aria-label={`${petDisplayName(p)}이(가) 얻은 칭호`}>
+                        {p.titles.map((t) => {
+                          const equipped = p.equippedTitle?.awardId === t.awardId;
+                          return (
+                            <li key={t.awardId} className={`dexd-record-title ${equipped ? "is-equipped" : ""}`}>
+                              {equipped && <span aria-label="장착한 칭호">★ </span>}
+                              {t.name}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </div>
                   <span className="dexd-record-state">
                     {p.releasedAt ? (

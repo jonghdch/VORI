@@ -388,4 +388,25 @@ class GeminiClientTest {
         assertThat(GeminiClient.introFor(null, "강아지")).isEqualTo("너는 사용자가 키우는 반려 펫 '강아지'야.");
         assertThat(GeminiClient.introFor(" ", null)).isEqualTo("너는 사용자의 절약을 돕는 반려 펫이야.");
     }
+
+    @Test
+    @DisplayName("펫 대화는 설정을 systemInstruction 으로, 지난 대화를 user/model 역할로 보낸다")
+    @SuppressWarnings("unchecked")
+    void chatSendsSystemInstructionAndRoles() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(anyString(), any(), eq(Map.class))).thenReturn(OK_RESPONSE);
+
+        client(rt).chat("너는 펫이야", List.of(
+                new GeminiClient.ChatTurn(true, "안녕"),
+                new GeminiClient.ChatTurn(false, "반가워요!"),
+                new GeminiClient.ChatTurn(true, "뭐 해?")));
+
+        ArgumentCaptor<Object> body = ArgumentCaptor.forClass(Object.class);
+        verify(rt).postForObject(primaryUrl(), body.capture(), eq(Map.class));
+        Map<String, Object> sent = (Map<String, Object>) body.getValue();
+        assertThat(sent.get("systemInstruction").toString()).contains("너는 펫이야");
+        List<Map<String, Object>> contents = (List<Map<String, Object>>) sent.get("contents");
+        assertThat(contents).extracting(c -> c.get("role")).containsExactly("user", "model", "user");
+        assertThat(contents.toString()).doesNotContain("너는 펫이야");
+    }
 }

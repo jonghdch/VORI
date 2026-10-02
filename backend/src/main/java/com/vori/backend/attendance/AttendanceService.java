@@ -20,6 +20,8 @@ public class AttendanceService {
     private final UserRepository users;
     private final PetRepository pets;
     private final PetGrowthLogRepository growthLogs;
+    private final com.vori.backend.notification.NotificationService notificationService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public AttendanceResponse today(Long userId) {
@@ -87,9 +89,12 @@ public class AttendanceService {
 
     private void applyStatItem(Long userId, StatType statType, int delta) {
         Pet pet = pets.findByUserIdAndReleasedAtIsNull(userId).stream().findFirst().orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "키우는 펫이 있어야 사용할 수 있어요."));
+        int levelBefore = pet.level();
         pet.addStat(statType, delta);
         pet.evaluateStage();
+        notificationService.petGrew(userId, pet, levelBefore);
         growthLogs.save(PetGrowthLog.builder().petId(pet.getId()).userId(userId).statType(statType).delta(delta).savedAmount(0).reason(GrowthReason.ATTENDANCE_ITEM).createdAt(LocalDateTime.now()).build());
+        eventPublisher.publishEvent(new com.vori.backend.pettitle.PetTitleCheckEvent(userId, "ATTENDANCE_ITEM"));
     }
 
     private int currentStreak(Long userId, LocalDate end) {

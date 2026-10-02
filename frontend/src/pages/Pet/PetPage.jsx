@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import {
   PetArt,
-  STAGE_LABEL,
-  nextStage,
   petDisplayName,
+  levelProgressPct,
+  nextMilestone,
+  MAX_LEVEL,
 } from "../../components/petVisual";
 import { getActivePet, interactWithPet, listPets, releasePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
@@ -23,6 +24,7 @@ import {
 } from "../../components/furnitureVisual";
 import { PetActionMenu, PetReaction, REACTION_MS, pickLine } from "./PetInteraction";
 import PetHistoryPanel from "./PetHistoryPanel";
+import PetChatPanel from "./PetChatPanel";
 import { itemImageFor } from "../../components/itemVisual";
 import roomDefaultImage from "../../assets/backgrounds/room-default.png";
 import roomWoodImage from "../../assets/backgrounds/room-wood.png";
@@ -178,8 +180,8 @@ const INITIAL_PET_POSITION = { x: 50, y: 62 };
 
 // 오른쪽 카드 하나에서 탭으로 전환해 보는 섹션들
 const PANEL_TABS = [
-  { id: "pet", label: "현재 펫" },
-  { id: "status", label: "펫 상태" },
+  { id: "pet", label: "펫 상태" },
+  { id: "chat", label: "대화방" },
   { id: "background", label: "방 테마" },
   { id: "furniture", label: "보유 가구" },
   { id: "items", label: "아이템" },
@@ -313,7 +315,7 @@ function PetPage({ user, onLogout }) {
         kind: "err",
         text:
           e.status === 400
-            ? `${STAGE_LABEL.ADULT}까지 키운 펫만 분양할 수 있어요.`
+            ? e.message || `${MAX_LEVEL}레벨을 달성한 펫만 분양할 수 있어요.`
             : e.status === 409
               ? "이미 분양한 펫이에요."
               : e.message,
@@ -417,7 +419,8 @@ function PetPage({ user, onLogout }) {
         color: PET_ACCENT,
       }
     : null;
-  const evolution = pet ? nextStage(pet.stage) : null;
+  const milestone = pet ? nextMilestone(pet.level) : null;
+  const graduated = pet ? pet.level >= pet.maxLevel : false;
   const selectedBackground =
     BACKGROUNDS.find((background) => background.id === selectedBackgroundId) ??
     BACKGROUNDS[0];
@@ -659,10 +662,12 @@ function PetPage({ user, onLogout }) {
           );
           messages.push(`${petDisplayName(result.pet)}의 매력이 1 올랐어요!`);
         }
-        // 상호작용 횟수로 받는 칭호 — 히든 칭호는 목록에 없던 것이라 여기서 알려줘야 한다
-        for (const title of result.newTitles ?? []) {
+        // 상호작용으로 펫이 얻은 칭호 — 히든 칭호는 목록에 없던 것이라 여기서 알려줘야 한다
+        const newTitles = result.newTitles ?? [];
+        if (newTitles.length > 0) setPet(result.pet);
+        for (const title of newTitles) {
           messages.push(
-            `${title.hidden ? "히든 칭호" : "칭호"} 「${title.name}」 획득! 업적/칭호 화면에서 장착할 수 있어요.`,
+            `${petDisplayName(result.pet)}이(가) ${title.hidden ? "히든 칭호" : "칭호"} 「${title.name}」를 얻었어요! 도감 칭호 탭에서 장착할 수 있어요.`,
           );
         }
         if (messages.length > 0) setNotice({ kind: "ok", text: messages.join(" ") });
@@ -866,7 +871,7 @@ function PetPage({ user, onLogout }) {
             </section>
           </div>
 
-          {/* 오른쪽: 현재 펫 · 펫 상태 · 방 테마 · 보유 가구 · 아이템 · 내역을 한 카드에서 탭으로 전환 */}
+          {/* 오른쪽: 펫 상태 · 대화방 · 방 테마 · 보유 가구 · 아이템 · 내역을 한 카드에서 탭으로 전환 */}
           <aside className="pet-myroom-side">
             <section className="home-card pet-panel pet-tab-card">
               <div className="pet-tab-bar" role="tablist" aria-label="마이룸 메뉴">
@@ -896,7 +901,7 @@ function PetPage({ user, onLogout }) {
               {activeTab === "pet" && (
                 <div className="pet-tab-panel">
                   <div className="pet-panel-head">
-                    <h2 className="home-card-title home-card-title--sm">현재 펫</h2>
+                    <h2 className="home-card-title home-card-title--sm">펫 상태</h2>
                     <span>{pet ? "한 마리만 키우는 중" : petLoading ? "불러오는 중…" : "펫 없음"}</span>
                   </div>
                   {petError && <p className="pet-inline-error">{petError}</p>}
@@ -915,51 +920,64 @@ function PetPage({ user, onLogout }) {
                         <div>
                           <strong>{selectedPet.name}</strong>
                           <small>{selectedPet.type}</small>
-                          <p>{formatDate(pet.hatchedAt)} 부화 · 경험치 {pet.statTotal}</p>
+                          <p>{formatDate(pet.hatchedAt)} 부화 · Lv. {pet.level}</p>
                         </div>
                       </div>
 
-                      {/* 진화 진행도 — 임계값은 백엔드와 동일(200/300) */}
+                      {/* 레벨 진행도 — 레벨·진행 경험치는 서버(PetLevel) 값. 5레벨 2차, 15레벨 3차, 30레벨 졸업 */}
                       <div className="pet-evolve">
                         <div className="pet-evolve-head">
-                          <span>
-                            {evolution
-                              ? `${STAGE_LABEL[evolution.stage]}까지`
-                              : "최종 단계"}
-                          </span>
+                          <span>Lv. {pet.level} / {pet.maxLevel}</span>
                           <strong>
-                            {evolution
-                              ? `${Math.min(pet.statTotal, evolution.threshold)} / ${evolution.threshold}`
-                              : `${STAGE_LABEL.ADULT} 완료`}
+                            {graduated
+                              ? "졸업 가능"
+                              : `다음 레벨까지 ${pet.levelExp} / ${pet.levelExpNeeded}`}
                           </strong>
                         </div>
                         <div className="pet-status-track">
                           <div
                             className="pet-status-fill"
-                            style={{
-                              width: evolution
-                                ? `${Math.min(100, (pet.statTotal / evolution.threshold) * 100)}%`
-                                : "100%",
-                              background: "var(--home-green)",
-                            }}
+                            style={{ width: `${levelProgressPct(pet)}%`, background: "var(--home-green)" }}
                           />
                         </div>
                         <p className="pet-evolve-help">
-                          {evolution
-                            ? "합리적인 지출로 절약하면 스탯이 올라 다음 단계로 자라요."
-                            : "다 자란 펫은 분양해서 코인으로 바꿀 수 있어요. 분양가 = 경험치 × 10."}
+                          {milestone
+                            ? `Lv. ${milestone.level}에 ${milestone.label}. 하루 소비 판정과 출석 보상으로 경험치가 쌓여요.`
+                            : "30레벨을 달성했어요! 분양해서 졸업시키면 코인으로 바꿀 수 있어요. 분양가 = EXP."}
                         </p>
-                        {pet.stage === "ADULT" && (
+                        {graduated && (
                           <button
                             type="button"
                             className="home-btn home-btn-primary pet-release-btn"
                             disabled={releasing}
                             onClick={handleRelease}
                           >
-                            {releasing ? "분양 중…" : `분양하기 (${coin(pet.statTotal * 10)}~)`}
+                            {releasing ? "분양 중…" : `분양하기 (${coin(pet.exp)}~)`}
                           </button>
                         )}
                       </div>
+
+                      {/* 누적 스탯 — 합리적인 지출을 기록하면 자란다 */}
+                      <ul className="pet-status-list" aria-label="누적 스탯">
+                        {STAT_META.map((meta) => {
+                          const value = pet?.[meta.key] ?? 0;
+                          const width = Math.min(Math.max(value, 0), 100);
+                          return (
+                            <li key={meta.key}>
+                              <div className="pet-status-row">
+                                <span>{meta.label}</span>
+                                <strong>{value}</strong>
+                              </div>
+                              <div className="pet-status-track">
+                                <div
+                                  className="pet-status-fill"
+                                  style={{ width: `${width}%`, background: meta.color }}
+                                />
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
                     </>
                   )}
                   {!pet && !petLoading && !petError && (
@@ -969,49 +987,14 @@ function PetPage({ user, onLogout }) {
                   )}
                 </div>
               )}
-              {activeTab === "status" && (
-                <div className="pet-tab-panel">
-                  <div className="pet-panel-head">
-                    <h2 className="home-card-title home-card-title--sm">펫 상태</h2>
-                    <span>누적 스탯</span>
+              {activeTab === "chat" &&
+                (pet ? (
+                  <PetChatPanel key={pet.id} pet={pet} />
+                ) : (
+                  <div className="pet-tab-panel">
+                    <p className="pet-empty">키우는 펫이 있어야 대화할 수 있어요.</p>
                   </div>
-                  <div className="pet-status-summary">
-                    <div>
-                      <strong>{selectedPet?.name ?? "펫"}</strong>
-                      <p>합리적인 지출을 기록하면 스탯이 자라요.</p>
-                    </div>
-                    {selectedPet && (
-                      <PetArt
-                        appearanceKey={selectedPet.appearanceKey}
-                        stage={selectedPet.stage}
-                        name={selectedPet.name}
-                        className="pet-status-image"
-                        emojiClassName="pet-status-emoji"
-                      />
-                    )}
-                  </div>
-                  <ul className="pet-status-list">
-                    {STAT_META.map((meta) => {
-                      const value = pet?.[meta.key] ?? 0;
-                      const width = Math.min(Math.max(value, 0), 100);
-                      return (
-                        <li key={meta.key}>
-                          <div className="pet-status-row">
-                            <span>{meta.label}</span>
-                            <strong>{value}</strong>
-                          </div>
-                          <div className="pet-status-track">
-                            <div
-                              className="pet-status-fill"
-                              style={{ width: `${width}%`, background: meta.color }}
-                            />
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
+                ))}
               {activeTab === "background" && (
                 <div className="pet-tab-panel">
                   <div className="pet-panel-head">

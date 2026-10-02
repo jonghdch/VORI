@@ -56,6 +56,8 @@ public class DailyJudgmentService {
     private final PetRepository petRepository;
     private final PetGrowthLogRepository petGrowthLogRepository;
     private final UserFurnitureRepository userFurnitureRepository;
+    private final com.vori.backend.notification.NotificationService notificationService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     private record Reward(int coins, int statPerType) {}
 
@@ -143,6 +145,7 @@ public class DailyJudgmentService {
         List<Pet> pets = petRepository.findByUserIdAndReleasedAtIsNull(user.getId());
         if (pets.isEmpty()) return;
         Pet pet = pets.get(0);
+        int levelBefore = pet.level();
         Map<StatType, BigDecimal> furnitureBonusPct = new EnumMap<>(StatType.class);
         for (UserFurniture furniture : userFurnitureRepository.findByUserIdAndPositionXIsNotNullAndPositionYIsNotNull(user.getId())) {
             BigDecimal pct = furniture.getReleaseBonusPct() == null ? BigDecimal.ZERO : furniture.getReleaseBonusPct();
@@ -166,6 +169,8 @@ public class DailyJudgmentService {
             }
         }
         pet.evaluateStage();
+        notificationService.petGrew(user.getId(), pet, levelBefore);
+        eventPublisher.publishEvent(new com.vori.backend.pettitle.PetTitleCheckEvent(user.getId(), "DAILY_JUDGMENT"));
     }
 
     private static Signal stronger(Signal a, Signal b) {

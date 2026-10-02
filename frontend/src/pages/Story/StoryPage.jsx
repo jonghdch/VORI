@@ -3,7 +3,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import SiteHeader from "../../components/SiteHeader";
 import { PET_CATALOG, DEX_TIER_LABEL, STAGE_ORDER } from "../../components/petCatalog";
-import { PetArt, STAGE_LABEL, STAGE_THRESHOLD } from "../../components/petVisual";
+import { MAX_LEVEL, PetArt, STAGE_LABEL, STAGE_LEVEL } from "../../components/petVisual";
 import { FurnitureArt, CATEGORY_LABEL, STAT_LABEL } from "../../components/furnitureVisual";
 import useMediaQuery from "../../components/useMediaQuery";
 // SiteHeader 가 .landing-header 등 랜딩 페이지의 헤더 클래스를 그대로 쓰기
@@ -72,11 +72,11 @@ const STORY_TABS = [
   { id: "items", label: "아이템" },
 ];
 
-// 성장 단계 — 펫·도감 화면과 같은 이름(1차 → 2차 → 3차)과 임계값을 쓴다.
+// 성장 단계 — 펫·도감 화면과 같은 이름(1차 → 2차 → 3차)과 진화 레벨을 쓴다.
 const EVOLUTION_STAGES = STAGE_ORDER.map((stage) => ({
   id: stage,
   label: STAGE_LABEL[stage] ?? stage,
-  threshold: STAGE_THRESHOLD[stage] ?? 0,
+  level: STAGE_LEVEL[stage] ?? 1,
 }));
 
 const MOON_TOP_INPUT = [0, 0.58, 1];
@@ -624,9 +624,9 @@ function StoryPage({ user, onLogout }) {
                     <div className="story-evolution-note">
                       {index === 0 && "작은 떡을 기다리는 첫 모습"}
                       {index === 1 &&
-                        `스탯 합계 ${stage.threshold}부터. 습관이 쌓이며 성격이 드러나는 시기`}
+                        `Lv. ${stage.level}부터. 습관이 쌓이며 성격이 드러나는 시기`}
                       {index === 2 &&
-                        `스탯 합계 ${stage.threshold}부터. 스탯의 흔적을 품고 완성된 모습`}
+                        `Lv. ${stage.level}부터. 스탯의 흔적을 품고 완성된 모습`}
                     </div>
                   </div>
                 ))}
@@ -643,9 +643,10 @@ function StoryPage({ user, onLogout }) {
                   <div>
                     <dt>성장 방식</dt>
                     <dd>
-                      합리적인 소비 기록이 쌓일수록 진화 단계가 열립니다. 스탯
-                      합계 {EVOLUTION_STAGES[1].threshold}에 {EVOLUTION_STAGES[1].label},{" "}
-                      {EVOLUTION_STAGES[2].threshold}에 {EVOLUTION_STAGES[2].label}가 됩니다.
+                      합리적인 소비 기록이 쌓일수록 레벨이 오르고 진화합니다. Lv.{" "}
+                      {EVOLUTION_STAGES[1].level}에 {EVOLUTION_STAGES[1].label}, Lv.{" "}
+                      {EVOLUTION_STAGES[2].level}에 {EVOLUTION_STAGES[2].label}가 되고, Lv. {MAX_LEVEL}을
+                      달성하면 졸업합니다.
                     </dd>
                   </div>
                   <div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import AppRightSidebar from "../../components/AppRightSidebar";
@@ -7,10 +7,11 @@ import { getHomeSummary } from "../../api/home";
 import { getMonthlyLedger } from "../../api/ledger";
 import { getActivePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
-import { getLatestDailyReport, markDailyReportRead } from "../../api/report";
-import { listTitles } from "../../api/titles";
-import { PetArt, petDisplayName } from "../../components/petVisual";
+import { getUnreadMonthlyReport } from "../../api/monthlyReports";
+import { listAchievements } from "../../api/achievements";
+import { PetArt, petDisplayName, levelProgressPct } from "../../components/petVisual";
 import { AI_ACTIVE_FROM_HOUR } from "../../config";
+import { NO_RECORD_LINE, SPENDING_LINES, monthlyReportLine, petTmiLines } from "../../components/petLines";
 import "./HomeDashboard.css";
 
 // 스탯 4종 표시 메타 — 값은 키우는 펫 본인의 스탯(PetResponse.stat*). 펫 화면과 같은 값이다.
@@ -24,6 +25,23 @@ const STAT_META = [
 ];
 
 const won = (n) => `${(n ?? 0).toLocaleString("ko-KR")}원`;
+
+// 월간 리포트 버튼을 띄우는 기간 — 매달 마지막 날 12시(월간 정산 시각)부터 7일.
+const REPORT_WINDOW_DAYS = 7;
+
+/** 지금이 리포트 기간이면 그 리포트의 달("YYYY-MM"), 아니면 null. 기간은 다음 달 초까지 걸친다. */
+function reportWindowMonth(now = new Date()) {
+  // 이번 달과 지난달 마지막 날 12시를 차례로 본다
+  for (const offset of [0, -1]) {
+    const start = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0, 12);
+    const end = new Date(start);
+    end.setDate(end.getDate() + REPORT_WINDOW_DAYS);
+    if (now >= start && now < end) {
+      return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}`;
+    }
+  }
+  return null;
+}
 
 function HomeDashboard({ user, onNavigate, onLogout }) {
   const navigate = useNavigate();
@@ -45,11 +63,11 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     };
   }, []);
 
-  // 키우는 펫(이름·외형·스탯) + 최신 일일 리포트(펫 말풍선). 둘 다 실패해도 홈은 떠야 하므로 조용히 fallback.
+  // 키우는 펫(이름·외형·스탯) + 안 본 월간 리포트(펫 말풍선). 둘 다 실패해도 홈은 떠야 하므로 조용히 fallback.
   const [activePet, setActivePet] = useState(null);
   // 조회가 끝나기 전에는 "펫 없음" 안내를 띄우지 않는다 — 잠깐 떴다 사라지는 깜빡임 방지
   const [petLoaded, setPetLoaded] = useState(false);
-  const [dailyReport, setDailyReport] = useState(null);
+  const [unreadReport, setUnreadReport] = useState(null);
   const [titles, setTitles] = useState([]);
   const [titlesLoading, setTitlesLoading] = useState(true);
   useEffect(() => {
@@ -65,15 +83,10 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
         .catch(() => {});
     loadPet();
     window.addEventListener(PET_CHANGED_EVENT, loadPet);
-    getLatestDailyReport()
-      .then((r) => {
-        if (!alive) return;
-        setDailyReport(r);
-        // 화면에 보인 순간 읽음 처리 — 실패해도 표시엔 영향 없음
-        if (r && !r.readAt) markDailyReportRead(r.id).catch(() => {});
-      })
+    getUnreadMonthlyReport()
+      .then((r) => alive && setUnreadReport(r))
       .catch(() => {});
-    listTitles()
+    listAchievements()
       .then((data) => {
         if (alive) setTitles(Array.isArray(data) ? data : []);
       })
@@ -123,6 +136,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   }, []);
 
   const today = new Date();
+  const reportMonth = reportWindowMonth(today);
   const dateStr = new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "2-digit",
@@ -134,20 +148,35 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   const stats = activePet;
   const spending = summary?.spending;
   const recent = summary?.recentExpenses ?? [];
-  const activeTitle = titles.find((title) => title.active);
+  // 칭호는 펫이 얻는다 — 키우는 펫이 장착한 칭호. 장착하지 않았으면 "칭호 없음".
+  const equippedTitle = activePet?.equippedTitle ?? null;
   const achievementPreview = (
     titles.some((title) => title.acquired)
       ? titles.filter((title) => title.acquired)
       : titles
   ).slice(0, 4);
 
-  // 경험치바 — 프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
-  // 백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체.
-  const statTotal = STAT_META.reduce((s, m) => s + (stats?.[m.key] ?? 0), 0);
-  const petLevel = Math.floor(statTotal / 100) + 1;
-  const petExp = statTotal % 100;
+  // 레벨·경험치 게이지 — 서버(PetLevel)가 계산한 값. 게이지는 지금 레벨 안에서 다음 레벨까지의 진행률.
+  const petLevel = activePet?.level ?? 1;
+  const petExp = levelProgressPct(activePet);
   // 스탯 막대 기준값 — 가장 큰 스탯(최소 100). 스탯이 100을 넘어도 막대끼리 비교가 된다.
   const statScale = Math.max(100, ...STAT_META.map((m) => stats?.[m.key] ?? 0));
+
+  // 말풍선 ③ 에 쓸 무작위 값 — 화면을 열 때 한 번만 정해 다시 그려져도 대사가 바뀌지 않게
+  const [bubbleSeed] = useState(() => Math.random());
+  const bubble = useMemo(() => {
+    if (loading) return { text: "오늘 소비를 살펴보고 있어요…" };
+    if ((spending?.today ?? 0) <= 0) return { text: NO_RECORD_LINE };
+    if (unreadReport) {
+      const month = Number(unreadReport.yearMonth.slice(5));
+      return { text: monthlyReportLine(month), link: `/report?month=${unreadReport.yearMonth}` };
+    }
+    const lines = [
+      ...SPENDING_LINES.map((l) => l.replace("{today}", won(spending.today))),
+      ...petTmiLines(activePet),
+    ];
+    return { text: lines[Math.floor(bubbleSeed * lines.length)] };
+  }, [loading, spending, unreadReport, activePet, bubbleSeed]);
 
   return (
     <AppShell
@@ -171,23 +200,18 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 마이룸 가기 →
               </button>
             </div>
-            {/* 말풍선 — 일일 리포트의 AI 코멘트가 있으면 그걸, 없으면 오늘 지출 기반 문구 */}
-            <div className="home-pet-bubble">
-              {dailyReport?.aiComment ? (
-                <>
-                  <span className="home-pet-bubble-date">
-                    {dailyReport.reportDate.slice(5).replace("-", "/")} 리포트
-                  </span>
-                  {dailyReport.aiComment}
-                </>
-              ) : loading ? (
-                "오늘 소비를 살펴보고 있어요…"
-              ) : (spending?.today ?? 0) > 0 ? (
-                `오늘 ${won(spending.today)} 지출했어요. 저녁 8시에 같이 돌아봐요!`
-              ) : (
-                "오늘은 아직 지출 기록이 없어요. 첫 기록을 남겨볼까요?"
-              )}
-            </div>
+            {/* 말풍선 — ① 오늘 기록 없음 ② 안 본 월간 리포트 ③ 소비 이야기·펫 TMI (petLines.js) */}
+            {bubble.link ? (
+              <button
+                type="button"
+                className="home-pet-bubble home-pet-bubble--link"
+                onClick={() => navigate(bubble.link)}
+              >
+                {bubble.text}
+              </button>
+            ) : (
+              <div className="home-pet-bubble">{bubble.text}</div>
+            )}
             <div className="home-pet-body">
               {petLoaded && !activePet ? (
                 /* 키우는 펫이 없을 때(분양 직후·알 개봉 전) — 마이룸과 같은 안내 */
@@ -214,7 +238,11 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                     className="home-pet-gauge-ring"
                     viewBox="0 0 120 120"
                     role="img"
-                    aria-label={`경험치 ${petExp}/100 (Lv. ${petLevel})`}
+                    aria-label={
+                    activePet?.levelExpNeeded
+                      ? `Lv. ${petLevel}, 다음 레벨까지 ${activePet.levelExp}/${activePet.levelExpNeeded}`
+                      : `Lv. ${petLevel} (만렙)`
+                  }
                   >
                     {/* 채움 색 — 화면 왼쪽(시작) 연한 세이지 → 오른쪽 짙은 세이지. 랜딩 톤과 맞춤.
                         원이 135° 회전돼 있어 좌표도 회전 전 기준(대각선)으로 잡았다. */}
@@ -253,29 +281,34 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                       />
                     )}
                   </div>
+                  <div className="home-pet-gauge-foot">
+                    {/* 다음 레벨까지 경험치(현재 / 필요) 캡슐. 만렙이면 MAX */}
+                    {activePet && (
+                      <span className="home-pet-exp">
+                        <span className="home-pet-exp-label">EXP</span>
+                        {activePet.levelExpNeeded
+                          ? `${activePet.levelExp} / ${activePet.levelExpNeeded}`
+                          : "MAX"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="home-pet-name-line">
                   <button
                     type="button"
                     className="home-pet-title-badge"
                     onClick={() => navigate("/dex?tab=titles")}
-                    aria-label={`칭호 ${activeTitle?.name ?? "없음"} — 칭호 도감 열기`}
+                    aria-label={`장착 칭호 ${equippedTitle?.name ?? "없음"} — 칭호 도감 열기`}
                   >
-                    {activeTitle?.name ?? "칭호 없음"}
+                    {equippedTitle?.name ?? "칭호 없음"}
                   </button>
-                </div>
-                <div className="home-pet-name-line">
                   <h2 className="home-pet-name">{activePet ? petDisplayName(activePet) : "보리"}</h2>
                   <span className="home-pet-level-label">Lv. {petLevel}</span>
                 </div>
               </div>
-              {/* 스탯 카드 — 흰 카드 + 수치 표시로 초록 배경 위에서도 눈에 띄게.
+              {/* 스탯 — 이름 / 막대 / 수치를 가로로 나란히. 카드 없이 배경 위에.
                   막대 길이는 네 스탯 중 가장 큰 값(최소 100) 기준 상대 비율. */}
-              <section className="home-pet-stats home-statcard" aria-label="펫 스탯">
-                <div className="home-statcard-head">
-                  <h3 className="home-statcard-title">펫 스탯</h3>
-                  <span className="home-statcard-total">
-                    합계 <strong>{statTotal.toLocaleString("ko-KR")}</strong>
-                  </span>
-                </div>
+              <section className="home-pet-stats" aria-label="펫 스탯">
                 <ul className="home-stat-list">
                   {STAT_META.map((m) => {
                     const value = stats?.[m.key] ?? 0;
@@ -286,7 +319,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                         style={{ "--stat-color": m.color }}
                       >
                         <span className="home-stat-label">{m.label}</span>
-                        <div className="home-stat-track">
+                        <div className="home-stat-track" aria-hidden>
                           <div
                             className="home-stat-fill"
                             style={{ width: `${(Math.max(value, 0) / statScale) * 100}%` }}
@@ -427,13 +460,24 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 signalByKey={calendarSignals}
               />
             </div>
-            <button
-              type="button"
-              className="home-btn home-btn-primary home-btn-block"
-              onClick={() => navigate("/report")}
-            >
-              ▶ 리포트 확인하기
-            </button>
+            {/* 월말 정산 뒤 일주일은 그 달 리포트로, 그 외에는 가계부로 */}
+            {reportMonth ? (
+              <button
+                type="button"
+                className="home-btn home-btn-primary home-btn-block"
+                onClick={() => navigate(`/report?month=${reportMonth}`)}
+              >
+                ▶ 리포트 확인하기
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="home-btn home-btn-primary home-btn-block"
+                onClick={() => navigate("/wallet")}
+              >
+                ▶ 가계부 이동하기
+              </button>
+            )}
           </section>
         </div>
 

@@ -1,5 +1,6 @@
 package com.vori.backend.expense;
 
+import com.vori.backend.pettitle.PetTitleCheckEvent;
 import com.vori.backend.category.Category;
 import com.vori.backend.category.CategoryRepository;
 import com.vori.backend.expense.dto.ExpenseCreateRequest;
@@ -314,6 +315,8 @@ public class ExpenseService {
                 .reason(GrowthReason.EXPENSE_SAVING)
                 .createdAt(LocalDateTime.now())
                 .build());
+        // 레벨이 올랐을 수 있으니 커밋 뒤 펫 칭호(진화)를 본다
+        eventPublisher.publishEvent(new PetTitleCheckEvent(userId, "EXPENSE_SAVING"));
         return statDelta;
     }
 }

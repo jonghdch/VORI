@@ -58,10 +58,14 @@ public class Pet {
     @Builder.Default
     private Integer statEndurance = 0;
 
-    // 쓰다듬기·칭찬하기 등 상호작용 누적 횟수. 칭호 조건(PET_INTERACTIONS)의 기준값.
+    // 쓰다듬기·칭찬하기 등 상호작용 누적 횟수. 펫 칭호 조건(INTERACTIONS)의 기준값.
     @Column(name = "interaction_count", nullable = false)
     @Builder.Default
     private Integer interactionCount = 0;
+
+    // 장착한 칭호 — 이 펫이 딴 칭호(pet_title_awards) 중 유저가 장착한 1개. NULL = 장착 안 함.
+    @Column(name = "equipped_title_award_id")
+    private Long equippedTitleAwardId;
 
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "ENUM('INFANT','JUVENILE','ADULT')")
@@ -76,10 +80,6 @@ public class Pet {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    // 진화 임계값 — 4대 스탯 합 기준. 1학기 설계서 §Step 4 기준값.
-    private static final int JUVENILE_THRESHOLD = 200;
-    private static final int ADULT_THRESHOLD = 300;
-
     public void addStat(com.vori.backend.common.StatType statType, int delta) {
         switch (statType) {
             case ENERGY     -> this.statEnergy     += delta;
@@ -89,30 +89,48 @@ public class Pet {
         }
     }
 
-    /** 해당 단계가 되기 위한 최소 스탯 합. 임계값이 여기 한 곳에만 있도록 밖에서도 이걸 쓴다. */
+    /** 해당 단계가 되기 위한 최소 스탯 합. 기준은 PetLevel 한 곳에 있다(EXP 를 스탯 단위로 환산). */
     public static int minStatTotalFor(PetStage stage) {
-        return switch (stage) {
-            case INFANT -> 0;
-            case JUVENILE -> JUVENILE_THRESHOLD;
-            case ADULT -> ADULT_THRESHOLD;
-        };
+        return PetLevel.minExpFor(PetLevel.levelOf(stage)) / PetLevel.EXP_PER_STAT;
     }
 
-    /** 4대 스탯 합. 진화 판정·분양가 산출의 기준값. */
+    /** 4대 스탯 합. */
     public int statTotal() {
         return nz(statEnergy) + nz(statCharm) + nz(statIq) + nz(statEndurance);
     }
 
+    /** EXP = 스탯 합 × 10. 레벨 판정과 분양가 산출의 기준값. */
+    public int exp() {
+        return statTotal() * PetLevel.EXP_PER_STAT;
+    }
+
+    /** EXP 에서 계산한 레벨(1~30). */
+    public int level() {
+        return PetLevel.levelFor(exp());
+    }
+
     /**
-     * 스탯 합에 따라 성장 단계를 갱신한다. addStat 직후 호출.
+     * 화면·리포트에 보일 단계 — 저장된 단계와 레벨이 정하는 단계 중 높은 쪽.
+     * 단계는 스탯이 오를 때만 다시 계산되므로, 진화 기준을 바꾼 직후의 기존 펫은 저장값이 낮을 수 있다.
+     * 다음 성장 때 evaluateStage 가 저장값도 맞춘다.
+     */
+    public PetStage displayStage() {
+        PetStage byLevel = PetLevel.stageFor(level());
+        return byLevel.ordinal() > stage.ordinal() ? byLevel : stage;
+    }
+
+    /** 만렙(30)을 달성해 졸업(분양)할 수 있는가. */
+    public boolean isGraduated() {
+        return level() >= PetLevel.MAX_LEVEL;
+    }
+
+    /**
+     * 레벨에 따라 성장 단계를 갱신한다(5레벨 2차, 15레벨 3차). addStat 직후 호출.
      * 단계는 되돌아가지 않는다 — 지출 삭제로 스탯이 줄어도 이미 큰 펫이 도로 작아지면
      * 사용자 경험이 무너지므로 상향 전이만 허용.
      */
     public void evaluateStage() {
-        int total = statTotal();
-        PetStage next = total >= ADULT_THRESHOLD ? PetStage.ADULT
-                : total >= JUVENILE_THRESHOLD ? PetStage.JUVENILE
-                : PetStage.INFANT;
+        PetStage next = PetLevel.stageFor(level());
         if (next.ordinal() > this.stage.ordinal()) {
             this.stage = next;
         }
@@ -133,19 +151,35 @@ public class Pet {
      * evaluateStage() 를 다시 돌려도 같은 단계가 나온다(내려가는 전이도 허용).
      */
     public void forceStage(PetStage target) {
-        int total = minStatTotalFor(target);
+        setStatTotal(minStatTotalFor(target));
+        this.stage = target;
+    }
+
+    /** 레벨을 강제로 맞춘다(관리자 시연용, 내려가기 허용). 스탯 합을 그 레벨의 최소값으로, 단계도 그 레벨에 맞춘다. */
+    public void forceLevel(int level) {
+        int target = Math.max(1, Math.min(level, PetLevel.MAX_LEVEL));
+        setStatTotal(PetLevel.minExpFor(target) / PetLevel.EXP_PER_STAT);
+        this.stage = PetLevel.stageFor(target);
+    }
+
+    /** 스탯 합을 total 로 맞추며 4대 스탯에 고르게 나눈다. */
+    private void setStatTotal(int total) {
         int base = total / 4;
         int rem = total % 4;
         this.statEnergy = base + (rem > 0 ? 1 : 0);
         this.statCharm = base + (rem > 1 ? 1 : 0);
         this.statIq = base + (rem > 2 ? 1 : 0);
         this.statEndurance = base;
-        this.stage = target;
     }
 
     /** 상호작용 1회를 센다. */
     public void recordInteraction() {
         this.interactionCount = nz(interactionCount) + 1;
+    }
+
+    /** 칭호를 장착하거나(awardId) 해제한다(null). 이 펫의 칭호인지는 PetTitleService 가 확인한다. */
+    public void equipTitle(Long awardId) {
+        this.equippedTitleAwardId = awardId;
     }
 
     /** 이름을 짓는다. 길이·공백 검사는 요청 DTO(PetNameRequest)가 맡는다. */

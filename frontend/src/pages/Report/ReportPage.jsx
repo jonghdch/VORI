@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import RecordCalendar, { dateKey } from "../../components/RecordCalendar";
 import { getMonthlyLedger } from "../../api/ledger";
+import { markMonthlyReportRead } from "../../api/monthlyReports";
 import "../Wallet/WalletPage.css";
 import "./ReportPage.css";
 
@@ -99,8 +100,15 @@ function ReportPage({ user, onLogout }) {
   const todayKey = dateKey(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
   // 보기 단위(주/월)와 기준일. 이동 시 anchor 만 갱신되고 기간이 따라간다.
-  const [viewMode, setViewMode] = useState("week");
-  const [anchor, setAnchor] = useState(() => new Date());
+  // ?month=2026-09 로 들어오면(알림·홈 말풍선의 "월간 리포트 확인") 그 달 월간 보기로 연다.
+  const [searchParams] = useSearchParams();
+  const requestedMonth = /^\d{4}-\d{2}$/.test(searchParams.get("month") || "") ? searchParams.get("month") : null;
+  const [viewMode, setViewMode] = useState(() => (requestedMonth ? "month" : "week"));
+  const [anchor, setAnchor] = useState(() => {
+    if (!requestedMonth) return new Date();
+    const [y, m] = requestedMonth.split("-").map(Number);
+    return new Date(y, m - 1, 1);
+  });
 
   // 보고 있는 기간의 날짜 목록 — 주: 일요일 시작 7일, 월: 1일~말일.
   const periodDates = useMemo(() => {
@@ -146,6 +154,13 @@ function ReportPage({ user, onLogout }) {
     const [y, m] = best.split("-").map(Number);
     return { calYear: y, calMonth: m };
   }, [viewMode, anchor, periodDates]);
+
+  // 월간 보기로 어떤 달을 열면 그 달 월간 리포트(정산된 경우)를 열람한 것으로 기록한다.
+  // 정산 전인 달이면 서버가 조용히 무시한다.
+  useEffect(() => {
+    if (viewMode !== "month") return;
+    markMonthlyReportRead(`${calYear}-${pad2(calMonth)}`).catch(() => {});
+  }, [viewMode, calYear, calMonth]);
 
   const [rows, setRows] = useState([]);
   // 캘린더용 — 기간 필터 전, 받아온 달 전체 행. null = 로딩 중.

@@ -3,15 +3,17 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import { listPets } from "../../api/pet";
-import { listTitles } from "../../api/titles";
+import { listAchievements } from "../../api/achievements";
 import { PET_CHANGED_EVENT, getMe } from "../../api/user";
 import { PET_CATALOG } from "../../components/petCatalog";
 import PetDexPanel, { buildStatusByKey } from "./PetDexPanel";
+import PetTitlePanel from "./PetTitlePanel";
 import AchievementPanel from "../Achievement/AchievementPanel";
 import "../Home/HomeDashboard.css";
 import "./PetDexPage.css";
 
 // 도감 = 펫 · 업적 · 칭호 한 화면. 위에 요약 세 칸, 그 아래 탭.
+// 업적은 유저가 쌓고(서버 titles), 칭호는 펫이 얻는다(서버 pet-titles, 칭호 탭이 직접 읽는다).
 // 탭은 ?tab= 으로 남겨 링크로 바로 열 수 있다 (/dex?tab=titles).
 const TABS = [
   { id: "pets", label: "펫" },
@@ -25,7 +27,7 @@ function PetDexPage({ onLogout }) {
   const current = TABS.find((t) => t.id === searchParams.get("tab")) ?? TABS[0];
   const selectTab = (id) => setSearchParams(id === TABS[0].id ? {} : { tab: id }, { replace: true });
 
-  // 세 탭이 같은 데이터를 보므로 여기서 한 번만 읽는다.
+  // 펫 탭·업적 탭과 위 요약이 같은 데이터를 보므로 여기서 한 번만 읽는다. 칭호 탭은 자기 데이터를 따로 읽는다.
   const [pets, setPets] = useState([]);
   const [titles, setTitles] = useState([]);
   // 관리자는 도감이 전부 열린 상태로 본다 — 관리자 혜택(코인 무제한·칭호 전부)과 같은 기조.
@@ -39,7 +41,7 @@ function PetDexPage({ onLogout }) {
     setPets(Array.isArray(data) ? data : []);
     setPetError(null);
   }), []);
-  const loadTitles = useCallback(() => listTitles().then((data) => {
+  const loadTitles = useCallback(() => listAchievements().then((data) => {
     setTitles(Array.isArray(data) ? data : []);
     setTitleError(null);
   }), []);
@@ -70,7 +72,14 @@ function PetDexPage({ onLogout }) {
     };
   }, [loadPets, loadTitles, navigate]);
 
+  // 칭호 탭이 열리며 놓친 칭호가 지급될 수 있다 — 칭호 탭이 아는 수와 다를 때만 펫 목록을 다시 읽는다
+  const reloadPetsQuietly = useCallback(() => { loadPets().catch(() => {}); }, [loadPets]);
+  // 펫 목록을 아직 못 읽었으면 null — 비교하지 않는다
+  const activePetTitleCount = loading ? null : (pets.find((p) => !p.releasedAt)?.titles?.length ?? 0);
+
   const acquiredCount = useMemo(() => titles.filter((t) => t.acquired).length, [titles]);
+  // 칭호는 펫이 얻는다 — 지금까지 키운 모든 펫이 딴 칭호 수
+  const petTitleCount = useMemo(() => pets.reduce((sum, p) => sum + (p.titles?.length ?? 0), 0), [pets]);
   const doneKinds = useMemo(() => {
     const statusByKey = buildStatusByKey(pets);
     return PET_CATALOG.filter((sp) => statusByKey[sp.appearanceKey]?.doneCount > 0).length;
@@ -88,7 +97,7 @@ function PetDexPage({ onLogout }) {
           </article>
           <article className="dex-summary-card">
             <p className="dex-summary-label">획득 칭호</p>
-            <p className="dex-summary-value">{loading ? "…" : `${acquiredCount}개`}</p>
+            <p className="dex-summary-value">{loading ? "…" : `${petTitleCount}개`}</p>
           </article>
           <article className="dex-summary-card">
             <p className="dex-summary-label">다 키운 펫</p>
@@ -122,14 +131,10 @@ function PetDexPage({ onLogout }) {
         <div id="dex-panel" role="tabpanel" aria-labelledby={`dex-tab-${current.id}`}>
           {current.id === "pets" ? (
             <PetDexPanel pets={pets} isAdmin={isAdmin} error={petError} />
+          ) : current.id === "achievements" ? (
+            <AchievementPanel titles={titles} loading={loading} error={titleError} onChange={setTitles} />
           ) : (
-            <AchievementPanel
-              tab={current.id}
-              titles={titles}
-              loading={loading}
-              error={titleError}
-              reload={loadTitles}
-            />
+            <PetTitlePanel knownTitleCount={activePetTitleCount} onTitlesChanged={reloadPetsQuietly} />
           )}
         </div>
       </main>
