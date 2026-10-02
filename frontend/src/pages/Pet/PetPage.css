@@ -1288,7 +1288,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-right: 0;
+  /* 입력창·버튼 포커스 테두리(바깥 4px)가 overflow 에 잘리지 않게 안쪽 여백을 두고,
+     같은 만큼 음수 바깥 여백으로 상쇄해 다른 탭과 가장자리를 맞춘다 */
+  padding: 0 4px 4px;
+  margin: 0 -4px -4px;
 }
 
 .pet-chat-remaining {
