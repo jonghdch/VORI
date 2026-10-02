@@ -188,6 +188,7 @@ const PANEL_TABS = [
 ];
 // 탭 줄 오른쪽 끝 "내역 보기" — 펫 이력·아이템 내역을 한곳에서 (PetHistoryPanel)
 const HISTORY_TAB = "history";
+const PET_TAB_PANEL_ID = "pet-tab-panel";
 
 function readStoredBackground() {
   try {
@@ -880,7 +881,9 @@ function PetPage({ user, onLogout }) {
                     key={tab.id}
                     type="button"
                     role="tab"
+                    id={`pet-tab-${tab.id}`}
                     aria-selected={activeTab === tab.id}
+                    aria-controls={activeTab === tab.id ? PET_TAB_PANEL_ID : undefined}
                     className={`pet-tab-btn ${activeTab === tab.id ? "is-active" : ""}`}
                     onClick={() => setActiveTab(tab.id)}
                   >
@@ -890,7 +893,9 @@ function PetPage({ user, onLogout }) {
                 <button
                   type="button"
                   role="tab"
+                  id={`pet-tab-${HISTORY_TAB}`}
                   aria-selected={activeTab === HISTORY_TAB}
+                  aria-controls={activeTab === HISTORY_TAB ? PET_TAB_PANEL_ID : undefined}
                   className={`pet-tab-btn pet-tab-btn--history ${activeTab === HISTORY_TAB ? "is-active" : ""}`}
                   onClick={() => setActiveTab(HISTORY_TAB)}
                 >
@@ -898,6 +903,13 @@ function PetPage({ user, onLogout }) {
                 </button>
               </div>
 
+              {/* 탭 패널 — 활성 탭 내용만 렌더하므로 패널 하나를 두고 aria-labelledby 만 바꾼다 */}
+              <div
+                className="pet-tab-panel-host"
+                id={PET_TAB_PANEL_ID}
+                role="tabpanel"
+                aria-labelledby={`pet-tab-${activeTab}`}
+              >
               {activeTab === "pet" && (
                 <div className="pet-tab-panel">
                   <div className="pet-panel-head">
@@ -1122,6 +1134,7 @@ function PetPage({ user, onLogout }) {
                 </div>
               )}
               {activeTab === HISTORY_TAB && <PetHistoryPanel petHistory={petHistory} />}
+              </div>
               {notice && (
                 <p
                   className={`pet-notice ${notice.kind === "err" ? "pet-notice--err" : ""}`}

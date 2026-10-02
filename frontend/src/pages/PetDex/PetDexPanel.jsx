@@ -46,13 +46,12 @@ function PetDexPanel({ pets, isAdmin, error }) {
 
   return (
     <>
-      <div className="dex-filters" role="tablist" aria-label="등급 필터">
+      <div className="dex-filters" role="group" aria-label="등급 필터">
         {["ALL", ...DEX_TIERS].map((t) => (
           <button
             key={t}
             type="button"
-            role="tab"
-            aria-selected={tier === t}
+            aria-pressed={tier === t}
             className={`dex-filter ${tier === t ? "is-active" : ""}`}
             onClick={() => setTier(t)}
           >

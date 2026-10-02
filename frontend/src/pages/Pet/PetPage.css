@@ -596,6 +596,14 @@
   margin-left: auto;
 }
 
+/* 탭 패널 래퍼 — 안쪽 .pet-tab-panel 이 남은 높이를 채우고 스크롤하도록 flex 를 이어 준다 */
+.pet-tab-panel-host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 /* 방(400px 안팎)과 높이가 크게 어긋나지 않도록 내용이 길면 카드 안에서 스크롤 */
 .pet-tab-panel {
   flex: 1;
