@@ -446,7 +446,7 @@ INDEX(user_id, released_at)
 | 보유 가구 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 보유 가구 고유 번호 |
 | 사용자 식별자 | `user_id` | FK | `BIGINT NOT NULL` | → `users(id)` |
 | 가구 이름 | `name` |  | `VARCHAR(50) NOT NULL` | 보유한 가구 이름 |
-| 가구 카테고리 | `category` |  | `ENUM('BED','WALLPAPER','FLOOR','MIRROR','VANITY','PICTURE','BOARD','SHELF','DRAWER','COMPUTER') NOT NULL` | 가구 종류 |
+| 가구 카테고리 | `category` |  | `ENUM('BED','WALLPAPER','FLOOR','MIRROR','VANITY','PICTURE','BOARD','SHELF','DRAWER','COMPUTER','TENT','PICNIC_MAT','CAMPFIRE','HAMMOCK','PARASOL','CAMP_CHAIR','CANOPY_BED','TEA_TABLE','FIREPLACE','ROCKING_CHAIR','TREASURE_CHEST','SLEEP_CAPSULE','TELESCOPE','SWIM_TUBE','BEACH_BALL','LEATHER_SOFA','GLASS_TABLE','LANTERN','ICEBOX','SAFE','DESK','FRIDGE','EMPTY_DESK') NOT NULL` | 가구 종류 |
 | 대상 스탯 | `stat_target` |  | `ENUM('ENERGY','CHARM','IQ','ENDURANCE') NOT NULL` | 보너스 대상 스탯 |
 | 분양 보너스율 | `release_bonus_pct` |  | `DECIMAL(5,2) DEFAULT 0` | 분양가 보너스율 |
 | 테마 식별자 | `theme_id` | FK | `BIGINT NULL` | → `theme_master(id)` |

@@ -25,24 +25,39 @@ import {
 import { PetActionMenu, PetReaction, REACTION_MS, pickLine } from "./PetInteraction";
 import PetHistoryPanel from "./PetHistoryPanel";
 import PetChatPanel from "./PetChatPanel";
+import { itemImageFor } from "../../components/itemVisual";
 import roomDefaultImage from "../../assets/backgrounds/room-default.png";
 import roomWoodImage from "../../assets/backgrounds/room-wood.png";
 import roomMintImage from "../../assets/backgrounds/room-mint.png";
 import roomEveningImage from "../../assets/backgrounds/room-evening.png";
+import roomModernImage from "../../assets/backgrounds/room-modern.png";
+import roomPrincessImage from "../../assets/backgrounds/room-princess.png";
+import roomOceanImage from "../../assets/backgrounds/room-ocean.png";
+import roomForestImage from "../../assets/backgrounds/room-forest.png";
+import roomSnowImage from "../../assets/backgrounds/room-snow.png";
+import roomDesertImage from "../../assets/backgrounds/room-desert.png";
+import roomSpaceImage from "../../assets/backgrounds/room-space.png";
+import roomDragonImage from "../../assets/backgrounds/room-dragon.png";
+import roomAtticImage from "../../assets/backgrounds/room-attic.png";
+import outdoorForestImage from "../../assets/backgrounds/outdoor-forest.png";
+import outdoorOceanImage from "../../assets/backgrounds/outdoor-ocean.png";
 import "../Home/HomeDashboard.css";
 import "./PetPage.css";
 
 // 펫은 GET /api/pets/active, 가구는 GET /api/furniture 로 받는다.
-// 방 색상(BACKGROUNDS)은 백엔드에 대응 개념이 없어 브라우저(localStorage)에만 저장하는 개인 취향값.
+// 방 테마(BACKGROUNDS)는 백엔드에 대응 개념이 없어 브라우저(localStorage)에만 저장하는 개인 취향값.
 // 벽지·바닥은 백엔드 가구(WALLPAPER/FLOOR)라 보유 가구 쪽에서 다룬다.
 const PET_ACCENT = "#f2c27b";
+// 보유 가구 테마 칩의 키 — "전체" 와 테마 없는 가구 묶음. 실제 테마 이름과 겹치지 않는 값.
+const FURNITURE_THEME_ALL = "__all__";
+const FURNITURE_THEME_NONE = "__none__";
 const BACKGROUND_STORAGE_KEY = "vori.myroom.background";
 
 const BACKGROUNDS = [
   {
     id: "default",
     slot: "1번 슬롯",
-    name: "기본 방",
+    name: "햇살 거실",
     owned: true,
     className: "pet-room-bg--image",
     image: roomDefaultImage,
@@ -50,7 +65,7 @@ const BACKGROUNDS = [
   {
     id: "wood",
     slot: "2번 슬롯",
-    name: "나무 방",
+    name: "원목 오두막",
     owned: true,
     className: "pet-room-bg--image",
     image: roomWoodImage,
@@ -58,7 +73,7 @@ const BACKGROUNDS = [
   {
     id: "mint",
     slot: "3번 슬롯",
-    name: "민트 방",
+    name: "민트 침실",
     owned: true,
     className: "pet-room-bg--image",
     image: roomMintImage,
@@ -66,10 +81,98 @@ const BACKGROUNDS = [
   {
     id: "evening",
     slot: "4번 슬롯",
-    name: "저녁 방",
+    name: "달빛 거실",
     owned: true,
     className: "pet-room-bg--image",
     image: roomEveningImage,
+  },
+  {
+    id: "modern",
+    slot: "5번 슬롯",
+    name: "시티 라운지",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: roomModernImage,
+  },
+  {
+    id: "princess",
+    slot: "6번 슬롯",
+    name: "공주 침실",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: roomPrincessImage,
+  },
+  {
+    id: "ocean",
+    slot: "7번 슬롯",
+    name: "해변 별장",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: roomOceanImage,
+  },
+  {
+    id: "forest",
+    slot: "8번 슬롯",
+    name: "숲속 은신처",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: roomForestImage,
+  },
+  {
+    id: "snow",
+    slot: "9번 슬롯",
+    name: "설산 산장",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: roomSnowImage,
+  },
+  {
+    id: "desert",
+    slot: "10번 슬롯",
+    name: "사막 오아시스",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: roomDesertImage,
+  },
+  {
+    id: "space",
+    slot: "11번 슬롯",
+    name: "우주 정거장",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: roomSpaceImage,
+  },
+  {
+    id: "dragon",
+    slot: "12번 슬롯",
+    name: "용의 둥지",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: roomDragonImage,
+  },
+  {
+    id: "attic",
+    slot: "13번 슬롯",
+    name: "별밤 다락",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: roomAtticImage,
+  },
+  {
+    id: "outdoor-forest",
+    slot: "14번 슬롯",
+    name: "초록 평야",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: outdoorForestImage,
+  },
+  {
+    id: "outdoor-ocean",
+    slot: "15번 슬롯",
+    name: "여름 해변",
+    owned: true,
+    className: "pet-room-bg--image",
+    image: outdoorOceanImage,
   },
 ];
 
@@ -79,7 +182,7 @@ const INITIAL_PET_POSITION = { x: 50, y: 62 };
 const PANEL_TABS = [
   { id: "pet", label: "펫 상태" },
   { id: "chat", label: "대화방" },
-  { id: "background", label: "방 색상" },
+  { id: "background", label: "방 테마" },
   { id: "furniture", label: "보유 가구" },
   { id: "items", label: "아이템" },
 ];
@@ -239,6 +342,7 @@ function PetPage({ user, onLogout }) {
   const [furnitureLoading, setFurnitureLoading] = useState(true);
   const [dragPositions, setDragPositions] = useState({}); // { [id]: {x,y} }
   const [furnitureBusy, setFurnitureBusy] = useState(null); // 가구 id
+  const [furnitureTheme, setFurnitureTheme] = useState(FURNITURE_THEME_ALL); // 보유 가구 테마 칩
   const [statItems, setStatItems] = useState([]);
   const [itemBusy, setItemBusy] = useState(false);
 
@@ -322,8 +426,12 @@ function PetPage({ user, onLogout }) {
     BACKGROUNDS[0];
 
   // 방에 그리는 가구: 배치된 것 중 벽지·바닥(면)은 칩으로, 나머지는 드래그 가능한 물건으로.
+  // 겹친 가구는 뒤에 그린 것이 위에 보인다 — 컴퓨터는 책상 위에 올려 두는 물건이라 맨 마지막에 그린다.
   const placedFurniture = useMemo(
-    () => furniture.filter((f) => f.placed && !isSurface(f.category)),
+    () =>
+      furniture
+        .filter((f) => f.placed && !isSurface(f.category))
+        .sort((a, b) => (a.category === "COMPUTER") - (b.category === "COMPUTER")),
     [furniture],
   );
   const roomBonus = useMemo(() => {
@@ -338,6 +446,40 @@ function PetPage({ user, onLogout }) {
     release += themes.filter((theme) => theme.active).reduce((sum, theme) => sum + Number(theme.setBonusPct || 0), 0);
     return { stat, release };
   }, [furniture, themes]);
+
+  // 보유 가구를 테마로 골라 보기. 가구는 themeId 만 들고 오므로 이름은 테마 현황(themes)에서 찾는다.
+  // 칩은 가진 가구의 테마만 만든다 — 가구가 없는 테마는 눌러 봐야 빈 목록이다.
+  const furnitureThemeKeyOf = useCallback(
+    (item) => themes.find((theme) => theme.id === item.themeId)?.name ?? FURNITURE_THEME_NONE,
+    [themes],
+  );
+  const furnitureThemeOptions = useMemo(() => {
+    const counts = new Map();
+    furniture.forEach((item) => {
+      const key = furnitureThemeKeyOf(item);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return [...counts]
+      .map(([key, count]) => ({
+        key,
+        label: key === FURNITURE_THEME_NONE ? "테마 없음" : key,
+        count,
+      }))
+      // 이름순으로 고정한다(테마 없음은 맨 끝) — 배치·회수로 목록 순서가 바뀌어도 칩은 제자리에 있게.
+      .sort(
+        (a, b) =>
+          (a.key === FURNITURE_THEME_NONE) - (b.key === FURNITURE_THEME_NONE) ||
+          a.label.localeCompare(b.label, "ko"),
+      );
+  }, [furniture, furnitureThemeKeyOf]);
+  const activeFurnitureTheme = furnitureThemeOptions.some((option) => option.key === furnitureTheme)
+    ? furnitureTheme
+    : FURNITURE_THEME_ALL;
+  const visibleFurniture =
+    activeFurnitureTheme === FURNITURE_THEME_ALL
+      ? furniture
+      : furniture.filter((item) => furnitureThemeKeyOf(item) === activeFurnitureTheme);
+
   const positionOf = (item) =>
     dragPositions[item.id] ?? { x: item.positionX ?? 50, y: item.positionY ?? 72 };
 
@@ -729,7 +871,7 @@ function PetPage({ user, onLogout }) {
             </section>
           </div>
 
-          {/* 오른쪽: 펫 상태 · 대화방 · 방 색상 · 보유 가구 · 아이템 · 내역을 한 카드에서 탭으로 전환 */}
+          {/* 오른쪽: 펫 상태 · 대화방 · 방 테마 · 보유 가구 · 아이템 · 내역을 한 카드에서 탭으로 전환 */}
           <aside className="pet-myroom-side">
             <section className="home-card pet-panel pet-tab-card">
               <div className="pet-tab-bar" role="tablist" aria-label="마이룸 메뉴">
@@ -856,7 +998,7 @@ function PetPage({ user, onLogout }) {
               {activeTab === "background" && (
                 <div className="pet-tab-panel">
                   <div className="pet-panel-head">
-                    <h2 className="home-card-title home-card-title--sm">방 색상</h2>
+                    <h2 className="home-card-title home-card-title--sm">방 테마</h2>
                     <span>이 브라우저에만 저장</span>
                   </div>
                   <div className="pet-background-list">
@@ -864,17 +1006,23 @@ function PetPage({ user, onLogout }) {
                       <button
                         key={background.id}
                         type="button"
-                        className={`pet-background-card ${background.className} ${
+                        className={`pet-background-card ${
                           selectedBackgroundId === background.id ? "is-selected" : ""
                         }`}
-                        style={
-                          background.image
-                            ? { backgroundImage: `url(${background.image})` }
-                            : undefined
-                        }
                         onClick={() => chooseBackground(background.id)}
+                        aria-pressed={selectedBackgroundId === background.id}
                       >
-                        <span>{background.name}</span>
+                        {/* 그림 위에 글씨를 얹으면 잘 안 보여서 썸네일과 이름을 위아래로 나눈다 */}
+                        <span
+                          className={`pet-background-thumb ${background.className}`}
+                          style={
+                            background.image
+                              ? { backgroundImage: `url(${background.image})` }
+                              : undefined
+                          }
+                          aria-hidden
+                        />
+                        <span className="pet-background-name">{background.name}</span>
                         <strong>{background.slot}</strong>
                       </button>
                     ))}
@@ -902,8 +1050,34 @@ function PetPage({ user, onLogout }) {
                       </button>
                     </div>
                   ) : (
+                    <>
+                    {/* 테마가 둘 이상일 때만 — 한 묶음뿐이면 고를 게 없다 */}
+                    {furnitureThemeOptions.length > 1 && (
+                      <div className="pet-furniture-themes" role="group" aria-label="테마로 골라 보기">
+                        <button
+                          type="button"
+                          className={`pet-theme-chip ${activeFurnitureTheme === FURNITURE_THEME_ALL ? "is-active" : ""}`}
+                          aria-pressed={activeFurnitureTheme === FURNITURE_THEME_ALL}
+                          onClick={() => setFurnitureTheme(FURNITURE_THEME_ALL)}
+                        >
+                          전체<span>{furniture.length}</span>
+                        </button>
+                        {furnitureThemeOptions.map((option) => (
+                          <button
+                            key={option.key}
+                            type="button"
+                            className={`pet-theme-chip ${activeFurnitureTheme === option.key ? "is-active" : ""}`}
+                            aria-pressed={activeFurnitureTheme === option.key}
+                            onClick={() => setFurnitureTheme(option.key)}
+                          >
+                            {option.label}
+                            <span>{option.count}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <div className="pet-furniture-grid">
-                      {furniture.map((item) => (
+                      {visibleFurniture.map((item) => (
                         <button
                           key={item.id}
                           type="button"
@@ -912,7 +1086,11 @@ function PetPage({ user, onLogout }) {
                           onClick={() => (item.placed ? removeFurniture(item) : placeFurniture(item))}
                           title={`${CATEGORY_LABEL[item.category] ?? ""} · ${
                             STAT_LABEL[item.statTarget] ?? ""
-                          } · 분양가 +${item.releaseBonusPct}%`}
+                          } · 분양가 +${item.releaseBonusPct}%${
+                            furnitureThemeKeyOf(item) === FURNITURE_THEME_NONE
+                              ? ""
+                              : ` · ${furnitureThemeKeyOf(item)} 테마`
+                          }`}
                         >
                           <span>
                             <FurnitureArt
@@ -933,13 +1111,14 @@ function PetPage({ user, onLogout }) {
                         </button>
                       ))}
                     </div>
+                    </>
                   )}
                 </div>
               )}
               {activeTab === "items" && (
                 <div className="pet-tab-panel">
                   <div className="pet-panel-head"><h2 className="home-card-title home-card-title--sm">아이템</h2><span>{statItems.length}개 보유</span></div>
-                  {statItems.length === 0 ? <p className="pet-empty">보유한 아이템이 없어요. 출석 탭에서 출석 보상을 받아 보세요.</p> : <div className="pet-item-list">{statItems.map((item) => <article key={item.id} className="pet-item-card"><div><strong>{item.name}</strong><span>{STAT_LABEL[item.statType]} +{item.statDelta}</span></div><button type="button" disabled={itemBusy || !pet} onClick={() => handleUseItem(item)}>사용하기</button></article>)}</div>}
+                  {statItems.length === 0 ? <p className="pet-empty">보유한 아이템이 없어요. 출석 탭에서 출석 보상을 받아 보세요.</p> : <div className="pet-item-list">{statItems.map((item) => <article key={item.id} className="pet-item-card">{itemImageFor(item.statType, item.name) && <img src={itemImageFor(item.statType, item.name)} alt="" className="pet-item-image" />}<div className="pet-item-text"><strong>{item.name}</strong><span>{STAT_LABEL[item.statType]} +{item.statDelta}</span></div><button type="button" disabled={itemBusy || !pet} onClick={() => handleUseItem(item)}>사용하기</button></article>)}</div>}
                 </div>
               )}
               {activeTab === HISTORY_TAB && <PetHistoryPanel petHistory={petHistory} />}
