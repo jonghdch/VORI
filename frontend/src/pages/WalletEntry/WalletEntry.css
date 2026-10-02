@@ -824,6 +824,23 @@
   font-size: 13px;
   line-height: 1.6;
 }
+.ledger-judgment-expenses {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ledger-judgment-expense-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #ebe7dd;
+}
+.ledger-judgment-expense-row > span { display: flex; flex-direction: column; gap: 3px; }
+.ledger-judgment-expense-row strong { font-size: 13px; }
+.ledger-judgment-expense-row small { color: #6e6b65; font-size: 12px; }
 .ledger-signal-result {
   display: inline-flex;
   align-items: center;
@@ -856,6 +873,10 @@
   background: #fff8d9;
 }
 .ledger-signal-result--red {
+  color: #a8463d;
+  background: #fde8e5;
+}
+.ledger-signal-result--exhausted {
   color: #a96518;
   background: #fff0d8;
 }

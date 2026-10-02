@@ -47,7 +47,8 @@ class PetInteractionTest {
             growthLogRepository,
             mock(ApplicationEventPublisher.class),
             mock(com.vori.backend.notification.NotificationService.class),
-            petTitleService);
+            petTitleService,
+            new com.vori.backend.pet.PetStatRewardService(org.mockito.Mockito.mock(com.vori.backend.attendance.UserStatItemRepository.class)));
 
     private Pet activePet(int charm, int energy) {
         Pet pet = Pet.builder()

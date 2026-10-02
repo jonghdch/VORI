@@ -47,6 +47,7 @@ public class ExpenseService {
     private final ApplicationEventPublisher eventPublisher;
     private final SignalConfigService signalConfigService;
     private final AiInquiryRepository aiInquiryRepository;
+    private final com.vori.backend.pet.PetStatRewardService statRewardService;
 
     /**
      * 판정에 필요한 최소 표본 수. 이보다 적으면 z 를 계산하지 않고 GREEN.
@@ -90,6 +91,9 @@ public class ExpenseService {
                 .memo(req.memo())
                 .isRecurring(req.isRecurring())
                 .build());
+
+        // 새 기록을 남긴 즉시 주는 습관 보상. 수정·삭제에는 다시 지급하지 않는다.
+        userRepository.findById(userId).orElseThrow().addGameMoney(100);
 
         UserStatStats stats = userStatStatsRepository
                 .findByUserIdAndStatType(userId, category.getStatType())
@@ -302,7 +306,7 @@ public class ExpenseService {
         if (pets.isEmpty()) return 0;
 
         Pet pet = pets.get(0);
-        pet.addStat(statType, statDelta);
+        int applied = statRewardService.grant(pet, userId, statType, statDelta);
         pet.evaluateStage(); // 스탯 합이 임계값을 넘었으면 INFANT→JUVENILE→ADULT 로 승급
 
         petGrowthLogRepository.save(PetGrowthLog.builder()
@@ -310,7 +314,7 @@ public class ExpenseService {
                 .userId(userId)
                 .expenseId(expenseId)
                 .statType(statType)
-                .delta(statDelta)
+                .delta(applied)
                 .savedAmount(savedAmount)
                 .reason(GrowthReason.EXPENSE_SAVING)
                 .createdAt(LocalDateTime.now())

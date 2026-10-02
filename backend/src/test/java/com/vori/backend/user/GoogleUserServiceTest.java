@@ -21,7 +21,7 @@ class GoogleUserServiceTest {
     private final UserRepository users = mock(UserRepository.class);
     private final UserService service = new UserService(users, mock(PasswordEncoder.class), mock(JdbcTemplate.class),
             mock(PetRepository.class), mock(PetSpeciesRepository.class), mock(ApplicationEventPublisher.class),
-            mock(BaselineSeeder.class));
+            mock(BaselineSeeder.class), mock(com.vori.backend.budget.SpendingPlanService.class));
 
     @Test
     void 같은_이메일의_기존_계정에는_자동으로_연결하지_않는다() {
