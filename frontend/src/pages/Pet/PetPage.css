@@ -1294,6 +1294,66 @@
   margin: 0 -4px -4px;
 }
 
+/* 대화방 제목 + (i) 안내 버튼. 팝업은 제목 아래로 뜬다 */
+.pet-chat-title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pet-chat-info-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--home-muted);
+  cursor: pointer;
+}
+
+.pet-chat-info-btn:hover,
+.pet-chat-info-btn[aria-expanded="true"] {
+  color: var(--home-green-dark);
+}
+
+.pet-chat-info-btn:focus-visible {
+  outline: 2px solid var(--home-green);
+  outline-offset: 1px;
+}
+
+.pet-chat-info {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 64px));
+  padding: 10px 12px;
+  border: 1px solid var(--home-card-border);
+  border-radius: 10px;
+  background: var(--home-white);
+  box-shadow:
+    0 1px 2px rgba(45, 51, 40, 0.06),
+    0 8px 20px rgba(45, 51, 40, 0.12);
+}
+
+.pet-chat-info p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--home-text);
+  word-break: keep-all;
+}
+
+.pet-chat-info p + p {
+  margin-top: 6px;
+}
+
 .pet-chat-remaining {
   font-variant-numeric: tabular-nums;
 }

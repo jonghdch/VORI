@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { chatWithPet, getPetChatStatus } from "../../api/pet";
 import { petTmiLines } from "../../components/petLines";
 
@@ -41,6 +41,24 @@ export default function PetChatPanel({ pet }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(null); // { personality, remaining, dailyLimit }
+  // 제목 옆 (i) 안내 팝업 — 바깥을 누르거나 Esc 로 닫는다
+  const infoId = useId();
+  const infoRef = useRef(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+
+  useEffect(() => {
+    if (!infoOpen) return undefined;
+    const onPointer = (e) => {
+      if (!infoRef.current?.contains(e.target)) setInfoOpen(false);
+    };
+    const onKey = (e) => e.key === "Escape" && setInfoOpen(false);
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [infoOpen]);
 
   useEffect(() => {
     let alive = true;
@@ -89,7 +107,36 @@ export default function PetChatPanel({ pet }) {
   return (
     <div className="pet-tab-panel pet-chat-panel">
       <div className="pet-panel-head">
-        <h2 className="home-card-title home-card-title--sm">대화방</h2>
+        <div className="pet-chat-title" ref={infoRef}>
+          <h2 className="home-card-title home-card-title--sm">대화방</h2>
+          <button
+            type="button"
+            className="pet-chat-info-btn"
+            aria-label="대화방 안내"
+            aria-expanded={infoOpen}
+            aria-controls={infoId}
+            onClick={() => setInfoOpen((v) => !v)}
+          >
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
+              <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M8 7.2v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="8" cy="4.9" r="0.9" fill="currentColor" />
+            </svg>
+          </button>
+          {infoOpen && (
+            <div id={infoId} className="pet-chat-info" role="note">
+              {/* 범위는 서버 PetLedgerSummary 가 넘기는 것과 같아야 한다 */}
+              <p>대화 내용은 저장되지 않아요.</p>
+              <p>
+                오늘 지출 합계와 건수, 이번 달 카테고리별 합계, 최근 지출 몇 건의 항목명과 판정 신호,
+                이번 달 판정 분포를 기반으로 답해요!
+              </p>
+              <p>
+                이외의 메모, 사유 답변 원문, 결제수단, 가맹점 상세 같은 사적인 내용은 넣지 않아요.
+              </p>
+            </div>
+          )}
+        </div>
         {status && (
           <span className="pet-chat-remaining">
             오늘 {status.remaining} / {status.dailyLimit}번

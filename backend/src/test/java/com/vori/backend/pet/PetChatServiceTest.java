@@ -34,7 +34,7 @@ class PetChatServiceTest {
     private final GeminiClient gemini = mock(GeminiClient.class);
     private final AtomicReference<LocalDate> today = new AtomicReference<>(LocalDate.of(2026, 10, 2));
     private final PetChatService service =
-            new PetChatService(petRepository, speciesRepository, gemini, 2, today::get);
+            new PetChatService(petRepository, speciesRepository, gemini, mock(PetLedgerSummary.class), 2, today::get);
 
     private void givenPet() {
         Pet pet = Pet.builder().id(3L).userId(USER_ID).speciesId(1L).name("콩이")
@@ -116,14 +116,15 @@ class PetChatServiceTest {
     }
 
     @Test
-    @DisplayName("시스템 프롬프트에 이름·종족·성격·대화 규칙이 들어간다")
+    @DisplayName("시스템 프롬프트에 이름·종족·성격·가계부 요약·대화 규칙이 들어간다")
     void systemPromptHasPersonaAndRules() {
         Pet pet = Pet.builder().userId(USER_ID).speciesId(1L).name("콩이")
                 .statIq(20).createdAt(LocalDateTime.now()).build();
         PetSpecies species = PetSpecies.builder().name("다람쥐").tier(PetTier.B).appearanceKey("squirrel").build();
 
-        String prompt = PetChatService.systemPrompt(pet, species);
+        String prompt = PetChatService.systemPrompt(pet, species, "- 오늘 지출: 2건, 합계 12,000원");
 
-        assertThat(prompt).contains("다람쥐 '콩이'", "도토리", "꼼꼼한 계산쟁이 100%", "주인", "109");
+        assertThat(prompt).contains("다람쥐 '콩이'", "도토리", "꼼꼼한 계산쟁이 100%", "주인", "109",
+                "가계부 요약", "- 오늘 지출: 2건, 합계 12,000원");
     }
 }
