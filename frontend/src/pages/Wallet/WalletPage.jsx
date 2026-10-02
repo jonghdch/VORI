@@ -350,16 +350,9 @@ function WalletPage({ user, onLogout }) {
   const selectedDateIsFuture = selectedDateIso && selectedDateIso > todayIso;
   const selectedJudgment = selectedDateIso ? judgmentsByDate[selectedDateIso] ?? null : null;
 
-  const expenseToEdit =
-    selectedRow?.type === "EXPENSE" && selectedRow.day === selectedDay
-      ? selectedRow
-      : selectedDayExpenses[0] ?? null;
-
   const handleAddOrEditExpense = () => {
     if (!selectedDateIso || selectedDateIsFuture) return;
-    const editQuery = expenseToEdit
-      ? `&editExpenseId=${expenseToEdit.dbId}`
-      : "";
+    const editQuery = selectedDayExpenses.length > 0 ? "&edit=true" : "";
     navigate(`/wallet/new?date=${selectedDateIso}${editQuery}`);
   };
 
@@ -803,10 +796,7 @@ function WalletPage({ user, onLogout }) {
           ) : selectedJudgment ? (
             <div className="ledger-day-reward-values">
               <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span><CoinIcon className="ledger-day-reward-coin" /> 받은 코인</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
-              <div className="ledger-day-reward-value"><span>⚡ 에너지</span><strong>+{selectedJudgment.statRewardPerType || 0}</strong></div>
-              <div className="ledger-day-reward-value"><span>✨ 매력</span><strong>+{selectedJudgment.statRewardPerType || 0}</strong></div>
-              <div className="ledger-day-reward-value"><span>🧠 지능</span><strong>+{selectedJudgment.statRewardPerType || 0}</strong></div>
-              <div className="ledger-day-reward-value"><span>🛡️ 지구력</span><strong>+{selectedJudgment.statRewardPerType || 0}</strong></div>
+              {[["ENERGY", "⚡ 에너지"], ["CHARM", "✨ 매력"], ["IQ", "🧠 지능"], ["ENDURANCE", "🛡️ 지구력"]].filter(([key]) => Number(selectedJudgment.statRewards?.[key] ?? 0) > 0).map(([key, label]) => <div className="ledger-day-reward-value" key={key}><span>{label}</span><strong>+{selectedJudgment.statRewards[key]}</strong></div>)}
             </div>
           ) : (
             <p className="ledger-day-reward-empty">이 날짜는 아직 소비 판정을 완료하지 않아 지급된 보상이 없어요.</p>

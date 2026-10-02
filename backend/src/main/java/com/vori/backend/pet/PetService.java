@@ -49,6 +49,7 @@ public class PetService {
     private final ApplicationEventPublisher eventPublisher;
     private final NotificationService notificationService;
     private final PetTitleService petTitleService;
+    private final PetStatRewardService statRewardService;
 
     // 분양가 = EXP(스탯 합 × 10) × (1 + (개별 가구 보너스합 + 테마 세트 보너스합)/100)
 
@@ -163,14 +164,17 @@ public class PetService {
         }
         if (charmUp) {
             int levelBefore = pet.level();
-            pet.addStat(StatType.CHARM, INTERACT_CHARM_DELTA);
+            // 스탯 100 상한(PetStatRewardService) — 넘는 만큼은 전환 성장 아이템으로 준다
+            int applied = statRewardService.grant(pet, userId, StatType.CHARM, INTERACT_CHARM_DELTA);
             pet.evaluateStage();
             notificationService.petGrew(userId, pet, levelBefore);
+            // 매력이 이미 100 이라 applied 가 0 이어도 당첨 기록은 남긴다 — 하루 상한(INTERACT_CHARM_DAILY_CAP)이
+            // 이 기록 수로 세므로, 빼면 상한에 막히지 않고 전환 아이템을 계속 받을 수 있다
             petGrowthLogRepository.save(PetGrowthLog.builder()
                     .petId(pet.getId())
                     .userId(userId)
                     .statType(StatType.CHARM)
-                    .delta(INTERACT_CHARM_DELTA)
+                    .delta(applied)
                     .savedAmount(0)
                     .reason(GrowthReason.PET_INTERACTION)
                     .createdAt(LocalDateTime.now())

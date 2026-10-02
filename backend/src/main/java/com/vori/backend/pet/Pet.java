@@ -89,6 +89,21 @@ public class Pet {
         }
     }
 
+    /** 스탯 상한 100까지만 올리고 실제 반영된 수치를 돌려준다. */
+    public int addStatUpToMax(com.vori.backend.common.StatType statType, int delta) {
+        int current = statValue(statType);
+        int applied = Math.max(0, Math.min(delta, 100 - current));
+        addStat(statType, applied);
+        return applied;
+    }
+
+    public int statValue(com.vori.backend.common.StatType statType) {
+        return switch (statType) {
+            case ENERGY -> nz(statEnergy); case CHARM -> nz(statCharm);
+            case IQ -> nz(statIq); case ENDURANCE -> nz(statEndurance);
+        };
+    }
+
     /** 해당 단계가 되기 위한 최소 스탯 합. 기준은 PetLevel 한 곳에 있다(EXP 를 스탯 단위로 환산). */
     public static int minStatTotalFor(PetStage stage) {
         return PetLevel.minExpFor(PetLevel.levelOf(stage)) / PetLevel.EXP_PER_STAT;

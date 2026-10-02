@@ -10,6 +10,14 @@ group = 'com.vori'
 version = '0.0.1-SNAPSHOT'
 description = 'Vori 백엔드'
 
+// OneDrive 같은 동기화 폴더가 build/ 산출물을 온라인 전용 파일로 바꾸면 Gradle 이 스냅샷을 읽지 못한다.
+// 그런 PC 에서만 환경변수 VORI_BUILD_DIR 로 빌드 폴더를 동기화 밖으로 옮긴다(예: %TEMP%\\vori-gradle-build).
+// 기본으로 켜 두지 않는다 — 한 PC 의 여러 작업 폴더(worktree)·개발 서버가 같은 폴더를 공유해 서로 덮어쓴다.
+def customBuildDir = System.getenv('VORI_BUILD_DIR')
+if (customBuildDir) {
+	layout.buildDirectory.set(file(customBuildDir))
+}
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(17)

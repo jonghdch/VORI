@@ -139,7 +139,9 @@ public class AiInquiryService {
             if (fresh.getAnsweredAt() != null) return; // 동시 답변 멱등 가드 재확인
 
             Expense expense = expenseRepository.findById(fresh.getExpenseId()).orElseThrow();
-            Signal newSignal = computeSignalFinal(expense.getSignalFinal(), reason);
+            // 질문의 목적은 예외 지출을 평가하는 것이다. AI가 사유를 합당하다고
+            // 분류하면 과소비를 보통 또는 합리적으로 조정한다.
+            Signal newSignal = computeSignalFinal(expense.getSignalInitial(), reason);
             boolean adjusted = newSignal != expense.getSignalFinal();
 
             fresh.recordAnswer(req.answerText(), reason, adjusted);
@@ -156,4 +158,5 @@ public class AiInquiryService {
             case IMPULSE, ETC -> original;
         };
     }
+
 }

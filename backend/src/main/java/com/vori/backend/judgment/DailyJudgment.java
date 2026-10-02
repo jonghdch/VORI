@@ -35,6 +35,19 @@ public class DailyJudgment {
     private Integer coinReward;
     @Column(name = "stat_reward_per_type", nullable = false)
     private Integer statRewardPerType;
+    @Column(name = "reward_details", length = 255)
+    private String rewardDetails;
     @Column(name = "judged_at", nullable = false)
     private LocalDateTime judgedAt;
+
+    /** 관리자 시연 재판정은 같은 날짜 행을 갱신해 결과 화면도 최신 계산을 보게 한다. */
+    public void refresh(Signal signal, int expenseCount, int coinReward, int statRewardPerType,
+                        String rewardDetails, LocalDateTime judgedAt) {
+        this.signal = signal;
+        this.expenseCount = expenseCount;
+        this.coinReward = coinReward;
+        this.statRewardPerType = statRewardPerType;
+        this.rewardDetails = rewardDetails;
+        this.judgedAt = judgedAt;
+    }
 }
