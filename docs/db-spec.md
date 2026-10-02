@@ -376,7 +376,7 @@ UNIQUE(user_id, report_date)
 INDEX(user_id, released_at)
 ```
 
-`equipped_title_award_id` 추가 마이그레이션: `V30__pet_titles.sql`(이름은 `V32__equip_naming.sql` 에서 `featured_…` → `equipped_…`). `name` 추가 마이그레이션: `V25__pet_name.sql`. `interaction_count` 추가 마이그레이션: `V28__pet_interaction_hidden_title.sql`(칭호 마스터 `titles` 의 `hidden` 컬럼·`PET_INTERACTIONS` 지표·히든 칭호 「사랑둥이」도 같은 파일).
+`equipped_title_award_id` 추가 마이그레이션: `V41__pet_titles.sql`(이름은 `V43__equip_naming.sql` 에서 `featured_…` → `equipped_…`). `name` 추가 마이그레이션: `V25__pet_name.sql`. `interaction_count` 추가 마이그레이션: `V28__pet_interaction_hidden_title.sql`(칭호 마스터 `titles` 의 `hidden` 컬럼·`PET_INTERACTIONS` 지표·히든 칭호 「사랑둥이」도 같은 파일).
 
 ---
 
@@ -425,7 +425,7 @@ INDEX(user_id, released_at)
 
 ## 도메인 4 — 꾸미기·업적·칭호
 
-업적은 유저가, 칭호는 펫이 얻는다(V30). 업적 테이블 이름은 옛 "칭호" 시절의 `titles`·`user_titles` 를 그대로 쓴다.
+업적은 유저가, 칭호는 펫이 얻는다(V41). 업적 테이블 이름은 옛 "칭호" 시절의 `titles`·`user_titles` 를 그대로 쓴다.
 
 ### 17. 테마 `theme_master`
 
@@ -467,7 +467,7 @@ INDEX(user_id, released_at)
 | 잠금 해제 조건 | `unlock_condition` |  | `JSON NULL` | 획득 시점 근거 `{code, threshold, value}` |
 | 잠금 해제 테마 식별자 | `unlocks_theme_id` | FK | `BIGINT NULL` | → `theme_master(id)`. 기록용 — 해금 판정은 `theme_master.unlock_title_id` |
 | 획득 일시 | `acquired_at` |  | `DATETIME NOT NULL` | 획득 시각 |
-| 장착 순서 | `equip_order` | UQ복합 | `TINYINT NULL` | 장착한 업적의 칸 순서(1~3, 내 정보 상자 3칸). NULL = 장착 안 함 (V31 추가, V32 에서 `showcase_order` → `equip_order`) |
+| 장착 순서 | `equip_order` | UQ복합 | `TINYINT NULL` | 장착한 업적의 칸 순서(1~3, 내 정보 상자 3칸). NULL = 장착 안 함 (V42 추가, V43 에서 `showcase_order` → `equip_order`) |
 
 제약:
 
@@ -476,7 +476,7 @@ UNIQUE(user_id, title_id)
 UNIQUE(user_id, equip_order)  -- NULL 은 여러 개 가능
 ```
 
-`users.active_title_id`(옛 칭호 장착)는 V30 부터 읽지 않는다. 컬럼 삭제는 다음 단계. 헤더 칭호 배지도 없앴고, 대신 유저가 장착한 업적 3개를 내 정보 상자에 보여 준다(`equip_order`, `PUT /api/achievements/equipped`).
+`users.active_title_id`(옛 칭호 장착)는 V41 부터 읽지 않는다. 장착해 둔 값은 V44 에서 업적 장착 첫 칸으로 옮겼다. 컬럼 삭제는 다음 단계. 헤더 칭호 배지도 없앴고, 대신 유저가 장착한 업적 3개를 내 정보 상자에 보여 준다(`equip_order`, `PUT /api/achievements/equipped`).
 
 ---
 
@@ -488,17 +488,17 @@ UNIQUE(user_id, equip_order)  -- NULL 은 여러 개 가능
 | 코드 | `code` | UQ | `VARCHAR(50) NOT NULL` | 고정 코드. 생성 뒤 바꾸지 않는다 |
 | 이름 | `name` |  | `VARCHAR(50) NOT NULL` | |
 | 설명 | `description` |  | `VARCHAR(200) NOT NULL` | 조건 문구 |
-| 지표 | `metric_type` |  | `ENUM(...) NOT NULL` | `TitleMetricType` 과 짝. V30 에서 `PETS_HATCHED`·`SPECIES_GRADUATED`·`PET_TITLES_TOTAL`·`PET_TITLE_KINDS`·`PET_TITLES_ON_ONE_PET`·`HIDDEN_PET_TITLES` 추가 |
+| 지표 | `metric_type` |  | `ENUM(...) NOT NULL` | `TitleMetricType` 과 짝. V41 에서 `PETS_HATCHED`·`SPECIES_GRADUATED`·`PET_TITLES_TOTAL`·`PET_TITLE_KINDS`·`PET_TITLES_ON_ONE_PET`·`HIDDEN_PET_TITLES` 추가 |
 | 목표치 | `threshold` |  | `BIGINT NOT NULL` | 지표가 이 값 이상이면 달성 |
 | 활성 | `enabled` |  | `BOOLEAN NOT NULL DEFAULT TRUE` | 끄면 판정·목록에서 빠진다 |
 | 히든 | `hidden` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | 따기 전에는 조건을 가리고(설명 "???") 달성률만 보여 준다 (V28) |
 | 정렬 | `sort_order` |  | `INT NOT NULL DEFAULT 0` | |
 
-V30 에서 「사랑둥이」(`PET_LOVELY`)는 펫 칭호로 옮기면서 `enabled = FALSE` 로 껐다(획득 기록은 남김).
+V41 에서 「사랑둥이」(`PET_LOVELY`)는 펫 칭호로 옮기면서 `enabled = FALSE` 로 껐다(획득 기록은 남김).
 
 ---
 
-### 21. 펫 칭호 마스터 `pet_titles` (V30)
+### 21. 펫 칭호 마스터 `pet_titles` (V41)
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
@@ -516,7 +516,7 @@ V30 에서 「사랑둥이」(`PET_LOVELY`)는 펫 칭호로 옮기면서 `enabl
 
 ---
 
-### 22. 펫 칭호 획득 `pet_title_awards` (V30)
+### 22. 펫 칭호 획득 `pet_title_awards` (V41)
 
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
