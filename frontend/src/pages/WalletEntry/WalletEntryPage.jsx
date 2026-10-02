@@ -14,6 +14,7 @@ import { categorizeRemote } from "../../api/categorize";
 import { MAX_RECEIPT_BYTES, prepareReceiptImage, uploadReceipt } from "../../api/receipt";
 import {
   saveLedgerEntries,
+  deleteExpense,
   listCategoryTree,
   listExpensesByDate,
   listIncomesByDate,
@@ -36,8 +37,7 @@ function WalletEntryPage({ user }) {
   // 쿼리를 직접 수정해도 미래 날짜에는 가계부를 작성할 수 없다.
   const dateStr =
     requestedDateIsValid && requestedDate <= todayStr ? requestedDate : todayStr;
-  const editExpenseId = Number(params.get("editExpenseId")) || null;
-  const isEditMode = editExpenseId != null;
+  const isEditMode = params.get("edit") === "true";
   const past = isPastDate(dateStr);
 
   // 같은 날짜의 입력값을 sessionStorage 에 보관 — Step 2/3 갔다 와도 유지.
@@ -47,12 +47,19 @@ function WalletEntryPage({ user }) {
   // 앞 사람의 입력이 그대로 떠오르고, 그 행이 dbId 를 달고 있어 "저장됨" 으로까지 표시된다
   // (실제로는 이 계정에 없는 지출이다). 시연 리허설을 다른 계정으로 해 본 뒤 무대 계정으로
   // 로그인하면 바로 겪는다.
-  const storageKey = `ledger-entry-${user?.id ?? "anon"}-${dateStr}${isEditMode ? `-edit-${editExpenseId}` : ""}`;
+  const storageKey = `ledger-entry-${user?.id ?? "anon"}-${dateStr}${isEditMode ? "-edit" : ""}`;
   const loadDraft = () => {
     try {
       const raw = sessionStorage.getItem(storageKey);
       if (!raw) return null;
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      // 저장된 행의 dbId 를 임시저장하면 삭제 뒤에도 과거 행이 되살아나 404가 난다.
+      // 임시저장은 아직 서버에 저장하지 않은 행만 보관한다.
+      return {
+        income: (parsed.income || []).filter((row) => !row.dbId),
+        expense: (parsed.expense || []).filter((row) => !row.dbId),
+        savings: (parsed.savings || []).filter((row) => !row.dbId),
+      };
     } catch {
       return null;
     }
@@ -102,13 +109,19 @@ function WalletEntryPage({ user }) {
     };
   }, []);
 
-  // 변경마다 저장
+  // 아직 서버에 없는 행만 임시저장한다. DB 행은 매 진입 때 서버에서 새로 읽는다.
   useEffect(() => {
     try {
-      sessionStorage.setItem(
-        storageKey,
-        JSON.stringify({ income, expense, savings }),
-      );
+      const draftRows = {
+        income: income.filter((row) => !row.dbId),
+        expense: expense.filter((row) => !row.dbId),
+        savings: savings.filter((row) => !row.dbId),
+      };
+      if (draftRows.income.length || draftRows.expense.length || draftRows.savings.length) {
+        sessionStorage.setItem(storageKey, JSON.stringify(draftRows));
+      } else {
+        sessionStorage.removeItem(storageKey);
+      }
     } catch {}
   }, [income, expense, savings, storageKey]);
 
@@ -119,23 +132,10 @@ function WalletEntryPage({ user }) {
     } catch {}
   };
 
-  // mount (또는 dateStr 변경) 시 DB 에서 그 날짜 기존 데이터 fetch.
-  // draft 에 실제 입력값이 있으면 draft 우선. 빈 draft (기본 빈 행만) 은 fetch.
+  // mount (또는 dateStr 변경) 시 DB 에서 그 날짜 기존 데이터를 항상 fetch한다.
+  // 서버 행과 아직 저장하지 않은 임시 행을 함께 보여 준다.
   useEffect(() => {
-    // mount 시점의 closure draft 가 아니라 fresh 한 sessionStorage 를 다시 읽음.
-    // (직전 setState 가 즉시 sessionStorage 에 write 되므로 closure 는 stale)
     const fresh = loadDraft();
-    const hasContent = (rows) =>
-      Array.isArray(rows) &&
-      rows.some(
-        (r) => (r.name && r.name.trim()) || (r.amount && String(r.amount).trim()),
-      );
-    const draftHasContent =
-      fresh &&
-      (hasContent(fresh.income) ||
-        hasContent(fresh.expense) ||
-        hasContent(fresh.savings));
-    if (draftHasContent) return;
     let cancelled = false;
     (async () => {
       try {
@@ -145,10 +145,9 @@ function WalletEntryPage({ user }) {
           isEditMode ? Promise.resolve([]) : listSavingsByDate(dateStr),
         ]);
         if (cancelled) return;
-        if (exps.length + incs.length + savs.length === 0) return;
         const next = (e) => nextId.current++;
         setExpense(
-          exps.filter((e) => !isEditMode || e.id === editExpenseId).map((e) => ({
+          [...exps.map((e) => ({
             id: next(),
             dbId: e.id,
             paymentMethod: e.paymentMethod || "CREDIT",
@@ -156,28 +155,30 @@ function WalletEntryPage({ user }) {
             amount: String(e.amount),
             categoryId: e.categoryId,
             categoryTouched: true, // 저장된 카테고리 — 자동분류로 덮지 않음
-            isEditing: isEditMode && e.id === editExpenseId,
-          })),
+            // 같은 날짜를 다시 열면 저장된 지출도 바로 고칠 수 있게 한다.
+            // 수정 링크의 쿼리가 사라져도 읽기 전용 행으로 잠기지 않는다.
+            isEditing: true,
+          })), ...(fresh?.expense || [])],
         );
         setIncome(
-          incs.map((i) => ({
+          [...incs.map((i) => ({
             id: next(),
             dbId: i.id,
             name: i.item,
             amount: String(i.amount),
             categoryEnum: i.source,
             sourceTouched: true,
-          })),
+          })), ...(fresh?.income || [])],
         );
         setSavings(
-          savs.map((s) => ({
+          [...savs.map((s) => ({
             id: next(),
             dbId: s.id,
             name: s.item,
             amount: String(s.amount),
             categoryEnum: s.savingType,
             sourceTouched: true,
-          })),
+          })), ...(fresh?.savings || [])],
         );
       } catch {
         // fetch 실패는 무시 — 빈 폼으로 시작
@@ -187,12 +188,25 @@ function WalletEntryPage({ user }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateStr, editExpenseId, isEditMode]);
+  }, [dateStr, isEditMode]);
 
 
   const addRow = (setter) => setter((rows) => [...rows, newRow()]);
   const removeRow = (setter, id) =>
     setter((rows) => rows.filter((r) => r.id !== id));
+
+  const deleteExpenseRow = async (row) => {
+    if (row.dbId) {
+      if (!window.confirm(`'${row.name || "이 지출"}'을 삭제할까요?`)) return;
+      try {
+        await deleteExpense(row.dbId);
+      } catch (error) {
+        setSubmitError(error.message || "지출을 삭제하지 못했어요.");
+        return;
+      }
+    }
+    removeRow(setExpense, row.id);
+  };
 
   // 현재 카드의 금액 입력이 끝나면 이미 만들어져 있는 다음 빈 카드로만 이동한다.
   // 새 카드를 자동 생성하지는 않는다. 섹션 표시 순서(수입 → 지출 → 저축)를 그대로 따른다.
@@ -449,7 +463,7 @@ function WalletEntryPage({ user }) {
                 type="expense"
                 expenseCatOptions={expenseCatOptions}
                 onChange={(patch) => updateRow(setExpense, row.id, patch)}
-                onDelete={() => removeRow(setExpense, row.id)}
+                onDelete={() => deleteExpenseRow(row)}
                 onComplete={() => focusNextEmptyCard("expense", row.id)}
               />
             ))}
@@ -637,8 +651,7 @@ function EntryRow({
           </span>
         )}
         {categoryControl}
-        {/* 저장된 행은 삭제 API 가 없어 로컬에서만 지워지는 가짜 삭제가 됨 — 버튼 숨김 */}
-        {!saved && (
+        {(type === "expense" || !saved) && (
           <button
             type="button"
             className="ledger-row-del"

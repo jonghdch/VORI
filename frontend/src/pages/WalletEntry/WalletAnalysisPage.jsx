@@ -284,7 +284,7 @@ function WalletAnalysisPage({ user }) {
                   : dailySignal === "GREEN"
                     ? "모든 지출이 초록으로 분류됐어요. 항목별로 판정 이유를 확인해 보세요."
                     : dailySignal === "GRAY"
-                      ? "주황 지출이 포함되어 있어요. 하루 색상은 빨강, 주황, 초록 순으로 가장 주의가 필요한 지출을 따라요."
+                      ? "노랑 지출이 포함되어 있어요. 하루 색상은 빨강, 노랑, 초록 순으로 가장 주의가 필요한 지출을 따라요."
                       : "빨강 지출이 포함되어 있어요. 아래 항목별 금액 비교와 사유를 확인해 보세요."}
               </p>
             </div>
@@ -326,7 +326,7 @@ function WalletAnalysisPage({ user }) {
                 </span>
               </h1>
               <p className="ledger-subtitle">
-                예외적인 지출이 있어 어떤 이유로 지출하게 되었는지 작성해주세요
+                평소보다 큰 지출이 있어 소비한 이유를 기록해주세요. AI가 사유를 평가해 판정에 반영해요.
               </p>
             </div>
 
@@ -540,7 +540,7 @@ function getDailySignal(expenses) {
 function signalLabel(signal) {
   if (signal === "GREEN") return "초록 · 절약";
   if (signal === "RED") return "빨강 · 과소비";
-  return "주황 · 보통";
+  return "노랑 · 보통";
 }
 
 export default WalletAnalysisPage;

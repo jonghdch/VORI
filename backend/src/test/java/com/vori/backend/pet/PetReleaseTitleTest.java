@@ -39,7 +39,8 @@ class PetReleaseTitleTest {
             mock(PetGrowthLogRepository.class),
             mock(ApplicationEventPublisher.class),
             mock(com.vori.backend.notification.NotificationService.class),
-            petTitleService);
+            petTitleService,
+            new com.vori.backend.pet.PetStatRewardService(org.mockito.Mockito.mock(com.vori.backend.attendance.UserStatItemRepository.class)));
 
     @Test
     @DisplayName("분양하기 전에, 아직 키우는 상태인 펫으로 칭호를 판정한다")

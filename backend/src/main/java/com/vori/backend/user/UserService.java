@@ -8,6 +8,7 @@ import com.vori.backend.pet.PetRepository;
 import com.vori.backend.pet.PetSpecies;
 import com.vori.backend.pet.PetSpeciesRepository;
 import com.vori.backend.title.TitleCheckEvent;
+import com.vori.backend.budget.SpendingPlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -34,6 +35,7 @@ public class UserService {
     private final PetSpeciesRepository petSpeciesRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final com.vori.backend.onboarding.BaselineSeeder baselineSeeder;
+    private final SpendingPlanService spendingPlanService;
 
     @Transactional
     public User signup(SignupRequest req) {
@@ -182,10 +184,14 @@ public class UserService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
 
+        Integer previousIncome = user.getMonthlyIncome();
         // 공백 정리는 ProfileUpdateRequest 가 검사 전에 끝냈다.
         user.updateProfile(req.nickname(), req.name(), req.age(), req.job(), req.monthlyIncome());
         // 월 수입이 바뀌면 실제 지출이 없는 타입의 초기 기준선을 다시 잡는다(온보딩 씨딩과 같은 규칙).
         baselineSeeder.reseedFromIncome(userId, req.monthlyIncome());
+        if (!java.util.Objects.equals(previousIncome, req.monthlyIncome())) {
+            spendingPlanService.rebuildCurrentPlan(userId);
+        }
         return user;
     }
 

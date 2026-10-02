@@ -47,12 +47,15 @@ public class ExpenseService {
     private final ApplicationEventPublisher eventPublisher;
     private final SignalConfigService signalConfigService;
     private final AiInquiryRepository aiInquiryRepository;
+    private final com.vori.backend.pet.PetStatRewardService statRewardService;
 
     /**
      * 판정에 필요한 최소 표본 수. 이보다 적으면 z 를 계산하지 않고 GREEN.
      * 온보딩 씨딩(BaselineSeeder)이 초기값을 넣을 때 표본 수를 이 값으로 두어 첫 지출부터 판정이 돌게 한다.
      */
     public static final int N_MIN = 5;
+    /** 하루 첫 지출 기록에 주는 코인. */
+    private static final int RECORD_REWARD_COINS = 100;
     // Z_GREEN / Z_RED 임계값은 signal_config 테이블(관리자 조정) 에서 읽는다. SignalConfigService 참조.
     private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
     // expenses.z_score 는 DECIMAL(6,3) — 담을 수 있는 한계. clampZScore 참조.
@@ -90,6 +93,11 @@ public class ExpenseService {
                 .memo(req.memo())
                 .isRecurring(req.isRecurring())
                 .build());
+
+        // 기록 습관 보상 — 하루 첫 기록에만 준다. 지급일을 사용자에 남겨 삭제 후 재등록으로 다시 받지 못한다.
+        // 같은 날 동시 등록이 둘 다 받지 않게 사용자 행을 잠근다.
+        userRepository.findByIdForUpdate(userId).orElseThrow()
+                .grantDailyRecordReward(java.time.LocalDate.now(), RECORD_REWARD_COINS);
 
         UserStatStats stats = userStatStatsRepository
                 .findByUserIdAndStatType(userId, category.getStatType())
@@ -302,7 +310,7 @@ public class ExpenseService {
         if (pets.isEmpty()) return 0;
 
         Pet pet = pets.get(0);
-        pet.addStat(statType, statDelta);
+        int applied = statRewardService.grant(pet, userId, statType, statDelta);
         pet.evaluateStage(); // 스탯 합이 임계값을 넘었으면 INFANT→JUVENILE→ADULT 로 승급
 
         petGrowthLogRepository.save(PetGrowthLog.builder()
@@ -310,7 +318,7 @@ public class ExpenseService {
                 .userId(userId)
                 .expenseId(expenseId)
                 .statType(statType)
-                .delta(statDelta)
+                .delta(applied)
                 .savedAmount(savedAmount)
                 .reason(GrowthReason.EXPENSE_SAVING)
                 .createdAt(LocalDateTime.now())

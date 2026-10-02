@@ -49,7 +49,8 @@ class ExpenseServiceUpdateTest {
     private final SignalConfigService signalConfig = mock(SignalConfigService.class);
     private final AiInquiryRepository inquiries = mock(AiInquiryRepository.class);
     private final ExpenseService service = new ExpenseService(expenses, categories, stats, users,
-            goals, pets, growthLogs, events, signalConfig, inquiries);
+            goals, pets, growthLogs, events, signalConfig, inquiries,
+            new com.vori.backend.pet.PetStatRewardService(org.mockito.Mockito.mock(com.vori.backend.attendance.UserStatItemRepository.class)));
 
     @BeforeEach
     void setUp() {

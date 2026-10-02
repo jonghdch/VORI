@@ -5,6 +5,7 @@ import com.vori.backend.onboarding.dto.SpendingProfileRequest;
 import com.vori.backend.onboarding.dto.SpendingProfileResponse;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
+import com.vori.backend.budget.SpendingPlanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ public class OnboardingService {
     private final UserRepository userRepository;
     private final UserSpendingProfileRepository profileRepository;
     private final BaselineSeeder baselineSeeder;
+    private final SpendingPlanService spendingPlanService;
 
     @Transactional(readOnly = true)
     public OnboardingStatusResponse status(Long userId) {
@@ -65,6 +67,8 @@ public class OnboardingService {
             profile.markBaselineApplied();
         }
         UserSpendingProfile saved = profileRepository.save(profile);
+        // 설문 응답(수입·주 소비 영역)을 바탕으로 4개 스탯 예산을 한 번 생성한다.
+        spendingPlanService.ensurePlan(userId, java.time.YearMonth.now().toString());
         return SpendingProfileResponse.from(saved);
     }
 
