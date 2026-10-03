@@ -880,6 +880,11 @@
   color: #a96518;
   background: #fff0d8;
 }
+/* 스탯별 상세가 저장되기 전 판정 — 색을 추측하지 않고 중립으로 */
+.ledger-signal-result--none {
+  color: #6f6c64;
+  background: #efede7;
+}
 .ledger-pay-group {
   background: #fbfaf6;
   border: 1px solid #e2dfd7;

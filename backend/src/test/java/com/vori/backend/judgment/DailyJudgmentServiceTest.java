@@ -17,6 +17,7 @@ import com.vori.backend.user.Role;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -102,6 +103,47 @@ class DailyJudgmentServiceTest {
         assertEquals(Signal.RED, result.signal());
         assertEquals(0, result.statRewards().get(StatType.ENERGY));
         assertEquals(0, pet.statTotal());
+    }
+
+    @Test
+    void 다시_열어도_판정한_순간과_같은_스탯별_결과와_절약액을_돌려준다() {
+        LocalDate date = LocalDate.now();
+        User user = User.builder().id(1L).role(Role.USER).gameMoney(0).build();
+        activePet();
+        energyBudget(date);
+        Expense lunch = Expense.builder().userId(1L).statType(StatType.ENERGY).amount(1_234)
+                .signalFinal(Signal.GREEN).spentAt(date.atStartOfDay()).build();
+        when(expenses.findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(1L, date.atStartOfDay(), date.plusDays(1).atStartOfDay()))
+                .thenReturn(List.of(lunch));
+        when(expenses.findByUserIdAndSpentAtBetween(any(), any(), any())).thenReturn(List.of(lunch));
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
+        when(judgments.findByUserIdAndJudgmentDate(1L, date)).thenReturn(Optional.empty());
+        ArgumentCaptor<DailyJudgment> stored = ArgumentCaptor.forClass(DailyJudgment.class);
+        when(judgments.save(stored.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        DailyJudgmentResponse fresh = service.judgeDate(user.getId(), user.getRole(), date);
+        when(judgments.findByUserIdAndJudgmentDate(1L, date)).thenReturn(Optional.of(stored.getValue()));
+        DailyJudgmentResponse reopened = service.getByDate(1L, date).orElseThrow();
+
+        // 예전엔 다시 열면 스탯별 결과가 비고 절약액이 코인 × 100 으로 깎였다
+        assertEquals(fresh.groupJudgments(), reopened.groupJudgments());
+        assertEquals(Signal.GREEN, reopened.groupJudgments().get(StatType.ENERGY).signal());
+        assertEquals(fresh.savedAmount(), reopened.savedAmount());
+    }
+
+    @Test
+    void V49_이전에_저장된_판정은_스탯별_결과_없이_코인으로_절약액을_어림한다() {
+        LocalDate date = LocalDate.now();
+        DailyJudgment legacy = DailyJudgment.builder().userId(1L).judgmentDate(date)
+                .signal(Signal.RED).expenseCount(4).coinReward(95).statRewardPerType(6)
+                .rewardDetails("ENERGY:2,IQ:6").judgedAt(LocalDateTime.now()).build();
+        when(judgments.findByUserIdAndJudgmentDate(1L, date)).thenReturn(Optional.of(legacy));
+
+        DailyJudgmentResponse reopened = service.getByDate(1L, date).orElseThrow();
+
+        assertTrue(reopened.groupJudgments().isEmpty(), "없는 결과를 지어내지 않는다 — 화면은 「기록 없음」");
+        assertEquals(9_500, reopened.savedAmount());
+        assertEquals(6, reopened.statRewards().get(StatType.IQ));
     }
 
     @Test
