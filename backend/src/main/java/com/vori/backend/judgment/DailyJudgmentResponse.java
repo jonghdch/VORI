@@ -1,6 +1,7 @@
 package com.vori.backend.judgment;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vori.backend.expense.Signal;
 import com.vori.backend.common.StatType;
@@ -33,7 +34,10 @@ public record DailyJudgmentResponse(
             Signal signal
     ) {}
 
-    private static final ObjectMapper JSON = new ObjectMapper();
+    // GroupJudgment 칸이 나중에 바뀌어도 예전에 저장한 JSON 을 읽을 수 있게, 모르는 칸은 건너뛴다.
+    private static final ObjectMapper JSON = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DailyJudgmentResponse.class);
 
     /** 저장된 판정을 응답으로. V49 이전 행은 스탯별 결과가 없어 빈 값, 절약액은 코인 × 100 으로 어림한다. */
     static DailyJudgmentResponse from(DailyJudgment j, boolean alreadyJudged) {
@@ -62,8 +66,9 @@ public record DailyJudgmentResponse(
         if (json == null || json.isBlank()) return Map.of();
         try {
             Map<StatType, GroupJudgment> parsed = JSON.readValue(json, new TypeReference<Map<StatType, GroupJudgment>>() {});
-            return parsed.isEmpty() ? Map.of() : new EnumMap<>(parsed);
+            return parsed == null || parsed.isEmpty() ? Map.of() : new EnumMap<>(parsed);
         } catch (Exception e) {
+            log.warn("저장된 스탯별 판정을 읽지 못해 「기록 없음」으로 보여 준다 — {}", e.getMessage());
             return Map.of();
         }
     }

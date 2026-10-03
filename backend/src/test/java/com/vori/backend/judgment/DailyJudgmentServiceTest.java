@@ -203,5 +203,8 @@ class DailyJudgmentServiceTest {
 
         assertFalse(result.alreadyJudged());
         assertEquals(Signal.GREEN, existing.getSignal(), "지출이 없으니 다시 계산하면 초록으로 갱신");
+        // 재판정도 스탯별 결과와 절약액을 함께 갱신해, 다시 열었을 때 방금 계산과 같아야 한다
+        assertEquals(result.groupJudgments(), DailyJudgmentResponse.groupsFromJson(existing.getGroupDetails()));
+        assertEquals(result.savedAmount(), existing.getSavedAmount());
     }
 }
