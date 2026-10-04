@@ -1,0 +1,32 @@
+item,expected,kind
+순대국밥,외식,clear
+냉면,외식,clear
+서브웨이 샌드위치,외식,clear
+빽다방,카페,clear
+이디야 바닐라라떼,카페,clear
+요기요 피자,배달,clear
+홈플러스 우유,마트·식자재,clear
+세븐일레븐 도시락,편의점,clear
+에이블리 원피스,의류,clear
+슬리퍼,신발·잡화,clear
+에코백,가방,clear
+선글라스,액세서리,clear
+샴푸,생필품·잡화,clear
+보조배터리,생필품·잡화,clear
+마스크팩,화장품,clear
+염색,헤어·미용실,clear
+롯데시네마 예매,영화,clear
+뮤지컬 티켓,공연·뮤지컬,clear
+닌텐도 스위치 게임,게임·구독,clear
+볼링장,취미·레저,clear
+에어비앤비,여행·숙박,clear
+클라이밍,스포츠·헬스,clear
+버스비,대중교통,clear
+택시비,택시,clear
+SRT 수서,장거리 교통,clear
+병원 진료비,의료·약국,clear
+형광펜,학용품·문구,clear
+인터넷 요금,통신비,clear
+관리비,주거·관리비,clear
+전기요금,공과금,clear
+강아지 간식,펫용품,clear
