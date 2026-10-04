@@ -41,6 +41,15 @@ class CategorizeServiceTest {
     }
 
     @Test
+    void 물건_이름_안에_들어가는_일반_낱말로는_정하지_않는다() {
+        // 커피머신이 카페로 확정되면 화면이 그대로 골라 버린다(Codex 검토)
+        for (String name : new String[]{"커피머신", "커피믹스", "라떼 파우더", "갤럭시 노트"}) {
+            assertNull(CategorizeService.ruleLeafName(name), name);
+        }
+        assertEquals("카페", CategorizeService.ruleLeafName("스타벅스 라떼"), "상호가 있으면 그대로 카페");
+    }
+
+    @Test
     void 무엇을_샀는지_모르는_이름은_규칙으로_정하지_않는다() {
         for (String name : new String[]{"편의점", "다이소", "쿠팡", "올리브영", "치킨", "문밸리 타코"}) {
             assertNull(CategorizeService.ruleLeafName(name), name);
