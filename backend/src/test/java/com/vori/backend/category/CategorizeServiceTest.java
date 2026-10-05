@@ -31,6 +31,10 @@ class CategorizeServiceTest {
         assertEquals("펫용품", CategorizeService.ruleLeafName("동물병원 진료"));
         assertEquals("생필품·잡화", CategorizeService.ruleLeafName("노트북 거치대"));
         assertEquals("통신비", CategorizeService.ruleLeafName("SKT 요금"));
+        // 물건 이름이 판매처보다 먼저 — 큰 마트·편의점은 식자재 말고도 판다(Codex 검토)
+        assertEquals("생필품·잡화", CategorizeService.ruleLeafName("홈플러스 세제"));
+        assertEquals("생필품·잡화", CategorizeService.ruleLeafName("GS25 물티슈"));
+        assertEquals("펫용품", CategorizeService.ruleLeafName("이마트 고양이 사료"));
     }
 
     @Test

@@ -43,7 +43,10 @@ with open(args.cases, encoding="utf-8") as f:
 clear = [r for r in rows if r["kind"] == "clear"]
 amb = [r for r in rows if r["kind"] == "ambiguous"]
 hit = sum(r["ok"] for r in clear)
-print(f"분명한 품목 정확도: {hit}/{len(clear)} = {hit / len(clear):.0%}")
+if clear:
+    print(f"분명한 품목 정확도: {hit}/{len(clear)} = {hit / len(clear):.0%}")
+else:
+    print("분명한 품목 없음 — 정확도는 건너뛴다")
 # 점수 1.0 = 상호·낱말 규칙으로 정해진 것. 규칙이 덮는 품목과 임베딩이 맡는 품목을 나눠 본다.
 ruled = [r for r in clear if float(r["score"]) >= 0.999]
 embed = [r for r in clear if float(r["score"]) < 0.999]
@@ -59,7 +62,8 @@ print("\n애매한 품목 (물어봐야 하는 것):")
 for r in amb:
     print(f"  {r['item']:<14} 후보 {r['expected']:<22} 예측 {r['predicted']:<10} 점수 {r['score']}")
 scores = sorted(float(r["score"]) for r in clear)
-print(f"\n분명한 품목 점수 범위: {scores[0]:.3f} ~ {scores[-1]:.3f} (중앙값 {scores[len(scores) // 2]:.3f})")
+if scores:
+    print(f"\n분명한 품목 점수 범위: {scores[0]:.3f} ~ {scores[-1]:.3f} (중앙값 {scores[len(scores) // 2]:.3f})")
 
 if args.out:
     with open(args.out, "w", encoding="utf-8-sig", newline="") as f:
