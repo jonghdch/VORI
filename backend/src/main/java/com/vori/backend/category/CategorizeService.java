@@ -153,7 +153,8 @@ public class CategorizeService {
     }
 
     /**
-     * 본인이 같은 이름으로 저장한 지출 중 가장 최근 것의 카테고리(점수 1.0). 없거나 그 카테고리가 꺼졌으면 null.
+     * 본인이 같은 이름으로 저장한 지출 중 가장 최근에 저장한 것의 카테고리(점수 1.0).
+     * 없거나 그 카테고리(또는 대분류)가 꺼졌으면 null — 꺼진 카테고리는 드롭다운에도 없다.
      * 자동 분류가 틀려 사용자가 드롭다운에서 고쳐 저장하면 그 선택이 지출에 남는다 — 다음부터 그걸 먼저 쓴다.
      * 다른 사용자의 기록은 보지 않는다(같은 「타코」라도 사람마다 외식·배달이 다르다).
      */
@@ -165,6 +166,9 @@ public class CategorizeService {
         if (ids.isEmpty()) return null;
         return categoryRepository.findById(ids.get(0))
                 .filter(c -> c.getParentId() != null && Boolean.TRUE.equals(c.getIsActive()))
+                .filter(c -> categoryRepository.findById(c.getParentId())
+                        .map(p -> Boolean.TRUE.equals(p.getIsActive()))
+                        .orElse(false))
                 .map(c -> toResult(c, 1.0, Source.HISTORY))
                 .orElse(null);
     }

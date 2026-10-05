@@ -134,6 +134,18 @@ class CategorizeServiceTest {
     }
 
     @Test
+    void 내_기록의_대분류가_꺼졌어도_건너뛴다() {
+        when(repo.findById(30L)).thenReturn(Optional.of(Category.builder().id(30L).name("여가").isActive(false).build()));
+        when(repo.findById(31L)).thenReturn(Optional.of(Category.builder().id(31L).parentId(30L).name("취미·레저").build()));
+        when(expenses.findRecentCategoryIdsByItemKey(eq(7L), anyString(), any())).thenReturn(List.of(31L));
+
+        CategorizeService.Result r = new CategorizeService(repo, gemini, expenses).categorizeOrFallback(7L, "GS25 삼각김밥");
+
+        assertEquals("편의점", r.leafName());
+        assertEquals(CategorizeService.Source.RULE, r.source());
+    }
+
+    @Test
     void 로그인_정보가_없으면_내_기록을_보지_않는다() {
         CategorizeService.Result r = new CategorizeService(repo, gemini, expenses).categorizeOrFallback(null, "GS25 삼각김밥");
 
