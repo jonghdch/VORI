@@ -1,24 +1,28 @@
 package com.vori.backend.category;
 
+import com.vori.backend.expense.ExpenseRepository;
 import com.vori.backend.gemini.GeminiClient;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
  * 사용자가 입력한 내역(name) 의 의도를 추론해 카테고리 leaf 를 결정.
  *
- * 동작:
- *  1. 시작 직후 비동기로 categories 테이블의 leaf 전체 embedding 을 미리 계산해 캐시
- *  2. 사용자 입력이 오면 input embedding 을 한 번만 받아 cached leaf 들과 cosine 비교
- *  3. 최고 점수 leaf 반환. threshold 미달이면 null (호출자가 "기타" 처리)
+ * 순서(처음 정해지는 것을 쓴다):
+ *  1. 내 기록 — 본인이 같은 이름으로 저장한 지출의 카테고리(가장 최근). 사용자가 고친 분류를 기억한다.
+ *  2. 상호·낱말 규칙(RULES)
+ *  3. 임베딩 — 시작 직후 비동기로 leaf 전체 embedding 을 캐시해 두고, 입력 embedding 과 cosine 비교
+ *  4. 모두 실패하면 categorizeOrFallback 이 "기타 생활"
  *
  * 비용: 시작 시 leaf 수 만큼 embedding 호출 (현재 36개), 이후엔 입력당 1회.
  * 모델: Gemini text-embedding-004 — 무료 tier (분당 1500, 일 무제한)
@@ -30,6 +34,7 @@ public class CategorizeService {
 
     private final CategoryRepository categoryRepository;
     private final GeminiClient geminiClient;
+    private final ExpenseRepository expenseRepository;
 
     // leaf id → 임베딩 벡터 (768차원)
     private final Map<Long, double[]> leafEmbeddings = new HashMap<>();
@@ -135,31 +140,58 @@ public class CategorizeService {
     private static final String FALLBACK_LEAF_NAME = "기타 생활";
 
     /**
-     * 분류 시도 후 실패하면 폴백 leaf("기타 생활")로 떨어뜨린다.
+     * 내 기록 → 규칙 → 임베딩 순으로 분류하고, 모두 실패하면 폴백 leaf("기타 생활")로 떨어뜨린다.
      * → 자동 분류가 안 돼도(예: Gemini 미연결) 사용자가 입력을 이어갈 수 있게.
+     * userId 가 null 이면 내 기록은 보지 않는다.
      */
-    public Result categorizeOrFallback(String name) {
+    public Result categorizeOrFallback(Long userId, String name) {
         if (name == null || name.isBlank()) return null;
+        Result mine = fromHistory(userId, name);
+        if (mine != null) return mine;
         Result r = categorize(name);
         return r != null ? r : fallback();
     }
 
+    /**
+     * 본인이 같은 이름으로 저장한 지출 중 가장 최근 것의 카테고리(점수 1.0). 없거나 그 카테고리가 꺼졌으면 null.
+     * 자동 분류가 틀려 사용자가 드롭다운에서 고쳐 저장하면 그 선택이 지출에 남는다 — 다음부터 그걸 먼저 쓴다.
+     * 다른 사용자의 기록은 보지 않는다(같은 「타코」라도 사람마다 외식·배달이 다르다).
+     */
+    Result fromHistory(Long userId, String name) {
+        if (userId == null) return null;
+        String key = itemKey(name);
+        if (key.isEmpty()) return null;
+        List<Long> ids = expenseRepository.findRecentCategoryIdsByItemKey(userId, key, PageRequest.of(0, 1));
+        if (ids.isEmpty()) return null;
+        return categoryRepository.findById(ids.get(0))
+                .filter(c -> c.getParentId() != null && Boolean.TRUE.equals(c.getIsActive()))
+                .map(c -> toResult(c, 1.0, Source.HISTORY))
+                .orElse(null);
+    }
+
+    /** 내 기록을 찾을 때 비교하는 이름 — 소문자, 띄어쓰기 없음(「문밸리 타코」=「문밸리타코」). */
+    static String itemKey(String name) {
+        return name == null ? "" : name.toLowerCase(Locale.ROOT).replace(" ", "");
+    }
+
     /** Gemini 없이 categories 테이블만으로 폴백 leaf 를 만든다. 없으면 null. */
     private Result fallback() {
-        return leafResult(FALLBACK_LEAF_NAME, 0.0);
+        return leafResult(FALLBACK_LEAF_NAME, 0.0, Source.FALLBACK);
     }
 
     /** leaf 이름으로 결과를 만든다(DB 조회만, Gemini 없음). 없으면 null. */
-    private Result leafResult(String leafName, double score) {
+    private Result leafResult(String leafName, double score, Source source) {
         return categoryRepository.findFirstByName(leafName)
                 .filter(c -> c.getParentId() != null)
-                .map(c -> {
-                    String parentName = categoryRepository.findById(c.getParentId())
-                            .map(Category::getName)
-                            .orElse("");
-                    return new Result(c.getId(), c.getName(), c.getParentId(), parentName, score);
-                })
+                .map(c -> toResult(c, score, source))
                 .orElse(null);
+    }
+
+    private Result toResult(Category leaf, double score, Source source) {
+        String parentName = categoryRepository.findById(leaf.getParentId())
+                .map(Category::getName)
+                .orElse("");
+        return new Result(leaf.getId(), leaf.getName(), leaf.getParentId(), parentName, score, source);
     }
 
     /**
@@ -249,7 +281,7 @@ public class CategorizeService {
         if (name == null || name.isBlank()) return null;
         String ruled = ruleLeafName(name);
         if (ruled != null) {
-            Result r = leafResult(ruled, 1.0);
+            Result r = leafResult(ruled, 1.0, Source.RULE);
             if (r != null) return r;
         }
         if (!ready) return null;
@@ -266,7 +298,7 @@ public class CategorizeService {
         }
         if (bestId == null || bestScore < MATCH_THRESHOLD) return null;
         CachedLeaf m = leafMeta.get(bestId);
-        return new Result(m.id, m.name, m.parentId, m.parentName, bestScore);
+        return new Result(m.id, m.name, m.parentId, m.parentName, bestScore, Source.EMBEDDING);
     }
 
     private static double cosine(double[] a, double[] b) {
@@ -283,5 +315,8 @@ public class CategorizeService {
 
     public boolean isReady() { return ready; }
 
-    public record Result(Long leafId, String leafName, Long parentId, String parentName, double score) {}
+    /** 어디서 정했는지 — 측정 스크립트가 나눠 세고, 애매할 때 묻기(분류 ③)에서 쓴다. */
+    public enum Source { HISTORY, RULE, EMBEDDING, FALLBACK }
+
+    public record Result(Long leafId, String leafName, Long parentId, String parentName, double score, Source source) {}
 }
