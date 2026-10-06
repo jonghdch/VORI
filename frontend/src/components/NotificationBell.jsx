@@ -7,6 +7,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "../api/notifications";
+import "./NotificationBell.css";
 
 // 알림 종류별 점 색 — 아이콘 대신 작은 색 점으로 구분한다
 const TYPE_TONE = {

@@ -5,7 +5,7 @@ import AdminTools from "./AdminTools";
 import PetNameGate from "./PetNameGate";
 import AttendanceGate from "./AttendanceGate";
 import { getMe } from "../api/user";
-import "../pages/Home/HomeDashboard.css";
+import "./AppShell.css";
 
 const TOP_NAV = [
   { id: "home", label: "홈" },
@@ -16,7 +16,7 @@ const TOP_NAV = [
 
 // page: null = 아직 화면이 없는 메뉴 — 누르면 아무 일도 없는 척하지 않도록
 // disabled + "준비 중" 표기로 렌더한다.
-// 메뉴 앞 기호는 공통 작은 원(●) — 평소엔 어둡고, 선택된 메뉴만 빛난다 (HomeDashboard.css).
+// 메뉴 앞 기호는 공통 작은 원(●) — 평소엔 어둡고, 선택된 메뉴만 빛난다 (AppShell.css).
 const SIDE_MENU = [
   { id: "home", label: "홈 대시보드", page: "home" },
   { id: "wallet", label: "가계부", page: "wallet" },
