@@ -165,17 +165,133 @@ public class CategorizeService {
         List<Long> ids = expenseRepository.findRecentCategoryIdsByItemKey(userId, key, PageRequest.of(0, 1));
         if (ids.isEmpty()) return null;
         return categoryRepository.findById(ids.get(0))
-                .filter(c -> c.getParentId() != null && Boolean.TRUE.equals(c.getIsActive()))
-                .filter(c -> categoryRepository.findById(c.getParentId())
-                        .map(p -> Boolean.TRUE.equals(p.getIsActive()))
-                        .orElse(false))
+                .filter(this::usableLeaf)
                 .map(c -> toResult(c, 1.0, Source.HISTORY))
                 .orElse(null);
+    }
+
+    /** 드롭다운에 보이는 카테고리인지 — 소분류이고, 자기와 대분류가 모두 켜져 있다. */
+    private boolean usableLeaf(Category c) {
+        return c.getParentId() != null && Boolean.TRUE.equals(c.getIsActive())
+                && categoryRepository.findById(c.getParentId())
+                        .map(p -> Boolean.TRUE.equals(p.getIsActive()))
+                        .orElse(false);
     }
 
     /** 내 기록을 찾을 때 비교하는 이름 — 소문자, 띄어쓰기 없음(「문밸리 타코」=「문밸리타코」). */
     static String itemKey(String name) {
         return name == null ? "" : name.toLowerCase(Locale.ROOT).replace(" ", "");
+    }
+
+    // ───── 애매하면 묻기 ─────
+
+    /** 무엇을 물을지. 질문 문구는 화면이 정한다. */
+    public enum AskType {
+        WHAT,              // 판매처만 썼다 — 무엇을 샀나
+        DINE_OR_DELIVERY   // 매장에서 먹었나, 배달했나
+    }
+
+    /** 칩 하나 — label 은 화면에 보일 말, leafName 은 실제로 들어갈 카테고리. */
+    public record Candidate(Long leafId, String label, String leafName) {}
+
+    /** 분류 결과 + 물어볼지. askType 이 null 이면 묻지 않는다(candidates 는 빈 목록). */
+    public record Suggestion(Result result, AskType askType, List<Candidate> candidates) {}
+
+    private record Choice(String label, String leafName) {}
+
+    private record AskRule(AskType type, List<Choice> choices) {}
+
+    private static final String DELIVERY_LEAF = "배달";
+    /** 매장과 포장은 둘 다 외식으로 저장되니 한 칩으로 — 포장한 사람도 고를 게 있게(10/6 채린). */
+    private static final List<Choice> DINE_OR_DELIVERY = List.of(
+            new Choice("매장·포장", "외식"), new Choice("배달", DELIVERY_LEAF));
+
+    /** 칩 최대 개수. 화면이 끝에 「그 외」(전체 목록)를 하나 더 붙인다. */
+    static final int MAX_CHIPS = 4;
+
+    /**
+     * 이름만으로는 무엇을 샀는지 모르는 입력 — 이름 전체가 이것과 같을 때만(askKey 로 비교) 묻는다.
+     * 「GS25 물티슈」처럼 물건이 같이 적혀 있으면 묻지 않고 규칙·임베딩으로 정한다. 첫 칩이 기본값이다.
+     * 칩은 대학생이 그 판매처에서 자주 사는 순서로 MAX_CHIPS 개까지(Gemini·ChatGPT 검토 반영, 10/6).
+     */
+    private static final Map<String, AskRule> ASK_RULES = askRules();
+
+    private static Map<String, AskRule> askRules() {
+        Map<String, AskRule> m = new HashMap<>();
+        AskRule store = new AskRule(AskType.WHAT, List.of(new Choice("먹을 것", "편의점"),
+                new Choice("생활용품", "생필품·잡화"), new Choice("상비약", "의료·약국"), new Choice("교통카드 충전", "대중교통")));
+        for (String n : List.of("편의점", "GS25", "지에스25", "CU", "씨유", "세븐일레븐", "이마트24", "미니스톱")) m.put(askKey(n), store);
+        AskRule mart = new AskRule(AskType.WHAT, List.of(new Choice("장보기", "마트·식자재"),
+                new Choice("생활용품", "생필품·잡화"), new Choice("화장품", "화장품")));
+        for (String n : List.of("마트", "이마트", "홈플러스", "롯데마트", "코스트코", "트레이더스", "노브랜드")) m.put(askKey(n), mart);
+        m.put(askKey("다이소"), new AskRule(AskType.WHAT, List.of(new Choice("생활용품", "생필품·잡화"),
+                new Choice("문구", "학용품·문구"), new Choice("취미·만들기", "취미·레저"), new Choice("간식", "마트·식자재"))));
+        m.put(askKey("쿠팡"), new AskRule(AskType.WHAT, List.of(new Choice("생활용품", "생필품·잡화"),
+                new Choice("장보기", "마트·식자재"), new Choice("옷", "의류"), new Choice("책", "도서"))));
+        m.put(askKey("올리브영"), new AskRule(AskType.WHAT, List.of(new Choice("화장품", "화장품"),
+                new Choice("생활용품", "생필품·잡화"), new Choice("상비약", "의료·약국"), new Choice("향수", "향수"))));
+        AskRule dish = new AskRule(AskType.DINE_OR_DELIVERY, DINE_OR_DELIVERY);
+        for (String n : List.of("치킨", "피자", "타코", "떡볶이", "족발", "보쌈", "짜장면", "짬뽕", "마라탕", "햄버거")) m.put(askKey(n), dish);
+        return Map.copyOf(m);
+    }
+
+    /** 묻기 목록과 비교하는 이름 — 소문자, 띄어쓰기·기호 없음(「GS 25」「다이소.」도 같게). */
+    static String askKey(String name) {
+        return name == null ? "" : name.toLowerCase(Locale.ROOT).replaceAll("[\\s\\p{Punct}·ㆍ•]", "");
+    }
+
+    /**
+     * 화면용 분류 — 내 기록 → 규칙 → 임베딩으로 정한 결과에 「물어볼지」를 더한다.
+     * 기본값을 미리 골라 두므로 묻더라도 저장은 막지 않는다. Gemini 호출은 늘지 않는다.
+     *  (1) 판매처·음식 이름만 쓴 경우(ASK_RULES): 후보 칩을 준다. 내 기록이 있으면 그걸 기본값으로 두고,
+     *      후보에 없으면 칩을 하나 더 붙인다(기본값과 선택 표시가 어긋나지 않게).
+     *  (2) 임베딩이 배달로 정한 경우: deliveryCheck.
+     */
+    public Suggestion suggest(Long userId, String name) {
+        if (name == null || name.isBlank()) return null;
+        Result mine = fromHistory(userId, name);
+        AskRule rule = ASK_RULES.get(askKey(name));
+        if (rule != null) {
+            List<Candidate> cands = candidates(rule.choices());
+            if (mine != null && cands.stream().noneMatch(c -> c.leafId().equals(mine.leafId()))) {
+                cands.add(0, new Candidate(mine.leafId(), mine.leafName(), mine.leafName()));
+                if (cands.size() > MAX_CHIPS) cands = new ArrayList<>(cands.subList(0, MAX_CHIPS));
+            }
+            if (cands.size() >= 2) {
+                Result def = mine != null ? mine : leafResult(cands.get(0).leafName(), 1.0, Source.ASK);
+                if (def != null) return new Suggestion(def, rule.type(), List.copyOf(cands));
+            }
+        }
+        Result r = mine != null ? mine : categorize(name);
+        if (r == null) r = fallback();
+        return r == null ? null : deliveryCheck(r);
+    }
+
+    /**
+     * 임베딩이 배달로 정했으면 외식을 기본값으로 매장/배달을 묻는다.
+     * 진짜 배달은 대개 배민·쿠팡이츠·배달 같은 낱말이 있어 규칙(RULES)에서 이미 정해진다. 그런데도 임베딩이
+     * 배달로 보냈으면 가게 이름일 가능성이 크다(10/3 시연 「문밸리 타코」). 내 기록·규칙으로 정한 건 묻지 않는다.
+     */
+    Suggestion deliveryCheck(Result r) {
+        if (r.source() == Source.EMBEDDING && DELIVERY_LEAF.equals(r.leafName())) {
+            List<Candidate> cands = candidates(DINE_OR_DELIVERY);
+            if (cands.size() == 2) {
+                Result dineIn = leafResult(cands.get(0).leafName(), r.score(), Source.ASK);
+                if (dineIn != null) return new Suggestion(dineIn, AskType.DINE_OR_DELIVERY, List.copyOf(cands));
+            }
+        }
+        return new Suggestion(r, null, List.of());
+    }
+
+    /** 후보 칩 — 없거나 꺼진 카테고리(대분류가 꺼진 것 포함)는 뺀다. */
+    private List<Candidate> candidates(List<Choice> choices) {
+        List<Candidate> out = new ArrayList<>();
+        for (Choice ch : choices) {
+            categoryRepository.findFirstByName(ch.leafName())
+                    .filter(this::usableLeaf)
+                    .ifPresent(c -> out.add(new Candidate(c.getId(), ch.label(), c.getName())));
+        }
+        return out;
     }
 
     /** Gemini 없이 categories 테이블만으로 폴백 leaf 를 만든다. 없으면 null. */
@@ -319,8 +435,8 @@ public class CategorizeService {
 
     public boolean isReady() { return ready; }
 
-    /** 어디서 정했는지 — 측정 스크립트가 나눠 세고, 애매할 때 묻기(분류 ③)에서 쓴다. */
-    public enum Source { HISTORY, RULE, EMBEDDING, FALLBACK }
+    /** 어디서 정했는지 — 측정 스크립트가 나눠 센다. ASK 는 묻기 규칙이 고른 기본값(사용자가 칩으로 바꿀 수 있다). */
+    public enum Source { HISTORY, RULE, EMBEDDING, ASK, FALLBACK }
 
     public record Result(Long leafId, String leafName, Long parentId, String parentName, double score, Source source) {}
 }

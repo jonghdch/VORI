@@ -32,14 +32,20 @@ public class CategoryController {
      * 사용자 입력 → leaf 자동 추론. 본인이 같은 이름으로 저장한 기록이 있으면 그 카테고리를 먼저 쓴다.
      * 매칭 실패(threshold 미달·서비스 미준비·Gemini 미연결) 시 "기타 생활" 폴백 leaf 반환
      * → 자동 분류가 안 돼도 사용자가 입력을 이어갈 수 있다 (다음 단계 진행 가능).
+     * 이름만으로 애매하면 askType·candidates 로 칩을 준다(leafId 는 그중 기본값).
      */
     @PostMapping("/categorize")
     public CategorizeResponse categorize(@AuthenticationPrincipal UserPrincipal principal,
                                          @Valid @RequestBody CategorizeRequest req) {
         Long userId = principal != null ? principal.getId() : null;
-        CategorizeService.Result r = categorizeService.categorizeOrFallback(userId, req.name());
-        if (r == null) return CategorizeResponse.empty();
+        CategorizeService.Suggestion s = categorizeService.suggest(userId, req.name());
+        if (s == null) return CategorizeResponse.empty();
+        CategorizeService.Result r = s.result();
         return new CategorizeResponse(r.leafId(), r.leafName(), r.parentId(), r.parentName(), r.score(),
-                r.source().name());
+                r.source().name(),
+                s.askType() == null ? null : s.askType().name(),
+                s.candidates().stream()
+                        .map(c -> new CategorizeResponse.Candidate(c.leafId(), c.label(), c.leafName()))
+                        .toList());
     }
 }
