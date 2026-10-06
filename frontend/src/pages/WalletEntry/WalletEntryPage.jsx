@@ -307,13 +307,18 @@ function WalletEntryPage({ user }) {
     }
   };
   // autoCategory: 자동 분류 응답에서 온 패치. 응답을 기다리는 사이 사용자가 직접 골랐으면
-  // (categoryTouched) 그 선택을 덮지 않는다 — 최신 행 상태를 여기서 봐야 늦게 온 응답도 걸러진다.
+  // (categoryTouched) 그 선택을 덮지 않고, 다시 묻는 칩도 띄우지 않는다(이전 이름의 칩도 비운다).
+  // 최신 행 상태를 여기서 봐야 늦게 온 응답도 걸러진다.
   const updateRow = (setter, id, patch) =>
     setter((rows) =>
       rows.map((r) => {
         if (r.id !== id) return r;
         const { autoCategory, ...rest } = patch;
-        if (autoCategory && r.categoryTouched) delete rest.categoryId;
+        if (autoCategory && r.categoryTouched) {
+          delete rest.categoryId;
+          rest.askType = null;
+          rest.candidates = [];
+        }
         return { ...r, ...rest };
       }),
     );

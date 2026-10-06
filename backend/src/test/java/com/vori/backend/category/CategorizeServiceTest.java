@@ -236,6 +236,17 @@ class CategorizeServiceTest {
     }
 
     @Test
+    void 대분류가_꺼진_카테고리는_칩에서_뺀다() {
+        when(repo.findById(50L)).thenReturn(Optional.of(Category.builder().id(50L).name("생활").isActive(false).build()));
+        when(repo.findFirstByName("의료·약국"))
+                .thenReturn(Optional.of(Category.builder().id(30L).parentId(50L).name("의료·약국").isActive(true).build()));
+
+        CategorizeService.Suggestion s = new CategorizeService(repo, gemini, expenses).suggest(7L, "편의점");
+
+        assertEquals(List.of("먹을 것", "생활용품", "교통카드 충전"), labels(s));
+    }
+
+    @Test
     void 음식_이름만_쓰면_매장_포장과_배달을_묻고_외식을_기본값으로_둔다() {
         CategorizeService.Suggestion s = new CategorizeService(repo, gemini, expenses).suggest(7L, "치킨");
 

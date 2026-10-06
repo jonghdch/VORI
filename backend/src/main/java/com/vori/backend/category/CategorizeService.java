@@ -165,12 +165,17 @@ public class CategorizeService {
         List<Long> ids = expenseRepository.findRecentCategoryIdsByItemKey(userId, key, PageRequest.of(0, 1));
         if (ids.isEmpty()) return null;
         return categoryRepository.findById(ids.get(0))
-                .filter(c -> c.getParentId() != null && Boolean.TRUE.equals(c.getIsActive()))
-                .filter(c -> categoryRepository.findById(c.getParentId())
-                        .map(p -> Boolean.TRUE.equals(p.getIsActive()))
-                        .orElse(false))
+                .filter(this::usableLeaf)
                 .map(c -> toResult(c, 1.0, Source.HISTORY))
                 .orElse(null);
+    }
+
+    /** 드롭다운에 보이는 카테고리인지 — 소분류이고, 자기와 대분류가 모두 켜져 있다. */
+    private boolean usableLeaf(Category c) {
+        return c.getParentId() != null && Boolean.TRUE.equals(c.getIsActive())
+                && categoryRepository.findById(c.getParentId())
+                        .map(p -> Boolean.TRUE.equals(p.getIsActive()))
+                        .orElse(false);
     }
 
     /** 내 기록을 찾을 때 비교하는 이름 — 소문자, 띄어쓰기 없음(「문밸리 타코」=「문밸리타코」). */
@@ -278,12 +283,12 @@ public class CategorizeService {
         return new Suggestion(r, null, List.of());
     }
 
-    /** 후보 칩 — 없거나 꺼진 카테고리는 뺀다. */
+    /** 후보 칩 — 없거나 꺼진 카테고리(대분류가 꺼진 것 포함)는 뺀다. */
     private List<Candidate> candidates(List<Choice> choices) {
         List<Candidate> out = new ArrayList<>();
         for (Choice ch : choices) {
             categoryRepository.findFirstByName(ch.leafName())
-                    .filter(c -> c.getParentId() != null && Boolean.TRUE.equals(c.getIsActive()))
+                    .filter(this::usableLeaf)
                     .ifPresent(c -> out.add(new Candidate(c.getId(), ch.label(), c.getName())));
         }
         return out;
