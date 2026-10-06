@@ -13,7 +13,7 @@ public record TitleProgress(
         long petsReleased,    // 분양한 펫 수
         long sTierPets,       // 뽑은 S 등급 펫 수
         long aiAnswers,       // 답변을 마친 AI 질문 수
-        long receiptScans,    // 인식에 성공한 영수증 수
+        long receiptScans,    // 값을 읽어 낸 영수증 수 (영수증이 아닌 사진은 제외)
         long loginCount,      // 누적 로그인 횟수
         long petInteractions, // 가장 많이 상호작용한 펫의 상호작용 횟수 (업적 사랑둥이는 펫 칭호로 옮겨 지금은 안 씀)
         long petsHatched,     // 부화한(받은) 펫 수, 시작 펫 포함

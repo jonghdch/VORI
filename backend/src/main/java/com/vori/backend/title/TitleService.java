@@ -8,7 +8,6 @@ import com.vori.backend.pet.GachaPullRepository;
 import com.vori.backend.pet.PetRepository;
 import com.vori.backend.pet.PetTier;
 import com.vori.backend.pettitle.PetTitleAwardRepository;
-import com.vori.backend.receipt.OcrStatus;
 import com.vori.backend.receipt.ReceiptOcrJobRepository;
 import com.vori.backend.theme.ThemeMaster;
 import com.vori.backend.theme.ThemeMasterRepository;
@@ -202,7 +201,7 @@ public class TitleService {
                 petRepository.countByUserIdAndReleasedAtIsNotNull(userId),
                 gachaPullRepository.countByUserIdAndTier(userId, PetTier.S),
                 aiInquiryRepository.countByUserIdAndAnsweredAtIsNotNull(userId),
-                receiptOcrJobRepository.countByUserIdAndStatus(userId, OcrStatus.SUCCESS),
+                receiptOcrJobRepository.countReadScans(userId),
                 loginCount,
                 petRepository.maxInteractionCountByUserId(userId),
                 petRepository.countByUserId(userId),
