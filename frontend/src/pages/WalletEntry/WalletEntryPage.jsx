@@ -558,9 +558,11 @@ const ASK_TEXT = {
   WHAT: {
     question: "무엇을 샀나요?",
     hint: "산 것을 같이 쓰면 바로 분류돼요 (예: 편의점 컵라면)",
+    other: true, // 칩에 없는 카테고리를 고를 「그 외」
   },
+  // 매장·포장 / 배달 — 포장한 사람도 고를 게 있게 묻는다
   DINE_OR_DELIVERY: {
-    question: "매장에서 먹었나요, 배달했나요?",
+    question: "어떻게 먹었나요?",
   },
 };
 
@@ -638,6 +640,9 @@ function EntryRow({
   const showAsk =
     type === "expense" && !locked && !row.categorizing && Boolean(ask) &&
     (row.candidates?.length ?? 0) > 1;
+  const otherSelected =
+    row.categoryId != null && !(row.candidates ?? []).some((c) => c.leafId === row.categoryId);
+  const categoryOpenRef = useRef(null);
 
   // 카테고리/출처 선택 컨트롤 (눌러서 수정 가능한 드롭다운).
   const categoryControl =
@@ -649,6 +654,7 @@ function EntryRow({
         placeholder={row.categorizing ? "분류 중…" : "카테고리"}
         align="right"
         disabled={locked}
+        openRef={categoryOpenRef}
       />
     ) : (
       <Dropdown
@@ -739,6 +745,17 @@ function EntryRow({
               </button>
             );
           })}
+          {/* 칩에 없는 카테고리는 오른쪽 위 전체 목록에서 — 거기서 고르면 이 칩이 선택돼 보인다 */}
+          {ask.other && (
+            <button
+              type="button"
+              className={`ledger-chip${otherSelected ? " ledger-chip-selected" : ""}`}
+              aria-pressed={otherSelected}
+              onClick={() => categoryOpenRef.current?.()}
+            >
+              그 외
+            </button>
+          )}
           {ask.hint && <p className="ledger-ask-hint">{ask.hint}</p>}
         </div>
       )}
@@ -771,9 +788,18 @@ function EntryRow({
 }
 
 // 클릭 chip + 펼침 메뉴 (결제수단용).
-function Dropdown({ value, options, onChange, placeholder, align = "left", disabled = false }) {
+// openRef 를 주면 바깥(예: 내역 아래 「그 외」 칩)에서 openRef.current() 로 목록을 열 수 있다.
+function Dropdown({ value, options, onChange, placeholder, align = "left", disabled = false, openRef }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!openRef) return undefined;
+    openRef.current = () => setOpen(true);
+    return () => {
+      openRef.current = null;
+    };
+  }, [openRef]);
 
   useEffect(() => {
     if (!open) return;

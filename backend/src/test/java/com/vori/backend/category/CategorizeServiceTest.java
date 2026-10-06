@@ -27,7 +27,8 @@ class CategorizeServiceTest {
     void 카테고리_준비() {
         when(repo.findById(1L)).thenReturn(Optional.of(Category.builder().id(1L).name("식비").build()));
         for (Category c : List.of(leaf(2L, "외식", true), leaf(3L, "카페", true), leaf(4L, "배달", true),
-                leaf(6L, "편의점", true), leaf(12L, "생필품·잡화", true), leaf(40L, "기타 생활", true))) {
+                leaf(6L, "편의점", true), leaf(12L, "생필품·잡화", true), leaf(25L, "대중교통", true),
+                leaf(30L, "의료·약국", true), leaf(40L, "기타 생활", true))) {
             when(repo.findFirstByName(c.getName())).thenReturn(Optional.of(c));
             when(repo.findById(c.getId())).thenReturn(Optional.of(c));
         }
@@ -175,7 +176,7 @@ class CategorizeServiceTest {
         CategorizeService.Suggestion s = new CategorizeService(repo, gemini, expenses).suggest(7L, "편의점");
 
         assertEquals(CategorizeService.AskType.WHAT, s.askType());
-        assertEquals(List.of("먹을 것", "생활용품"), labels(s));
+        assertEquals(List.of("먹을 것", "생활용품", "상비약", "교통카드 충전"), labels(s));
         assertEquals("편의점", s.result().leafName());
         assertEquals(CategorizeService.Source.ASK, s.result().source());
         verify(gemini, never()).embed(anyString());
@@ -206,24 +207,27 @@ class CategorizeServiceTest {
         CategorizeService.Suggestion s = new CategorizeService(repo, gemini, expenses).suggest(7L, "편의점");
 
         assertEquals(CategorizeService.AskType.WHAT, s.askType());
-        assertEquals(List.of("먹을 것", "생활용품"), labels(s));
+        assertEquals(List.of("먹을 것", "생활용품", "상비약", "교통카드 충전"), labels(s));
         assertEquals("생필품·잡화", s.result().leafName());
         assertEquals(CategorizeService.Source.HISTORY, s.result().source());
     }
 
     @Test
-    void 내_기록이_후보에_없으면_칩을_하나_더_붙인다() {
+    void 내_기록이_후보에_없으면_맨_앞에_칩을_붙이고_최대_개수를_지킨다() {
         when(expenses.findRecentCategoryIdsByItemKey(eq(7L), eq("편의점"), any())).thenReturn(List.of(3L));
 
         CategorizeService.Suggestion s = new CategorizeService(repo, gemini, expenses).suggest(7L, "편의점");
 
-        assertEquals(List.of("카페", "먹을 것", "생활용품"), labels(s));
+        assertEquals(List.of("카페", "먹을 것", "생활용품", "상비약"), labels(s));
+        assertEquals(CategorizeService.MAX_CHIPS, s.candidates().size());
         assertEquals("카페", s.result().leafName());
     }
 
     @Test
     void 후보_카테고리가_꺼져_칩이_하나뿐이면_묻지_않는다() {
         when(repo.findFirstByName("생필품·잡화")).thenReturn(Optional.of(leaf(12L, "생필품·잡화", false)));
+        when(repo.findFirstByName("의료·약국")).thenReturn(Optional.of(leaf(30L, "의료·약국", false)));
+        when(repo.findFirstByName("대중교통")).thenReturn(Optional.empty());
 
         CategorizeService.Suggestion s = new CategorizeService(repo, gemini, expenses).suggest(7L, "편의점");
 
@@ -232,11 +236,11 @@ class CategorizeServiceTest {
     }
 
     @Test
-    void 음식_이름만_쓰면_매장_배달을_묻고_매장을_기본값으로_둔다() {
+    void 음식_이름만_쓰면_매장_포장과_배달을_묻고_외식을_기본값으로_둔다() {
         CategorizeService.Suggestion s = new CategorizeService(repo, gemini, expenses).suggest(7L, "치킨");
 
         assertEquals(CategorizeService.AskType.DINE_OR_DELIVERY, s.askType());
-        assertEquals(List.of("매장에서 먹음", "배달"), labels(s));
+        assertEquals(List.of("매장·포장", "배달"), labels(s));
         assertEquals("외식", s.result().leafName());
     }
 
