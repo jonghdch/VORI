@@ -306,8 +306,17 @@ function WalletEntryPage({ user }) {
       setReceiptBusy(false);
     }
   };
+  // autoCategory: 자동 분류 응답에서 온 패치. 응답을 기다리는 사이 사용자가 직접 골랐으면
+  // (categoryTouched) 그 선택을 덮지 않는다 — 최신 행 상태를 여기서 봐야 늦게 온 응답도 걸러진다.
   const updateRow = (setter, id, patch) =>
-    setter((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setter((rows) =>
+      rows.map((r) => {
+        if (r.id !== id) return r;
+        const { autoCategory, ...rest } = patch;
+        if (autoCategory && r.categoryTouched) delete rest.categoryId;
+        return { ...r, ...rest };
+      }),
+    );
 
   // 빈 행(내역·금액 둘 다 비어있음)은 제출 시 무시한다 → 강제 삭제 불필요.
   const isRowEmpty = (r) =>
@@ -544,6 +553,17 @@ function WalletEntryPage({ user }) {
   );
 }
 
+// 자동 분류가 애매하다고 돌려준 경우(askType)의 질문 문구. 판정 문구처럼 중립으로 둔다.
+const ASK_TEXT = {
+  WHAT: {
+    question: "무엇을 샀나요?",
+    hint: "산 것을 같이 쓰면 바로 분류돼요 (예: 편의점 컵라면)",
+  },
+  DINE_OR_DELIVERY: {
+    question: "매장에서 먹었나요, 배달했나요?",
+  },
+};
+
 function EntryRow({
   num,
   row,
@@ -571,6 +591,8 @@ function EntryRow({
         categorizing: false,
         categoryTouched: false,
         sourceTouched: false,
+        askType: null,
+        candidates: [],
       });
       return;
     }
@@ -585,7 +607,8 @@ function EntryRow({
       onChange({ categorizing: false });
       return;
     }
-    // 백엔드 분류(Gemini). debounce 400ms. 진행 중엔 categorizing=true.
+    // 백엔드 분류(내 기록·규칙·Gemini). debounce 400ms. 진행 중엔 categorizing=true.
+    // 이름만으로 애매하면 askType·candidates 가 같이 와서 칩으로 묻는다(기본값은 이미 골라져 있다).
     onChange({ categorizing: true });
     let cancelled = false;
     const handle = setTimeout(async () => {
@@ -593,8 +616,14 @@ function EntryRow({
       if (cancelled) return;
       onChange(
         r == null
-          ? { categoryId: null, categorizing: false }
-          : { categoryId: r.leafId, categorizing: false },
+          ? { autoCategory: true, categoryId: null, categorizing: false, askType: null, candidates: [] }
+          : {
+              autoCategory: true,
+              categoryId: r.leafId,
+              categorizing: false,
+              askType: r.askType ?? null,
+              candidates: r.candidates ?? [],
+            },
       );
     }, 400);
     return () => {
@@ -603,6 +632,12 @@ function EntryRow({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row.name, type]);
+
+  // 이름만으로 애매할 때 내역 아래에 칩으로 묻는다. 분류를 다시 하는 동안엔 예전 칩을 숨긴다.
+  const ask = ASK_TEXT[row.askType];
+  const showAsk =
+    type === "expense" && !locked && !row.categorizing && Boolean(ask) &&
+    (row.candidates?.length ?? 0) > 1;
 
   // 카테고리/출처 선택 컨트롤 (눌러서 수정 가능한 드롭다운).
   const categoryControl =
@@ -683,10 +718,30 @@ function EntryRow({
           placeholder={
             type === "income"
               ? "예: 6월 월급, 엄마 용돈"
-              : "예: 스타벅스, GS25, 지하철"
+              : "예: GS25 삼각김밥, 학식, 지하철"
           }
         />
       </div>
+      {showAsk && (
+        <div className="ledger-ask" role="group" aria-label={ask.question}>
+          <span className="ledger-ask-question">{ask.question}</span>
+          {row.candidates.map((c) => {
+            const selected = row.categoryId === c.leafId;
+            return (
+              <button
+                key={c.leafId}
+                type="button"
+                className={`ledger-chip${selected ? " ledger-chip-selected" : ""}`}
+                aria-pressed={selected}
+                onClick={() => onChange({ categoryId: c.leafId, categoryTouched: true })}
+              >
+                {c.label}
+              </button>
+            );
+          })}
+          {ask.hint && <p className="ledger-ask-hint">{ask.hint}</p>}
+        </div>
+      )}
       <div className="ledger-row-field">
         <span className="ledger-row-label">금액</span>
         <div className="ledger-row-input-wrap">

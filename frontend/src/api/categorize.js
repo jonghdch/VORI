@@ -10,8 +10,10 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * @param {string} name - 사용자가 "내역" 필드에 입력한 텍스트
- * @returns {Promise<{leafId, leafName, parentId, parentName, score, source} | null>}
- *          source: HISTORY(내가 전에 고른 것)·RULE(상호 규칙)·EMBEDDING·FALLBACK(기타 생활)
+ * @returns {Promise<{leafId, leafName, parentId, parentName, score, source, askType, candidates} | null>}
+ *          source: HISTORY(내가 전에 고른 것)·RULE(상호 규칙)·EMBEDDING·ASK(묻기 기본값)·FALLBACK(기타 생활)
+ *          askType: 이름만으로 애매하면 WHAT(무엇을 샀나)·DINE_OR_DELIVERY(매장·포장/배달), 아니면 null
+ *          candidates: 물어볼 때의 칩 [{leafId, label, leafName}], leafId 와 같은 칩이 기본 선택
  *          매칭 실패 시 (leafId=null), 또는 재시도까지 실패하면 null 반환.
  */
 export async function categorizeRemote(name) {

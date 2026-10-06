@@ -395,6 +395,25 @@
   background: #f3f1ea;
   color: #6e6b65;
 }
+/* 내역이 애매할 때 묻는 칩 줄 — 입력칸과 같은 들여쓰기(라벨 36px + 간격 8px) */
+.ledger-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-left: 44px;
+}
+.ledger-ask-question {
+  font-size: 12px;
+  color: #6e6b65;
+  margin-right: 2px;
+}
+.ledger-ask-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 11px;
+  color: #8a8780;
+}
 .ledger-row-input-wrap {
   flex: 1;
   position: relative;
