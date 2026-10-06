@@ -77,7 +77,7 @@ function PetDetailPage({ onLogout }) {
   const shownIndex = owned ? Math.min(viewing ?? reached, reached) : -1;
 
   return (
-    <AppShell activeTop="raise" activeSide="dex" onLogout={onLogout}>
+    <AppShell activeTop="" activeSide="dex" onLogout={onLogout}>
       <main className="home-main dex-main">
         <Link to="/dex" className="dexd-back">
           ← 도감
@@ -201,7 +201,7 @@ function PetDetailPage({ onLogout }) {
                         {formatDate(p.releasedAt)} 분양 · <CoinIcon /> {(p.releaseValue ?? 0).toLocaleString("ko-KR")}
                       </>
                     ) : (
-                      <Link to="/raise" className="home-link-btn">
+                      <Link to="/myroom" className="home-link-btn">
                         마이룸에서 보기 →
                       </Link>
                     )}

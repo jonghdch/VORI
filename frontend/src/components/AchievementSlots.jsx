@@ -4,7 +4,7 @@ import { EQUIP_LIMIT } from "../api/achievements";
  * 장착한 업적 칸 3개 — 내 정보 상자(AccountMenu)와 도감 업적 탭(AchievementPanel)이 같이 쓴다.
  * shown: 올린 업적(순서대로). onRemove(achievement) 가 있으면 채워진 칸에 × 가 생긴다(업적 탭). 내 정보 상자는 보기만 한다.
  * onEmptyClick 이 있으면 빈 칸이 버튼이 되고(내 정보 상자 → 업적 탭으로), 없으면 자리 표시만 한다.
- * 스타일은 HomeDashboard.css 의 .account-menu-slot*.
+ * 스타일은 AccountMenu.css 의 .account-menu-slot*.
  */
 function AchievementSlots({ shown, onRemove, onEmptyClick, disabled = false, className = "" }) {
   const slots = Array.from({ length: EQUIP_LIMIT }, (_, i) => shown[i] ?? null);

@@ -351,7 +351,7 @@ function ShopPage({ user, onLogout }) {
               role="tab"
               id="shop-tab-egg"
               aria-selected={shopTab === "egg"}
-              aria-controls="shop-panel-egg"
+              aria-controls={shopTab === "egg" ? "shop-panel-egg" : undefined}
               className={`shop-tab ${shopTab === "egg" ? "is-active" : ""}`}
               onClick={() => setShopTab("egg")}
             >
@@ -363,7 +363,7 @@ function ShopPage({ user, onLogout }) {
               role="tab"
               id="shop-tab-furniture"
               aria-selected={shopTab === "furniture"}
-              aria-controls="shop-panel-furniture"
+              aria-controls={shopTab === "furniture" ? "shop-panel-furniture" : undefined}
               className={`shop-tab ${shopTab === "furniture" ? "is-active" : ""}`}
               onClick={() => setShopTab("furniture")}
             >
@@ -488,7 +488,7 @@ function ShopPage({ user, onLogout }) {
                   <button
                     type="button"
                     className="home-link-btn"
-                    onClick={() => navigate("/raise")}
+                    onClick={() => navigate("/myroom")}
                   >
                     마이룸 가기 →
                   </button>

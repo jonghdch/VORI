@@ -7,8 +7,6 @@ import com.vori.backend.common.StatType;
 import com.vori.backend.expense.dto.ExpenseUpdateRequest;
 import com.vori.backend.goal.GoalRepository;
 import com.vori.backend.inquiry.AiInquiryRepository;
-import com.vori.backend.pet.PetGrowthLogRepository;
-import com.vori.backend.pet.PetRepository;
 import com.vori.backend.stats.UserStatStats;
 import com.vori.backend.stats.UserStatStatsRepository;
 import com.vori.backend.user.Role;
@@ -43,14 +41,11 @@ class ExpenseServiceUpdateTest {
     private final UserStatStatsRepository stats = mock(UserStatStatsRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final GoalRepository goals = mock(GoalRepository.class);
-    private final PetRepository pets = mock(PetRepository.class);
-    private final PetGrowthLogRepository growthLogs = mock(PetGrowthLogRepository.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final SignalConfigService signalConfig = mock(SignalConfigService.class);
     private final AiInquiryRepository inquiries = mock(AiInquiryRepository.class);
     private final ExpenseService service = new ExpenseService(expenses, categories, stats, users,
-            goals, pets, growthLogs, events, signalConfig, inquiries,
-            new com.vori.backend.pet.PetStatRewardService(org.mockito.Mockito.mock(com.vori.backend.attendance.UserStatItemRepository.class)));
+            goals, events, new ExpenseCalculationService(signalConfig), inquiries);
 
     @BeforeEach
     void setUp() {

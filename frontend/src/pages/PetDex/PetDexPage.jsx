@@ -86,7 +86,7 @@ function PetDexPage({ onLogout }) {
   }, [pets]);
 
   return (
-    <AppShell activeTop="raise" activeSide="dex" onLogout={onLogout}>
+    <AppShell activeTop="" activeSide="dex" onLogout={onLogout}>
       <main className="home-main dex-main">
         <h1 className="dex-sr-title">도감</h1>
 

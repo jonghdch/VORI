@@ -39,15 +39,23 @@ public class DailyJudgment {
     private String rewardDetails;
     @Column(name = "judged_at", nullable = false)
     private LocalDateTime judgedAt;
+    /** 스탯별 판정 결과(JSON) — 판정을 다시 열 때 판정한 순간과 같은 칸을 보여 주려고 저장한다. V49 이전 행은 null. */
+    @Column(name = "group_details", columnDefinition = "TEXT")
+    private String groupDetails;
+    /** 실제로 남긴 금액(원). 코인은 이 값 / 100 이라 코인만으로는 100원 미만이 사라진다. V49 이전 행은 null. */
+    @Column(name = "saved_amount")
+    private Integer savedAmount;
 
     /** 관리자 시연 재판정은 같은 날짜 행을 갱신해 결과 화면도 최신 계산을 보게 한다. */
     public void refresh(Signal signal, int expenseCount, int coinReward, int statRewardPerType,
-                        String rewardDetails, LocalDateTime judgedAt) {
+                        String rewardDetails, String groupDetails, int savedAmount, LocalDateTime judgedAt) {
         this.signal = signal;
         this.expenseCount = expenseCount;
         this.coinReward = coinReward;
         this.statRewardPerType = statRewardPerType;
         this.rewardDetails = rewardDetails;
+        this.groupDetails = groupDetails;
+        this.savedAmount = savedAmount;
         this.judgedAt = judgedAt;
     }
 }

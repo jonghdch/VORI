@@ -243,6 +243,8 @@ navigate("/login");
 
 ## 관련 문서
 
+문서의 현재성·용도별 구분은 [`docs/README.md`](docs/README.md)를 먼저 본다.
+
 | 문서 | 내용 |
 |---|---|
 | [`DATABASE.md`](DATABASE.md) | DB 셋업·Flyway·application.properties·트러블슈팅 |
@@ -252,3 +254,7 @@ navigate("/login");
 | [`docs/db-spec.md`](docs/db-spec.md) | 테이블 18종 명세 + 변경 이력 |
 | [`docs/signup-flow.md`](docs/signup-flow.md) | 회원가입 중 소비 프로필 5단계 수집·온보딩 연결 설계 |
 | [`docs/tutorial-flow.md`](docs/tutorial-flow.md) | 신규 사용자 온보딩·인앱 튜토리얼 사용자 흐름 설계 |
+| [`docs/roadmap.md`](docs/roadmap.md) | 설계 철학·향후 확장·우선순위 |
+| [`docs/market-research.md`](docs/market-research.md) | 시장·경쟁 분석과 구현 배경 |
+| [`docs/plan-vs-reality.md`](docs/plan-vs-reality.md) | 초기 기획과 실제 구현의 차이 |
+| [`docs/demo-plan.md`](docs/demo-plan.md) | 중간발표 시연 계획(기록용) |

@@ -25,156 +25,19 @@ import {
 import { PetActionMenu, PetReaction, REACTION_MS, pickLine } from "./PetInteraction";
 import PetHistoryPanel from "./PetHistoryPanel";
 import PetChatPanel from "./PetChatPanel";
+import { ROOM_BACKGROUNDS } from "./roomBackgrounds";
 import { itemImageFor } from "../../components/itemVisual";
-import roomDefaultImage from "../../assets/backgrounds/room-default.png";
-import roomWoodImage from "../../assets/backgrounds/room-wood.png";
-import roomMintImage from "../../assets/backgrounds/room-mint.png";
-import roomEveningImage from "../../assets/backgrounds/room-evening.png";
-import roomModernImage from "../../assets/backgrounds/room-modern.png";
-import roomPrincessImage from "../../assets/backgrounds/room-princess.png";
-import roomOceanImage from "../../assets/backgrounds/room-ocean.png";
-import roomForestImage from "../../assets/backgrounds/room-forest.png";
-import roomSnowImage from "../../assets/backgrounds/room-snow.png";
-import roomDesertImage from "../../assets/backgrounds/room-desert.png";
-import roomSpaceImage from "../../assets/backgrounds/room-space.png";
-import roomDragonImage from "../../assets/backgrounds/room-dragon.png";
-import roomAtticImage from "../../assets/backgrounds/room-attic.png";
-import outdoorForestImage from "../../assets/backgrounds/outdoor-forest.png";
-import outdoorOceanImage from "../../assets/backgrounds/outdoor-ocean.png";
 import "../Home/HomeDashboard.css";
 import "./PetPage.css";
 
 // 펫은 GET /api/pets/active, 가구는 GET /api/furniture 로 받는다.
-// 방 테마(BACKGROUNDS)는 백엔드에 대응 개념이 없어 브라우저(localStorage)에만 저장하는 개인 취향값.
+// 방 테마(ROOM_BACKGROUNDS)는 백엔드에 대응 개념이 없어 브라우저(localStorage)에만 저장하는 개인 취향값.
 // 벽지·바닥은 백엔드 가구(WALLPAPER/FLOOR)라 보유 가구 쪽에서 다룬다.
 const PET_ACCENT = "#f2c27b";
 // 보유 가구 테마 칩의 키 — "전체" 와 테마 없는 가구 묶음. 실제 테마 이름과 겹치지 않는 값.
 const FURNITURE_THEME_ALL = "__all__";
 const FURNITURE_THEME_NONE = "__none__";
 const BACKGROUND_STORAGE_KEY = "vori.myroom.background";
-
-const BACKGROUNDS = [
-  {
-    id: "default",
-    slot: "1번 슬롯",
-    name: "햇살 거실",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomDefaultImage,
-  },
-  {
-    id: "wood",
-    slot: "2번 슬롯",
-    name: "원목 오두막",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomWoodImage,
-  },
-  {
-    id: "mint",
-    slot: "3번 슬롯",
-    name: "민트 침실",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomMintImage,
-  },
-  {
-    id: "evening",
-    slot: "4번 슬롯",
-    name: "달빛 거실",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomEveningImage,
-  },
-  {
-    id: "modern",
-    slot: "5번 슬롯",
-    name: "시티 라운지",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomModernImage,
-  },
-  {
-    id: "princess",
-    slot: "6번 슬롯",
-    name: "공주 침실",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomPrincessImage,
-  },
-  {
-    id: "ocean",
-    slot: "7번 슬롯",
-    name: "해변 별장",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomOceanImage,
-  },
-  {
-    id: "forest",
-    slot: "8번 슬롯",
-    name: "숲속 은신처",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomForestImage,
-  },
-  {
-    id: "snow",
-    slot: "9번 슬롯",
-    name: "설산 산장",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomSnowImage,
-  },
-  {
-    id: "desert",
-    slot: "10번 슬롯",
-    name: "사막 오아시스",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomDesertImage,
-  },
-  {
-    id: "space",
-    slot: "11번 슬롯",
-    name: "우주 정거장",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomSpaceImage,
-  },
-  {
-    id: "dragon",
-    slot: "12번 슬롯",
-    name: "용의 둥지",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomDragonImage,
-  },
-  {
-    id: "attic",
-    slot: "13번 슬롯",
-    name: "별밤 다락",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: roomAtticImage,
-  },
-  {
-    id: "outdoor-forest",
-    slot: "14번 슬롯",
-    name: "초록 평야",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: outdoorForestImage,
-  },
-  {
-    id: "outdoor-ocean",
-    slot: "15번 슬롯",
-    name: "여름 해변",
-    owned: true,
-    className: "pet-room-bg--image",
-    image: outdoorOceanImage,
-  },
-];
 
 const INITIAL_PET_POSITION = { x: 50, y: 62 };
 
@@ -188,6 +51,7 @@ const PANEL_TABS = [
 ];
 // 탭 줄 오른쪽 끝 "내역 보기" — 펫 이력·아이템 내역을 한곳에서 (PetHistoryPanel)
 const HISTORY_TAB = "history";
+const PET_TAB_PANEL_ID = "pet-tab-panel";
 
 function readStoredBackground() {
   try {
@@ -422,8 +286,8 @@ function PetPage({ user, onLogout }) {
   const milestone = pet ? nextMilestone(pet.level) : null;
   const graduated = pet ? pet.level >= pet.maxLevel : false;
   const selectedBackground =
-    BACKGROUNDS.find((background) => background.id === selectedBackgroundId) ??
-    BACKGROUNDS[0];
+    ROOM_BACKGROUNDS.find((background) => background.id === selectedBackgroundId) ??
+    ROOM_BACKGROUNDS[0];
 
   // 방에 그리는 가구: 배치된 것 중 벽지·바닥(면)은 칩으로, 나머지는 드래그 가능한 물건으로.
   // 겹친 가구는 뒤에 그린 것이 위에 보인다 — 컴퓨터는 책상 위에 올려 두는 물건이라 맨 마지막에 그린다.
@@ -700,8 +564,8 @@ function PetPage({ user, onLogout }) {
 
   return (
     <AppShell
-      activeTop="raise"
-      activeSide="raise"
+      activeTop="myroom"
+      activeSide="myroom"
       user={user}
       onLogout={onLogout}
     >
@@ -880,7 +744,9 @@ function PetPage({ user, onLogout }) {
                     key={tab.id}
                     type="button"
                     role="tab"
+                    id={`pet-tab-${tab.id}`}
                     aria-selected={activeTab === tab.id}
+                    aria-controls={activeTab === tab.id ? PET_TAB_PANEL_ID : undefined}
                     className={`pet-tab-btn ${activeTab === tab.id ? "is-active" : ""}`}
                     onClick={() => setActiveTab(tab.id)}
                   >
@@ -890,7 +756,9 @@ function PetPage({ user, onLogout }) {
                 <button
                   type="button"
                   role="tab"
+                  id={`pet-tab-${HISTORY_TAB}`}
                   aria-selected={activeTab === HISTORY_TAB}
+                  aria-controls={activeTab === HISTORY_TAB ? PET_TAB_PANEL_ID : undefined}
                   className={`pet-tab-btn pet-tab-btn--history ${activeTab === HISTORY_TAB ? "is-active" : ""}`}
                   onClick={() => setActiveTab(HISTORY_TAB)}
                 >
@@ -898,6 +766,13 @@ function PetPage({ user, onLogout }) {
                 </button>
               </div>
 
+              {/* 탭 패널 — 활성 탭 내용만 렌더하므로 패널 하나를 두고 aria-labelledby 만 바꾼다 */}
+              <div
+                className="pet-tab-panel-host"
+                id={PET_TAB_PANEL_ID}
+                role="tabpanel"
+                aria-labelledby={`pet-tab-${activeTab}`}
+              >
               {activeTab === "pet" && (
                 <div className="pet-tab-panel">
                   <div className="pet-panel-head">
@@ -1002,7 +877,7 @@ function PetPage({ user, onLogout }) {
                     <span>이 브라우저에만 저장</span>
                   </div>
                   <div className="pet-background-list">
-                    {BACKGROUNDS.map((background) => (
+                        {ROOM_BACKGROUNDS.map((background) => (
                       <button
                         key={background.id}
                         type="button"
@@ -1122,6 +997,7 @@ function PetPage({ user, onLogout }) {
                 </div>
               )}
               {activeTab === HISTORY_TAB && <PetHistoryPanel petHistory={petHistory} />}
+              </div>
               {notice && (
                 <p
                   className={`pet-notice ${notice.kind === "err" ? "pet-notice--err" : ""}`}

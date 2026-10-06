@@ -585,13 +585,15 @@ function StoryPage({ user, onLogout }) {
           </div>
 
           {/* 탭: 캐릭터 소개 / 아이템 */}
-          <div className="story-tabs" role="tablist">
+          <div className="story-tabs" role="tablist" aria-label="안내서 종류">
             {STORY_TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 role="tab"
+                id={`story-tab-${tab.id}`}
                 aria-selected={activeTab === tab.id}
+                aria-controls={activeTab === tab.id ? "story-tab-panel" : undefined}
                 className={`story-tab ${
                   activeTab === tab.id ? "story-tab--active" : ""
                 }`}
@@ -603,6 +605,7 @@ function StoryPage({ user, onLogout }) {
           </div>
 
           {/* 활성 탭에 따라 카드 그리드 분기 */}
+          <div id="story-tab-panel" role="tabpanel" aria-labelledby={`story-tab-${activeTab}`}>
           {activeTab === "characters" && selectedCharacter ? (
             <div className="story-character-detail">
               <div className="story-evolution">
@@ -720,6 +723,7 @@ function StoryPage({ user, onLogout }) {
               })}
             </div>
           )}
+          </div>
 
           <div className="story-back">
             <button

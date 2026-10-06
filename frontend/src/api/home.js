@@ -1,5 +1,5 @@
 // 홈 대시보드 요약 API. 스탯 + 기간별 지출 + 최근 지출 + 카테고리 분포.
-import { API_BASE } from "./base";
+import { get } from "./http";
 
 /**
  * @returns {Promise<null | {
@@ -11,12 +11,7 @@ import { API_BASE } from "./base";
  */
 export async function getHomeSummary() {
   try {
-    const res = await fetch(`${API_BASE}/users/me/home`, {
-      method: "GET",
-      credentials: "include",
-    });
-    if (!res.ok) return null;
-    return res.json();
+    return await get("/users/me/home");
   } catch {
     return null;
   }

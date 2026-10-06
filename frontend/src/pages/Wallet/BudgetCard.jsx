@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getSpendingPlan } from "../../api/spendingPlan";
+import "./BudgetCard.css";
 
 const won = (value) => `${Number(value || 0).toLocaleString("ko-KR")}원`;
 
