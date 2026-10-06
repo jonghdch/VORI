@@ -1,0 +1,54 @@
+item,expected,kind
+학식,외식,clear
+마라탕,외식,clear
+돈까스,외식,clear
+쌀국수,외식,clear
+김밥천국,외식,clear
+맘스터치 버거,외식,clear
+메가커피 아메리카노,카페,clear
+스타벅스 라떼,카페,clear
+공차 버블티,카페,clear
+설빙,카페,clear
+배민 치킨,배달,clear
+쿠팡이츠 떡볶이,배달,clear
+이마트 장보기,마트·식자재,clear
+계란 한 판,마트·식자재,clear
+GS25 삼각김밥,편의점,clear
+CU 컵라면,편의점,clear
+무신사 맨투맨,의류,clear
+유니클로 히트텍,의류,clear
+나이키 운동화,신발·잡화,clear
+백팩,가방,clear
+귀걸이,액세서리,clear
+휴지,생필품·잡화,clear
+충전기 케이블,생필품·잡화,clear
+다이소 수납함,생필품·잡화,clear
+올리브영 선크림,화장품,clear
+미용실 커트,헤어·미용실,clear
+CGV 영화,영화,clear
+전공책,도서,clear
+넷플릭스,게임·구독,clear
+스팀 게임,게임·구독,clear
+제주도 숙소,여행·숙박,clear
+헬스장 한 달,스포츠·헬스,clear
+교통카드 충전,대중교통,clear
+지하철,대중교통,clear
+카카오택시,택시,clear
+KTX 부산,장거리 교통,clear
+약국 감기약,의료·약국,clear
+치과 진료,의료·약국,clear
+노트,학용품·문구,clear
+볼펜,학용품·문구,clear
+휴대폰 요금,통신비,clear
+월세,주거·관리비,clear
+노래방,취미·레저,clear
+PC방,게임·구독|취미·레저,clear
+고양이 사료,펫용품,clear
+편의점,편의점|생필품·잡화,ambiguous
+다이소,생필품·잡화|학용품·문구,ambiguous
+마트,마트·식자재|생필품·잡화,ambiguous
+올리브영,화장품|생필품·잡화,ambiguous
+쿠팡,생필품·잡화|마트·식자재|의류,ambiguous
+문밸리 타코,외식|배달,ambiguous
+치킨,외식|배달,ambiguous
+타코,외식|배달,ambiguous
