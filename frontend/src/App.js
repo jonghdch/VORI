@@ -33,7 +33,7 @@ const WalletConfirmPage = lazy(() =>
 );
 // 가계부 달력/조회 (가은 PR #4). AppShell 기반.
 const WalletPage = lazy(() => import("./pages/Wallet/WalletPage"));
-// 소비 리포트 — 아직 플레이스홀더 (/wallet 보이는 리포트의 "자세히보기" 진입점).
+// 주·월 소비 리포트 (/wallet 보이는 리포트의 "자세히보기" 진입점).
 const ReportPage = lazy(() => import("./pages/Report/ReportPage"));
 const PetPage = lazy(() => import("./pages/Pet/PetPage"));
 const PetDexPage = lazy(() => import("./pages/PetDex/PetDexPage"));
