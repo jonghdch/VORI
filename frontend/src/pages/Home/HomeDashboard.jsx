@@ -195,7 +195,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               <button
                 type="button"
                 className="home-pet-room-link"
-                onClick={() => navigate("/raise")}
+                onClick={() => navigate("/myroom")}
               >
                 마이룸 가기 →
               </button>

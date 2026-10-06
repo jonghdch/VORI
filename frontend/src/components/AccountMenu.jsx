@@ -6,6 +6,7 @@ import { getMe } from "../api/user";
 import { listAchievements } from "../api/achievements";
 import AchievementSlots from "./AchievementSlots";
 import { openAttendance } from "./AttendanceModal";
+import "./AccountMenu.css";
 
 const coin = (n) => (n ?? 0).toLocaleString("ko-KR");
 

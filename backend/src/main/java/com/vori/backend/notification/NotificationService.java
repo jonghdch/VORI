@@ -41,17 +41,17 @@ public class NotificationService {
         String who = pet.getName() == null || pet.getName().isBlank() ? "펫" : pet.getName();
         if (levelBefore < PetLevel.JUVENILE_LEVEL && after >= PetLevel.JUVENILE_LEVEL) {
             notify(userId, NotificationType.PET_EVOLVED, who + "이(가) 2차로 진화했어요!",
-                    "Lv. " + PetLevel.JUVENILE_LEVEL + " 달성", "/raise",
+                    "Lv. " + PetLevel.JUVENILE_LEVEL + " 달성", "/myroom",
                     "pet:" + pet.getId() + ":lv" + PetLevel.JUVENILE_LEVEL);
         }
         if (levelBefore < PetLevel.ADULT_LEVEL && after >= PetLevel.ADULT_LEVEL) {
             notify(userId, NotificationType.PET_EVOLVED, who + "이(가) 3차로 진화했어요!",
-                    "Lv. " + PetLevel.ADULT_LEVEL + " 달성", "/raise",
+                    "Lv. " + PetLevel.ADULT_LEVEL + " 달성", "/myroom",
                     "pet:" + pet.getId() + ":lv" + PetLevel.ADULT_LEVEL);
         }
         if (levelBefore < PetLevel.MAX_LEVEL && after >= PetLevel.MAX_LEVEL) {
             notify(userId, NotificationType.PET_GRADUATE_READY, who + "이(가) 30레벨이 됐어요. 졸업시킬 수 있어요!",
-                    "마이룸에서 분양하면 코인을 받아요", "/raise",
+                    "마이룸에서 분양하면 코인을 받아요", "/myroom",
                     "pet:" + pet.getId() + ":lv" + PetLevel.MAX_LEVEL);
         }
     }

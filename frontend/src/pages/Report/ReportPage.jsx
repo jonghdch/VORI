@@ -5,6 +5,7 @@ import AppShell from "../../components/AppShell";
 import RecordCalendar, { dateKey } from "../../components/RecordCalendar";
 import { getMonthlyLedger } from "../../api/ledger";
 import { markMonthlyReportRead } from "../../api/monthlyReports";
+import "../Home/HomeDashboard.css";
 import "../Wallet/WalletPage.css";
 import "./ReportPage.css";
 

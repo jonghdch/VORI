@@ -63,13 +63,20 @@ React Router v7 (`BrowserRouter`) 사용. SPA 이지만 URL 이 페이지마다 
 | `/` | LandingPage | 공개 |
 | `/login` | LoginPage | 공개 |
 | `/signup` | SignupPage | 공개 |
+| `/signup/profile` | SignupProfilePage (소비 프로필 설문) | **인증 필요** |
+| `/onboarding` | OnboardingPage | **인증 필요** |
 | `/story` | StoryPage | 공개 |
+| `/terms`, `/privacy` | 약관·개인정보처리방침 | 공개 |
 | `/home` | HomeDashboard | **인증 필요** (미인증 시 `/login` 으로 리다이렉트) |
 | `/wallet` | WalletPage (가계부 달력/조회) | **인증 필요** |
 | `/wallet/new` | WalletEntryPage (작성 Step 1 · 입력) | **인증 필요** |
-| `/wallet/new/analysis` | WalletAnalysisPage (Step 2 · AI 사유 질문) | **인증 필요** |
+| `/wallet/analysis` | WalletAnalysisPage (AI 사유 질문·일일 판정) | **인증 필요** |
 | `/wallet/new/confirm` | WalletConfirmPage (Step 3 · 확인) | **인증 필요** |
-| `/settings` | SettingsPage (환경설정) | **인증 필요** |
+| `/report` | ReportPage (주·월 소비 리포트) | **인증 필요** |
+| `/myroom` | PetPage (마이룸·펫 성장·가구 배치) | **인증 필요** |
+| `/dex`, `/dex/:appearanceKey` | 펫·업적·칭호 도감 | **인증 필요** |
+| `/shop` | ShopPage (알·가구 상점) | **인증 필요** |
+| `/settings/:tab` | SettingsPage (프로필·기본 설정) | **인증 필요** |
 | `/admin` (→ `/admin/dashboard`) | AdminLayout + 중첩 라우트 (종합 대시보드·유저 현황 등) | **ADMIN 전용** (일반 사용자는 `/home` 으로 리다이렉트) |
 
 > 가계부 화면은 작성(`/wallet/new` 3-step)과 조회/달력(`/wallet`)으로 나뉜다. 폴더는 각각 `pages/WalletEntry/`, `pages/Wallet/`. 공통 레이아웃(상단바·사이드바)은 `components/AppShell` 이 담당.
@@ -131,19 +138,21 @@ React Router v7 (`BrowserRouter`) 사용. SPA 이지만 URL 이 페이지마다 
         → 그날 지출 중 가장 강한 신호로 판정 → 코인 + 펫 4개 스탯 지급 + pet_growth_logs INSERT
 ```
 
-### 영수증 OCR (Phase 2 — 미구현)
+### 영수증 OCR (구현됨)
 ```
 영수증 사진 업로드 → receipt_ocr_jobs INSERT (status=PENDING)
-                → 비동기 Vision API 호출 → status=PROCESSING
+                → Gemini 이미지 인식 → status=PROCESSING
                 → 추출 텍스트·금액·날짜·품목 저장 → status=SUCCESS|FAILED
-                → 사용자가 확인 후 expense_id 매칭 시 expenses INSERT
+                → 입력 화면을 자동으로 채움 → 사용자가 확인·수정 후 지출 저장
 ```
 
-### 펫 성장·가챠 (Phase 2 — 미구현)
+### 펫 성장·가챠·마이룸 (구현됨)
 ```
 게임머니 충분 → eggs INSERT (purchased_at)
             → 사용자 개봉 클릭 → gacha_pulls INSERT (확률 분포 기반) + eggs.opened_at SET
             → pets INSERT (species_id, egg_id, hatched_at)
+            → 소비 판정·상호작용·아이템 사용으로 스탯/레벨 성장
+            → 마이룸에서 가구 구매·배치, 성장 완료 후 분양
 ```
 
 ## 빌드·실행 환경

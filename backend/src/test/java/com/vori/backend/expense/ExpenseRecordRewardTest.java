@@ -1,15 +1,11 @@
 package com.vori.backend.expense;
 
-import com.vori.backend.attendance.UserStatItemRepository;
 import com.vori.backend.category.Category;
 import com.vori.backend.category.CategoryRepository;
 import com.vori.backend.common.StatType;
 import com.vori.backend.expense.dto.ExpenseCreateRequest;
 import com.vori.backend.goal.GoalRepository;
 import com.vori.backend.inquiry.AiInquiryRepository;
-import com.vori.backend.pet.PetGrowthLogRepository;
-import com.vori.backend.pet.PetRepository;
-import com.vori.backend.pet.PetStatRewardService;
 import com.vori.backend.stats.UserStatStats;
 import com.vori.backend.stats.UserStatStatsRepository;
 import com.vori.backend.user.Role;
@@ -42,9 +38,8 @@ class ExpenseRecordRewardTest {
     private final UserStatStatsRepository stats = mock(UserStatStatsRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final ExpenseService service = new ExpenseService(expenses, categories, stats, users,
-            mock(GoalRepository.class), mock(PetRepository.class), mock(PetGrowthLogRepository.class),
-            mock(ApplicationEventPublisher.class), mock(SignalConfigService.class), mock(AiInquiryRepository.class),
-            new PetStatRewardService(mock(UserStatItemRepository.class)));
+            mock(GoalRepository.class), mock(ApplicationEventPublisher.class),
+            new ExpenseCalculationService(mock(SignalConfigService.class)), mock(AiInquiryRepository.class));
 
     private User user;
 
