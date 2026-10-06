@@ -414,6 +414,12 @@
   font-size: 11px;
   color: #8a8780;
 }
+/* 「+ 메모」 — 접혀 있을 때. 점선 칩(.ledger-chip-placeholder)을 입력칸 들여쓰기에 맞춘다 */
+.ledger-memo-add {
+  align-self: flex-start;
+  margin-left: 44px;
+  padding: 2px 12px;
+}
 .ledger-row-input-wrap {
   flex: 1;
   position: relative;

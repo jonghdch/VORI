@@ -81,6 +81,7 @@ function WalletEntryPage({ user }) {
     paymentMethod: defaultPayment,
     name: "",
     amount: "",
+    memo: "",
   });
 
   // 초기엔 빈 행을 강제하지 않음 (행 0개로 시작). 사용자가 "+ 추가"로 직접 넣음.
@@ -155,6 +156,8 @@ function WalletEntryPage({ user }) {
             amount: String(e.amount),
             categoryId: e.categoryId,
             categoryTouched: true, // 저장된 카테고리 — 자동분류로 덮지 않음
+            memo: e.memo ?? "", // 다시 보낼 때 그대로 돌려줘야 지워지지 않는다
+            memoOpen: Boolean(e.memo), // 메모를 다 지우는 동안 칸이 접히지 않게
             // 같은 날짜를 다시 열면 저장된 지출도 바로 고칠 수 있게 한다.
             // 수정 링크의 쿼리가 사라져도 읽기 전용 행으로 잠기지 않는다.
             isEditing: true,
@@ -365,6 +368,7 @@ function WalletEntryPage({ user }) {
             categoryId: r.categoryId,
             paymentMethod: r.paymentMethod,
             spentAt: `${dateStr}T00:00:00`,
+            memo: r.memo ?? "", // 빈 글자 = 메모 없음(수정이면 지움)
           })),
           incomes: incomeRows.map((r) => ({
             item: r.name.trim(),
@@ -558,6 +562,9 @@ function WalletEntryPage({ user }) {
   );
 }
 
+// 지출 메모 최대 길이 — 서버(expenses.memo VARCHAR(200))와 같다.
+const MEMO_MAX = 200;
+
 // 자동 분류가 애매하다고 돌려준 경우(askType)의 질문 문구. 판정 문구처럼 중립으로 둔다.
 const ASK_TEXT = {
   WHAT: {
@@ -648,6 +655,17 @@ function EntryRow({
   const otherSelected =
     row.categoryId != null && !(row.candidates ?? []).some((c) => c.leafId === row.categoryId);
   const categoryOpenRef = useRef(null);
+
+  // 메모 — 평소엔 「+ 메모」만, 누르거나 이미 메모가 있으면 칸을 연다. 사용자만 보는 기록(분류·AI 에 안 씀).
+  const showMemo = Boolean(row.memoOpen) || Boolean((row.memo ?? "").trim());
+  const memoInputRef = useRef(null);
+  const focusMemoNext = useRef(false); // 「+ 메모」를 눌러 열었을 때만 커서를 옮긴다(임시저장 복원 때는 안 옮김)
+  useEffect(() => {
+    if (showMemo && focusMemoNext.current) {
+      focusMemoNext.current = false;
+      memoInputRef.current?.focus();
+    }
+  }, [showMemo]);
 
   // 카테고리/출처 선택 컨트롤 (눌러서 수정 가능한 드롭다운).
   const categoryControl =
@@ -788,6 +806,42 @@ function EntryRow({
           <span className="ledger-row-unit">원</span>
         </div>
       </div>
+      {type === "expense" &&
+        (showMemo ? (
+          <div className="ledger-row-field">
+            <span className="ledger-row-label">메모</span>
+            <input
+              ref={memoInputRef}
+              type="text"
+              className="ledger-row-input"
+              data-entry-field="memo"
+              value={row.memo ?? ""}
+              onChange={(e) => onChange({ memo: e.target.value })}
+              disabled={locked}
+              maxLength={MEMO_MAX}
+              enterKeyHint="done"
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" || e.nativeEvent?.isComposing) return;
+                e.preventDefault();
+                onComplete?.();
+              }}
+              placeholder="예: 학교 앞에서 동기들이랑"
+            />
+          </div>
+        ) : (
+          !locked && (
+            <button
+              type="button"
+              className="ledger-chip ledger-chip-placeholder ledger-memo-add"
+              onClick={() => {
+                focusMemoNext.current = true;
+                onChange({ memoOpen: true });
+              }}
+            >
+              + 메모
+            </button>
+          )
+        ))}
     </div>
   );
 }
