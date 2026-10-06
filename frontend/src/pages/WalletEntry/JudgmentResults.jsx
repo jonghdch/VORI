@@ -5,6 +5,7 @@ const LABELS = { GREEN: "초록 · 합리적", GRAY: "노랑 · 보통", RED: "�
 const STAT_LABELS = { ENERGY: "식비", CHARM: "쇼핑 · 뷰티", IQ: "문화 · 여가", ENDURANCE: "생활 · 고정비" };
 const REWARD_NAMES = { ENERGY: "에너지", CHARM: "매력", IQ: "지능", ENDURANCE: "지구력" };
 const EXHAUSTED_LABEL = "주황 · 예산 소진";
+const NO_RECORD_LABEL = "기록 없음";
 
 export function judgmentReason(expense, signal) {
   const saved = Number(expense.savedAmount || 0);
@@ -15,18 +16,10 @@ export function judgmentReason(expense, signal) {
   return comparison;
 }
 
-function signalForGroup(statType, expenses, judgment) {
-  const stored = judgment?.groupJudgments?.[statType]?.signal;
-  if (stored) return stored;
-  const reward = Number(judgment?.statRewards?.[statType]);
-  if (reward >= 11) return "GREEN";
-  if (reward >= 6) return "GRAY";
-  if (reward > 0) return "RED";
-  const rank = { GREEN: 1, GRAY: 2, RED: 3 };
-  return expenses.reduce((worst, expense) => {
-    const candidate = expense.signalFinal || expense.signalInitial || "GRAY";
-    return rank[candidate] > rank[worst] ? candidate : worst;
-  }, "GREEN");
+// 스탯별 판정은 서버가 저장한 결과만 쓴다. 상세가 저장되기 전(V49 이전) 판정은 null —
+// 보상 숫자나 지출 신호로 색을 추측하면 잘 아낀 날도 빨강으로 보이므로 「기록 없음」으로 둔다.
+function signalForGroup(statType, judgment) {
+  return judgment?.groupJudgments?.[statType]?.signal ?? null;
 }
 
 function rewardForGroup(judgment, statType) {
@@ -38,7 +31,7 @@ function rewardForGroup(judgment, statType) {
 
 function groupReason(group) {
   const detail = group.detail;
-  if (!detail) return `${group.total.toLocaleString("ko-KR")}원을 사용했고, 이 그룹의 이번 달 누적 지출을 오늘까지 배정된 예산과 비교했어요.`;
+  if (!detail) return `이 판정은 스탯별 상세가 저장되기 전에 기록돼 예산 비교를 다시 보여 드릴 수 없어요. 이 스탯에서 ${group.total.toLocaleString("ko-KR")}원을 사용했어요.`;
   const monthly = Number(detail.monthlyBudget || 0).toLocaleString("ko-KR");
   const dailyBase = Number(detail.dailyBase || 0).toLocaleString("ko-KR");
   const available = Number(detail.availableToday || 0).toLocaleString("ko-KR");
@@ -64,7 +57,7 @@ export default function JudgmentResults({ expenses, judgment }) {
   }, {});
   const groups = Object.keys(STAT_LABELS).map((statType) => {
     const group = groupedExpenses[statType] || { statType, items: [], total: 0 };
-    return { ...group, detail: judgment?.groupJudgments?.[statType], signal: signalForGroup(statType, group.items, judgment) };
+    return { ...group, detail: judgment?.groupJudgments?.[statType], signal: signalForGroup(statType, judgment) };
   });
   const hasExhaustedGroup = groups.some((group) => group.detail?.budgetExhausted);
 
@@ -88,10 +81,13 @@ function GroupJudgmentCard({ group, judgment }) {
   const id = `judgment-group-${group.statType}`;
   const title = STAT_LABELS[group.statType] || "기타 지출";
   const exhausted = Boolean(group.detail?.budgetExhausted);
-  const label = exhausted ? EXHAUSTED_LABEL : LABELS[group.signal];
-  const signalClass = exhausted ? "ledger-signal-result--exhausted" : `ledger-signal-result--${group.signal.toLowerCase()}`;
+  const label = exhausted ? EXHAUSTED_LABEL : group.signal ? LABELS[group.signal] : NO_RECORD_LABEL;
+  const signalClass = exhausted ? "ledger-signal-result--exhausted" : `ledger-signal-result--${group.signal ? group.signal.toLowerCase() : "none"}`;
+  const summary = group.detail
+    ? `${group.items.length}건 합계 ${group.total.toLocaleString("ko-KR")}원 · 절약 ${Number(group.detail.savedAmount ?? 0).toLocaleString("ko-KR")}원 · 내일 +${Number(group.detail.nextDayCarry ?? 0).toLocaleString("ko-KR")}원`
+    : `${group.items.length}건 합계 ${group.total.toLocaleString("ko-KR")}원`;
   return <article className="ledger-judgment-card ledger-judgment-card--toggle">
-    <button type="button" className="ledger-judgment-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}><span className="ledger-judgment-toggle-text"><strong>{title} 판정</strong><span>{group.items.length}건 합계 {group.total.toLocaleString("ko-KR")}원 · 절약 {Number(group.detail?.savedAmount ?? 0).toLocaleString("ko-KR")}원 · 내일 +{Number(group.detail?.nextDayCarry ?? 0).toLocaleString("ko-KR")}원</span></span><span className={`ledger-signal-result ${signalClass}`}>{label}</span><span className="ledger-judgment-chevron" aria-hidden="true" /></button>
+    <button type="button" className="ledger-judgment-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}><span className="ledger-judgment-toggle-text"><strong>{title} 판정</strong><span>{summary}</span></span><span className={`ledger-signal-result ${signalClass}`}>{label}</span><span className="ledger-judgment-chevron" aria-hidden="true" /></button>
     {open && <div id={id} className="ledger-judgment-reason"><span>판정 이유</span><p>{groupReason(group)} {reward > 0 ? `${REWARD_NAMES[group.statType]} +${reward} 보상을 받았어요.` : ""}</p>{group.items.length > 0 && <div className="ledger-judgment-expenses">{group.items.map((expense) => <div className="ledger-judgment-expense-row" key={expense.id}><span><strong>{expense.item || "지출"}</strong><small>{Number(expense.amount || 0).toLocaleString("ko-KR")}원</small></span></div>)}</div>}</div>}
   </article>;
 }

@@ -42,12 +42,14 @@ public class DailyJudgmentService {
         if(old.isPresent() && role!=Role.ADMIN) return DailyJudgmentResponse.from(old.get(),true);
         Evaluation evaluation=evaluate(id,date); grant(user,evaluation,now);
         String details=evaluation.rewards.entrySet().stream().filter(e->e.getValue()>0).map(e->e.getKey()+":"+e.getValue()).collect(Collectors.joining(","));
+        // 스탯별 결과와 실제 절약액도 저장해, 판정을 다시 열었을 때 판정한 순간과 같은 화면을 보여 준다.
+        String groupDetails=DailyJudgmentResponse.groupsToJson(evaluation.groups);
         if(old.isPresent()) {
             DailyJudgment previous=old.get();
-            previous.refresh(evaluation.signal,evaluation.count,evaluation.saved/100,evaluation.rewards.values().stream().mapToInt(Integer::intValue).max().orElse(0),details,now);
+            previous.refresh(evaluation.signal,evaluation.count,evaluation.saved/100,evaluation.rewards.values().stream().mapToInt(Integer::intValue).max().orElse(0),details,groupDetails,evaluation.saved,now);
             return new DailyJudgmentResponse(date,evaluation.signal,evaluation.count,evaluation.saved/100,previous.getStatRewardPerType(),evaluation.rewards,evaluation.groups,evaluation.saved,now,false);
         }
-        DailyJudgment saved=judgments.save(DailyJudgment.builder().userId(id).judgmentDate(date).signal(evaluation.signal).expenseCount(evaluation.count).coinReward(evaluation.saved/100).statRewardPerType(evaluation.rewards.values().stream().mapToInt(Integer::intValue).max().orElse(0)).rewardDetails(details).judgedAt(now).build());
+        DailyJudgment saved=judgments.save(DailyJudgment.builder().userId(id).judgmentDate(date).signal(evaluation.signal).expenseCount(evaluation.count).coinReward(evaluation.saved/100).statRewardPerType(evaluation.rewards.values().stream().mapToInt(Integer::intValue).max().orElse(0)).rewardDetails(details).groupDetails(groupDetails).savedAmount(evaluation.saved).judgedAt(now).build());
         return new DailyJudgmentResponse(date,evaluation.signal,evaluation.count,evaluation.saved/100,saved.getStatRewardPerType(),evaluation.rewards,evaluation.groups,evaluation.saved,now,false);
     }
 
