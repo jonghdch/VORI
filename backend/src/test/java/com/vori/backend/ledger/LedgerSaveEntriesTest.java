@@ -201,6 +201,43 @@ class LedgerSaveEntriesTest {
     }
 
     @Test
+    void paymentOnlyChangeIsSavedWithoutRejudging() {
+        // 결제수단은 판정 계산·AI 질문에 안 쓰인다 — 바꿔도 AI 답변이 사라지면 안 된다
+        Expense e = saved(USER_ID);
+
+        service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                new ExpenseEntry(7L, 3L, 12000, "저녁", SPENT_AT, PaymentMethod.CASH, null)), null, null));
+
+        verify(expenseService, never()).updateExpense(any(), any(), any());
+        assertEquals(PaymentMethod.CASH, e.getPaymentMethod());
+    }
+
+    @Test
+    void olderExpenseWithoutPaymentIsNotRejudgedWhenScreenFillsTheDefault() {
+        // 결제수단이 비어 있던 예전 지출 — 화면은 기본값(신용카드)을 채워 다시 보낸다(Codex 리뷰)
+        Expense e = saved(USER_ID);
+        e.updatePaymentMethod(null);
+
+        service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                new ExpenseEntry(7L, 3L, 12000, "저녁", SPENT_AT, PaymentMethod.CREDIT, "옛 메모")), null, null));
+
+        verify(expenseService, never()).updateExpense(any(), any(), any());
+        assertEquals(PaymentMethod.CREDIT, e.getPaymentMethod());
+    }
+
+    @Test
+    void trailingSpaceInStoredItemIsNotAChange() {
+        // 다른 경로로 만든 지출은 내역 끝에 공백이 남아 있을 수 있다(Gemini 리뷰)
+        Expense e = saved(USER_ID);
+        e.updateDetails("저녁 ", 12000, 3L, null, PaymentMethod.DEBIT);
+
+        service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                new ExpenseEntry(7L, 3L, 12000, "저녁", SPENT_AT, PaymentMethod.DEBIT, "옛 메모")), null, null));
+
+        verify(expenseService, never()).updateExpense(any(), any(), any());
+    }
+
+    @Test
     void editWithoutMemoKeepsItAndEmptyMemoClearsIt() {
         Expense e = saved(USER_ID);
         when(expenseService.updateExpense(eq(USER_ID), eq(7L), any())).thenReturn(mock(ExpenseResponse.class));

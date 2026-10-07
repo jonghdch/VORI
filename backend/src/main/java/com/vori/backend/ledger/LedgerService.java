@@ -131,18 +131,24 @@ public class LedgerService {
         }
         // 메모는 보냈을 때만 바꾼다(null = 그대로, 빈 글자 = 지움). 판정에 안 쓰니 다시 계산할 것도 없다.
         if (e.memo() != null) current.updateMemo(normalizeMemo(e.memo()));
-        // 내역·금액·카테고리·결제수단이 그대로면 다시 계산하지 않는다. ExpenseService.updateExpense 는 판정을
-        // 다시 내면서 이 지출의 AI 질문과 답변을 지우고 새로 만든다 — 메모만 고친 수정이 답변을 날리면 안 된다.
-        if (sameDetails(current, e)) return ExpenseResponse.from(current);
+        // 내역·금액·카테고리가 그대로면 다시 판정하지 않는다. ExpenseService.updateExpense 는 판정을 다시 내면서
+        // 이 지출의 AI 질문과 답변을 지우고 새로 만든다 — 메모·결제수단만 고친 수정이 답변을 날리면 안 된다.
+        // 결제수단은 판정 계산·AI 질문 문구에 쓰지 않아 여기서 그대로 바꾼다. 결제수단이 비어 있던 예전 지출은
+        // 화면이 기본값(신용카드)을 채워 보내는데, 그것도 다시 판정할 이유가 아니다.
+        if (sameJudgedFields(current, e)) {
+            if (current.getPaymentMethod() != e.paymentMethod()) current.updatePaymentMethod(e.paymentMethod());
+            return ExpenseResponse.from(current);
+        }
         return expenseService.updateExpense(userId, e.id(), new ExpenseUpdateRequest(
                 e.item(), e.amount(), e.categoryId(), e.paymentMethod()));
     }
 
-    private static boolean sameDetails(Expense current, LedgerSaveRequest.ExpenseEntry e) {
-        return current.getItem().equals(e.item().trim())
+    /** 다시 판정할 필요가 없는지 — 내역(AI 질문 문구에 들어감)·금액·카테고리가 저장된 값과 같다. */
+    private static boolean sameJudgedFields(Expense current, LedgerSaveRequest.ExpenseEntry e) {
+        // 다른 경로로 만든 지출은 내역 끝에 공백이 남아 있을 수 있어 양쪽 다 다듬어 비교한다
+        return current.getItem().trim().equals(e.item().trim())
                 && current.getAmount().equals(e.amount())
-                && current.getCategoryId().equals(e.categoryId())
-                && current.getPaymentMethod() == e.paymentMethod();
+                && current.getCategoryId().equals(e.categoryId());
     }
 
     /** 메모 앞뒤 공백을 지우고, 비면 null(메모 없음). */

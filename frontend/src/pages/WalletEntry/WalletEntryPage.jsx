@@ -817,6 +817,10 @@ function EntryRow({
               data-entry-field="memo"
               value={row.memo ?? ""}
               onChange={(e) => onChange({ memo: e.target.value })}
+              // 빈 채로 벗어나면 다시 「+ 메모」로 접는다
+              onBlur={() => {
+                if (!(row.memo ?? "").trim()) onChange({ memoOpen: false });
+              }}
               disabled={locked}
               maxLength={MEMO_MAX}
               enterKeyHint="done"
