@@ -20,7 +20,14 @@ public record DailyJudgmentResponse(
         Map<StatType, GroupJudgment> groupJudgments,
         int savedAmount,
         LocalDateTime judgedAt,
-        boolean alreadyJudged
+        boolean alreadyJudged,
+        // 판정 단계(docs/judgment-flow.md). PENDING 이면 위 보상은 "확정 때 줄 예정" 값이고 아직 지급 전이다.
+        JudgmentStatus status,
+        // 예외 지출 사유를 반영하기 전 1차 결과. 확정 화면이 「빨강 → 초록」처럼 달라진 점을 보여 준다. V50 이전 판정은 null·빈 값.
+        Signal initialSignal,
+        Map<StatType, GroupJudgment> initialGroupJudgments,
+        // 보상 지급 여부 — 보상은 그날 자정에 준다. false 면 위 보상 칸은 "자정에 받을" 값이다
+        boolean rewarded
 ) {
     public record GroupJudgment(
             int monthlyBudget,
@@ -42,6 +49,8 @@ public record DailyJudgmentResponse(
     /** 저장된 판정을 응답으로. V49 이전 행은 스탯별 결과가 없어 빈 값, 절약액은 코인 × 100 으로 어림한다. */
     static DailyJudgmentResponse from(DailyJudgment j, boolean alreadyJudged) {
         Map<StatType, Integer> rewards = new EnumMap<>(StatType.class);
+        // 0 인 스탯은 저장하지 않으므로(reward_details 는 받은 스탯만) 네 칸을 0 으로 먼저 채운다
+        for (StatType type : StatType.values()) rewards.put(type, 0);
         if (j.getRewardDetails() != null) for (String pair : j.getRewardDetails().split(",")) {
             String[] values = pair.split(":");
             if (values.length == 2) try { rewards.put(StatType.valueOf(values[0]), Integer.parseInt(values[1])); } catch (IllegalArgumentException ignored) {}
@@ -49,7 +58,8 @@ public record DailyJudgmentResponse(
         int saved = j.getSavedAmount() != null ? j.getSavedAmount() : j.getCoinReward() * 100;
         return new DailyJudgmentResponse(
                 j.getJudgmentDate(), j.getSignal(), j.getExpenseCount(),
-                j.getCoinReward(), j.getStatRewardPerType(), rewards, groupsFromJson(j.getGroupDetails()), saved, j.getJudgedAt(), alreadyJudged);
+                j.getCoinReward(), j.getStatRewardPerType(), rewards, groupsFromJson(j.getGroupDetails()), saved, j.getJudgedAt(), alreadyJudged,
+                j.getStatus(), j.getInitialSignal(), groupsFromJson(j.getInitialGroupDetails()), j.isRewarded());
     }
 
     /** 스탯별 판정 결과를 판정 행(group_details)에 넣을 JSON 으로. */

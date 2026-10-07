@@ -131,8 +131,8 @@ public class LedgerService {
         }
         // 메모는 보냈을 때만 바꾼다(null = 그대로, 빈 글자 = 지움). 판정에 안 쓰니 다시 계산할 것도 없다.
         if (e.memo() != null) current.updateMemo(normalizeMemo(e.memo()));
-        // 내역·금액·카테고리가 그대로면 다시 판정하지 않는다. ExpenseService.updateExpense 는 판정을 다시 내면서
-        // 이 지출의 AI 질문과 답변을 지우고 새로 만든다 — 메모·결제수단만 고친 수정이 답변을 날리면 안 된다.
+        // 내역·금액·카테고리가 그대로면 ExpenseService 를 부르지 않는다. 내역만 바뀐 경우는 ExpenseService.updateExpense 가
+        // 판정 없이 이름만 고친다(금액·카테고리가 바뀌어야 다시 판정하고 AI 질문·답변을 새로 만든다 — docs/judgment-flow.md D6).
         // 결제수단은 판정 계산·AI 질문 문구에 쓰지 않아 여기서 그대로 바꾼다. 결제수단이 비어 있던 예전 지출은
         // 화면이 기본값(신용카드)을 채워 보내는데, 그것도 다시 판정할 이유가 아니다.
         if (sameJudgedFields(current, e)) {

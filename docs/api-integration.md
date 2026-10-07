@@ -446,6 +446,9 @@ PR #56(#58 로 머지)부터 코인과 펫 스탯은 **지출 저장 때가 아�
 ```
 1) 하루 판정 — 판정 대상은 로그인한 본인이다. 관리자 계정으로 시연하면 지난 날짜도 날짜마다 1회 판정할 수 있다
 POST /api/daily-judgments?date=2026-09-28
+   → 예외 지출(답 안 한 AI 질문)이 있으면 1차 판정(status=PENDING)만 하고 보상은 아직 없다 (docs/judgment-flow.md)
+POST /api/daily-judgments/finalize?date=2026-09-28
+   → 사유를 답했거나 건너뛸 때 최종 판정(status=FINALIZED). 보상은 그날 자정에 한 번 지급된다(관리자의 지난 날짜 판정은 바로)
 
 2) 어드민 치트 — 펫을 스탯 정확히 300 인 ADULT 로 (어드민 계정으로 호출)
 POST /api/admin/users/{userId}/pet/grow?stage=ADULT

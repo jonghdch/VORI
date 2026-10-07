@@ -13,7 +13,7 @@ import java.time.ZoneId;
 
 /**
  * 매일 20시(소비 판정이 열리는 시각) — 오늘 지출을 기록했고 아직 판정하지 않은 사용자에게 알린다.
- * 열리는 시각은 프론트 AI_ACTIVE_FROM_HOUR 기본값(20)과 같다.
+ * 열리는 시각은 서버 vori.ai-judge.open-hour·프론트 AI_ACTIVE_FROM_HOUR 기본값(20)과 같다.
  */
 @Slf4j
 @Component
@@ -33,7 +33,7 @@ public class JudgmentOpenNotifier {
                     today.atStartOfDay(), today.plusDays(1).atStartOfDay())) {
                 if (dailyJudgmentRepository.findByUserIdAndJudgmentDate(userId, today).isPresent()) continue;
                 notificationService.notify(userId, NotificationType.JUDGMENT_OPEN,
-                        "오늘 소비를 판정할 수 있어요", "판정하면 코인과 펫 경험치를 받아요",
+                        "오늘 소비를 판정할 수 있어요", "판정하면 오늘 자정에 코인과 펫 경험치를 받아요",
                         "/wallet", "judgment-open:" + today);
                 n++;
             }
