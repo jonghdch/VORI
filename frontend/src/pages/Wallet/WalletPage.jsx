@@ -787,7 +787,7 @@ function WalletPage({ user, onLogout }) {
           <div className="ledger-day-reward-head">
             <div>
               <span>{selectedDateIso ? `${formatDateDisplay(selectedDateIso)} 판정 보상` : "선택한 날짜의 판정 보상"}</span>
-              <strong>{!selectedJudgment ? "아직 판정 전" : isFinalJudgment(selectedJudgment) ? `${SIGNAL_STATUS[selectedJudgment.signal] || "판정 완료"} 소비` : selectedDateIso < todayIso ? "확정되지 않은 판정" : "사유 답변 대기"}</strong>
+              <strong>{!selectedJudgment ? "아직 판정 전" : isFinalJudgment(selectedJudgment) ? `${SIGNAL_STATUS[selectedJudgment.signal] || "판정 완료"} 소비` : selectedDateIso < todayIso ? "1차 판정으로 확정 중" : "사유 답변 대기"}</strong>
             </div>
             {isFinalJudgment(selectedJudgment) && <span className={`ledger-history-badge ${SIGNAL_BADGE[selectedJudgment.signal] || "ledger-history-badge--gray"}`}>판정 완료</span>}
           </div>
@@ -798,7 +798,7 @@ function WalletPage({ user, onLogout }) {
           ) : selectedJudgment && !isFinalJudgment(selectedJudgment) ? (
             <p className="ledger-day-reward-empty">
               {selectedDateIso < todayIso
-                ? "그날 안에 확정하지 않은 판정이라 보상이 지급되지 않았어요."
+                ? "자정이 지나 1차 판정 내용으로 확정돼요. 잠시 뒤 다시 확인해 주세요."
                 : "예외 지출 사유를 답하거나 건너뛰면 판정이 확정되고 보상이 지급돼요."}
             </p>
           ) : selectedJudgment ? (

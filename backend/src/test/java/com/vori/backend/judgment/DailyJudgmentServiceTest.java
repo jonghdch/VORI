@@ -362,4 +362,30 @@ class DailyJudgmentServiceTest {
         assertEquals(403, error.getStatusCode().value());
         verifyNoInteractions(judgments, users, pets, growthLogs);
     }
+
+    @Test
+    void 자정이_지난_미확정_판정은_1차_판정_내용으로_확정하고_그_보상을_준다() {
+        // D7 — 예외 지출 사유는 반영하지 않고, 1차 판정 때 저장한 결과·보상을 그대로 지급한다
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        User user = User.builder().id(1L).role(Role.USER).gameMoney(0).build();
+        Pet pet = activePet();
+        DailyJudgment pending = DailyJudgment.builder().id(70L).userId(1L).judgmentDate(yesterday)
+                .signal(Signal.RED).initialSignal(Signal.RED).status(JudgmentStatus.PENDING)
+                .expenseCount(2).coinReward(300).statRewardPerType(15).rewardDetails("CHARM:15").savedAmount(30_000)
+                .judgedAt(LocalDateTime.now().minusDays(1)).build();
+        when(judgments.findById(70L)).thenReturn(Optional.of(pending));
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
+        when(judgments.findByUserIdAndJudgmentDate(1L, yesterday)).thenReturn(Optional.of(pending));
+
+        assertTrue(service.finalizeExpiredAsInitial(70L));
+
+        assertEquals(JudgmentStatus.FINALIZED, pending.getStatus());
+        assertEquals(Signal.RED, pending.getSignal(), "1차 판정 그대로");
+        assertEquals(300, user.getGameMoney());
+        assertEquals(15, pet.getStatCharm());
+        verifyNoInteractions(expenses, inquiries); // 다시 계산하지 않는다
+
+        assertFalse(service.finalizeExpiredAsInitial(70L), "이미 확정됐으면 아무것도 하지 않는다");
+        assertEquals(300, user.getGameMoney());
+    }
 }
