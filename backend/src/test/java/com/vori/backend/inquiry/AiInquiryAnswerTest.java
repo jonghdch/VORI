@@ -3,6 +3,7 @@ package com.vori.backend.inquiry;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.ExpenseRepository;
 import com.vori.backend.expense.Signal;
+import com.vori.backend.gemini.AiQuotaException;
 import com.vori.backend.gemini.AiSwitches;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.inquiry.dto.AnswerRequest;
@@ -102,6 +103,18 @@ class AiInquiryAnswerTest {
         assertThat(inquiry.getAnsweredAt()).isNotNull();
         assertThat(inquiry.getReasonCategory()).isEqualTo(ReasonCategory.CEREMONY);
         assertThat(expense.getSignalFinal()).isEqualTo(Signal.GREEN);
+    }
+
+    @Test
+    @DisplayName("Gemini 하루 한도가 끝나도(AiQuotaException) 같은 길로 낱말 규칙을 쓴다")
+    void aiQuotaFallsBackToWords() {
+        when(gemini.classifyAnswer(anyString(), anyString()))
+                .thenThrow(new AiQuotaException(AiQuotaException.Kind.DAILY, "오후 5시"));
+
+        service.answerInquiry(INQUIRY, USER, new AnswerRequest("친구 결혼식 축의금", null));
+
+        assertThat(inquiry.getAnsweredAt()).isNotNull();
+        assertThat(inquiry.getReasonCategory()).isEqualTo(ReasonCategory.CEREMONY);
     }
 
     @Test

@@ -427,6 +427,21 @@ class GeminiClientTest {
     }
 
     @Test
+    @DisplayName("리셋 직전에 보낸 요청의 하루 한도 429 를 리셋 뒤에 받으면 기억하지 않는다 — 다음 날까지 막히지 않게")
+    void dailyQuotaAnsweredAfterResetIsNotRemembered() {
+        RestTemplate rt = mock(RestTemplate.class);
+        GeminiClient client = at(client(rt), Instant.parse("2026-11-12T07:59:58Z")); // 16:59:58 KST 에 보냄
+        when(rt.postForObject(anyString(), any(), eq(Map.class))).thenAnswer(inv -> {
+            at(client, Instant.parse("2026-11-12T08:00:05Z")); // 응답은 17:00:05 — 이미 한도가 풀린 뒤
+            throw quota(PER_DAY);
+        });
+
+        assertThatThrownBy(() -> client.generateQuestion("책", 15_000, BigDecimal.valueOf(9_000), null))
+                .isInstanceOfSatisfying(AiQuotaException.class, e -> assertThat(e.isDaily()).isFalse());
+        assertThat(client.availableModels()).containsExactly("primary");
+    }
+
+    @Test
     @DisplayName("다시 쓸 수 있는 때는 한국 시각으로 — 서머타임에 따라 16시·17시, 날이 넘어가면 「내일」")
     void availableAtInKoreanTime() {
         GeminiClient client = client(mock(RestTemplate.class), "backup");

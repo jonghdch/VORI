@@ -456,13 +456,14 @@ public class GeminiClient {
         for (int i = 0; ; i++) {
             String current = chain.get(i);
             boolean hasNext = i + 1 < chain.size();
+            Instant sentAt = clock.instant();
             try {
                 Map<?, ?> response = postWithRetry(
                         API_BASE + current + ":generateContent?key=" + apiKey, body, label, client, hasNext);
                 if (!current.equals(modelChain().get(0))) log.info("[Gemini] {} — 대체 모델 {} 로 처리함", label, current);
                 return response;
             } catch (HttpClientErrorException.TooManyRequests e) {
-                if (isDailyQuota(e)) markExhausted(current);
+                if (isDailyQuota(e)) markExhausted(current, sentAt);
                 if (!hasNext) throw quotaException();
                 log.warn("[Gemini] {} — {} 한도 초과, {} 로 넘김", label, current, chain.get(i + 1));
             } catch (HttpServerErrorException | HttpClientErrorException.NotFound e) {
@@ -503,8 +504,14 @@ public class GeminiClient {
         return modelChain().stream().filter(m -> !exhaustedUntil.containsKey(m)).toList();
     }
 
-    private void markExhausted(String model) {
-        Instant reset = nextQuotaReset();
+    /**
+     * 그 모델을 리셋까지 건너뛴다. 리셋 시각은 <b>요청을 보낸 때</b> 기준이다 — 리셋 직전에 보낸 요청의 429 를
+     * 리셋 뒤에 받으면, 받은 때 기준으로는 다음 날 리셋까지 막혀 버린다(시연 중 17시를 넘길 때). 그런 429 는 지난
+     * 하루의 것이라 기억하지 않는다.
+     */
+    private void markExhausted(String model, Instant sentAt) {
+        Instant reset = nextQuotaReset(sentAt);
+        if (!clock.instant().isBefore(reset)) return;
         if (exhaustedUntil.put(model, reset) == null) {
             log.warn("[Gemini] {} 오늘 한도 소진 — 한국 시각 {}까지 부르지 않음", model, availableAtLabel(reset));
         }
@@ -518,7 +525,12 @@ public class GeminiClient {
     }
 
     Instant nextQuotaReset() {
-        return LocalDate.now(clock.withZone(QUOTA_RESET_ZONE)).plusDays(1)
+        return nextQuotaReset(clock.instant());
+    }
+
+    /** from 다음에 오는 태평양 자정. */
+    static Instant nextQuotaReset(Instant from) {
+        return LocalDate.ofInstant(from, QUOTA_RESET_ZONE).plusDays(1)
                 .atStartOfDay(QUOTA_RESET_ZONE).toInstant();
     }
 
