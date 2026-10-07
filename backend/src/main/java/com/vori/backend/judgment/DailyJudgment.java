@@ -60,12 +60,23 @@ public class DailyJudgment {
     private String initialGroupDetails;
     @Column(name = "finalized_at")
     private LocalDateTime finalizedAt;
+    /** 보상 지급 시각 — 그날 자정에 한 번(JudgmentRewardSettler). null 이면 아직 지급 전. V50 이전 행은 판정 시각. */
+    @Column(name = "rewarded_at")
+    private LocalDateTime rewardedAt;
+
+    public boolean isRewarded() {
+        return rewardedAt != null;
+    }
+
+    public void markRewarded(LocalDateTime rewardedAt) {
+        this.rewardedAt = rewardedAt;
+    }
 
     public boolean isFinalized() {
         return status == JudgmentStatus.FINALIZED;
     }
 
-    /** 확정 — 예외 지출 사유를 반영해 다시 계산한 최종 결과를 담는다. 보상 지급은 서비스가 같은 트랜잭션에서 한다. */
+    /** 확정 — 예외 지출 사유를 반영해 다시 계산한 최종 결과와 보상(자정에 지급할 값)을 담는다. */
     public void finalizeWith(Signal signal, int expenseCount, int coinReward, int statRewardPerType,
                              String rewardDetails, String groupDetails, int savedAmount, LocalDateTime finalizedAt) {
         refresh(signal, expenseCount, coinReward, statRewardPerType, rewardDetails, groupDetails, savedAmount, judgedAt);
@@ -86,7 +97,7 @@ public class DailyJudgment {
 
     /**
      * 자정이 지나도록 사유 입력을 끝내지 않은 판정을 1차 판정 내용 그대로 확정한다(docs/judgment-flow.md D7).
-     * PENDING 동안 보상 칸에는 1차 판정의 "줄 예정" 값이 들어 있으므로 그대로 두고, 신호·스탯별 결과만 1차 값으로 맞춘다.
+     * PENDING 동안 보상 칸에는 1차 판정의 보상 값이 들어 있으므로 그대로 두고, 신호·스탯별 결과만 1차 값으로 맞춘다.
      */
     public void finalizeAsInitial(LocalDateTime finalizedAt) {
         if (initialSignal != null) this.signal = initialSignal;

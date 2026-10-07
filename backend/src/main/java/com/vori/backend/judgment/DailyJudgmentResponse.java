@@ -25,7 +25,9 @@ public record DailyJudgmentResponse(
         JudgmentStatus status,
         // 예외 지출 사유를 반영하기 전 1차 결과. 확정 화면이 「빨강 → 초록」처럼 달라진 점을 보여 준다. V50 이전 판정은 null·빈 값.
         Signal initialSignal,
-        Map<StatType, GroupJudgment> initialGroupJudgments
+        Map<StatType, GroupJudgment> initialGroupJudgments,
+        // 보상 지급 여부 — 보상은 그날 자정에 준다. false 면 위 보상 칸은 "자정에 받을" 값이다
+        boolean rewarded
 ) {
     public record GroupJudgment(
             int monthlyBudget,
@@ -57,7 +59,7 @@ public record DailyJudgmentResponse(
         return new DailyJudgmentResponse(
                 j.getJudgmentDate(), j.getSignal(), j.getExpenseCount(),
                 j.getCoinReward(), j.getStatRewardPerType(), rewards, groupsFromJson(j.getGroupDetails()), saved, j.getJudgedAt(), alreadyJudged,
-                j.getStatus(), j.getInitialSignal(), groupsFromJson(j.getInitialGroupDetails()));
+                j.getStatus(), j.getInitialSignal(), groupsFromJson(j.getInitialGroupDetails()), j.isRewarded());
     }
 
     /** 스탯별 판정 결과를 판정 행(group_details)에 넣을 JSON 으로. */
