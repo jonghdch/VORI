@@ -64,7 +64,8 @@ public class MonthlyReportService {
                 .mapToLong(i -> i.getAmount() == null ? 0 : i.getAmount())
                 .sum();
         List<DailyJudgment> judged = dailyJudgmentRepository
-                .findByUserIdAndJudgmentDateBetweenOrderByJudgmentDate(userId, month.atDay(1), month.atEndOfMonth());
+                .findByUserIdAndJudgmentDateBetweenOrderByJudgmentDate(userId, month.atDay(1), month.atEndOfMonth())
+                .stream().filter(DailyJudgment::isFinalized).toList(); // 사유를 기다리는 1차 판정은 아직 그날 결과가 아니다
 
         monthlyReportRepository.save(MonthlyReport.builder()
                 .userId(userId)

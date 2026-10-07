@@ -46,6 +46,44 @@ public class DailyJudgment {
     @Column(name = "saved_amount")
     private Integer savedAmount;
 
+    /** 판정 단계. 기존 행(V50 이전)은 이미 보상을 받은 판정이라 FINALIZED. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, columnDefinition = "ENUM('PENDING','FINALIZED')")
+    @Builder.Default
+    private JudgmentStatus status = JudgmentStatus.FINALIZED;
+    /** 1차 판정 신호 — 예외 지출 사유를 반영하기 전. V50 이전 행은 null. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "initial_signal", columnDefinition = "ENUM('RED','GRAY','GREEN')")
+    private Signal initialSignal;
+    /** 1차 스탯별 결과(JSON, group_details 와 같은 형식). V50 이전 행은 null. */
+    @Column(name = "initial_group_details", columnDefinition = "TEXT")
+    private String initialGroupDetails;
+    @Column(name = "finalized_at")
+    private LocalDateTime finalizedAt;
+
+    public boolean isFinalized() {
+        return status == JudgmentStatus.FINALIZED;
+    }
+
+    /** 확정 — 예외 지출 사유를 반영해 다시 계산한 최종 결과를 담는다. 보상 지급은 서비스가 같은 트랜잭션에서 한다. */
+    public void finalizeWith(Signal signal, int expenseCount, int coinReward, int statRewardPerType,
+                             String rewardDetails, String groupDetails, int savedAmount, LocalDateTime finalizedAt) {
+        refresh(signal, expenseCount, coinReward, statRewardPerType, rewardDetails, groupDetails, savedAmount, judgedAt);
+        this.status = JudgmentStatus.FINALIZED;
+        this.finalizedAt = finalizedAt;
+    }
+
+    /**
+     * 관리자가 확정된 날을 다시 판정할 때 — 판정 결과만 최신 계산으로 바꾸고 보상 칸(코인·스탯·절약액)은 그대로 둔다.
+     * 다시 판정해도 보상은 다시 주지 않으므로, 보상 칸을 새 계산으로 덮으면 실제로 받은 것과 화면이 달라진다.
+     */
+    public void refreshResult(Signal signal, int expenseCount, String groupDetails, LocalDateTime judgedAt) {
+        this.signal = signal;
+        this.expenseCount = expenseCount;
+        this.groupDetails = groupDetails;
+        this.judgedAt = judgedAt;
+    }
+
     /** 관리자 시연 재판정은 같은 날짜 행을 갱신해 결과 화면도 최신 계산을 보게 한다. */
     public void refresh(Signal signal, int expenseCount, int coinReward, int statRewardPerType,
                         String rewardDetails, String groupDetails, int savedAmount, LocalDateTime judgedAt) {

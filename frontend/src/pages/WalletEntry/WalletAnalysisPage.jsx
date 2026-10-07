@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toIsoDate } from "./utils";
 import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
 import { listExpensesByDate } from "../../api/ledger";
-import { getDateJudgment, startDateJudgment } from "../../api/dailyJudgment";
+import { finalizeDateJudgment, getDateJudgment, startDateJudgment } from "../../api/dailyJudgment";
 import JudgmentResults, { judgmentReason } from "./JudgmentResults";
 import { canUseAiJudge } from "../../config";
 import "./WalletEntry.css";
@@ -12,7 +12,9 @@ import "./WalletEntry.css";
 // (더 이상 가계부 작성 위저드의 단계가 아니다.)
 // - 백엔드가 z-score 로 anomaly 감지한 expense 만 AI 질문 생성됨 (비동기).
 // - 질문이 없으면 안내 + "완료" 만 표시.
-// - 있으면 페이지네이션으로 한 건씩 답변. "다음에 할게요" 누르면 답변 안 한 채로 닫음.
+// - 있으면 페이지네이션으로 한 건씩 답변. 판정은 1차 판정 → 예외 지출 사유 → 확정 순서다(docs/judgment-flow.md).
+//   "완료"는 답변을 보낸 뒤, "건너뛰고 판정 받기"는 답변 없이 확정한다. 보상은 확정 때 한 번 들어온다.
+//   "돌아가기"로 나가면 확정하지 않은 채 남고, 그날 다시 들어오면 질문부터 이어서 답한다.
 // - 활성 시간대 밖에서 직접 URL 로 들어오면 /wallet 로 돌려보낸다.
 //   열리는 시각은 config.AI_ACTIVE_FROM_HOUR (기본 20시).
 
@@ -32,7 +34,9 @@ const ANSWER_MAX = 500;
 function WalletAnalysisPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const dateStr = user?.role === "ADMIN" ? params.get("date") || toIsoDate() : toIsoDate();
+  // 오늘 날짜는 들어온 순간에 고정한다 — 자정을 넘기면 다른 날짜로 확정을 보내 그날 판정이 확정되지 못한다
+  const [enteredOn] = useState(() => toIsoDate());
+  const dateStr = user?.role === "ADMIN" ? params.get("date") || enteredOn : enteredOn;
   // 이벤트 활성 시간대 가드. 카드 버튼과 동일 기준(config.isAiJudgeOpen).
   // 진입 시점에 1회만 판정해 고정 — 매 렌더 재평가하면 23:59에 답변을
   // 타이핑하던 사용자가 자정을 넘는 순간 리다이렉트로 축출되고 작성 내용이 날아간다.
@@ -83,7 +87,7 @@ function WalletAnalysisPage({ user }) {
     setAnswers({});
     setReasons({});
     submittedRef.current.clear();
-    const tryFetch = async () => {
+    const tryFetch = async (judgmentResult) => {
       if (cancelled) return;
       try {
         const [data, expenseData] = await Promise.all([
@@ -102,11 +106,21 @@ function WalletAnalysisPage({ user }) {
           setWaitingForQuestion(true);
           // 45% 에서 시작해 마지막 재시도에 95% 근처까지. 100% 는 결과가 났을 때만.
           setLoadProgress(45 + Math.round((attempts / MAX_RETRIES) * 50));
-          setTimeout(tryFetch, RETRY_INTERVAL_MS);
+          setTimeout(() => tryFetch(judgmentResult), RETRY_INTERVAL_MS);
           return;
         }
         setQuestionPending(redWithoutQuestion);
-        setInquiries(data);
+        let pendingQuestions = data;
+        if (judgmentResult?.status === "FINALIZED") {
+          // 확정된 날은 사유를 다시 받지 않는다 — 답해도 그날 판정에는 반영되지 않는다
+          pendingQuestions = [];
+        } else if (judgmentResult?.status === "PENDING" && data.length === 0) {
+          // 기다릴 사유가 없다(다른 화면에서 이미 답함) — 바로 확정한다
+          const finalized = await finalizeDateJudgment(dateStr);
+          if (cancelled) return;
+          setJudgment(finalized);
+        }
+        setInquiries(pendingQuestions);
         setLoadProgress(100);
         setLoading(false);
       } catch {
@@ -124,7 +138,7 @@ function WalletAnalysisPage({ user }) {
         if (cancelled) return;
         setJudgment(result);
         setLoadProgress(45);
-        tryFetch();
+        tryFetch(result);
       } catch {
         if (cancelled) return;
         setLoadError(true);
@@ -171,13 +185,14 @@ function WalletAnalysisPage({ user }) {
   const goDone = () => navigate(`/wallet?date=${dateStr}`);
   const goBack = goDone;
 
-  // 답변 입력된 inquiry 들만 POST. 완료 뒤 갱신된 소비별 판정 결과를 보여준다.
-  const submitAll = async () => {
+  // 답변 입력된 inquiry 들만 POST 한 뒤 판정을 확정한다(withAnswers=false 면 건너뛰기 — 답변 없이 1차 판정 그대로 확정).
+  // 확정 응답이 최종 판정·보상이다. 갱신된 소비별 판정 결과를 보여준다.
+  const finish = async (withAnswers) => {
     if (submitting) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      for (const inq of inquiries) {
+      for (const inq of withAnswers ? inquiries : []) {
         if (submittedRef.current.has(inq.inquiryId)) continue;
         const text = (answers[inq.inquiryId] || "").trim();
         const reason = reasons[inq.inquiryId] || null;
@@ -185,12 +200,16 @@ function WalletAnalysisPage({ user }) {
         await answerInquiry(inq.inquiryId, text, reason);
         submittedRef.current.add(inq.inquiryId);
       }
+      setJudgment(await finalizeDateJudgment(dateStr));
+      // 확정된 뒤에는 답해도 반영되지 않는다 — 아래 조회가 실패해도 질문이 남지 않게 먼저 비운다
+      setInquiries([]);
+      setPage(1);
       const refreshedExpenses = await listExpensesByDate(dateStr);
       setExpenses(refreshedExpenses);
       setInquiries([]);
       setPage(1);
     } catch (e) {
-      setSubmitError(e.message || "답변 저장 중 오류가 발생했어요");
+      setSubmitError(e.message || "판정을 확정하지 못했어요");
     } finally {
       setSubmitting(false);
     }
@@ -345,6 +364,11 @@ function WalletAnalysisPage({ user }) {
               <p className="ledger-subtitle">
                 평소보다 큰 지출이 있어 소비한 이유를 기록해주세요. AI가 사유를 평가해 판정에 반영해요.
               </p>
+              {judgment?.status === "PENDING" && (
+                <p className="ledger-hint">
+                  1차 판정은 {signalLabel(judgment.signal)}이에요. 사유를 답하거나 건너뛰면 판정이 확정되고 보상이 들어와요.
+                </p>
+              )}
             </div>
 
             <div className="ledger-pager">
@@ -465,10 +489,10 @@ function WalletAnalysisPage({ user }) {
               <button
                 type="button"
                 className="ledger-skip-link"
-                onClick={goDone}
+                onClick={() => finish(false)}
                 disabled={submitting}
               >
-                다음에 할게요
+                건너뛰고 판정 받기
               </button>
               <div className="ledger-actions-row">
                 <button
@@ -482,7 +506,7 @@ function WalletAnalysisPage({ user }) {
                 <button
                   type="button"
                   className="ledger-next"
-                  onClick={submitAll}
+                  onClick={() => finish(true)}
                   disabled={submitting}
                 >
                   {submitting ? "저장 중…" : "완료"}
