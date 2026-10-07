@@ -22,6 +22,7 @@
 |---|---|
 | [`signup-flow.md`](signup-flow.md) | 회원가입·소비 프로필 수집 흐름 |
 | [`tutorial-flow.md`](tutorial-flow.md) | 온보딩과 인앱 튜토리얼 설계 |
+| [`judgment-flow.md`](judgment-flow.md) | 하루 판정 흐름 재설계 — 1차 판정 → 예외 지출 사유 → 확정·보상 |
 
 이 문서에는 구현 전 제안도 포함될 수 있다. 구현 여부는 `App.js`의 라우트와 해당 페이지 코드를 함께 확인한다.
 
