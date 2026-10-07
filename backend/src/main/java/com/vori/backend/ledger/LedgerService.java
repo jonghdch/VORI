@@ -116,7 +116,7 @@ public class LedgerService {
 
     private ExpenseResponse createExpense(Long userId, LedgerSaveRequest.ExpenseEntry e) {
         return expenseService.createExpense(userId, new ExpenseCreateRequest(
-                e.categoryId(), e.amount(), e.item(), e.spentAt(), null, e.paymentMethod(), null, null));
+                e.categoryId(), e.amount(), e.item(), e.spentAt(), null, e.paymentMethod(), normalizeMemo(e.memo()), null));
     }
 
     private ExpenseResponse updateExpense(Long userId, LedgerSaveRequest.ExpenseEntry e) {
@@ -124,8 +124,38 @@ public class LedgerService {
         if (e.paymentMethod() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "결제수단을 선택해주세요.");
         }
+        Expense current = expenseRepository.findById(e.id())
+                .orElseThrow(() -> new IllegalArgumentException("지출을 찾을 수 없습니다."));
+        if (!current.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 지출만 수정할 수 있습니다.");
+        }
+        // 메모는 보냈을 때만 바꾼다(null = 그대로, 빈 글자 = 지움). 판정에 안 쓰니 다시 계산할 것도 없다.
+        if (e.memo() != null) current.updateMemo(normalizeMemo(e.memo()));
+        // 내역·금액·카테고리가 그대로면 다시 판정하지 않는다. ExpenseService.updateExpense 는 판정을 다시 내면서
+        // 이 지출의 AI 질문과 답변을 지우고 새로 만든다 — 메모·결제수단만 고친 수정이 답변을 날리면 안 된다.
+        // 결제수단은 판정 계산·AI 질문 문구에 쓰지 않아 여기서 그대로 바꾼다. 결제수단이 비어 있던 예전 지출은
+        // 화면이 기본값(신용카드)을 채워 보내는데, 그것도 다시 판정할 이유가 아니다.
+        if (sameJudgedFields(current, e)) {
+            if (current.getPaymentMethod() != e.paymentMethod()) current.updatePaymentMethod(e.paymentMethod());
+            return ExpenseResponse.from(current);
+        }
         return expenseService.updateExpense(userId, e.id(), new ExpenseUpdateRequest(
                 e.item(), e.amount(), e.categoryId(), e.paymentMethod()));
+    }
+
+    /** 다시 판정할 필요가 없는지 — 내역(AI 질문 문구에 들어감)·금액·카테고리가 저장된 값과 같다. */
+    private static boolean sameJudgedFields(Expense current, LedgerSaveRequest.ExpenseEntry e) {
+        // 다른 경로로 만든 지출은 내역 끝에 공백이 남아 있을 수 있어 양쪽 다 다듬어 비교한다
+        return current.getItem().trim().equals(e.item().trim())
+                && current.getAmount().equals(e.amount())
+                && current.getCategoryId().equals(e.categoryId());
+    }
+
+    /** 메모 앞뒤 공백을 지우고, 비면 null(메모 없음). */
+    static String normalizeMemo(String memo) {
+        if (memo == null) return null;
+        String trimmed = memo.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     /**

@@ -126,4 +126,14 @@ public class Expense {
         this.statType = statType;
         this.paymentMethod = paymentMethod;
     }
+
+    /** 메모만 고친다. 메모는 판정·분류·AI 에 쓰지 않으므로 다시 계산할 것이 없다. */
+    public void updateMemo(String memo) {
+        this.memo = memo;
+    }
+
+    /** 결제수단만 고친다. 판정 계산·AI 질문 문구에 쓰지 않으므로 다시 계산할 것이 없다. */
+    public void updatePaymentMethod(PaymentMethod paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
 }

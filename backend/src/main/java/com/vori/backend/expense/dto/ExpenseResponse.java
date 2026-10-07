@@ -23,6 +23,7 @@ public record ExpenseResponse(
         Integer savedAmount,
         Integer statDelta,
         Boolean isRecurring,
+        String memo,
         com.vori.backend.inquiry.ReasonCategory reasonCategory
 ) {
     public static ExpenseResponse from(Expense e) {
@@ -45,6 +46,7 @@ public record ExpenseResponse(
                 e.getSavedAmount(),
                 e.getStatDelta(),
                 e.getIsRecurring(),
+                e.getMemo(),
                 reason
         );
     }
