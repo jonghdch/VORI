@@ -71,22 +71,34 @@ class DailyJudgmentServiceTest {
     }
 
     @Test
-    void 예산을_남기면_그_그룹에_스탯과_코인을_준다() {
+    void 예산을_남기면_그_그룹에_스탯과_코인을_정하고_자정에_지급한다() {
         LocalDate date = LocalDate.now();
         User user = User.builder().id(1L).role(Role.USER).gameMoney(0).build();
         Pet pet = activePet();
         energyBudget(date);
         when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
-        when(judgments.findByUserIdAndJudgmentDate(1L, date)).thenReturn(Optional.empty());
-        when(judgments.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        rememberSavedJudgment(date);
 
         DailyJudgmentResponse result = service.judgeDate(user.getId(), user.getRole(), date);
 
         assertEquals(Signal.GREEN, result.signal());
+        assertEquals(JudgmentStatus.FINALIZED, result.status(), "답할 예외 지출이 없으면 바로 최종 판정");
         assertEquals(15, result.statRewards().get(StatType.ENERGY), "남긴 금액이 커도 그룹당 최대 15");
         assertEquals(0, result.statRewards().get(StatType.CHARM));
-        assertEquals(15, pet.getStatEnergy());
         assertEquals(result.savedAmount() / 100, result.coinReward());
+        assertFalse(result.rewarded());
+        assertEquals(0, user.getGameMoney(), "보상은 판정 때가 아니라 그날 자정에 준다");
+        assertEquals(0, pet.getStatEnergy());
+
+        // 판정 뒤에 지출이 바뀌어도 보상은 판정 때 정한 값 그대로 준다
+        Expense later = Expense.builder().userId(1L).statType(StatType.ENERGY).amount(10_000_000)
+                .signalInitial(Signal.RED).signalFinal(Signal.RED).spentAt(date.atStartOfDay()).build();
+        when(expenses.findByUserIdAndSpentAtBetween(any(), any(), any())).thenReturn(List.of(later));
+
+        assertTrue(service.payReward(SAVED_ID));
+        assertEquals(result.coinReward(), user.getGameMoney());
+        assertEquals(15, pet.getStatEnergy());
+        assertFalse(service.payReward(SAVED_ID), "자정 정산이 두 번 돌아도 한 번만 준다");
         assertEquals(result.coinReward(), user.getGameMoney());
     }
 
@@ -202,7 +214,7 @@ class DailyJudgmentServiceTest {
         User admin = User.builder().id(3L).role(Role.ADMIN).gameMoney(0).build();
         DailyJudgment existing = DailyJudgment.builder().userId(3L).judgmentDate(date)
                 .signal(Signal.RED).expenseCount(0).coinReward(0).statRewardPerType(0)
-                .judgedAt(LocalDateTime.now()).build();
+                .judgedAt(LocalDateTime.now()).rewardedAt(LocalDateTime.now()).build();
         when(users.findByIdForUpdate(3L)).thenReturn(Optional.of(admin));
         when(judgments.findByUserIdAndJudgmentDate(3L, date)).thenReturn(Optional.of(existing));
 
@@ -231,12 +243,16 @@ class DailyJudgmentServiceTest {
         return big;
     }
 
+    private static final long SAVED_ID = 99L;
+
     /** save 한 판정 행을 다음 조회에서 돌려주게 한다 — 1차 판정 뒤 확정 요청이 같은 행을 읽는다. */
     private void rememberSavedJudgment(LocalDate date) {
         when(judgments.findByUserIdAndJudgmentDate(1L, date)).thenReturn(Optional.empty());
         when(judgments.save(any())).thenAnswer(invocation -> {
             DailyJudgment row = invocation.getArgument(0);
+            ReflectionTestUtils.setField(row, "id", SAVED_ID);
             when(judgments.findByUserIdAndJudgmentDate(1L, date)).thenReturn(Optional.of(row));
+            when(judgments.findById(SAVED_ID)).thenReturn(Optional.of(row));
             return row;
         });
     }
@@ -255,13 +271,13 @@ class DailyJudgmentServiceTest {
 
         assertEquals(JudgmentStatus.PENDING, first.status());
         assertEquals(Signal.RED, first.initialSignal());
-        assertEquals(0, user.getGameMoney(), "보상은 사유 입력까지 끝나 확정될 때 준다");
+        assertEquals(0, user.getGameMoney(), "보상은 그날 자정에 준다");
         assertEquals(0, pet.statTotal());
         verifyNoInteractions(growthLogs);
     }
 
     @Test
-    void 사유가_인정되면_확정_때_그_그룹을_완화하고_보상을_한_번_준다() {
+    void 사유가_인정되면_최종_판정에서_그_그룹을_완화하고_보상은_자정에_한_번_준다() {
         LocalDate date = LocalDate.now();
         User user = User.builder().id(1L).role(Role.USER).gameMoney(0).build();
         activePet();
@@ -284,10 +300,14 @@ class DailyJudgmentServiceTest {
         assertEquals(Signal.GRAY, finalized.groupJudgments().get(StatType.ENERGY).signal());
         assertEquals(Signal.GRAY, finalized.signal());
 
-        int coinsAfterFirst = user.getGameMoney();
+        assertEquals(0, user.getGameMoney(), "최종 판정이 나도 보상은 자정에");
         DailyJudgmentResponse again = service.finalizeDate(1L, Role.USER, date);
         assertTrue(again.alreadyJudged());
-        assertEquals(coinsAfterFirst, user.getGameMoney(), "확정을 다시 불러도 보상은 한 번");
+
+        assertTrue(service.payReward(SAVED_ID));
+        assertEquals(finalized.coinReward(), user.getGameMoney());
+        assertFalse(service.payReward(SAVED_ID));
+        assertEquals(finalized.coinReward(), user.getGameMoney(), "보상은 한 번");
     }
 
     @Test
@@ -340,7 +360,7 @@ class DailyJudgmentServiceTest {
         when(pets.findByUserIdAndReleasedAtIsNull(3L)).thenReturn(List.of(pet));
         DailyJudgment existing = DailyJudgment.builder().userId(3L).judgmentDate(date)
                 .signal(Signal.GREEN).expenseCount(0).coinReward(300).statRewardPerType(15)
-                .rewardDetails("ENERGY:15").judgedAt(LocalDateTime.now()).build();
+                .rewardDetails("ENERGY:15").judgedAt(LocalDateTime.now()).rewardedAt(LocalDateTime.now()).build();
         when(users.findByIdForUpdate(3L)).thenReturn(Optional.of(admin));
         when(judgments.findByUserIdAndJudgmentDate(3L, date)).thenReturn(Optional.of(existing));
 
@@ -364,7 +384,7 @@ class DailyJudgmentServiceTest {
     }
 
     @Test
-    void 자정이_지난_미확정_판정은_1차_판정_내용으로_확정하고_그_보상을_준다() {
+    void 자정이_지난_미확정_판정은_1차_판정_내용으로_확정하고_그_보상을_지급한다() {
         // D7 — 예외 지출 사유는 반영하지 않고, 1차 판정 때 저장한 결과·보상을 그대로 지급한다
         LocalDate yesterday = LocalDate.now().minusDays(1);
         User user = User.builder().id(1L).role(Role.USER).gameMoney(0).build();
@@ -381,11 +401,43 @@ class DailyJudgmentServiceTest {
 
         assertEquals(JudgmentStatus.FINALIZED, pending.getStatus());
         assertEquals(Signal.RED, pending.getSignal(), "1차 판정 그대로");
+        assertFalse(service.finalizeExpiredAsInitial(70L), "이미 확정됐으면 아무것도 하지 않는다");
+
+        assertTrue(service.payReward(70L));
         assertEquals(300, user.getGameMoney());
         assertEquals(15, pet.getStatCharm());
         verifyNoInteractions(expenses, inquiries); // 다시 계산하지 않는다
+    }
 
-        assertFalse(service.finalizeExpiredAsInitial(70L), "이미 확정됐으면 아무것도 하지 않는다");
-        assertEquals(300, user.getGameMoney());
+    @Test
+    void 판정_받기를_하지_않은_날은_자정에_신호등_판정을_대신_내린다() {
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        User user = User.builder().id(1L).role(Role.USER).gameMoney(0).build();
+        energyBudget(yesterday);
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
+        when(judgments.findByUserIdAndJudgmentDate(1L, yesterday)).thenReturn(Optional.empty());
+        ArgumentCaptor<DailyJudgment> saved = ArgumentCaptor.forClass(DailyJudgment.class);
+        when(judgments.save(saved.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertTrue(service.judgeUnjudgedDay(1L, yesterday));
+
+        assertEquals(JudgmentStatus.FINALIZED, saved.getValue().getStatus());
+        assertFalse(saved.getValue().isRewarded(), "지급은 이어서 payReward 가 한다");
+        assertEquals(0, user.getGameMoney());
+    }
+
+    @Test
+    void 관리자가_지난_날짜를_새로_판정하면_그_자정이_지났으므로_바로_지급한다() {
+        LocalDate date = LocalDate.now().minusDays(2);
+        User admin = User.builder().id(1L).role(Role.ADMIN).gameMoney(0).build();
+        activePet();
+        energyBudget(date);
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(admin));
+        rememberSavedJudgment(date);
+
+        DailyJudgmentResponse result = service.judgeDate(1L, Role.ADMIN, date);
+
+        assertTrue(result.rewarded());
+        assertEquals(result.coinReward(), admin.getGameMoney());
     }
 }

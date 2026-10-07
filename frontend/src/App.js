@@ -87,7 +87,7 @@ const ADMIN_PAGES = {
 //   /wallet                 가계부 달력/조회 (인증 필요)
 //   /wallet/new             가계부 작성 Step 1 (입력)
 //   /wallet/new/confirm     Step 2 (확인)
-//   /wallet/analysis        소비 분석 (오후 8시~자정 이벤트, ledger-ai-card 진입)
+//   /wallet/analysis        소비 분석 (오후 10시~자정 이벤트, ledger-ai-card 진입)
 //   /report                 소비 리포트 (플레이스홀더)
 //   /myroom                 마이룸 (펫 키우기)
 //   /dex                    펫 도감
@@ -253,7 +253,7 @@ function App() {
             }
           />
           {/* 소비 분석 — 위저드 단계가 아니라 /wallet 의 ledger-ai-card 에서
-              오후 8시~자정 이벤트로 진입하는 독립 페이지. */}
+              오후 10시~자정 이벤트로 진입하는 독립 페이지. */}
           <Route
             path="/wallet/analysis"
             element={

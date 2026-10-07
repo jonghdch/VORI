@@ -388,7 +388,7 @@ function WalletEntryPage({ user }) {
       // 성공 — draft 비움. 다음 mount 에서는 DB fetch 로 폼 채움 (정확한 dbId 포함).
       clearDraft();
       // 소비 분석은 더 이상 작성 흐름의 단계가 아니다. 입력 후 바로 확인으로.
-      // (분석은 /wallet 의 ledger-ai-card 에서 오후 8시~자정 이벤트로 진행)
+      // (분석은 /wallet 의 ledger-ai-card 에서 오후 10시~자정 이벤트로 진행)
       navigate(`/wallet/new/confirm?date=${dateStr}`);
     } catch (e) {
       setSubmitError(e.message || "저장 중 오류가 발생했어요");

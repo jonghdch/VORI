@@ -65,6 +65,8 @@ function groupReason(group, softenedFrom) {
 export default function JudgmentResults({ expenses, judgment }) {
   const signal = judgment?.signal || "GREEN";
   const coin = judgment?.coinReward ?? 0;
+  // 보상은 그날 자정에 지급된다 — 지급 전이면 "받을" 보상으로 보여 준다
+  const paid = Boolean(judgment?.rewarded);
   const groupedExpenses = expenses.reduce((all, expense) => {
     const statType = expense.statType || "ENDURANCE";
     const group = all[statType] || { statType, items: [], total: 0 };
@@ -83,10 +85,11 @@ export default function JudgmentResults({ expenses, judgment }) {
     <section className="ledger-judgment-card ledger-reward-card" aria-label="일일 판정 보상">
       <div className="ledger-reward-heading"><div><span>오늘의 판정 보상</span><h2>{hasExhaustedGroup ? EXHAUSTED_LABEL : LABELS[signal]}</h2></div><span className={`ledger-signal-result ${hasExhaustedGroup ? "ledger-signal-result--exhausted" : `ledger-signal-result--${signal.toLowerCase()}`}`}>{hasExhaustedGroup ? EXHAUSTED_LABEL : LABELS[signal]}</span></div>
       <div className="ledger-reward-grid">
-        <div className="ledger-reward-item ledger-reward-item--coin"><span className="ledger-reward-icon" aria-hidden="true"><CoinIcon /></span><span>판정 지급 코인</span><strong>+{coin.toLocaleString("ko-KR")}</strong></div>
+        <div className="ledger-reward-item ledger-reward-item--coin"><span className="ledger-reward-icon" aria-hidden="true"><CoinIcon /></span><span>{paid ? "판정 지급 코인" : "자정에 받을 코인"}</span><strong>+{coin.toLocaleString("ko-KR")}</strong></div>
         {groups.filter((group) => rewardForGroup(judgment, group.statType) > 0).map((group) => <div className="ledger-reward-item" key={group.statType}><span className="ledger-reward-icon" aria-hidden="true">✦</span><span>{REWARD_NAMES[group.statType]}</span><strong>+{rewardForGroup(judgment, group.statType)}</strong></div>)}
       </div>
-      <p className="ledger-reward-note">판정으로 지급된 코인: +{coin.toLocaleString("ko-KR")} · 오늘 그룹 예산에서 절약한 금액: {Number(judgment?.savedAmount ?? 0).toLocaleString("ko-KR")}원</p>
+      <p className="ledger-reward-note">{paid ? "판정으로 지급된 코인" : "오늘 자정에 받을 코인"}: +{coin.toLocaleString("ko-KR")} · 오늘 그룹 예산에서 절약한 금액: {Number(judgment?.savedAmount ?? 0).toLocaleString("ko-KR")}원</p>
+      {!paid && <p className="ledger-reward-note">보상은 오늘 자정에 들어와요. 판정 뒤에 지출을 고쳐도 보상은 바뀌지 않아요.</p>}
       <p className="ledger-reward-note">같은 스탯 그룹의 지출을 합산해 하루 한 번 판정해요.</p>
     </section>
     {groups.map((group) => <GroupJudgmentCard key={group.statType} group={group} judgment={judgment} />)}
@@ -110,6 +113,6 @@ function GroupJudgmentCard({ group, judgment }) {
     : `${group.items.length}건 합계 ${group.total.toLocaleString("ko-KR")}원`;
   return <article className="ledger-judgment-card ledger-judgment-card--toggle">
     <button type="button" className="ledger-judgment-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}><span className="ledger-judgment-toggle-text"><strong>{title} 판정</strong><span>{summary}</span></span><span className={`ledger-signal-result ${signalClass}`}>{label}</span><span className="ledger-judgment-chevron" aria-hidden="true" /></button>
-    {open && <div id={id} className="ledger-judgment-reason"><span>판정 이유</span><p>{groupReason(group, changed ? initialSignal : null)} {reward > 0 ? `${REWARD_NAMES[group.statType]} +${reward} 보상을 받았어요.` : ""}</p>{group.items.length > 0 && <div className="ledger-judgment-expenses">{group.items.map((expense) => <div className="ledger-judgment-expense-row" key={expense.id}><span><strong>{expense.item || "지출"}</strong><small>{Number(expense.amount || 0).toLocaleString("ko-KR")}원</small></span></div>)}</div>}</div>}
+    {open && <div id={id} className="ledger-judgment-reason"><span>판정 이유</span><p>{groupReason(group, changed ? initialSignal : null)} {reward > 0 ? `${REWARD_NAMES[group.statType]} +${reward} 보상을 ${judgment?.rewarded ? "받았어요" : "자정에 받아요"}.` : ""}</p>{group.items.length > 0 && <div className="ledger-judgment-expenses">{group.items.map((expense) => <div className="ledger-judgment-expense-row" key={expense.id}><span><strong>{expense.item || "지출"}</strong><small>{Number(expense.amount || 0).toLocaleString("ko-KR")}원</small></span></div>)}</div>}</div>}
   </article>;
 }

@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Service @RequiredArgsConstructor
 public class DailyJudgmentService {
-    @Value("${vori.ai-judge.open-hour:20}") private int openHour;
+    @Value("${vori.ai-judge.open-hour:22}") private int openHour;
     private final DailyJudgmentRepository judgments; private final ExpenseRepository expenses; private final UserRepository users;
     private final PetRepository pets; private final PetGrowthLogRepository logs; private final UserFurnitureRepository furniture;
     private final SpendingPlanService plans; private final UserStatBudgetRepository budgets; private final PetStatRewardService statRewardService;
@@ -36,10 +36,11 @@ public class DailyJudgmentService {
     @Transactional public DailyJudgmentResponse judgeToday(Long id,Role role){return judgeDate(id,role,LocalDate.now());}
 
     /**
-     * 1차 판정 (docs/judgment-flow.md ①). 봉투로 계산해 PENDING 으로 저장하고 보상은 아직 주지 않는다.
-     * 그날 답할 예외 지출(답변 안 된 AI 질문)이 없으면 같은 요청에서 바로 확정·지급한다.
+     * 1차 신호등 판정 (docs/judgment-flow.md ①). 봉투로 계산해 PENDING 으로 저장한다.
+     * 그날 답할 예외 지출(답변 안 된 AI 질문)이 없으면 같은 요청에서 바로 최종 판정으로 확정한다.
      * 판정 행이 이미 있으면 다시 계산하지 않는다 — PENDING 은 1차 결과(이어서 사유 입력), FINALIZED 는 최종 결과.
-     * 관리자는 확정된 날도 다시 계산해 갱신하지만 보상은 다시 주지 않는다(시연·검증용, 보상 중복 방지).
+     * 보상은 여기서 주지 않는다. 그날 자정에 확정된 판정의 보상을 한 번 지급한다(payReward).
+     * 관리자는 확정된 날도 다시 계산해 갱신한다(시연·검증용). 이미 지급한 날은 보상 칸을 바꾸지 않는다.
      */
     @Transactional public DailyJudgmentResponse judgeDate(Long id,Role role,LocalDate date){
         LocalDateTime now=LocalDateTime.now();
@@ -51,7 +52,10 @@ public class DailyJudgmentService {
             DailyJudgment existing=old.get();
             if(role==Role.ADMIN && existing.isFinalized()) {
                 Evaluation evaluation=evaluate(id,date);
-                existing.refreshResult(evaluation.signal,evaluation.count,DailyJudgmentResponse.groupsToJson(evaluation.groups),now);
+                String groups=DailyJudgmentResponse.groupsToJson(evaluation.groups);
+                // 아직 지급 전이면 보상 칸도 새 계산으로, 이미 지급했으면 실제로 준 값을 그대로 둔다
+                if(existing.isRewarded()) existing.refreshResult(evaluation.signal,evaluation.count,groups,now);
+                else existing.refresh(evaluation.signal,evaluation.count,evaluation.saved/100,maxReward(evaluation),details(evaluation),groups,evaluation.saved,now);
                 return DailyJudgmentResponse.from(existing,false);
             }
             return DailyJudgmentResponse.from(existing,existing.isFinalized());
@@ -66,9 +70,9 @@ public class DailyJudgmentService {
     }
 
     /**
-     * 확정 (docs/judgment-flow.md ③). 예외 지출 사유 입력이 끝났거나 건너뛰었을 때 화면이 부른다.
-     * 답변으로 인정된 지출을 반영해 그날을 다시 계산하고 보상을 한 번 지급한다. 답하지 않은 지출은 빨강 그대로다.
-     * 판정은 그날 안에만 확정할 수 있다(관리자 제외). 이미 확정된 날은 저장된 결과를 그대로 돌려준다 — 연속 클릭·재시도에도 보상은 한 번.
+     * 최종 신호등 판정 (docs/judgment-flow.md ③). 예외 지출 사유 입력이 끝났거나 건너뛰었을 때 화면이 부른다.
+     * 답변으로 인정된 지출을 반영해 그날을 다시 계산하고 보상(자정에 지급할 값)을 정한다. 답하지 않은 지출은 빨강 그대로다.
+     * 판정은 그날 안에만 확정할 수 있다(관리자 제외). 이미 확정된 날은 저장된 결과를 그대로 돌려준다.
      */
     @Transactional public DailyJudgmentResponse finalizeDate(Long id,Role role,LocalDate date){
         LocalDateTime now=LocalDateTime.now();
@@ -81,9 +85,9 @@ public class DailyJudgmentService {
     }
 
     /**
-     * 자정이 지난 미확정 판정을 1차 판정 내용으로 확정하고 그 보상을 지급한다(docs/judgment-flow.md D7).
+     * 자정이 지난 미확정 판정을 1차 신호등 판정 내용으로 확정한다(docs/judgment-flow.md D7). 보상 지급은 payReward 가 한다.
      * 예외 지출 사유는 반영하지 않는다 — 다시 계산하지 않고 1차 판정 때 저장한 결과·보상을 그대로 쓴다.
-     * 사용자 행을 잠근 뒤 다시 읽어 PENDING 일 때만 진행하므로, 사용자의 확정 요청과 겹쳐도 보상은 한 번이다.
+     * 사용자 행을 잠근 뒤 다시 읽어 PENDING 일 때만 진행한다.
      * @return 이번 호출로 확정했으면 true
      */
     @Transactional public boolean finalizeExpiredAsInitial(Long judgmentId){
@@ -94,15 +98,51 @@ public class DailyJudgmentService {
         if(row==null || row.isFinalized()) return false;
         LocalDateTime now=LocalDateTime.now();
         row.finalizeAsInitial(now);
+        return true;
+    }
+
+    /**
+     * 판정 받기를 하지 않은 날 — 자정에 신호등 판정을 대신 내려 확정한다(사유 반영 없음). 보상 지급은 payReward 가 한다.
+     * 지출을 하나도 적지 않은 날은 부르지 않는다(JudgmentRewardSettler) — 안 쓴 날로 계산돼 최대 보상이 나가지 않게.
+     * @return 이번 호출로 판정을 만들었으면 true
+     */
+    @Transactional public boolean judgeUnjudgedDay(Long userId,LocalDate date){
+        users.findByIdForUpdate(userId).orElseThrow();
+        if(judgments.findByUserIdAndJudgmentDate(userId,date).isPresent()) return false;
+        LocalDateTime now=LocalDateTime.now();
+        Evaluation evaluation=evaluate(userId,date);
+        String groupDetails=DailyJudgmentResponse.groupsToJson(evaluation.groups);
+        judgments.save(DailyJudgment.builder().userId(userId).judgmentDate(date).signal(evaluation.signal).expenseCount(evaluation.count).coinReward(evaluation.saved/100).statRewardPerType(maxReward(evaluation)).rewardDetails(details(evaluation)).groupDetails(groupDetails).savedAmount(evaluation.saved).judgedAt(now)
+                .status(JudgmentStatus.FINALIZED).initialSignal(evaluation.signal).initialGroupDetails(groupDetails).finalizedAt(now).build());
+        return true;
+    }
+
+    /**
+     * 그날 자정 — 확정된 판정의 보상을 한 번 지급한다(docs/judgment-flow.md ④). 판정 때 정해 저장한 값을 그대로 준다.
+     * 판정 뒤에 지출을 고쳐도 보상은 바뀌지 않는다. 사용자 행을 잠근 뒤 다시 읽어 아직 지급 전일 때만 진행한다.
+     * @return 이번 호출로 지급했으면 true
+     */
+    @Transactional public boolean payReward(Long judgmentId){
+        DailyJudgment found=judgments.findById(judgmentId).orElse(null);
+        if(found==null) return false;
+        User user=users.findByIdForUpdate(found.getUserId()).orElseThrow();
+        DailyJudgment row=judgments.findByUserIdAndJudgmentDate(user.getId(),found.getJudgmentDate()).orElse(null);
+        if(row==null || !row.isFinalized() || row.isRewarded()) return false;
+        payStored(user,row,LocalDateTime.now());
+        return true;
+    }
+
+    private void payStored(User user,DailyJudgment row,LocalDateTime now){
         DailyJudgmentResponse stored=DailyJudgmentResponse.from(row,false);
         grant(user,new Evaluation(row.getSignal(),row.getExpenseCount(),stored.statRewards(),stored.groupJudgments(),stored.savedAmount()),now);
-        return true;
+        row.markRewarded(now);
     }
 
     private DailyJudgmentResponse finalizeRow(User user,DailyJudgment row,LocalDateTime now){
         Evaluation evaluation=evaluate(user.getId(),row.getJudgmentDate());
         row.finalizeWith(evaluation.signal,evaluation.count,evaluation.saved/100,maxReward(evaluation),details(evaluation),DailyJudgmentResponse.groupsToJson(evaluation.groups),evaluation.saved,now);
-        grant(user,evaluation,now);
+        // 보상은 그날 자정에 준다. 그 자정이 이미 지난 날(관리자 시연의 지난 날짜)은 기다릴 자정이 없으므로 바로 준다
+        if(row.getJudgmentDate().isBefore(now.toLocalDate())) payStored(user,row,now);
         return DailyJudgmentResponse.from(row,false);
     }
 

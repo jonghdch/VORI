@@ -170,7 +170,7 @@ function WalletPage({ user, onLogout }) {
   // 기본 선택 = 오늘 (이번 달 한정)
   const [selectedDay, setSelectedDay] = useState(() => initialDate.getDate());
   const [selectedId, setSelectedId] = useState(null);
-  // 일반 사용자는 20시부터, 관리자는 시연·검증을 위해 항상 사용할 수 있다.
+  // 일반 사용자는 22시부터, 관리자는 시연·검증을 위해 항상 사용할 수 있다.
   const [isAiActive, setIsAiActive] = useState(() => canUseAiJudge(user));
 
   useEffect(() => {
@@ -799,15 +799,19 @@ function WalletPage({ user, onLogout }) {
             <p className="ledger-day-reward-empty">
               {selectedDateIso < todayIso
                 ? "자정이 지나 1차 판정 내용으로 확정돼요. 잠시 뒤 다시 확인해 주세요."
-                : "예외 지출 사유를 답하거나 건너뛰면 판정이 확정되고 보상이 지급돼요."}
+                : "예외 지출 사유를 답하거나 건너뛰면 최종 판정이 나요. 보상은 오늘 자정에 들어와요."}
             </p>
           ) : selectedJudgment ? (
             <div className="ledger-day-reward-values">
-              <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span><CoinIcon className="ledger-day-reward-coin" /> 받은 코인</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
+              <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span><CoinIcon className="ledger-day-reward-coin" /> {selectedJudgment.rewarded ? "받은 코인" : "자정에 받을 코인"}</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
               {[["ENERGY", "⚡ 에너지"], ["CHARM", "✨ 매력"], ["IQ", "🧠 지능"], ["ENDURANCE", "🛡️ 지구력"]].filter(([key]) => Number(selectedJudgment.statRewards?.[key] ?? 0) > 0).map(([key, label]) => <div className="ledger-day-reward-value" key={key}><span>{label}</span><strong>+{selectedJudgment.statRewards[key]}</strong></div>)}
             </div>
           ) : (
-            <p className="ledger-day-reward-empty">이 날짜는 아직 소비 판정을 완료하지 않아 지급된 보상이 없어요.</p>
+            <p className="ledger-day-reward-empty">
+              {selectedDateIso && selectedDateIso >= todayIso
+                ? "판정하지 않아도 지출을 적은 날은 자정에 신호등 판정이 내려지고 보상이 들어와요."
+                : "이 날짜는 판정 기록이 없어 지급된 보상이 없어요."}
+            </p>
           )}
         </section>
 
