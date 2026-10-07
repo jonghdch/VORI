@@ -35,10 +35,20 @@ class ReasonRulesTest {
     }
 
     @Test
+    @DisplayName("「안과」「안내」처럼 「안」으로 시작하는 낱말은 부정이 아니다")
+    void wordsStartingWithAnAreNotNegation() {
+        assertThat(ReasonRules.classify("안과 진료 받았어")).isEqualTo(ReasonCategory.EMERGENCY);
+        assertThat(ReasonRules.classify("병원 안내 받고 약국")).isEqualTo(ReasonCategory.EMERGENCY);
+    }
+
+    @Test
     @DisplayName("부정 표현이 있거나 모르는 말이면 기타 — 신호를 낮추지 않는다")
     void negationOrUnknownIsEtc() {
         assertThat(ReasonRules.classify("병원 갈 뻔했는데 안 갔어")).isEqualTo(ReasonCategory.ETC);
         assertThat(ReasonRules.classify("결혼식은 아니고 그냥")).isEqualTo(ReasonCategory.ETC);
+        assertThat(ReasonRules.classify("병원 안갔어")).isEqualTo(ReasonCategory.ETC);
+        assertThat(ReasonRules.classify("학원 교재 못샀어")).isEqualTo(ReasonCategory.ETC);
+        assertThat(ReasonRules.classify("학원 못 가서")).isEqualTo(ReasonCategory.ETC);
         assertThat(ReasonRules.classify("그때는 그럴 일이 있었어")).isEqualTo(ReasonCategory.ETC);
         assertThat(ReasonRules.classify("  ")).isEqualTo(ReasonCategory.ETC);
         assertThat(ReasonRules.classify(null)).isEqualTo(ReasonCategory.ETC);

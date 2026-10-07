@@ -4,13 +4,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * 사유 칩 문구와, AI 분류가 실패했을 때 쓰는 낱말 규칙.
  *
  * <p>Gemini 무료 한도가 끝나도 답변은 저장돼야 한다 — 「이유를 묻고 인정하는」 흐름이 멈추면 안 된다.
  * 그래서 AI 가 실패하면 답변 글의 낱말로 사유를 고른다. 이 규칙은 <b>보수적</b>이다: 잘못 걸려 신호가 부당하게
- * 낮아지는 것보다 못 낮추는 쪽(기타 = 신호 그대로)이 낫다. 부정 표현(「갈 뻔했는데」「안 갔어」)이 있으면 기타로 둔다.
+ * 낮아지는 것보다 못 낮추는 쪽(기타 = 신호 그대로)이 낫다. 부정 표현(「갈 뻔했는데」「안 갔어」「안갔어」)이 있으면 기타로 둔다.
  *
  * <p>위에서부터 처음 맞는 사유를 쓴다. 「친구 결혼식」처럼 사람 만남 낱말이 같이 오는 경우가 많아 경조사·갑작스러운
  * 일·배움을 먼저 본다. 「사고」는 「사고 싶어서」(사고 싶은 물건)와 겹쳐 「교통사고」「사고가 나」처럼만 둔다.
@@ -28,7 +29,10 @@ final class ReasonRules {
             ReasonCategory.IMPULSE, "사고 싶어서",
             ReasonCategory.ETC, "기타");
 
-    private static final List<String> NEGATIONS = List.of("뻔", "않", "아니", "안 ");
+    private static final List<String> NEGATIONS = List.of("뻔", "않", "아니", "안 ", "못 ");
+    /** 붙여 쓴 부정(「안갔어」「못샀어」). 낱말 첫머리에서만 본다 — 「안과」「편안」「안내」는 걸리지 않게. */
+    private static final Pattern ATTACHED_NEGATION =
+            Pattern.compile("(^|\\s)(안|못)(가|갔|사|샀|하|해|했|먹|냈|썼|써|와|왔)");
 
     private static final Map<ReasonCategory, List<String>> WORDS = new LinkedHashMap<>();
     static {
@@ -49,7 +53,9 @@ final class ReasonRules {
     static ReasonCategory classify(String answer) {
         if (answer == null || answer.isBlank()) return ReasonCategory.ETC;
         String text = answer.toLowerCase(Locale.ROOT);
-        if (NEGATIONS.stream().anyMatch(text::contains)) return ReasonCategory.ETC;
+        if (NEGATIONS.stream().anyMatch(text::contains) || ATTACHED_NEGATION.matcher(text).find()) {
+            return ReasonCategory.ETC;
+        }
         for (Map.Entry<ReasonCategory, List<String>> e : WORDS.entrySet()) {
             if (e.getValue().stream().anyMatch(text::contains)) return e.getKey();
         }

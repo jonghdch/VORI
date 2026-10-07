@@ -26,6 +26,8 @@ const REASON_CHIPS = [
   { value: "IMPULSE", label: "사고 싶어서" },
   { value: "ETC", label: "기타" },
 ];
+// 서버 AnswerRequest 의 @Size(max = 500) 과 같다. 넘으면 칩을 골라도 저장이 거절된다.
+const ANSWER_MAX = 500;
 
 function WalletAnalysisPage({ user }) {
   const navigate = useNavigate();
@@ -443,6 +445,7 @@ function WalletAnalysisPage({ user }) {
                     <textarea
                       className="ledger-qa-answer"
                       rows={6}
+                      maxLength={ANSWER_MAX}
                       placeholder="자유롭게 적어도 돼요 (선택)"
                       value={answers[inq.inquiryId] || ""}
                       onChange={(e) =>
