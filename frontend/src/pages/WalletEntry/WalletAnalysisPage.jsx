@@ -16,7 +16,7 @@ import "./WalletEntry.css";
 //   "완료"는 답변을 보낸 뒤, "건너뛰고 판정 받기"는 답변 없이 확정한다. 보상은 그날 자정에 한 번 들어온다.
 //   "돌아가기"로 나가면 확정하지 않은 채 남고, 그날 다시 들어오면 질문부터 이어서 답한다.
 // - 활성 시간대 밖에서 직접 URL 로 들어오면 /wallet 로 돌려보낸다.
-//   열리는 시각은 config.AI_ACTIVE_FROM_HOUR (기본 22시).
+//   열리는 시각은 config.AI_ACTIVE_FROM_HOUR (기본 20시).
 
 // 답변 사유 칩 — 서버 ReasonCategory 와 같은 값. 문구는 판정 문구처럼 중립으로(병원비·장례비에도 나간다).
 // 칩만 고르면 서버가 같은 문구(ReasonRules.CHIP_LABEL)를 답변으로 남긴다.

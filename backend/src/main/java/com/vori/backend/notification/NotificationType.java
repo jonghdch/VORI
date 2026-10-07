@@ -12,6 +12,6 @@ public enum NotificationType {
     PET_EVOLVED,
     /** 펫 30레벨 — 졸업(분양) 가능 */
     PET_GRADUATE_READY,
-    /** 오늘 소비 판정을 할 수 있음(22시) */
+    /** 오늘 소비 판정을 할 수 있음(20시) */
     JUDGMENT_OPEN
 }

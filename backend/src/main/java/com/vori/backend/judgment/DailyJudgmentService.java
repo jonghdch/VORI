@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Service @RequiredArgsConstructor
 public class DailyJudgmentService {
-    @Value("${vori.ai-judge.open-hour:22}") private int openHour;
+    @Value("${vori.ai-judge.open-hour:20}") private int openHour;
     private final DailyJudgmentRepository judgments; private final ExpenseRepository expenses; private final UserRepository users;
     private final PetRepository pets; private final PetGrowthLogRepository logs; private final UserFurnitureRepository furniture;
     private final SpendingPlanService plans; private final UserStatBudgetRepository budgets; private final PetStatRewardService statRewardService;
