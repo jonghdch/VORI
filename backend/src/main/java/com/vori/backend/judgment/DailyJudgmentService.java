@@ -55,7 +55,11 @@ public class DailyJudgmentService {
                 String groups=DailyJudgmentResponse.groupsToJson(evaluation.groups);
                 // 아직 지급 전이면 보상 칸도 새 계산으로, 이미 지급했으면 실제로 준 값을 그대로 둔다
                 if(existing.isRewarded()) existing.refreshResult(evaluation.signal,evaluation.count,groups,now);
-                else existing.refresh(evaluation.signal,evaluation.count,evaluation.saved/100,maxReward(evaluation),details(evaluation),groups,evaluation.saved,now);
+                else {
+                    existing.refresh(evaluation.signal,evaluation.count,evaluation.saved/100,maxReward(evaluation),details(evaluation),groups,evaluation.saved,now);
+                    // 자정이 이미 지난 날인데 아직 지급 전이면(정산 전·실패) 기다리지 않고 바로 준다 — finalizeRow 와 같은 규칙
+                    if(date.isBefore(now.toLocalDate())) payStored(user,existing,now);
+                }
                 return DailyJudgmentResponse.from(existing,false);
             }
             return DailyJudgmentResponse.from(existing,existing.isFinalized());

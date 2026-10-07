@@ -440,4 +440,24 @@ class DailyJudgmentServiceTest {
         assertTrue(result.rewarded());
         assertEquals(result.coinReward(), admin.getGameMoney());
     }
+
+    @Test
+    void 관리자가_지급_전인_지난_날을_다시_판정하면_바로_지급한다() {
+        // 자정 정산 전이거나 정산이 실패해 아직 지급되지 않은 지난 날 — 관리자 재판정에서 기다리지 않고 준다
+        LocalDate date = LocalDate.now().minusDays(1);
+        User admin = User.builder().id(1L).role(Role.ADMIN).gameMoney(0).build();
+        activePet();
+        energyBudget(date);
+        DailyJudgment unpaid = DailyJudgment.builder().userId(1L).judgmentDate(date)
+                .signal(Signal.GREEN).expenseCount(0).coinReward(0).statRewardPerType(0)
+                .judgedAt(LocalDateTime.now().minusDays(1)).build();
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(admin));
+        when(judgments.findByUserIdAndJudgmentDate(1L, date)).thenReturn(Optional.of(unpaid));
+
+        DailyJudgmentResponse result = service.judgeDate(1L, Role.ADMIN, date);
+
+        assertTrue(unpaid.isRewarded());
+        assertTrue(result.coinReward() > 0);
+        assertEquals(result.coinReward(), admin.getGameMoney());
+    }
 }
