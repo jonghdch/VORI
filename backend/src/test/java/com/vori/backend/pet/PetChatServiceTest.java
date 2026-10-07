@@ -1,5 +1,6 @@
 package com.vori.backend.pet;
 
+import com.vori.backend.gemini.AiQuotaException;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.gemini.GeminiClient.ChatTurn;
 import com.vori.backend.pet.dto.PetChatRequest;
@@ -76,6 +77,33 @@ class PetChatServiceTest {
                 .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(service.status(USER_ID).remaining()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Gemini 하루 한도가 끝났으면 503 에 다시 되는 시각을 알려 주고 횟수는 차감하지 않는다")
+    void dailyQuotaTellsWhenAvailable() {
+        givenPet();
+        when(gemini.chat(anyString(), anyList()))
+                .thenThrow(new AiQuotaException(AiQuotaException.Kind.DAILY, "오후 5시"));
+
+        assertThatThrownBy(() -> service.chat(USER_ID, say("안녕")))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(e -> {
+                    ResponseStatusException r = (ResponseStatusException) e;
+                    // 429 는 화면이 「내 하루 횟수 소진」으로 보고 입력을 막는다 — 503 이어야 한다
+                    assertThat(r.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                    assertThat(r.getReason()).contains("AI 대화량을 다 썼어요").contains("오후 5시 이후");
+                });
+        assertThat(service.status(USER_ID).remaining()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("분당 한도면 「1분 뒤」, 다른 실패면 예전 안내 그대로")
+    void otherFailureMessages() {
+        assertThat(PetChatService.failureMessage(new AiQuotaException(AiQuotaException.Kind.PER_MINUTE, null)))
+                .contains("1분 뒤");
+        assertThat(PetChatService.failureMessage(new RuntimeException("AI 서비스 호출에 실패했습니다.")))
+                .isEqualTo("지금은 펫이 대답하기 어려워요. 잠시 후 다시 말을 걸어 주세요.");
     }
 
     @Test

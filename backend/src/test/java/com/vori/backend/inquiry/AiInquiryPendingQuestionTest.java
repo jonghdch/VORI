@@ -3,6 +3,7 @@ package com.vori.backend.inquiry;
 import com.vori.backend.common.StatType;
 import com.vori.backend.expense.ExpenseAnomalyEvent;
 import com.vori.backend.expense.Signal;
+import com.vori.backend.gemini.AiSwitches;
 import com.vori.backend.gemini.GeminiClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,8 +28,9 @@ class AiInquiryPendingQuestionTest {
 
     private final AiInquiryRepository repo = mock(AiInquiryRepository.class);
     private final GeminiClient gemini = mock(GeminiClient.class);
+    private final AiSwitches switches = AiSwitches.allOn();
     private final AiInquiryService service = new AiInquiryService(
-            repo, null, null, gemini, null, null);
+            repo, null, null, gemini, null, null, switches);
 
     private static ExpenseAnomalyEvent event() {
         return new ExpenseAnomalyEvent(11L, 7L, 3L, "결혼식 축의금", 200_000, StatType.ENERGY,
@@ -76,6 +78,23 @@ class AiInquiryPendingQuestionTest {
 
         verify(repo, never()).updateQuestionIfUnanswered(anyLong(), anyString());
         verify(repo, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("관리자가 질문 문구 생성을 꺼 두면 Gemini 를 부르지 않고 템플릿 문구를 그대로 둔다")
+    void skipsGeminiWhenQuestionWordingIsOff() {
+        switches.setQuestionWording(false);
+
+        service.handleAnomalyEvent(event());
+
+        verify(gemini, never()).generateQuestion(anyString(), anyInt(), any(), any());
+        verify(repo, never()).updateQuestionIfUnanswered(anyLong(), anyString());
+    }
+
+    @Test
+    @DisplayName("템플릿 문구는 칩으로 고를 수도 있다는 걸 알려 준다")
+    void templateMentionsChips() {
+        assertThat(AiInquiry.templateQuestion("축의금", 200_000)).contains("골라 주거나");
     }
 
     @Test

@@ -72,11 +72,14 @@ public class AiInquiry {
                 .build();
     }
 
-    /** 조사(은/는)를 붙이지 않는 문형을 써서 내역이 무엇이든 어색하지 않게 한다. */
+    /**
+     * 조사(은/는)를 붙이지 않는 문형을 써서 내역이 무엇이든 어색하지 않게 한다.
+     * 답변 화면에 사유 칩이 있어 「골라 주거나」를 넣었다 — 질문 문구 생성을 끄면(AiSwitches) 모두가 이 문구를 본다.
+     */
     static String templateQuestion(String item, Integer amount) {
         String what = (item == null || item.isBlank()) ? "이번 지출" : "이번 " + item.trim();
         String won = amount == null ? "" : String.format(java.util.Locale.KOREA, " %,d원", amount);
-        return what + won + ", 평소보다 큰 지출이었어. 어떤 일이었는지 가볍게 적어 줄래?";
+        return what + won + ", 평소보다 큰 지출이었어. 어떤 일이었는지 골라 주거나 가볍게 적어 줄래?";
     }
 
     public void recordAnswer(String answerText, ReasonCategory reasonCategory, boolean signalAdjusted) {

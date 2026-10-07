@@ -6,6 +6,7 @@ import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.ExpenseAnomalyEvent;
 import com.vori.backend.expense.ExpenseRepository;
 import com.vori.backend.expense.Signal;
+import com.vori.backend.gemini.AiSwitches;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.inquiry.dto.AnswerRequest;
 import com.vori.backend.inquiry.dto.InquiryResponse;
@@ -36,6 +37,7 @@ public class AiInquiryService {
     private final GeminiClient geminiClient;
     private final TransactionTemplate transactionTemplate;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final AiSwitches aiSwitches;
     /** 특정 날짜의 미답변 inquiry 목록 — Step 2 화면용. */
     @Transactional(readOnly = true)
     public List<InquiryResponse> listPendingByDate(Long userId, LocalDate date) {
@@ -86,10 +88,13 @@ public class AiInquiryService {
      * 행이 없거나(지출 수정으로 지워지고 새 행이 생김) 이미 답한 뒤면 아무것도 바꾸지 않는다.
      * 그래서 이벤트의 inquiryId(행 id)로 찾는다 — expense_id 로 찾으면 수정 전 금액으로 만든
      * 옛 문구가 늦게 도착해 새 질문을 덮어쓴다.
+     *
+     * 관리자가 질문 문구 생성을 꺼 두면(AiSwitches, 한도 아끼기) Gemini 를 부르지 않고 템플릿 문구를 그대로 둔다.
      */
     @Async("aiExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleAnomalyEvent(ExpenseAnomalyEvent event) {
+        if (!aiSwitches.questionWording()) return;
         try {
             String question = geminiClient.generateQuestion(
                     event.getItem(), event.getAmount(), event.getMeanEma(), event.getStatType()

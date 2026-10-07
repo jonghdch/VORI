@@ -3,6 +3,7 @@ package com.vori.backend.report;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.ExpenseRepository;
+import com.vori.backend.gemini.AiSwitches;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.inquiry.AiInquiry;
 import com.vori.backend.inquiry.AiInquiryRepository;
@@ -54,6 +55,7 @@ public class DailyReportService {
     private final GeminiClient geminiClient;
     private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
+    private final AiSwitches aiSwitches;
 
     /**
      * 하루치 집계 결과 — AI 호출 전에 트랜잭션 밖으로 들고 나올 값들.
@@ -153,15 +155,18 @@ public class DailyReportService {
     private void generateForUser(Long userId, LocalDate date) {
         DailySummary summary = aggregate(userId, date);
 
-        // AI 실패로 리포트 자체가 사라지면 안 된다 — 코멘트만 비우고 통계는 남긴다
+        // AI 실패로 리포트 자체가 사라지면 안 된다 — 코멘트만 비우고 통계는 남긴다.
+        // 관리자가 일일 코멘트를 꺼 두면(AiSwitches, 한도 아끼기) 부르지 않고 같은 모양(코멘트 없음)으로 저장한다.
         String comment = null;
-        try {
-            comment = geminiClient.generateDailyComment(new GeminiClient.DailyCommentInput(
-                    summary.petName(), summary.speciesName(),
-                    summary.expenseTotal(), summary.incomeTotal(), summary.savedAmount(),
-                    summary.statDeltaTotal(), summary.reasons()));
-        } catch (Exception e) {
-            log.warn("AI 코멘트 생성 실패 — 통계만 저장. userId={}, date={}", userId, date);
+        if (aiSwitches.dailyComment()) {
+            try {
+                comment = geminiClient.generateDailyComment(new GeminiClient.DailyCommentInput(
+                        summary.petName(), summary.speciesName(),
+                        summary.expenseTotal(), summary.incomeTotal(), summary.savedAmount(),
+                        summary.statDeltaTotal(), summary.reasons()));
+            } catch (Exception e) {
+                log.warn("AI 코멘트 생성 실패 — 통계만 저장. userId={}, date={}", userId, date);
+            }
         }
 
         save(userId, date, summary, comment);
