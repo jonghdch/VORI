@@ -667,6 +667,12 @@
 .ledger-qa-question strong {
   margin-right: 4px;
 }
+/* 답변 사유 칩 줄 — 기존 .ledger-chip 을 쓴다 */
+.ledger-qa-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .ledger-qa-answer {
   border: 1px solid #e2dfd7;
   border-radius: 10px;

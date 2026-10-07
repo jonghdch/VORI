@@ -12,5 +12,7 @@ export async function listInquiriesByDate(date) {
   }
 }
 
-export const answerInquiry = (id, answerText) =>
-  post(`/inquiries/${id}/answer`, { answerText });
+// 사유 칩(reasonCategory)이나 글(answerText) 중 하나는 있어야 한다. 둘 다 있으면 서버가 칩을 우선한다.
+// 칩을 고르면 AI 를 부르지 않아 Gemini 한도가 끝나도 답변이 저장된다.
+export const answerInquiry = (id, answerText, reasonCategory = null) =>
+  post(`/inquiries/${id}/answer`, { answerText: answerText || null, reasonCategory });
