@@ -15,6 +15,18 @@ import "./WalletEntry.css";
 // - 있으면 페이지네이션으로 한 건씩 답변. "다음에 할게요" 누르면 답변 안 한 채로 닫음.
 // - 활성 시간대 밖에서 직접 URL 로 들어오면 /wallet 로 돌려보낸다.
 //   열리는 시각은 config.AI_ACTIVE_FROM_HOUR (기본 20시).
+
+// 답변 사유 칩 — 서버 ReasonCategory 와 같은 값. 문구는 판정 문구처럼 중립으로(병원비·장례비에도 나간다).
+// 칩만 고르면 서버가 같은 문구(ReasonRules.CHIP_LABEL)를 답변으로 남긴다.
+const REASON_CHIPS = [
+  { value: "CEREMONY", label: "경조사" },
+  { value: "EMERGENCY", label: "갑작스러운 일" },
+  { value: "SOCIAL", label: "모임·만남" },
+  { value: "SELF_INVEST", label: "배움·자기계발" },
+  { value: "IMPULSE", label: "사고 싶어서" },
+  { value: "ETC", label: "기타" },
+];
+
 function WalletAnalysisPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -32,6 +44,7 @@ function WalletAnalysisPage({ user }) {
   const [judgment, setJudgment] = useState(null);
   const [page, setPage] = useState(1);
   const [answers, setAnswers] = useState({}); // inquiryId → text
+  const [reasons, setReasons] = useState({}); // inquiryId → 사유 칩(REASON_CHIPS 의 value)
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   // 부분 실패 후 retry 시 이미 POST 된 inquiry 재호출 방지. 백엔드도 answeredAt 가드가 있지만
@@ -66,6 +79,7 @@ function WalletAnalysisPage({ user }) {
     setJudgment(null);
     setPage(1);
     setAnswers({});
+    setReasons({});
     submittedRef.current.clear();
     const tryFetch = async () => {
       if (cancelled) return;
@@ -164,8 +178,9 @@ function WalletAnalysisPage({ user }) {
       for (const inq of inquiries) {
         if (submittedRef.current.has(inq.inquiryId)) continue;
         const text = (answers[inq.inquiryId] || "").trim();
-        if (!text) continue;
-        await answerInquiry(inq.inquiryId, text);
+        const reason = reasons[inq.inquiryId] || null;
+        if (!text && !reason) continue;
+        await answerInquiry(inq.inquiryId, text, reason);
         submittedRef.current.add(inq.inquiryId);
       }
       const refreshedExpenses = await listExpensesByDate(dateStr);
@@ -403,9 +418,32 @@ function WalletAnalysisPage({ user }) {
                     <div className="ledger-qa-question">
                       <strong>Q.</strong> {inq.question}
                     </div>
+                    {/* 사유 칩 — 고르면 AI 없이 바로 처리된다(Gemini 한도가 끝나도 답변 저장). 다시 누르면 해제 */}
+                    <div className="ledger-qa-reasons" role="group" aria-label="이유 고르기">
+                      {REASON_CHIPS.map((c) => {
+                        const selected = reasons[inq.inquiryId] === c.value;
+                        return (
+                          <button
+                            key={c.value}
+                            type="button"
+                            className={`ledger-chip${selected ? " ledger-chip-selected" : ""}`}
+                            aria-pressed={selected}
+                            onClick={() =>
+                              setReasons((prev) => ({
+                                ...prev,
+                                [inq.inquiryId]: selected ? null : c.value,
+                              }))
+                            }
+                          >
+                            {c.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                     <textarea
                       className="ledger-qa-answer"
-                      rows={10}
+                      rows={6}
+                      placeholder="자유롭게 적어도 돼요 (선택)"
                       value={answers[inq.inquiryId] || ""}
                       onChange={(e) =>
                         setAnswers((prev) => ({

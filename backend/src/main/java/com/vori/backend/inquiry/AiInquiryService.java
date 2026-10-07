@@ -127,8 +127,10 @@ public class AiInquiryService {
         // 이미 답변된 inquiry 는 재처리 X — 클라이언트 retry·중복 호출 시 Gemini 재호출/signal 재보정 방지
         if (inquiry.getAnsweredAt() != null) return;
 
-        // 2) 외부 API — 트랜잭션·커넥션 비점유 상태로 호출
-        ReasonCategory reason = geminiClient.classifyAnswer(inquiry.getQuestion(), req.answerText());
+        // 2) 사유 — 외부 API 는 트랜잭션·커넥션 비점유 상태로 호출
+        ReasonCategory reason = resolveReason(inquiry.getQuestion(), req);
+        // 칩만 고르고 글은 안 썼으면 칩 문구를 답변으로 남긴다(가계부 「소비 사유」에 보인다)
+        String answerText = req.hasText() ? req.answerText().trim() : ReasonRules.CHIP_LABEL.get(reason);
 
         // 3) 짧은 쓰기 트랜잭션
         transactionTemplate.executeWithoutResult(tx -> {
@@ -144,11 +146,27 @@ public class AiInquiryService {
             Signal newSignal = computeSignalFinal(expense.getSignalInitial(), reason);
             boolean adjusted = newSignal != expense.getSignalFinal();
 
-            fresh.recordAnswer(req.answerText(), reason, adjusted);
+            fresh.recordAnswer(answerText, reason, adjusted);
             expense.updateSignalFinal(newSignal);
             // 커밋 뒤 펫 칭호(AI 답변 수)를 본다
             eventPublisher.publishEvent(new com.vori.backend.pettitle.PetTitleCheckEvent(userId, "AI_ANSWERED"));
         });
+    }
+
+    /**
+     * 답변의 사유. 칩으로 고른 게 있으면 그대로 쓴다(AI 안 씀, 한도도 안 씀). 글만 있으면 AI 가 분류하고,
+     * AI 가 실패하면(무료 한도 소진·장애) 낱말 규칙으로 고른다 — 그래도 모르면 기타(신호 그대로).
+     * 예전엔 AI 실패가 그대로 500 이 되어 답변이 저장되지 않았다(10/7 실측).
+     */
+    ReasonCategory resolveReason(String question, AnswerRequest req) {
+        if (req.reasonCategory() != null) return req.reasonCategory();
+        try {
+            return geminiClient.classifyAnswer(question, req.answerText());
+        } catch (RuntimeException e) {
+            ReasonCategory byWords = ReasonRules.classify(req.answerText());
+            log.warn("사유 분류 AI 실패 — 낱말 규칙으로 {} 처리", byWords, e);
+            return byWords;
+        }
     }
 
     private Signal computeSignalFinal(Signal original, ReasonCategory reason) {
