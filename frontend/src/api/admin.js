@@ -152,6 +152,22 @@ export async function updateRationalityRules({ zRed, zGreen }) {
   return res.json();
 }
 
+// ───── AI 사용량 ─────
+
+/**
+ * Gemini 한도 상태와 「없어도 되는 AI」 스위치.
+ * @returns {Promise<{ questionWording: boolean, dailyComment: boolean,
+ *   models: { model: string, exhausted: boolean, availableAt: string|null }[] }>}
+ */
+export function getAiSettings() {
+  return adminGet("/admin/ai-settings", "AI 사용량 조회");
+}
+
+/** 스위치 변경 — 보낸 칸만 바뀐다. 응답은 getAiSettings 와 같다. */
+export function updateAiSettings({ questionWording, dailyComment }) {
+  return adminSend("PUT", "/admin/ai-settings", { questionWording, dailyComment }, "AI 설정 저장");
+}
+
 // ───── 칭호 관리 ─────
 
 // 공통 쓰기 — JSON 본문(선택). 400/404/409 는 서버 message 를 그대로 올린다.

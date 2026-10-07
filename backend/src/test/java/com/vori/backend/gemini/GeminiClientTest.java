@@ -14,6 +14,10 @@ import com.vori.backend.inquiry.ReasonCategory;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -330,6 +334,126 @@ class GeminiClientTest {
         assertThatThrownBy(() -> client.embed("아메리카노")).isInstanceOf(RuntimeException.class);
         verify(rt, times(3)).postForObject(contains("/models/embedder:embedContent"), any(), eq(Map.class));
         verify(rt, never()).postForObject(backupUrl(), any(), eq(Map.class));
+    }
+
+    // ───── 하루 한도 ─────
+
+    private static final String PER_DAY = "GenerateRequestsPerDayPerProjectPerModel-FreeTier";
+    private static final String PER_MINUTE = "GenerateRequestsPerMinutePerProjectPerModel-FreeTier";
+
+    /** 2026-11-12 10:00 KST — 경진대회 날 오전. 태평양은 11/11 17:00(PST)이라 한도는 한국 17시에 풀린다. */
+    private static final Instant DEMO_MORNING = Instant.parse("2026-11-12T01:00:00Z");
+
+    /** 실제 429 본문처럼 quotaId 를 실은 응답. */
+    private static HttpClientErrorException quota(String quotaId) {
+        String body = "{\"error\":{\"code\":429,\"status\":\"RESOURCE_EXHAUSTED\",\"details\":[{\"violations\":"
+                + "[{\"quotaId\":\"" + quotaId + "\"}]}]}}";
+        return (HttpClientErrorException) HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS,
+                "Too Many Requests", HttpHeaders.EMPTY, body.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+    }
+
+    private static GeminiClient at(GeminiClient c, Instant now) {
+        ReflectionTestUtils.setField(c, "clock", Clock.fixed(now, ZoneOffset.UTC));
+        return c;
+    }
+
+    @Test
+    @DisplayName("하루 한도를 다 쓴 주 모델은 리셋까지 건너뛰고 처음부터 대체 모델로 보낸다")
+    void skipsExhaustedPrimaryUntilReset() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(primaryUrl(), any(), eq(Map.class))).thenThrow(quota(PER_DAY));
+        when(rt.postForObject(backupUrl(), any(), eq(Map.class))).thenReturn(OK_RESPONSE);
+        GeminiClient client = at(client(rt, "backup"), DEMO_MORNING);
+
+        client.generateQuestion("커피", 8_000, BigDecimal.valueOf(4_000), null);
+        client.generateQuestion("커피", 8_000, BigDecimal.valueOf(4_000), null);
+
+        verify(rt, times(1)).postForObject(primaryUrl(), any(), eq(Map.class));
+        verify(rt, times(2)).postForObject(backupUrl(), any(), eq(Map.class));
+        assertThat(client.quotaStatus()).containsExactly(
+                new GeminiClient.ModelQuota("primary", true, "오후 5시"),
+                new GeminiClient.ModelQuota("backup", false, null));
+    }
+
+    @Test
+    @DisplayName("모든 모델이 하루 한도를 다 쓰면 언제 되는지 실어 던지고, 리셋 전엔 Gemini 를 부르지 않는다")
+    void allModelsExhaustedFailFastUntilReset() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(primaryUrl(), any(), eq(Map.class)))
+                .thenThrow(quota(PER_DAY))
+                .thenReturn(OK_RESPONSE);
+        when(rt.postForObject(backupUrl(), any(), eq(Map.class))).thenThrow(quota(PER_DAY));
+        GeminiClient client = at(client(rt, "backup"), DEMO_MORNING);
+
+        for (int i = 0; i < 2; i++) {
+            assertThatThrownBy(() -> client.chat("너는 펫이야", List.of(new GeminiClient.ChatTurn(true, "안녕"))))
+                    .isInstanceOfSatisfying(AiQuotaException.class, e -> {
+                        assertThat(e.isDaily()).isTrue();
+                        assertThat(e.getAvailableAt()).isEqualTo("오후 5시");
+                    });
+        }
+        // 두 번째는 HTTP 없이 바로 — 하루 한도는 몇 번을 다시 보내도 안 풀린다
+        verify(rt, times(1)).postForObject(primaryUrl(), any(), eq(Map.class));
+        verify(rt, times(1)).postForObject(backupUrl(), any(), eq(Map.class));
+
+        // 태평양 자정(한국 17시)이 지나면 다시 부른다
+        at(client, Instant.parse("2026-11-12T08:00:00Z"));
+        assertThat(client.chat("너는 펫이야", List.of(new GeminiClient.ChatTurn(true, "안녕")))).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("분당 한도는 재시도하고, 그래도 막히면 「잠깐 몰림」으로 던지고 기억하지 않는다")
+    void perMinuteQuotaIsNotRemembered() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(anyString(), any(), eq(Map.class))).thenThrow(quota(PER_MINUTE));
+        GeminiClient client = at(client(rt), DEMO_MORNING);
+
+        assertThatThrownBy(() -> client.extractReceipt(new byte[]{1, 2, 3}, "image/png"))
+                .isInstanceOfSatisfying(AiQuotaException.class, e -> assertThat(e.isDaily()).isFalse());
+        verify(rt, times(3)).postForObject(anyString(), any(), eq(Map.class));
+        assertThat(client.availableModels()).containsExactly("primary");
+    }
+
+    @Test
+    @DisplayName("대체 모델이 없어도 하루 한도면 같은 모델에 재시도하지 않는다")
+    void dailyQuotaIsNotRetried() {
+        RestTemplate rt = mock(RestTemplate.class);
+        when(rt.postForObject(anyString(), any(), eq(Map.class))).thenThrow(quota(PER_DAY));
+        GeminiClient client = at(client(rt), DEMO_MORNING);
+
+        assertThatThrownBy(() -> client.generateQuestion("책", 15_000, BigDecimal.valueOf(9_000), null))
+                .isInstanceOf(AiQuotaException.class);
+        verify(rt, times(1)).postForObject(anyString(), any(), eq(Map.class));
+    }
+
+    @Test
+    @DisplayName("리셋 직전에 보낸 요청의 하루 한도 429 를 리셋 뒤에 받으면 기억하지 않는다 — 다음 날까지 막히지 않게")
+    void dailyQuotaAnsweredAfterResetIsNotRemembered() {
+        RestTemplate rt = mock(RestTemplate.class);
+        GeminiClient client = at(client(rt), Instant.parse("2026-11-12T07:59:58Z")); // 16:59:58 KST 에 보냄
+        when(rt.postForObject(anyString(), any(), eq(Map.class))).thenAnswer(inv -> {
+            at(client, Instant.parse("2026-11-12T08:00:05Z")); // 응답은 17:00:05 — 이미 한도가 풀린 뒤
+            throw quota(PER_DAY);
+        });
+
+        assertThatThrownBy(() -> client.generateQuestion("책", 15_000, BigDecimal.valueOf(9_000), null))
+                .isInstanceOfSatisfying(AiQuotaException.class, e -> assertThat(e.isDaily()).isFalse());
+        assertThat(client.availableModels()).containsExactly("primary");
+    }
+
+    @Test
+    @DisplayName("다시 쓸 수 있는 때는 한국 시각으로 — 서머타임에 따라 16시·17시, 날이 넘어가면 「내일」")
+    void availableAtInKoreanTime() {
+        GeminiClient client = client(mock(RestTemplate.class), "backup");
+
+        at(client, DEMO_MORNING);
+        assertThat(client.availableAtLabel(client.nextQuotaReset())).isEqualTo("오후 5시");
+
+        at(client, Instant.parse("2026-10-07T01:00:00Z")); // 10/7 10:00 KST, 태평양 서머타임
+        assertThat(client.availableAtLabel(client.nextQuotaReset())).isEqualTo("오후 4시");
+
+        at(client, Instant.parse("2026-11-12T09:30:00Z")); // 18:30 KST — 오늘 한도는 이미 17시에 풀렸다
+        assertThat(client.availableAtLabel(client.nextQuotaReset())).isEqualTo("내일 오후 5시");
     }
 
     @Test

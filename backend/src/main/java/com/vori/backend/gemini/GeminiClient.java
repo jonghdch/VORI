@@ -14,12 +14,18 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -312,6 +318,8 @@ public class GeminiClient {
                 "contents", contents);
         try {
             return extractText(generate(body, "petChat", restTemplate));
+        } catch (AiQuotaException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Gemini 펫 대화 호출 실패", e);
             throw new RuntimeException("AI 서비스 호출에 실패했습니다.");
@@ -327,6 +335,8 @@ public class GeminiClient {
         );
         try {
             return extractText(generate(body, "generateContent", restTemplate));
+        } catch (AiQuotaException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Gemini API 호출 실패", e);
             throw new RuntimeException("AI 서비스 호출에 실패했습니다.");
@@ -363,6 +373,8 @@ public class GeminiClient {
 
         try {
             return extractText(generate(body, "extractReceipt", geminiImageRestTemplate));
+        } catch (AiQuotaException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Gemini 영수증 인식 실패", e);
             throw new RuntimeException("영수증 인식에 실패했습니다.");
@@ -434,25 +446,121 @@ public class GeminiClient {
      * 401·403·400 은 넘기지 않는다. 키·요청 문제라 어느 모델로 보내도 같은 답이 온다.
      * 타임아웃도 넘기지 않는다. 영수증은 읽기 60초 × 3회라 이미 오래 기다렸고, 여기서 한 모델을
      * 더 돌면 사용자가 몇 분을 기다리게 된다.
+     *
+     * <p>하루 한도를 다 쓴 모델은 리셋 시각까지 건너뛴다({@link #availableModels}). 마지막 모델까지 429 면
+     * {@link AiQuotaException} — 화면이 「잠시 후 다시」 대신 언제 되는지 알려 줄 수 있게.
      */
     private Map<?, ?> generate(Object body, String label, RestTemplate client) {
-        List<String> chain = modelChain();
+        List<String> chain = availableModels();
+        if (chain.isEmpty()) throw new AiQuotaException(AiQuotaException.Kind.DAILY, availableAtLabel());
         for (int i = 0; ; i++) {
             String current = chain.get(i);
             boolean hasNext = i + 1 < chain.size();
+            Instant sentAt = clock.instant();
             try {
                 Map<?, ?> response = postWithRetry(
                         API_BASE + current + ":generateContent?key=" + apiKey, body, label, client, hasNext);
-                if (i > 0) log.info("[Gemini] {} — 대체 모델 {} 로 처리함", label, current);
+                if (!current.equals(modelChain().get(0))) log.info("[Gemini] {} — 대체 모델 {} 로 처리함", label, current);
                 return response;
-            } catch (HttpServerErrorException
-                     | HttpClientErrorException.TooManyRequests
-                     | HttpClientErrorException.NotFound e) {
+            } catch (HttpClientErrorException.TooManyRequests e) {
+                if (isDailyQuota(e)) markExhausted(current, sentAt);
+                if (!hasNext) throw quotaException();
+                log.warn("[Gemini] {} — {} 한도 초과, {} 로 넘김", label, current, chain.get(i + 1));
+            } catch (HttpServerErrorException | HttpClientErrorException.NotFound e) {
                 if (!hasNext) throw e;
                 log.warn("[Gemini] {} — {} 사용 불가({}), {} 로 넘김", label, current, causeOf(e), chain.get(i + 1));
             }
         }
     }
+
+    // ───── 하루 한도 ─────
+
+    /** 하루 한도가 풀리는 시각의 기준 — 태평양 자정. 서머타임은 시간대가 맞춘다(한국 시각 10월 16시, 11월 17시). */
+    static final ZoneId QUOTA_RESET_ZONE = ZoneId.of("America/Los_Angeles");
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
+    /**
+     * 모델 → 하루 한도가 풀리는 시각. 다 쓴 모델을 리셋까지 부르지 않아, 한도가 끝난 뒤의 요청이 헛호출·재시도를
+     * 기다리지 않고 바로 안내를 받는다. 서버 메모리라 재시작하면 잊는다 — 그때는 한 번 불러 보고 다시 기억한다.
+     */
+    private final Map<String, Instant> exhaustedUntil = new ConcurrentHashMap<>();
+
+    /** 지금 시각. 테스트가 바꾼다. */
+    private Clock clock = Clock.systemUTC();
+
+    /**
+     * 429 가 하루 한도인지 — 본문의 quotaId 로 본다(하루면 GenerateRequestsPerDayPerProjectPerModel-FreeTier,
+     * 분당이면 …PerMinute…). 본문이 없거나 못 알아보면 하루로 보지 않는다. 잘못 기억하면 리셋까지 그 모델을 안 쓴다.
+     */
+    static boolean isDailyQuota(HttpClientErrorException e) {
+        String body = e.getResponseBodyAsString();
+        return body != null && body.contains("PerDay");
+    }
+
+    /** 오늘 한도가 남았을 수 있는 모델(주 모델부터). 리셋 시각이 지난 기록은 지운다. */
+    List<String> availableModels() {
+        Instant now = clock.instant();
+        exhaustedUntil.values().removeIf(reset -> !now.isBefore(reset));
+        return modelChain().stream().filter(m -> !exhaustedUntil.containsKey(m)).toList();
+    }
+
+    /**
+     * 그 모델을 리셋까지 건너뛴다. 리셋 시각은 <b>요청을 보낸 때</b> 기준이다 — 리셋 직전에 보낸 요청의 429 를
+     * 리셋 뒤에 받으면, 받은 때 기준으로는 다음 날 리셋까지 막혀 버린다(시연 중 17시를 넘길 때). 그런 429 는 지난
+     * 하루의 것이라 기억하지 않는다.
+     */
+    private void markExhausted(String model, Instant sentAt) {
+        Instant reset = nextQuotaReset(sentAt);
+        if (!clock.instant().isBefore(reset)) return;
+        if (exhaustedUntil.put(model, reset) == null) {
+            log.warn("[Gemini] {} 오늘 한도 소진 — 한국 시각 {}까지 부르지 않음", model, availableAtLabel(reset));
+        }
+    }
+
+    /** 마지막 모델까지 429 — 모든 모델이 하루 한도를 다 썼으면 DAILY, 아니면 잠깐 몰린 것(분당 한도). */
+    private AiQuotaException quotaException() {
+        return availableModels().isEmpty()
+                ? new AiQuotaException(AiQuotaException.Kind.DAILY, availableAtLabel())
+                : new AiQuotaException(AiQuotaException.Kind.PER_MINUTE, null);
+    }
+
+    Instant nextQuotaReset() {
+        return nextQuotaReset(clock.instant());
+    }
+
+    /** from 다음에 오는 태평양 자정. */
+    static Instant nextQuotaReset(Instant from) {
+        return LocalDate.ofInstant(from, QUOTA_RESET_ZONE).plusDays(1)
+                .atStartOfDay(QUOTA_RESET_ZONE).toInstant();
+    }
+
+    /** 가장 먼저 다시 쓸 수 있는 때(한국 시각). */
+    private String availableAtLabel() {
+        return availableAtLabel(exhaustedUntil.values().stream()
+                .min(Comparator.naturalOrder())
+                .orElseGet(this::nextQuotaReset));
+    }
+
+    /** 한국 시각으로 「오후 5시」, 날이 넘어가면 「내일 오후 5시」. */
+    String availableAtLabel(Instant reset) {
+        ZonedDateTime at = reset.atZone(KST);
+        int h = at.getHour();
+        String time = (h < 12 ? "오전 " : "오후 ") + (h % 12 == 0 ? 12 : h % 12) + "시"
+                + (at.getMinute() == 0 ? "" : " " + at.getMinute() + "분");
+        return at.toLocalDate().equals(LocalDate.now(clock.withZone(KST))) ? time : "내일 " + time;
+    }
+
+    /** 관리자 화면용 — 모델별로 오늘 한도를 다 썼는지, 다 썼으면 다시 쓸 수 있는 때. */
+    public List<ModelQuota> quotaStatus() {
+        List<String> available = availableModels();
+        return modelChain().stream()
+                .map(m -> available.contains(m)
+                        ? new ModelQuota(m, false, null)
+                        : new ModelQuota(m, true, availableAtLabel(exhaustedUntil.getOrDefault(m, nextQuotaReset()))))
+                .toList();
+    }
+
+    public record ModelQuota(String model, boolean exhausted, String availableAt) {}
 
     // ───── 재시도 ─────
 
@@ -476,6 +584,7 @@ public class GeminiClient {
      *
      * @param hasFallback 대체 모델이 있으면 429 는 같은 모델에 재시도하지 않고 바로 던진다.
      *                    하루 한도라면 몇 초 기다려서는 안 풀리고(태평양 자정 리셋), 헛된 재시도만 쌓인다.
+     *                    대체 모델이 없어도 본문이 하루 한도라고 하면 재시도하지 않는다({@link #isDailyQuota}).
      */
     private Map<?, ?> postWithRetry(String url, Object body, String label) {
         return postWithRetry(url, body, label, restTemplate, false);
@@ -489,7 +598,8 @@ public class GeminiClient {
             } catch (HttpServerErrorException
                      | HttpClientErrorException.TooManyRequests
                      | ResourceAccessException e) {
-                if (hasFallback && e instanceof HttpClientErrorException.TooManyRequests) throw e;
+                if (e instanceof HttpClientErrorException.TooManyRequests tooMany
+                        && (hasFallback || isDailyQuota(tooMany))) throw e;
                 if (attempt >= MAX_ATTEMPTS) {
                     log.error("[Gemini] {} — {}회 시도 모두 실패 ({})", label, attempt, causeOf(e));
                     throw e;

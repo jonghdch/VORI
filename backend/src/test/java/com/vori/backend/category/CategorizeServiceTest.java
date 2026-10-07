@@ -4,7 +4,11 @@ import com.vori.backend.expense.ExpenseRepository;
 import com.vori.backend.gemini.GeminiClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -280,5 +284,30 @@ class CategorizeServiceTest {
         CategorizeService.Suggestion s = service.suggest(7L, "배민 치킨");
         assertNull(s.askType());
         assertEquals("배달", s.result().leafName());
+    }
+
+    // ───── 실행 중 임베딩 실패 ─────
+
+    @Test
+    void 실행_중_임베딩이_실패하면_기타_생활로_떨어지고_잠깐은_임베딩을_건너뛴다() {
+        CategorizeService service = new CategorizeService(repo, gemini, expenses);
+        ReflectionTestUtils.setField(service, "ready", true); // 부팅 때 캐시는 만들어 둔 상태
+        Instant t0 = Instant.parse("2026-10-07T03:00:00Z");
+        ReflectionTestUtils.setField(service, "clock", Clock.fixed(t0, ZoneOffset.UTC));
+        when(gemini.embed(anyString())).thenThrow(new RuntimeException("AI 분류 서비스 호출에 실패했습니다."));
+
+        // 예전엔 예외가 그대로 나가 500 → 화면은 카테고리를 비워 뒀다
+        CategorizeService.Suggestion s = service.suggest(7L, "문밸리 타코");
+        assertEquals("기타 생활", s.result().leafName());
+        assertEquals(CategorizeService.Source.FALLBACK, s.result().source());
+
+        // 쉬는 동안은 입력마다 재시도·타임아웃을 기다리지 않는다
+        assertEquals("기타 생활", service.suggest(7L, "문밸리 타코").result().leafName());
+        verify(gemini, times(1)).embed(anyString());
+
+        ReflectionTestUtils.setField(service, "clock",
+                Clock.fixed(t0.plus(CategorizeService.EMBED_PAUSE), ZoneOffset.UTC));
+        service.suggest(7L, "문밸리 타코");
+        verify(gemini, times(2)).embed(anyString());
     }
 }

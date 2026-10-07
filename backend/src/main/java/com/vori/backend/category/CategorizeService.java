@@ -9,6 +9,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,6 +47,16 @@ public class CategorizeService {
 
     // 점수 미달 시 null. 0.55 정도면 매칭. 튜닝 필요.
     private static final double MATCH_THRESHOLD = 0.55;
+
+    /**
+     * 실행 중 임베딩이 실패하면(장애·한도) 이만큼 임베딩을 건너뛴다. 부팅 때 캐시를 다 만든 뒤에 실패하면 예외가 그대로
+     * 나가 /categorize 가 500 이 되고 화면은 카테고리를 비워 뒀다 — 이제 「기타 생활」로 떨어진다. 건너뛰는 동안은
+     * 입력마다 재시도(최대 3회)·타임아웃을 기다리지 않는다.
+     */
+    static final Duration EMBED_PAUSE = Duration.ofMinutes(5);
+    private volatile Instant embedPausedUntil = Instant.MIN;
+    /** 지금 시각. 테스트가 바꾼다. */
+    private Clock clock = Clock.systemUTC();
 
     private record CachedLeaf(Long id, String name, Long parentId, String parentName) {}
 
@@ -396,6 +409,7 @@ public class CategorizeService {
 
     /**
      * 사용자 입력 → 규칙에 맞으면 그 leaf, 아니면 가장 가까운 leaf. 규칙에 없고 ready=false 거나 threshold 미달이면 null.
+     * 임베딩이 실패했거나 실패 뒤 쉬는 중이어도 null(EMBED_PAUSE).
      */
     public Result categorize(String name) {
         if (name == null || name.isBlank()) return null;
@@ -404,8 +418,15 @@ public class CategorizeService {
             Result r = leafResult(ruled, 1.0, Source.RULE);
             if (r != null) return r;
         }
-        if (!ready) return null;
-        double[] queryVec = geminiClient.embed(name.trim());
+        if (!ready || clock.instant().isBefore(embedPausedUntil)) return null;
+        double[] queryVec;
+        try {
+            queryVec = geminiClient.embed(name.trim());
+        } catch (RuntimeException e) {
+            embedPausedUntil = clock.instant().plus(EMBED_PAUSE);
+            log.warn("임베딩 실패 — {}분 동안 임베딩 없이 분류한다(기본값 기타 생활)", EMBED_PAUSE.toMinutes(), e);
+            return null;
+        }
 
         Long bestId = null;
         double bestScore = -1.0;

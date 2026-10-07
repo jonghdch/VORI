@@ -1,5 +1,6 @@
 package com.vori.backend.pet;
 
+import com.vori.backend.gemini.AiQuotaException;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.gemini.GeminiClient.ChatTurn;
 import com.vori.backend.pet.dto.PetChatRequest;
@@ -86,10 +87,23 @@ public class PetChatService {
         } catch (RuntimeException e) {
             release(userId);
             log.warn("펫 대화 실패 — userId={}, petId={}", userId, pet.getId(), e);
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "지금은 펫이 대답하기 어려워요. 잠시 후 다시 말을 걸어 주세요.");
+            // 429 는 화면이 「내 하루 횟수를 다 씀」으로 보고 입력을 막는다 — 한도 소진도 503 으로 두고 문구만 나눈다
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, failureMessage(e));
         }
         return new PetChatResponse(reply, PetPersonality.labelOf(pet), remaining(userId), dailyLimit);
+    }
+
+    /**
+     * 실패 안내. 한도 소진은 「잠시 후 다시」가 맞지 않아 언제 되는지 알려 준다.
+     * 펫 말투로 꾸미지 않는다 — 펫의 말이 아니라 서비스 상태 안내다.
+     */
+    static String failureMessage(RuntimeException e) {
+        if (e instanceof AiQuotaException q) {
+            return q.isDaily()
+                    ? "오늘 준비한 AI 대화량을 다 썼어요. " + q.getAvailableAt() + " 이후에 다시 말을 걸어 주세요."
+                    : "지금 대화가 몰렸어요. 1분 뒤에 다시 말을 걸어 주세요.";
+        }
+        return "지금은 펫이 대답하기 어려워요. 잠시 후 다시 말을 걸어 주세요.";
     }
 
     /**

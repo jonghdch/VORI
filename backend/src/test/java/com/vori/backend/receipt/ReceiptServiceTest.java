@@ -1,6 +1,7 @@
 package com.vori.backend.receipt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vori.backend.gemini.AiQuotaException;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.receipt.dto.ReceiptOcrResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,5 +92,17 @@ class ReceiptServiceTest {
         assertThat(r.amount()).isEqualTo(9_900);
         assertThat(r.item()).isEqualTo("도시락");
         assertThat(r.extracted().sourceType()).isNull();
+    }
+
+    @Test
+    @DisplayName("Gemini 하루 한도가 끝났으면 실패로 남기고 직접 입력을 권한다 — 화면은 이 문구를 그대로 보여 준다")
+    void dailyQuotaAsksManualEntry() {
+        when(geminiClient.extractReceipt(any(), anyString()))
+                .thenThrow(new AiQuotaException(AiQuotaException.Kind.DAILY, "오후 5시"));
+
+        ReceiptOcrResponse r = service.process(1L, PNG);
+
+        assertThat(r.status()).isEqualTo(OcrStatus.FAILED);
+        assertThat(r.errorMessage()).contains("AI 사용량을 다 써서").contains("직접 입력");
     }
 }

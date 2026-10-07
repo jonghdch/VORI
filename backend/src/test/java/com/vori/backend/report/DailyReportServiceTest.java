@@ -3,6 +3,7 @@ package com.vori.backend.report;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.ExpenseRepository;
+import com.vori.backend.gemini.AiSwitches;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.income.IncomeRepository;
 import com.vori.backend.inquiry.AiInquiry;
@@ -47,10 +48,12 @@ class DailyReportServiceTest {
     private final AiInquiryRepository aiInquiryRepository = mock(AiInquiryRepository.class);
     private final GeminiClient geminiClient = mock(GeminiClient.class);
 
+    private final AiSwitches switches = AiSwitches.allOn();
+
     private final DailyReportService service = new DailyReportService(
             dailyReportRepository, expenseRepository, incomeRepository, petRepository,
             petSpeciesRepository, petGrowthLogRepository, aiInquiryRepository, geminiClient,
-            mock(TransactionTemplate.class), new ObjectMapper());
+            mock(TransactionTemplate.class), new ObjectMapper(), switches);
 
     private static final Long USER = 7L;
     private static final LocalDate DAY = LocalDate.of(2026, 9, 30);
@@ -119,5 +122,17 @@ class DailyReportServiceTest {
         assertThat(in.reasons()).isEmpty();
         assertThat(in.petName()).isNull();
         verify(aiInquiryRepository, never()).findByExpenseIdIn(anyList());
+    }
+
+    @Test
+    @DisplayName("관리자가 일일 코멘트를 꺼 두면 Gemini 를 부르지 않는다 — 리포트는 통계만으로 만든다")
+    void skipsGeminiWhenDailyCommentIsOff() {
+        when(expenseRepository.findByUserIdAndSpentAtBetween(eq(USER), any(), any())).thenReturn(List.of());
+        givenPet("콩이");
+        switches.setDailyComment(false);
+
+        service.generateNow(USER, DAY);
+
+        verify(geminiClient, never()).generateDailyComment(any());
     }
 }

@@ -33,6 +33,7 @@ export const ADMIN_NAV = [
       { to: "/admin/category-stats", label: "지출 카테고리 통계" },
       { to: "/admin/rationality-rules", label: "합리성 판정 / AI 룰 설정" },
       { to: "/admin/ai-logs", label: "AI 대사 로그" },
+      { to: "/admin/ai-usage", label: "AI 사용량" },
       { to: "/admin/ocr-jobs", label: "영수증 OCR 모니터링" },
     ],
   },

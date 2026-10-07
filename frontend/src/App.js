@@ -57,6 +57,7 @@ const AdminRationalityRulesPage = lazy(() =>
   import("./pages/Admin/RationalityRulesPage"),
 );
 const AdminAiLogsPage = lazy(() => import("./pages/Admin/AiLogsPage"));
+const AdminAiUsagePage = lazy(() => import("./pages/Admin/AiUsagePage"));
 const AdminSanctionsPage = lazy(() => import("./pages/Admin/SanctionsPage"));
 const AdminTitleManagePage = lazy(() =>
   import("./pages/Admin/TitleManagePage"),
@@ -71,6 +72,7 @@ const ADMIN_PAGES = {
   "/admin/category-stats": AdminCategoryStatsPage,
   "/admin/rationality-rules": AdminRationalityRulesPage,
   "/admin/ai-logs": AdminAiLogsPage,
+  "/admin/ai-usage": AdminAiUsagePage,
   "/admin/achievements": AdminTitleManagePage,
 };
 
