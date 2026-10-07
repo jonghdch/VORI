@@ -80,6 +80,25 @@ public class DailyJudgmentService {
         return finalizeRow(user,row,now);
     }
 
+    /**
+     * 자정이 지난 미확정 판정을 1차 판정 내용으로 확정하고 그 보상을 지급한다(docs/judgment-flow.md D7).
+     * 예외 지출 사유는 반영하지 않는다 — 다시 계산하지 않고 1차 판정 때 저장한 결과·보상을 그대로 쓴다.
+     * 사용자 행을 잠근 뒤 다시 읽어 PENDING 일 때만 진행하므로, 사용자의 확정 요청과 겹쳐도 보상은 한 번이다.
+     * @return 이번 호출로 확정했으면 true
+     */
+    @Transactional public boolean finalizeExpiredAsInitial(Long judgmentId){
+        DailyJudgment found=judgments.findById(judgmentId).orElse(null);
+        if(found==null) return false;
+        User user=users.findByIdForUpdate(found.getUserId()).orElseThrow();
+        DailyJudgment row=judgments.findByUserIdAndJudgmentDate(user.getId(),found.getJudgmentDate()).orElse(null);
+        if(row==null || row.isFinalized()) return false;
+        LocalDateTime now=LocalDateTime.now();
+        row.finalizeAsInitial(now);
+        DailyJudgmentResponse stored=DailyJudgmentResponse.from(row,false);
+        grant(user,new Evaluation(row.getSignal(),row.getExpenseCount(),stored.statRewards(),stored.groupJudgments(),stored.savedAmount()),now);
+        return true;
+    }
+
     private DailyJudgmentResponse finalizeRow(User user,DailyJudgment row,LocalDateTime now){
         Evaluation evaluation=evaluate(user.getId(),row.getJudgmentDate());
         row.finalizeWith(evaluation.signal,evaluation.count,evaluation.saved/100,maxReward(evaluation),details(evaluation),DailyJudgmentResponse.groupsToJson(evaluation.groups),evaluation.saved,now);

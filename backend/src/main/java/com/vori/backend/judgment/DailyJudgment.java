@@ -84,6 +84,17 @@ public class DailyJudgment {
         this.judgedAt = judgedAt;
     }
 
+    /**
+     * 자정이 지나도록 사유 입력을 끝내지 않은 판정을 1차 판정 내용 그대로 확정한다(docs/judgment-flow.md D7).
+     * PENDING 동안 보상 칸에는 1차 판정의 "줄 예정" 값이 들어 있으므로 그대로 두고, 신호·스탯별 결과만 1차 값으로 맞춘다.
+     */
+    public void finalizeAsInitial(LocalDateTime finalizedAt) {
+        if (initialSignal != null) this.signal = initialSignal;
+        if (initialGroupDetails != null) this.groupDetails = initialGroupDetails;
+        this.status = JudgmentStatus.FINALIZED;
+        this.finalizedAt = finalizedAt;
+    }
+
     /** 관리자 시연 재판정은 같은 날짜 행을 갱신해 결과 화면도 최신 계산을 보게 한다. */
     public void refresh(Signal signal, int expenseCount, int coinReward, int statRewardPerType,
                         String rewardDetails, String groupDetails, int savedAmount, LocalDateTime judgedAt) {
