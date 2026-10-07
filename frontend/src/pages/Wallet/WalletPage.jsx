@@ -170,7 +170,7 @@ function WalletPage({ user, onLogout }) {
   // 기본 선택 = 오늘 (이번 달 한정)
   const [selectedDay, setSelectedDay] = useState(() => initialDate.getDate());
   const [selectedId, setSelectedId] = useState(null);
-  // 일반 사용자는 22시부터, 관리자는 시연·검증을 위해 항상 사용할 수 있다.
+  // 일반 사용자는 20시부터, 관리자는 시연·검증을 위해 항상 사용할 수 있다.
   const [isAiActive, setIsAiActive] = useState(() => canUseAiJudge(user));
 
   useEffect(() => {

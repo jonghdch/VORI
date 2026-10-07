@@ -12,8 +12,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 
 /**
- * 매일 22시(소비 판정이 열리는 시각) — 오늘 지출을 기록했고 아직 판정하지 않은 사용자에게 알린다.
- * 열리는 시각은 서버 vori.ai-judge.open-hour·프론트 AI_ACTIVE_FROM_HOUR 기본값(22)과 같다.
+ * 매일 20시(소비 판정이 열리는 시각) — 오늘 지출을 기록했고 아직 판정하지 않은 사용자에게 알린다.
+ * 열리는 시각은 서버 vori.ai-judge.open-hour·프론트 AI_ACTIVE_FROM_HOUR 기본값(20)과 같다.
  */
 @Slf4j
 @Component
@@ -24,7 +24,7 @@ public class JudgmentOpenNotifier {
     private final DailyJudgmentRepository dailyJudgmentRepository;
     private final NotificationService notificationService;
 
-    @Scheduled(cron = "0 0 22 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 20 * * *", zone = "Asia/Seoul")
     public void notifyOpen() {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         try {
