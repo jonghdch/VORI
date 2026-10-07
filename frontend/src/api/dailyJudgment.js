@@ -14,3 +14,7 @@ export const startTodayJudgment = () =>
 
 export const startDateJudgment = (date) =>
   post(`/daily-judgments?date=${encodeURIComponent(date)}`);
+
+// 예외 지출 사유 입력을 마쳤거나 건너뛰었을 때 — 그날 판정을 확정하고 보상을 받는다 (docs/judgment-flow.md ③)
+export const finalizeDateJudgment = (date) =>
+  post(`/daily-judgments/finalize?date=${encodeURIComponent(date)}`);

@@ -142,6 +142,7 @@ public class ExpenseService {
 
     /**
      * 본인 지출의 내역명·금액 수정 후 현재 통계 기준으로 판정과 절약액을 다시 계산한다.
+     * 금액·카테고리가 바뀌지 않았으면 내역·결제수단만 고치고 판정은 그대로 둔다.
      *
      * 파생 상태 처리는 삭제(LedgerService.deleteExpense)와 같은 규칙을 따른다.
      * - user.totalSaved — 이 지출이 더해 둔 절약액과 새 절약액의 차이만큼 맞춘다.
@@ -154,6 +155,15 @@ public class ExpenseService {
         if (!expense.getUserId().equals(userId)) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.FORBIDDEN, "본인 지출만 수정할 수 있습니다.");
+        }
+
+        // 금액·카테고리가 그대로면 다시 판정하지 않는다(docs/judgment-flow.md D6). 신호는 이 둘로만 계산하므로
+        // 내역 이름·결제수단만 고친 수정에 판정을 다시 내면 얻는 것 없이 이 지출의 AI 질문·답변만 지워진다.
+        // AI 질문 문구에는 예전 이름이 남는다 — 그때 그 이름으로 물은 기록이다.
+        if (expense.getAmount().equals(req.amount()) && expense.getCategoryId().equals(req.categoryId())) {
+            expense.updateItem(req.item().trim());
+            if (req.paymentMethod() != null) expense.updatePaymentMethod(req.paymentMethod());
+            return ExpenseResponse.from(expense);
         }
 
         Category category = categoryRepository.findById(req.categoryId())

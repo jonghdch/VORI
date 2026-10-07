@@ -24,6 +24,8 @@ const CHART_COLORS = [
 
 // 합리성 시그널(백엔드 enum) → 한글 상태 + 배지 색상 클래스.
 const SIGNAL_STATUS = { GREEN: "합리적", GRAY: "중립", RED: "비합리적" };
+// 1차 판정만 끝나고 예외 지출 사유를 기다리는 날(PENDING)은 아직 그날 결과가 아니다 — 색·보상을 확정된 날처럼 보이지 않는다.
+const isFinalJudgment = (judgment) => Boolean(judgment) && judgment.status !== "PENDING";
 
 // 결제수단 enum(백엔드 PaymentMethod) → 한글 라벨.
 const PAYMENT_LABEL = {
@@ -271,7 +273,7 @@ function WalletPage({ user, onLogout }) {
     });
     Object.values(judgmentsByDate).forEach((judgment) => {
       const day = Number(judgment.date?.split("-")[2]);
-      if (day && judgment.signal) map.set(day, judgment.signal);
+      if (day && judgment.signal && isFinalJudgment(judgment)) map.set(day, judgment.signal);
     });
     return map;
   }, [rows, judgmentsByDate]);
@@ -547,7 +549,7 @@ function WalletPage({ user, onLogout }) {
                   const isToday = day === todayDay;
                   const dayIso = toIsoDate(viewYear, viewMonth, day);
                   const isFuture = dayIso > todayIso;
-                  const isJudged = Boolean(judgmentsByDate[dayIso]);
+                  const isJudged = isFinalJudgment(judgmentsByDate[dayIso]);
                   return (
                     <button
                       key={day}
@@ -597,7 +599,7 @@ function WalletPage({ user, onLogout }) {
                   const isSelected = isCurrentMonth && selectedDay === day;
                   const dayIso = toIsoDate(d.getFullYear(), d.getMonth() + 1, day);
                   const isFuture = dayIso > todayIso;
-                  const isJudged = isCurrentMonth && Boolean(judgmentsByDate[dayIso]);
+                  const isJudged = isCurrentMonth && isFinalJudgment(judgmentsByDate[dayIso]);
 
                   if (!isCurrentMonth) {
                     return (
@@ -785,14 +787,20 @@ function WalletPage({ user, onLogout }) {
           <div className="ledger-day-reward-head">
             <div>
               <span>{selectedDateIso ? `${formatDateDisplay(selectedDateIso)} 판정 보상` : "선택한 날짜의 판정 보상"}</span>
-              <strong>{selectedJudgment ? `${SIGNAL_STATUS[selectedJudgment.signal] || "판정 완료"} 소비` : "아직 판정 전"}</strong>
+              <strong>{!selectedJudgment ? "아직 판정 전" : isFinalJudgment(selectedJudgment) ? `${SIGNAL_STATUS[selectedJudgment.signal] || "판정 완료"} 소비` : selectedDateIso < todayIso ? "확정되지 않은 판정" : "사유 답변 대기"}</strong>
             </div>
-            {selectedJudgment && <span className={`ledger-history-badge ${SIGNAL_BADGE[selectedJudgment.signal] || "ledger-history-badge--gray"}`}>판정 완료</span>}
+            {isFinalJudgment(selectedJudgment) && <span className={`ledger-history-badge ${SIGNAL_BADGE[selectedJudgment.signal] || "ledger-history-badge--gray"}`}>판정 완료</span>}
           </div>
           {judgmentLoading ? (
             <p className="ledger-day-reward-empty">보상 정보를 불러오는 중이에요.</p>
           ) : judgmentError ? (
             <p className="ledger-day-reward-empty ledger-day-reward-error">{judgmentError}</p>
+          ) : selectedJudgment && !isFinalJudgment(selectedJudgment) ? (
+            <p className="ledger-day-reward-empty">
+              {selectedDateIso < todayIso
+                ? "그날 안에 확정하지 않은 판정이라 보상이 지급되지 않았어요."
+                : "예외 지출 사유를 답하거나 건너뛰면 판정이 확정되고 보상이 지급돼요."}
+            </p>
           ) : selectedJudgment ? (
             <div className="ledger-day-reward-values">
               <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span><CoinIcon className="ledger-day-reward-coin" /> 받은 코인</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
