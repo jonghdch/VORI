@@ -32,6 +32,11 @@ checkstyle {
 	maxWarnings = 0
 }
 
+// Spring Boot 3.5 는 지원이 끝나 새 패치가 없다. 보안 패치가 나온 라이브러리는 버전을 직접 올린다.
+// CI 보안 검사(Trivy)가 HIGH 이상을 찾으면 여기서 패치 버전으로 올리고, 고칠 수 없는 건 .trivyignore 에 이유와 함께 적는다.
+ext['jackson-bom.version'] = '2.21.7' // CVE-2026-89407 등 DoS 5건
+ext['tomcat.version'] = '10.1.60'     // CVE-2026-65182 등 인증 우회 3건
+
 repositories {
 	mavenCentral()
 }
