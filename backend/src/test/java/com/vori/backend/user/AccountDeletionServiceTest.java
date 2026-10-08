@@ -1,9 +1,12 @@
 package com.vori.backend.user;
 
+import com.vori.backend.notification.NotificationService;
+import com.vori.backend.notification.NotificationType;
 import com.vori.backend.user.dto.WithdrawalRequest;
 import com.vori.backend.user.dto.WithdrawalResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -11,11 +14,18 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -28,14 +38,17 @@ class AccountDeletionServiceTest {
 
     private final UserRepository userRepository = mock(UserRepository.class);
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final NotificationService notifications = mock(NotificationService.class);
     private final AccountDeletionService service = new AccountDeletionService(
-            userRepository, encoder, mock(JdbcTemplate.class), mock(PlatformTransactionManager.class), 30);
+            userRepository, encoder, jdbc, mock(PlatformTransactionManager.class), notifications, 30);
 
     private User given(Role role, String rawPassword) {
         User u = User.builder().id(5L).email("u@vori.com").nickname("닉").role(role)
                 .passwordHash(rawPassword == null ? null : encoder.encode(rawPassword))
                 .build();
         when(userRepository.findById(5L)).thenReturn(Optional.of(u));
+        when(userRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(u));
         return u;
     }
 
@@ -100,13 +113,48 @@ class AccountDeletionServiceTest {
     }
 
     @Test
-    @DisplayName("로그인 복구 — 대기 계정만 취소되고 true")
-    void cancelDeletionRestoresOnlyPending() {
+    @DisplayName("로그인 복구 — 유예 기간 안의 대기 계정만 복구하고 true, 정상 계정은 false")
+    void restoreOnLoginWithinGrace() {
         User u = given(Role.USER, "pw1234!!");
-        assertThat(u.cancelDeletion()).isFalse();
+        assertThat(service.restoreOnLogin(5L, NOW)).isFalse();
 
-        u.requestDeletion(NOW);
-        assertThat(u.cancelDeletion()).isTrue();
+        u.requestDeletion(NOW.minusDays(29));
+        assertThat(service.restoreOnLogin(5L, NOW)).isTrue();
         assertThat(u.isPendingDeletion()).isFalse();
+    }
+
+    @Test
+    @DisplayName("유예 기간이 지났으면 새벽 삭제 전이라도 복구하지 않고 401 (Codex 지적)")
+    void expiredAccountIsNotRestored() {
+        User u = given(Role.USER, "pw1234!!");
+        u.requestDeletion(NOW.minusDays(30));
+
+        assertThatThrownBy(() -> service.restoreOnLogin(5L, NOW))
+                .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.UNAUTHORIZED));
+        assertThat(u.isPendingDeletion()).isTrue();
+    }
+
+    @Test
+    @DisplayName("이미 지워진 계정의 로그인은 401 — purge 가 먼저 행을 지운 경우")
+    void purgedAccountLoginIsUnauthorized() {
+        when(userRepository.findByIdForUpdate(9L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.restoreOnLogin(9L, NOW))
+                .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.UNAUTHORIZED));
+    }
+
+    @Test
+    @DisplayName("영구 삭제가 실패하면 관리자에게 하루 한 번 알림을 보낸다")
+    void purgeFailureAlertsAdmins() {
+        when(userRepository.findIdsDeletionRequestedBefore(NOW.minusDays(30))).thenReturn(List.of(5L));
+        when(jdbc.queryForObject(anyString(), eq(Integer.class), any(Object[].class)))
+                .thenThrow(new DataIntegrityViolationException("FK"));
+        User admin = User.builder().id(1L).email("admin@vori.com").nickname("관리자").role(Role.ADMIN).build();
+        when(userRepository.findAllByRole(Role.ADMIN)).thenReturn(List.of(admin));
+
+        assertThat(service.purgeExpired(NOW)).isZero();
+
+        verify(notifications).notify(eq(1L), eq(NotificationType.ADMIN_ALERT), contains("1건"), anyString(),
+                isNull(), eq("account-purge-failed:2026-10-08"));
     }
 }

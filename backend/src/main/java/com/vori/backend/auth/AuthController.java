@@ -4,6 +4,7 @@ import com.vori.backend.auth.dto.AuthResponse;
 import com.vori.backend.auth.dto.GoogleLoginRequest;
 import com.vori.backend.auth.dto.LoginRequest;
 import com.vori.backend.auth.dto.SignupRequest;
+import com.vori.backend.user.AccountDeletionService;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserService;
 import com.vori.backend.user.dto.MeResponse;
@@ -26,6 +27,8 @@ import org.springframework.security.web.authentication.logout.SecurityContextLog
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -36,6 +39,7 @@ public class AuthController {
     private final SecurityContextRepository securityContextRepository;
     private final GoogleTokenVerifier googleTokenVerifier;
     private final CustomUserDetailsService userDetailsService;
+    private final AccountDeletionService accountDeletionService;
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
@@ -95,6 +99,10 @@ public class AuthController {
     private MeResponse establishSession(Authentication auth,
                                         HttpServletRequest request,
                                         HttpServletResponse response) {
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+        // 탈퇴 대기 계정이면 복구한다. 유예 기간이 지났으면 여기서 401 — 세션을 만들기 전에 판정한다
+        boolean restored = accountDeletionService.restoreOnLogin(principal.getId(), LocalDateTime.now());
+
         // 세션 고정(session fixation) 방어 — 로그인 성공 시 세션 ID 회전.
         // formLogin 을 꺼서 필터의 changeSessionId 전략을 안 타므로 직접 수행.
         request.getSession(true);
@@ -105,8 +113,7 @@ public class AuthController {
         SecurityContextHolder.setContext(context);
         securityContextRepository.saveContext(context, request, response);
 
-        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
-        boolean restored = userService.recordLogin(principal.getId());
+        userService.recordLogin(principal.getId());
         MeResponse me = userService.getMe(principal.getId());
         // 탈퇴 대기 계정이 로그인해 복구됐으면 화면이 안내할 수 있게 표시한다
         return restored ? me.withAccountRestored() : me;

@@ -173,20 +173,14 @@ public class UserService {
      * 로그인 성공 시 호출 — 누적 로그인 횟수를 올리고 칭호 조건을 다시 본다.
      * AuthController.login() 이 인증 성공 직후 호출한다. "최초 1회 로그인" 같은
      * 조건은 커밋 이후 이벤트로 평가돼야 하므로 지출 등록 등과 같은 패턴을 따른다.
-     *
-     * @return 탈퇴 대기 계정이라 이번 로그인으로 복구됐으면 true
      */
 
     @Transactional
-    public boolean recordLogin(Long userId) {
+    public void recordLogin(Long userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
         user.incrementLoginCount();
-        // 탈퇴 유예 기간 안에 로그인하면 탈퇴를 취소한다 (AccountDeletionService)
-        boolean restored = user.cancelDeletion();
-        if (restored) log.info("탈퇴 취소(로그인 복구) — userId={}", userId);
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "LOGIN"));
-        return restored;
     }
 
     @Transactional

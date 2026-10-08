@@ -32,11 +32,30 @@ class AccountDeletionPurgeTest {
     @Autowired NotificationService notificationService;
     @Autowired JdbcTemplate jdbc;
 
-    /** 가입(시작 펫·스탯 행 생성) + NO ACTION 테이블인 알림 1건. */
+    /**
+     * 가입(시작 펫·스탯 행 생성) + purge 가 손으로 정리하는 행을 모두 만든다.
+     * - FK 가 NO ACTION 인 4개 테이블: 알림·출석·월간 리포트·스탯 아이템
+     * - 자기 자식을 다시 가리키는 칭호 컬럼: users.active_title_id, pets.equipped_title_award_id
+     */
     private Long signupWithRows(String email) {
         Long id = userService.signup(new SignupRequest(
                 email, "test1234!", "탈퇴테스트", "탈퇴테스트", true, true, false)).getId();
         notificationService.notify(id, NotificationType.MONTHLY_REPORT, "제목", "본문", "/report", "purge-test:" + id);
+        jdbc.update("INSERT INTO attendance_checkins (user_id, checked_in_date, created_at) VALUES (?, ?, ?)",
+                id, NOW.toLocalDate(), NOW);
+        jdbc.update("INSERT INTO monthly_reports (user_id, report_month, generated_at) VALUES (?, '2026-09', ?)", id, NOW);
+        jdbc.update("INSERT INTO user_stat_items (user_id, name, stat_type, stat_delta, acquired_at) VALUES (?, '테스트', 'ENERGY', 1, ?)",
+                id, NOW);
+
+        Long titleId = jdbc.queryForObject("SELECT MIN(id) FROM titles", Long.class);
+        jdbc.update("INSERT INTO user_titles (user_id, title_id, acquired_at) VALUES (?, ?, ?)", id, titleId, NOW);
+        jdbc.update("UPDATE users SET active_title_id = (SELECT MAX(id) FROM user_titles WHERE user_id = ?) WHERE id = ?", id, id);
+
+        Long petId = jdbc.queryForObject("SELECT id FROM pets WHERE user_id = ?", Long.class, id);
+        Long petTitleId = jdbc.queryForObject("SELECT MIN(id) FROM pet_titles", Long.class);
+        jdbc.update("INSERT INTO pet_title_awards (pet_id, pet_title_id, acquired_at) VALUES (?, ?, ?)", petId, petTitleId, NOW);
+        jdbc.update("UPDATE pets SET equipped_title_award_id = (SELECT MAX(id) FROM pet_title_awards WHERE pet_id = ?) WHERE id = ?",
+                petId, petId);
         return id;
     }
 
@@ -49,20 +68,26 @@ class AccountDeletionPurgeTest {
     }
 
     @Test
-    @DisplayName("유예 기간이 지난 계정은 계정·펫·스탯·알림까지 모두 지워진다")
+    @DisplayName("유예 기간이 지난 계정은 FK 가 막는 테이블·칭호 장착까지 포함해 모두 지워진다")
     void purgesExpiredAccountWithItsRows() {
         Long id = signupWithRows("purge-expired@vori.test");
         assertThat(count("pets", "user_id", id)).isEqualTo(1);
         assertThat(count("notifications", "user_id", id)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT active_title_id FROM users WHERE id = ?", Long.class, id)).isNotNull();
         requestedAt(id, NOW.minusDays(31));
 
+        // 같은 DB 에 다른 만료 계정이 있을 수 있어 건수가 아니라 이 계정이 지워졌는지를 본다
         int purged = deletionService.purgeExpired(NOW);
 
-        assertThat(purged).isEqualTo(1);
+        assertThat(purged).isPositive();
         assertThat(count("users", "id", id)).isZero();
         assertThat(count("pets", "user_id", id)).isZero();
         assertThat(count("user_stat_stats", "user_id", id)).isZero();
         assertThat(count("notifications", "user_id", id)).isZero();
+        assertThat(count("attendance_checkins", "user_id", id)).isZero();
+        assertThat(count("monthly_reports", "user_id", id)).isZero();
+        assertThat(count("user_stat_items", "user_id", id)).isZero();
+        assertThat(count("user_titles", "user_id", id)).isZero();
     }
 
     @Test

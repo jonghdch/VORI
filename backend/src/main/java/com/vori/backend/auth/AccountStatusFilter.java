@@ -87,7 +87,7 @@ public class AccountStatusFilter extends OncePerRequestFilter {
 
         User user = current.get();
         if (user.isPendingDeletion()) {
-            // 탈퇴한 기기 말고 다른 기기에 남은 세션도 끊는다. 다시 로그인하면 복구된다(UserService.recordLogin)
+            // 탈퇴한 기기 말고 다른 기기에 남은 세션도 끊는다. 다시 로그인하면 복구된다(AccountDeletionService.restoreOnLogin)
             reject(request, response, HttpStatus.UNAUTHORIZED, "탈퇴 대기 중인 계정이에요. 다시 로그인하면 복구돼요.");
             return;
         }

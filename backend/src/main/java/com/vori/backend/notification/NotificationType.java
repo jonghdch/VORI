@@ -13,5 +13,7 @@ public enum NotificationType {
     /** 펫 30레벨 — 배웅 가능 */
     PET_GRADUATE_READY,
     /** 오늘 소비 판정을 할 수 있음(20시) */
-    JUDGMENT_OPEN
+    JUDGMENT_OPEN,
+    /** 관리자에게 — 자동 작업 실패 (탈퇴 계정 영구 삭제 등). 로그만 남기면 아무도 못 본다 */
+    ADMIN_ALERT
 }

@@ -32,6 +32,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Page<User> findByRole(Role role, Pageable pageable);
 
+    /** 역할별 전체 목록 — 관리자 알림 대상(AccountDeletionService) */
+    List<User> findAllByRole(Role role);
+
     // ───── 탈퇴 유예 (AccountDeletionService) ─────
 
     /** 탈퇴 대기 중인 계정 id. 배치 작업(알림·AI 코멘트·월간 리포트)이 대상에서 뺀다. */

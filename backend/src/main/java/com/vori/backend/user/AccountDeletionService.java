@@ -1,5 +1,7 @@
 package com.vori.backend.user;
 
+import com.vori.backend.notification.NotificationService;
+import com.vori.backend.notification.NotificationType;
 import com.vori.backend.user.dto.WithdrawalRequest;
 import com.vori.backend.user.dto.WithdrawalResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +23,7 @@ import java.util.List;
  * 회원 탈퇴 — 유예 후 영구 삭제.
  *
  * <p>탈퇴하면 바로 지우지 않고 {@code users.deletion_requested_at} 만 남긴다. 실수로 탈퇴해도
- * 유예 기간(기본 30일) 안에 다시 로그인하면 그대로 복구된다(UserService.recordLogin).
+ * 유예 기간(기본 30일) 안에 다시 로그인하면 그대로 복구된다({@link #restoreOnLogin}).
  * 대기 중에는 다른 기기의 세션도 AccountStatusFilter 가 끊고, 배치 작업(판정 알림·AI 일일 코멘트·
  * 월간 리포트)이 대상에서 뺀다. 기간이 지나면 {@link #purgeExpired} 가 매일 새벽 계정과 기록을 지운다.
  *
@@ -38,15 +40,18 @@ public class AccountDeletionService {
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
+    private final NotificationService notificationService;
     private final int graceDays;
 
     public AccountDeletionService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                                   JdbcTemplate jdbc, PlatformTransactionManager txManager,
+                                  NotificationService notificationService,
                                   @Value("${account.deletion.grace-days:30}") int graceDays) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jdbc = jdbc;
         this.tx = new TransactionTemplate(txManager);
+        this.notificationService = notificationService;
         this.graceDays = graceDays;
     }
 
@@ -68,6 +73,34 @@ public class AccountDeletionService {
         return new WithdrawalResponse(now.plusDays(graceDays));
     }
 
+    /**
+     * 로그인 직전 — 탈퇴 대기 계정이면 복구한다. AuthController 가 세션을 만들기 전에 부른다.
+     *
+     * <p>행을 잠그고(SELECT ... FOR UPDATE) 판정한다. purge 도 같은 행을 잠그므로 둘은 차례로 돈다 —
+     * 삭제가 먼저 끝났으면 행이 없어 401, 복구가 먼저면 purge 가 대기 해제를 보고 건너뛴다.
+     * 유예 기간이 이미 지났으면 새벽 삭제 전이라도 복구하지 않는다. 기준이 purge 와 같아야
+     * "30일" 이 정확히 30일이 된다.
+     *
+     * @return 이번 로그인으로 복구됐으면 true
+     */
+    @Transactional
+    public boolean restoreOnLogin(Long userId, LocalDateTime now) {
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "탈퇴 처리된 계정이에요"));
+        if (!user.isPendingDeletion()) return false;
+        if (!user.getDeletionRequestedAt().isAfter(cutoff(now))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "탈퇴 처리된 계정이에요");
+        }
+        user.cancelDeletion();
+        log.info("탈퇴 취소(로그인 복구) — userId={}", userId);
+        return true;
+    }
+
+    /** 이 시각 이전(포함)에 탈퇴를 신청한 계정은 유예 기간이 끝났다. purge 와 로그인 복구가 같이 쓴다. */
+    private LocalDateTime cutoff(LocalDateTime now) {
+        return now.minusDays(graceDays);
+    }
+
     /** 이메일 가입자는 비밀번호, 구글 가입자는 확인 문구. */
     private void verifyOwner(User user, WithdrawalRequest req) {
         if (user.getPasswordHash() != null) {
@@ -83,7 +116,8 @@ public class AccountDeletionService {
 
     /**
      * 유예 기간이 지난 탈퇴 대기 계정을 영구 삭제한다. 매일 04:00(한국 시간).
-     * 계정마다 트랜잭션을 따로 둬 한 명이 실패해도 나머지는 지운다. 실패는 ERROR 로그로 남기고
+     * 계정마다 트랜잭션을 따로 둬 한 명이 실패해도 나머지는 지운다. 실패하면 관리자에게 알림을 보내고
+     * (로그만으로는 아무도 못 본다 — 그러면 처리방침의 "30일 뒤 파기" 를 조용히 어기게 된다)
      * 다음 날 다시 시도된다(대상 조건이 그대로라서).
      */
     @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
@@ -92,18 +126,35 @@ public class AccountDeletionService {
     }
 
     public int purgeExpired(LocalDateTime now) {
-        List<Long> ids = userRepository.findIdsDeletionRequestedBefore(now.minusDays(graceDays));
+        List<Long> ids = userRepository.findIdsDeletionRequestedBefore(cutoff(now));
         int done = 0;
+        int failed = 0;
         for (Long id : ids) {
             try {
                 Boolean deleted = tx.execute(status -> purge(id));
                 if (Boolean.TRUE.equals(deleted)) done++;
             } catch (RuntimeException e) {
+                failed++;
                 log.error("탈퇴 계정 영구 삭제 실패 — userId={}", id, e);
             }
         }
-        if (!ids.isEmpty()) log.info("탈퇴 계정 영구 삭제 — 대상 {}명, 삭제 {}명", ids.size(), done);
+        if (!ids.isEmpty()) log.info("탈퇴 계정 영구 삭제 — 대상 {}명, 삭제 {}명, 실패 {}명", ids.size(), done, failed);
+        if (failed > 0) alertAdmins(failed, now);
         return done;
+    }
+
+    /** 영구 삭제 실패를 관리자 알림으로 남긴다. 하루 한 번(dedupe). 알림 자체가 실패해도 삭제 작업은 끝낸다. */
+    private void alertAdmins(int failed, LocalDateTime now) {
+        try {
+            for (User admin : userRepository.findAllByRole(Role.ADMIN)) {
+                notificationService.notify(admin.getId(), NotificationType.ADMIN_ALERT,
+                        "탈퇴 계정 영구 삭제 실패 " + failed + "건",
+                        "서버 로그의 '탈퇴 계정 영구 삭제 실패' 를 확인해 주세요. 내일 다시 시도해요.",
+                        null, "account-purge-failed:" + now.toLocalDate());
+            }
+        } catch (RuntimeException e) {
+            log.error("탈퇴 계정 삭제 실패 알림을 보내지 못함", e);
+        }
     }
 
     /**

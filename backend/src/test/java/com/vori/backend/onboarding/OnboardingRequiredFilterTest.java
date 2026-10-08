@@ -71,6 +71,17 @@ class OnboardingRequiredFilterTest {
     }
 
     @Test
+    void 설문_전에도_회원_탈퇴는_열어_둔다() throws Exception {
+        // 약관대로 가입 직후 설문을 그만둔 계정도 언제든 탈퇴할 수 있어야 한다
+        loginAs(Role.USER);
+        when(profiles.existsById(1L)).thenReturn(false);
+
+        filter.doFilter(request("POST", "/api/users/me/withdrawal"), new MockHttpServletResponse(), chain);
+
+        verify(chain).doFilter(any(), any());
+    }
+
+    @Test
     void 설문을_마쳤으면_통과() throws Exception {
         loginAs(Role.USER);
         when(profiles.existsById(1L)).thenReturn(true);

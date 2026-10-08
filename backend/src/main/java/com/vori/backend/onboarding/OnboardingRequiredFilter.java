@@ -17,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 소비 프로필 설문을 마치지 않은 계정은 설문과 로그인 관련 API 만 쓸 수 있다.
@@ -31,6 +32,8 @@ public class OnboardingRequiredFilter extends OncePerRequestFilter {
 
     /** 설문 전에도 열어 두는 경로. 로그인 상태 확인·로그아웃과 설문 저장·조회·완료. */
     private static final List<String> ALLOWED_PREFIXES = List.of("/api/auth/", "/api/onboarding/");
+    /** 설문 전에도 여는 단일 경로. 약관대로 가입 직후 설문을 그만둔 계정도 언제든 탈퇴할 수 있어야 한다. */
+    private static final Set<String> ALLOWED_PATHS = Set.of("/api/users/me/withdrawal");
 
     private final UserSpendingProfileRepository profileRepository;
     private final ObjectMapper objectMapper;
@@ -43,7 +46,8 @@ public class OnboardingRequiredFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return !path.startsWith("/api/") || ALLOWED_PREFIXES.stream().anyMatch(path::startsWith);
+        return !path.startsWith("/api/") || ALLOWED_PATHS.contains(path)
+                || ALLOWED_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
     @Override
