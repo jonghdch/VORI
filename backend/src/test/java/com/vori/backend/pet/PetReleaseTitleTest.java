@@ -20,7 +20,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * 분양 직전에 펫 칭호를 마지막으로 판정하는지 검증. 분양한 펫은 다시 판정하지 않으므로,
+ * 배웅 직전에 펫 칭호를 마지막으로 판정하는지 검증. 배웅한 펫은 다시 판정하지 않으므로,
  * 여기서 빠지면 마지막 행동으로 채운 칭호가 그 펫 기록에 영영 남지 않는다.
  */
 class PetReleaseTitleTest {
@@ -43,7 +43,7 @@ class PetReleaseTitleTest {
             new com.vori.backend.pet.PetStatRewardService(org.mockito.Mockito.mock(com.vori.backend.attendance.UserStatItemRepository.class)));
 
     @Test
-    @DisplayName("분양하기 전에, 아직 키우는 상태인 펫으로 칭호를 판정한다")
+    @DisplayName("배웅하기 전에, 아직 키우는 상태인 펫으로 칭호를 판정한다")
     void evaluatesTitlesBeforeRelease() {
         int stat = PetLevel.minExpFor(PetLevel.MAX_LEVEL) / PetLevel.EXP_PER_STAT;
         Pet pet = Pet.builder().id(3L).userId(USER_ID).speciesId(1L).statEnergy(stat)

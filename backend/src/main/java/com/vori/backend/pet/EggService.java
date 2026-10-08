@@ -25,7 +25,7 @@ import java.util.Map;
  * 알 상점·인벤토리·개봉(가챠). 추첨 확률 계산 자체는 GachaService 가 맡는다.
  *
  * 게임 루프: 절약 → 게임머니 적립(ExpenseService) → 알 구매 → 개봉 → 펫 획득
- *            → 절약으로 스탯 성장 → 성체 분양(PetService) → 게임머니 회수
+ *            → 절약으로 스탯 성장 → 성체 배웅(PetService) → 게임머니 회수
  */
 @Slf4j
 @Service
@@ -90,7 +90,7 @@ public class EggService {
      * 키우는 펫이 이미 있으면 개봉을 막는다. 화면과 성장 로직이 모두 활성 펫 한 마리만
      * 다루기 때문에(PetService.getActive / ExpenseService.updateActivePet 둘 다 첫 번째만
      * 본다), 그냥 두면 새로 깬 펫이 보이지도 자라지도 않고 코인만 사라진다.
-     * 구매는 막지 않는다 — 미리 사두고 분양 후에 까는 건 정상적인 플레이다.
+     * 구매는 막지 않는다 — 미리 사두고 배웅 후에 까는 건 정상적인 플레이다.
      */
     @Transactional
     public GachaResultResponse open(Long userId, Long eggId) {
@@ -104,7 +104,7 @@ public class EggService {
         }
         if (!petRepository.findByUserIdAndReleasedAtIsNull(userId).isEmpty()) {
             throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "먼저 키우던 펫을 분양해주세요");
+                    HttpStatus.CONFLICT, "먼저 키우던 펫을 배웅해주세요");
         }
 
         GachaService.Draw draw = gachaService.draw(readDistribution(egg));

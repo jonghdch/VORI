@@ -100,11 +100,11 @@ export const TIER_LABEL = {
 export const STAGE_LEVEL = { INFANT: 1, JUVENILE: 5, ADULT: 15 };
 export const MAX_LEVEL = 30;
 
-/** 다음 진화(또는 졸업)와 그 레벨. 졸업했으면 null. */
+/** 다음 진화(또는 배웅)와 그 레벨. 30레벨이면 null. */
 export function nextMilestone(level) {
   if (level < STAGE_LEVEL.JUVENILE) return { label: `${STAGE_LABEL.JUVENILE} 진화`, level: STAGE_LEVEL.JUVENILE };
   if (level < STAGE_LEVEL.ADULT) return { label: `${STAGE_LABEL.ADULT} 진화`, level: STAGE_LEVEL.ADULT };
-  if (level < MAX_LEVEL) return { label: "졸업", level: MAX_LEVEL };
+  if (level < MAX_LEVEL) return { label: "배웅", level: MAX_LEVEL };
   return null;
 }
 
@@ -116,6 +116,13 @@ export function levelProgressPct(pet) {
 
 /** 화면에 부를 펫 이름 — 사용자가 지어 준 이름, 아직 없으면 종족 이름. */
 export const petDisplayName = (pet) => pet?.name || pet?.speciesName || "펫";
+
+/** 이름 뒤 조사 — 받침이 있으면 withFinal("과"), 없으면 withoutFinal("와"). 한글이 아니면 둘을 함께 쓴다. */
+export function withJosa(word, withFinal, withoutFinal) {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  if (code < 0 || code > 11171) return `${word}${withoutFinal}(${withFinal})`;
+  return `${word}${code % 28 === 0 ? withoutFinal : withFinal}`;
+}
 
 /**
  * @param {string} appearanceKey

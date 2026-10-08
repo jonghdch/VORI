@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
  *
  * 과제는 "이 펫"의 기록으로만 판정한다. 펫 단위 값(레벨·상호작용·매력 보너스)은 그대로 쓰고,
  * 유저 단위 기록(AI 답변)은 펫이 부화한 뒤의 것만 센다. 그래서 새 펫이 오면 따로 초기화하지 않아도
- * 진행도가 0부터 시작한다. 분양한 펫은 판정하지 않는다 — 그 펫의 칭호는 분양 순간에 고정된다.
+ * 진행도가 0부터 시작한다. 배웅한 펫은 판정하지 않는다 — 그 펫의 칭호는 배웅 순간에 고정된다.
  */
 @Slf4j
 @Service
@@ -61,7 +61,7 @@ public class PetTitleService {
 
     /**
      * 펫의 칭호 조건을 보고 새로 채운 칭호를 지급한다. 부르는 쪽 트랜잭션 안에서 돈다.
-     * 상호작용·분양처럼 펫을 바꾼 바로 그 자리에서 부르면, 응답에 획득 칭호를 실을 수 있다.
+     * 상호작용·배웅처럼 펫을 바꾼 바로 그 자리에서 부르면, 응답에 획득 칭호를 실을 수 있다.
      */
     @Transactional
     public List<GrantedTitle> evaluate(Pet pet) {
@@ -143,7 +143,7 @@ public class PetTitleService {
     }
 
     /**
-     * 칭호 장착(awardId) / 장착 해제(null). 키우는 펫만 바꿀 수 있다 — 분양한 펫이 장착한 칭호는 기록이다.
+     * 칭호 장착(awardId) / 장착 해제(null). 키우는 펫만 바꿀 수 있다 — 배웅한 펫이 장착한 칭호는 기록이다.
      */
     @Transactional
     public PetTitleBoardResponse equip(Long userId, Long petId, Long awardId) {
@@ -153,7 +153,7 @@ public class PetTitleService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인의 펫만 바꿀 수 있습니다");
         }
         if (pet.isReleased()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "분양한 펫의 장착 칭호는 바꿀 수 없습니다");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "배웅한 펫의 장착 칭호는 바꿀 수 없습니다");
         }
         if (awardId != null) {
             PetTitleAward award = awardRepository.findById(awardId)

@@ -4,9 +4,9 @@
 //   POST /api/eggs/buy?grade=    알 구매
 //   POST /api/eggs/{id}/open     가챠 개봉 → 펫 지급
 //   GET  /api/pets/active        키우는 펫 (없으면 null)
-//   GET  /api/pets               보유·분양 이력 전체
+//   GET  /api/pets               보유·배웅 이력 전체
 //   PUT  /api/pets/{id}/name     펫 이름 짓기 (1~10자)
-//   POST /api/pets/{id}/release  성체 분양 → 게임머니 획득
+//   POST /api/pets/{id}/release  성체 배웅 → 게임머니 획득
 //   POST /api/pets/active/interact  상호작용 1회 → 1% 확률로 매력 +1
 //   GET  /api/pets/active/chat      대화창 상태 (성격·남은 횟수)
 //   POST /api/pets/active/chat      펫과 대화 한 마디
@@ -45,10 +45,10 @@ export const getActivePet = () => get("/pets/active");
 /** @returns {Promise<Pet[]>} */
 export const listPets = () => get("/pets");
 
-/** @returns {Promise<Pet>} 400 = 이름 규칙 위반(1~10자), 409 = 이미 분양한 펫 */
+/** @returns {Promise<Pet>} 400 = 이름 규칙 위반(1~10자), 409 = 이미 배웅한 펫 */
 export const namePet = (petId, name) => put(`/pets/${petId}/name`, { name });
 
-/** @returns {Promise<Pet>} 400 = 성체 아님, 409 = 이미 분양 */
+/** @returns {Promise<Pet>} 400 = 성체 아님, 409 = 이미 배웅 */
 export const releasePet = (petId) => post(`/pets/${petId}/release`);
 
 /**

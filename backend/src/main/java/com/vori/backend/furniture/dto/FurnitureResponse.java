@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 보유 가구 한 개. placed=false 면 인벤토리에 있고 분양가 보너스에도 반영되지 않는다.
+ * 보유 가구 한 개. placed=false 면 인벤토리에 있고 배웅 선물 보너스에도 반영되지 않는다.
  *
  * themeId 는 theme_master.id (테마 없는 가구는 null). 이름은 싣지 않는다 — 화면은 테마 현황
  * (GET /api/themes)을 이미 받고 있어 id 로 찾으면 되고, 여기서 이름까지 채우려면 배치·회수처럼

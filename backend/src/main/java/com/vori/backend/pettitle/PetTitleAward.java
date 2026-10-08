@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 펫이 딴 칭호 1건. 한 번 딴 칭호는 회수하지 않고, 분양한 펫의 기록으로도 그대로 남는다.
+ * 펫이 딴 칭호 1건. 한 번 딴 칭호는 회수하지 않고, 배웅한 펫의 기록으로도 그대로 남는다.
  */
 @Entity
 @Table(name = "pet_title_awards")

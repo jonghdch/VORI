@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * 펫 칭호 판정 검증. 칭호는 "그 펫"이 해낸 것이라 펫이 바뀌면 0부터 다시 세고, 한 번 딴 칭호는
- * 분양한 뒤에도 그 펫 기록으로 남아야 한다.
+ * 배웅한 뒤에도 그 펫 기록으로 남아야 한다.
  * Spring 컨텍스트·DB 없이 도는 순수 단위 테스트.
  */
 class PetTitleServiceTest {
@@ -146,7 +146,7 @@ class PetTitleServiceTest {
     }
 
     @Test
-    @DisplayName("분양한 펫은 판정하지 않는다 — 칭호는 분양 순간에 고정된다")
+    @DisplayName("배웅한 펫은 판정하지 않는다 — 칭호는 배웅 순간에 고정된다")
     void releasedPetIsNotEvaluated() {
         Pet released = pet(7L, PetLevel.MAX_LEVEL, 500, LocalDateTime.now().minusDays(10));
         released.release(100, LocalDateTime.now());
@@ -207,7 +207,7 @@ class PetTitleServiceTest {
     }
 
     @Test
-    @DisplayName("분양한 펫의 장착 칭호는 바꿀 수 없다")
+    @DisplayName("배웅한 펫의 장착 칭호는 바꿀 수 없다")
     void equipOfReleasedPetIsFixed() {
         Pet released = pet(10L, PetLevel.MAX_LEVEL, 0, LocalDateTime.now());
         released.release(100, LocalDateTime.now());
@@ -215,6 +215,6 @@ class PetTitleServiceTest {
 
         assertThatThrownBy(() -> service.equip(USER_ID, 10L, null))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("분양한 펫");
+                .hasMessageContaining("배웅한 펫");
     }
 }

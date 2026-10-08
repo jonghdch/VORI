@@ -154,7 +154,7 @@ function FurnitureBrowser({
                       {owned > 0 && <em className="shop-furniture-card-owned">보유 {owned}</em>}
                     </h2>
                     <p>
-                      {STAT_LABEL[item.statTarget] ?? item.statTarget} · 분양가 +{item.releaseBonusPct}%
+                      {STAT_LABEL[item.statTarget] ?? item.statTarget} · 배웅 선물 +{item.releaseBonusPct}%
                     </p>
                     {item.themeName && (
                       <small className="shop-furniture-theme">

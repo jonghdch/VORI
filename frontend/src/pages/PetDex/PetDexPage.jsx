@@ -63,7 +63,7 @@ function PetDexPage({ onLogout }) {
       if (titles.status === "rejected") setTitleError(titles.reason?.message || "칭호를 불러오지 못했어요");
       setLoading(false);
     });
-    // 관리자 도구·분양 등으로 펫이 바뀌면 다시 읽는다
+    // 관리자 도구·배웅 등으로 펫이 바뀌면 다시 읽는다
     const onPetChanged = () => loadPets().catch(() => {});
     window.addEventListener(PET_CHANGED_EVENT, onPetChanged);
     return () => {

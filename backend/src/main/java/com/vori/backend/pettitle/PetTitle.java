@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 
 /**
  * 펫 칭호 마스터. 업적(titles)과 달리 유저가 아니라 펫이 얻는다 — 펫마다 처음부터 다시 도전한다.
- * 칭호 과제는 졸업(분양) 조건과 상관없는 도전 목표다.
+ * 칭호 과제는 배웅 조건과 상관없는 도전 목표다.
  */
 @Entity
 @Table(name = "pet_titles")

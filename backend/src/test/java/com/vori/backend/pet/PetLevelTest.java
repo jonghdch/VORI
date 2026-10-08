@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 펫 레벨·진화 규칙. EXP = 스탯 합 × 10, 레벨은 EXP 에서 나오고, 레벨업에 드는 경험치는 점점 커진다.
- * 5레벨에 2차, 15레벨에 3차로 진화하고 30레벨(만렙)이 졸업(분양 가능)이다.
+ * 5레벨에 2차, 15레벨에 3차로 진화하고 30레벨(만렙)이 배웅 가능이다.
  */
 class PetLevelTest {
 
@@ -70,7 +70,7 @@ class PetLevelTest {
     }
 
     @Test
-    @DisplayName("30레벨이 돼야 졸업(분양 가능)")
+    @DisplayName("30레벨이 돼야 배웅 가능")
     void graduation() {
         assertThat(pet(311).isGraduated()).isFalse();
         assertThat(pet(312).isGraduated()).isTrue();
