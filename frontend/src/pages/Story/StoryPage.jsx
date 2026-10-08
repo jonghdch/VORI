@@ -205,45 +205,121 @@ function StoryParagraph({ children }) {
   );
 }
 
-function createCrateredMoonGeometry(THREE) {
-  // placeholder fallback. 실제 moon.glb 로드되면 이 mesh 는 교체됨.
-  // segments 64×40 ≈ 2,560 vertex (이전 160×96 의 17%).
-  const geometry = new THREE.SphereGeometry(1.25, 64, 40);
+// 일러스트풍 달 — 사진 같은 달(NASA 텍스처)은 너무 사실적이라 쓰지 않는다.
+// 매끈한 구 위에 또렷한 크레이터(평평한 바닥 + 둥근 테두리)와 옅은 바다(어두운 얼룩)만
+// 정점 색으로 칠한다. 텍스처 파일 없이 처음 한 번만 계산한다.
+const MOON_RADIUS = 1.25;
+const MOON_COLOR = {
+  base: 0xd9d1bd,
+  mare: 0xaea692,
+  floor: 0xbdb5a1,
+  rim: 0xece5d2,
+};
+// 바다(마리아) — 카메라 쪽(+z) 반구에 크게 번진 어두운 얼룩.
+const MOON_MARIA = [
+  { direction: [-0.38, 0.34, 0.86], radius: 0.46 },
+  { direction: [0.28, 0.2, 0.94], radius: 0.3 },
+  { direction: [-0.12, -0.36, 0.92], radius: 0.34 },
+  { direction: [0.5, 0.5, 0.7], radius: 0.22 },
+  { direction: [-0.72, -0.1, 0.68], radius: 0.24 },
+];
+// 눈에 띄는 큰 크레이터는 자리를 정해 두고, 작은 것은 시드 난수로 흩뿌린다.
+const MOON_BIG_CRATERS = [
+  { direction: [0.18, -0.62, 0.76], radius: 0.2 },
+  { direction: [-0.5, 0.12, 0.86], radius: 0.15 },
+  { direction: [0.56, -0.12, 0.82], radius: 0.17 },
+  { direction: [0.12, 0.58, 0.8], radius: 0.13 },
+  { direction: [-0.3, -0.7, 0.65], radius: 0.12 },
+  { direction: [0.74, 0.3, 0.6], radius: 0.11 },
+];
+const MOON_SMALL_CRATER_COUNT = 18;
+
+// 구 분할 수. 넓은 화면은 달이 350px 로 커서 160×112(≈18,000 vertex)가 필요하다.
+// 이보다 성기면 크레이터 테두리가 각지고 명암 경계에서 깨진다.
+// 좁은 화면은 달이 200px 이하라 112×76(≈8,600)으로 충분하고, 저사양 기기의
+// 생성 시간(데스크톱 실측 18,000개 ≈ 11ms)도 절반 아래로 줄인다.
+const MOON_SEGMENTS = { wide: [160, 112], compact: [112, 76] };
+
+function createCrateredMoonGeometry(THREE, [widthSegments, heightSegments]) {
+  // moon.glb 가 없을 때 쓰는 기본 달. 처음 한 번만 만든다.
+  const geometry = new THREE.SphereGeometry(MOON_RADIUS, widthSegments, heightSegments);
   const position = geometry.attributes.position;
+  const colors = new Float32Array(position.count * 3);
   const normal = new THREE.Vector3();
-  const craters = [
-    { direction: new THREE.Vector3(-0.42, 0.28, 0.86).normalize(), radius: 0.24, depth: 0.09 },
-    { direction: new THREE.Vector3(0.15, 0.52, 0.84).normalize(), radius: 0.16, depth: 0.065 },
-    { direction: new THREE.Vector3(0.46, -0.12, 0.88).normalize(), radius: 0.19, depth: 0.075 },
-    { direction: new THREE.Vector3(-0.18, -0.48, 0.86).normalize(), radius: 0.18, depth: 0.07 },
-    { direction: new THREE.Vector3(0.64, 0.38, 0.67).normalize(), radius: 0.13, depth: 0.05 },
-    { direction: new THREE.Vector3(-0.62, -0.2, 0.76).normalize(), radius: 0.14, depth: 0.05 },
-    { direction: new THREE.Vector3(0.08, -0.72, 0.69).normalize(), radius: 0.11, depth: 0.04 },
-  ];
+  const color = new THREE.Color();
+  const palette = Object.fromEntries(
+    Object.entries(MOON_COLOR).map(([key, hex]) => [key, new THREE.Color(hex)])
+  );
+  const toVector = ([x, y, z]) => new THREE.Vector3(x, y, z).normalize();
+  const { smoothstep, seededRandom } = THREE.MathUtils;
+
+  // 시드 고정 난수 — 새로고침해도 같은 달이 나오게. 첫 호출에 시드를 넣는다.
+  seededRandom(20261008);
+  const random = () => seededRandom();
+
+  const maria = MOON_MARIA.map(({ direction, radius }) => ({
+    direction: toVector(direction),
+    radius,
+    reachCos: Math.cos(radius),
+  }));
+  const craters = MOON_BIG_CRATERS.map(({ direction, radius }) => ({
+    direction: toVector(direction),
+    radius,
+  }));
+  for (let i = 0; i < MOON_SMALL_CRATER_COUNT; i += 1) {
+    craters.push({
+      // z 를 앞쪽으로 치우쳐서 보이는 면에 더 많이 생기게 한다.
+      direction: toVector([random() * 2 - 1, random() * 2 - 1, random() * 1.6 - 0.4]),
+      radius: 0.06 + random() * random() * 0.07,
+    });
+  }
+  craters.forEach((crater) => {
+    crater.depth = crater.radius * 0.3;
+    // 테두리 바깥까지 영향이 닿는 각도. 이 밖의 정점은 계산을 건너뛴다.
+    // 1.8 배에선 테두리 값이 0 에 가까워(≈0.0001) 끊긴 자국이 남지 않는다.
+    crater.reachCos = Math.cos(crater.radius * 1.8);
+  });
 
   for (let i = 0; i < position.count; i += 1) {
     normal.fromBufferAttribute(position, i).normalize();
-    let displacement =
-      Math.sin(normal.x * 22.1 + normal.y * 7.7) * 0.008 +
-      Math.sin(normal.y * 18.4 - normal.z * 12.3) * 0.007 +
-      Math.sin((normal.x + normal.z) * 31) * 0.004;
 
-    craters.forEach(({ direction, radius, depth }) => {
-      const distance = Math.acos(THREE.MathUtils.clamp(normal.dot(direction), -1, 1));
-      if (distance < radius) {
-        const t = distance / radius;
-        const bowl = Math.cos(t * Math.PI * 0.5);
-        const rim = Math.exp(-Math.pow((t - 0.86) / 0.13, 2));
-        displacement -= depth * bowl * bowl;
-        displacement += depth * 0.34 * rim;
-      }
+    // 바다: 가장자리가 부드럽게 번지는 얼룩. 살짝 낮게 깔린다.
+    let mareWeight = 0;
+    maria.forEach(({ direction, radius, reachCos }) => {
+      const dot = normal.dot(direction);
+      if (dot < reachCos) return;
+      const distance = Math.acos(Math.min(1, dot));
+      mareWeight = Math.max(mareWeight, 1 - smoothstep(distance, radius * 0.45, radius));
+    });
+    let displacement = -0.006 * mareWeight;
+
+    // 크레이터: 평평한 바닥 → 경사 → 둥글게 솟은 테두리.
+    let floorWeight = 0;
+    let rimWeight = 0;
+    craters.forEach(({ direction, radius, depth, reachCos }) => {
+      const dot = normal.dot(direction);
+      if (dot < reachCos) return;
+      const t = Math.acos(Math.min(1, dot)) / radius;
+      const bowl = 1 - smoothstep(t, 0.55, 1);
+      const rim = Math.exp(-(((t - 1) / 0.26) ** 2));
+      displacement += -depth * bowl + depth * 0.32 * rim;
+      floorWeight = Math.max(floorWeight, bowl);
+      rimWeight = Math.max(rimWeight, rim);
     });
 
-    normal.multiplyScalar(1.25 + displacement);
+    normal.multiplyScalar(MOON_RADIUS + displacement);
     position.setXYZ(i, normal.x, normal.y, normal.z);
+
+    color
+      .copy(palette.base)
+      .lerp(palette.mare, mareWeight)
+      .lerp(palette.floor, floorWeight * 0.55)
+      .lerp(palette.rim, rimWeight * 0.4);
+    color.toArray(colors, i * 3);
   }
 
   position.needsUpdate = true;
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   geometry.computeVertexNormals();
   return geometry;
 }
@@ -310,9 +386,14 @@ function Moon3D({ scrollProgress }) {
       scene.add(rimLight);
 
       const fallbackMoon = new THREE.Mesh(
-        createCrateredMoonGeometry(THREE),
+        createCrateredMoonGeometry(
+          THREE,
+          window.matchMedia(COMPACT_QUERY).matches
+            ? MOON_SEGMENTS.compact
+            : MOON_SEGMENTS.wide
+        ),
         new THREE.MeshStandardMaterial({
-          color: 0xbdb6a5,
+          vertexColors: true,
           roughness: 0.96,
           metalness: 0,
         })
