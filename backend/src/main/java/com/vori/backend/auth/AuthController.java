@@ -106,8 +106,10 @@ public class AuthController {
         securityContextRepository.saveContext(context, request, response);
 
         UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
-        userService.recordLogin(principal.getId());
-        return userService.getMe(principal.getId());
+        boolean restored = userService.recordLogin(principal.getId());
+        MeResponse me = userService.getMe(principal.getId());
+        // 탈퇴 대기 계정이 로그인해 복구됐으면 화면이 안내할 수 있게 표시한다
+        return restored ? me.withAccountRestored() : me;
     }
 
     @PostMapping("/logout")

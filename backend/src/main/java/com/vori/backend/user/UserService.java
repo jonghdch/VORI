@@ -39,8 +39,12 @@ public class UserService {
 
     @Transactional
     public User signup(SignupRequest req) {
-        if (userRepository.existsByEmail(req.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다");
+        Optional<User> existing = userRepository.findByEmail(req.email());
+        if (existing.isPresent()) {
+            // 탈퇴 대기 계정이면 새로 만들 게 아니라 로그인으로 복구하면 된다고 알려 준다
+            throw new ResponseStatusException(HttpStatus.CONFLICT, existing.get().isPendingDeletion()
+                ? "탈퇴 대기 중인 계정이에요. 로그인하면 복구돼요."
+                : "이미 사용 중인 이메일입니다");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -169,14 +173,20 @@ public class UserService {
      * 로그인 성공 시 호출 — 누적 로그인 횟수를 올리고 칭호 조건을 다시 본다.
      * AuthController.login() 이 인증 성공 직후 호출한다. "최초 1회 로그인" 같은
      * 조건은 커밋 이후 이벤트로 평가돼야 하므로 지출 등록 등과 같은 패턴을 따른다.
+     *
+     * @return 탈퇴 대기 계정이라 이번 로그인으로 복구됐으면 true
      */
 
     @Transactional
-    public void recordLogin(Long userId) {
+    public boolean recordLogin(Long userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
         user.incrementLoginCount();
+        // 탈퇴 유예 기간 안에 로그인하면 탈퇴를 취소한다 (AccountDeletionService)
+        boolean restored = user.cancelDeletion();
+        if (restored) log.info("탈퇴 취소(로그인 복구) — userId={}", userId);
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "LOGIN"));
+        return restored;
     }
 
     @Transactional

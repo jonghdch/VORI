@@ -185,3 +185,66 @@
     gap: 12px;
   }
 }
+
+/* 계정 탭 — 회원 탈퇴. 되돌리기 어려운 동작이라 붉은 톤은 확인 버튼에만 둔다 */
+.settings-withdraw-btn {
+  padding: 9px 16px;
+  border: 1px solid #d9b8b8;
+  border-radius: 9px;
+  background: #fff;
+  color: #a33b3b;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.settings-withdraw-btn:hover:not(:disabled) {
+  background: #fbf1f1;
+}
+.settings-withdraw-btn--confirm {
+  border-color: #b23b3b;
+  background: #b23b3b;
+  color: #fff;
+}
+.settings-withdraw-btn--confirm:hover:not(:disabled) {
+  background: #962f2f;
+}
+.settings-withdraw-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.settings-withdraw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #e2dfd7;
+}
+.settings-withdraw-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.settings-withdraw-cancel {
+  padding: 9px 16px;
+  border: 1px solid #d8d4ca;
+  border-radius: 9px;
+  background: #fff;
+  color: #3a3835;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.settings-withdraw-btn:focus-visible,
+.settings-withdraw-cancel:focus-visible {
+  outline: 2px solid #3a3835;
+  outline-offset: 2px;
+}
+@media (max-width: 560px) {
+  .settings-withdraw .settings-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+}

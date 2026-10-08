@@ -31,6 +31,7 @@
 | 개인정보 수집·이용 동의 일시 | `privacy_agreed_at` |  | `DATETIME NOT NULL` | 필수 개인정보 동의 시각 |
 | 마케팅 정보 수신 동의 일시 | `marketing_agreed_at` |  | `DATETIME NULL` | 선택 동의. NULL이면 미동의 |
 | 가입 일시 | `created_at` |  | `DATETIME NOT NULL` | 가입 시각 |
+| 탈퇴 요청 일시 | `deletion_requested_at` | IDX | `DATETIME NULL` | NULL = 정상 계정. 값 있음 = 탈퇴 대기 — 30일 안에 로그인하면 NULL 로 복구, 지나면 스케줄러가 계정과 기록을 영구 삭제 (V52) |
 
 ---
 

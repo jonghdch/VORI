@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
@@ -30,6 +31,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByIdForUpdate(@Param("id") Long id);
 
     Page<User> findByRole(Role role, Pageable pageable);
+
+    // ───── 탈퇴 유예 (AccountDeletionService) ─────
+
+    /** 탈퇴 대기 중인 계정 id. 배치 작업(알림·AI 코멘트·월간 리포트)이 대상에서 뺀다. */
+    @Query("select u.id from User u where u.deletionRequestedAt is not null")
+    Set<Long> findIdsPendingDeletion();
+
+    /** 유예 기간이 끝나 영구 삭제할 계정 id. */
+    @Query("select u.id from User u where u.deletionRequestedAt is not null and u.deletionRequestedAt <= :cutoff")
+    List<Long> findIdsDeletionRequestedBefore(@Param("cutoff") LocalDateTime cutoff);
 
     // ───── 어드민 대시보드 집계 ─────
 

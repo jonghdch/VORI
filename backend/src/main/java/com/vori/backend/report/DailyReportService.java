@@ -15,6 +15,7 @@ import com.vori.backend.pet.PetGrowthLogRepository;
 import com.vori.backend.pet.PetRepository;
 import com.vori.backend.pet.PetSpecies;
 import com.vori.backend.pet.PetSpeciesRepository;
+import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -56,6 +57,7 @@ public class DailyReportService {
     private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
     private final AiSwitches aiSwitches;
+    private final UserRepository userRepository;
 
     /**
      * 하루치 집계 결과 — AI 호출 전에 트랜잭션 밖으로 들고 나올 값들.
@@ -104,6 +106,8 @@ public class DailyReportService {
                 expenseRepository.findUserIdsWithExpenseInRange(
                         date.atStartOfDay(), date.plusDays(1).atStartOfDay()));
         ids.addAll(incomeRepository.findUserIdsWithIncomeOn(date));
+        // 탈퇴 대기 계정은 뺀다 — 볼 사람이 없는 리포트에 AI 코멘트 호출(무료 한도)을 쓰지 않게
+        ids.removeAll(userRepository.findIdsPendingDeletion());
         return List.copyOf(ids);
     }
 
