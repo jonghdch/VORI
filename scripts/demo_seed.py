@@ -3,14 +3,16 @@
 11월 시연 계정 세팅·리허설.
 
 무대에서 누르는 버튼마다 임계값이 넘어가도록, 계정을 임계값 **직전**에서 멈춰 둔다.
-각본은 docs/demo-plan.md 참조.
+각본은 docs/final-demo-plan.md 참조.
 
     python scripts/demo_seed.py
-        계정·온보딩·지출·코인·가구·펫을 한 번에 세팅한다
+        계정·온보딩·지출·코인·가구·펫(이름·출석까지)을 한 번에 세팅한다
     python scripts/demo_seed.py --rehearse
         세팅 후 시연 흐름까지 실행한다
     python scripts/demo_seed.py --rehearse --email <이메일>
         지정한 이메일로 계정을 만들고 리허설한다
+    python scripts/demo_seed.py --checkin --email <이메일>
+        발표 당일 아침 — 전날 만든 계정을 오늘 날짜로 출석시킨다(출석 창은 그날 안 했으면 뜬다)
 
 리허설은 세팅 상태를 소모한다(지출 10번째·배치·분양·개봉을 실제로 해버린다).
 발표용 계정은 --rehearse 없이 만들 것.
@@ -257,7 +259,30 @@ def seed(email):
             print(f"  치트 실패: {code} {msg(pet)}")
             sys.exit(1)
 
+    prepare_screens(user)
     return user, user_id, stage_coins
+
+
+# 펫 이름 — 이름 없는 펫은 첫 화면에서 이름 짓기 팝업이 뜬다.
+PET_NAME = "보리"
+
+
+def prepare_screens(user):
+    """무대 첫 클릭을 가로채는 팝업 두 개를 미리 치운다(10/8 화면 리허설).
+
+    - 펫 이름 짓기 팝업: 이름이 없으면 뜬다 → 이름을 지어 두면 다시 안 뜬다.
+    - 출석 창: 그날 출석하지 않았으면 하루 한 번 뜬다 → **그날** 출석해야 안 뜬다.
+      전날 만든 발표용 계정은 발표 당일 아침 `--checkin --email <이메일>` 로 다시 출석시킨다.
+    """
+    _, pet = user.call("GET", "/api/pets/active")
+    if isinstance(pet, dict) and not pet.get("name"):
+        code, res = user.call("PUT", f"/api/pets/{pet['id']}/name", {"name": PET_NAME})
+        print(f"  펫 이름 '{PET_NAME}'" if code == 200 else f"  펫 이름 짓기 실패: {code} {msg(res)}")
+    user.call("POST", "/api/attendance")  # 이미 출석했으면 서버가 거절해도 상관없다 — 아래에서 확인
+    _, att = user.call("GET", "/api/attendance")
+    checked = isinstance(att, dict) and att.get("checkedIn") is True
+    print(f"  오늘({datetime.date.today()}) 출석 " + ("완료" if checked else "안 됨"))
+    return checked
 
 
 def verify(user, stage_coins):
@@ -294,6 +319,10 @@ def verify(user, stage_coins):
     check("코지 해금됨", th.get("코지", {}).get("unlocked") is True)
     check("스터디 잠김 ⭐ (무대 3번의 핵심)", th.get("스터디", {}).get("unlocked") is False)
     check("배치된 가구 2개", sum(1 for f in furniture if f["placed"]) == 2)
+    _, att = user.call("GET", "/api/attendance")
+    check("펫 이름 있음 (이름 짓기 팝업 안 뜸)", bool(pet.get("name")), str(pet.get("name")))
+    check("오늘 출석함 (출석 창 안 뜸 — 다른 날 발표면 그날 --checkin)",
+          isinstance(att, dict) and att.get("checkedIn") is True)
 
     print(f"\n  보유 코인    {coins:,}")
     print(f"  펫           {pet.get('speciesName')} · {pet.get('stage')} · 스탯 {pet.get('statTotal')}")
@@ -487,7 +516,20 @@ def main():
     ap.add_argument("--rehearse", action="store_true",
                     help="세팅 후 시연 흐름을 실행한다 (세팅 상태를 소모함)")
     ap.add_argument("--email", help="계정 이메일 (기본: demo-<타임스탬프>@vori.local)")
+    ap.add_argument("--checkin", action="store_true",
+                    help="이미 만든 --email 계정을 오늘 날짜로 출석시키고 펫 이름을 확인만 한다 (발표 당일 아침)")
     args = ap.parse_args()
+
+    if args.checkin:
+        # 출석 창은 그날 출석하지 않았으면 하루 한 번 뜬다 — 전날 만든 계정은 발표 날 다시 출석해야 한다
+        if not args.email or args.rehearse:
+            ap.error("--checkin 은 --email 과 함께, --rehearse 없이 쓴다")
+        user = Session()
+        code, res = user.call("POST", "/api/auth/login", {"email": args.email, "password": PW})
+        if code != 200:
+            print(f"로그인 실패: {code} {msg(res)}")
+            sys.exit(1)
+        sys.exit(0 if prepare_screens(user) else 1)
 
     email = args.email or f"demo-{datetime.datetime.now():%m%d%H%M}@vori.local"
     user, user_id, stage_coins = seed(email)
