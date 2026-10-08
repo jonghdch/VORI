@@ -4,7 +4,7 @@ SET NAMES utf8mb4;
 -- FurnitureCatalog.themeName 과 짝 — 이름이 어긋나면 그 가구는 테마 없는 가구처럼 동작한다.
 --
 -- 새 테마는 상점에서 골라 보기 위한 분류다. set_bonus_pct 가 0 이라 세트가 발동해도
--- 배웅 선물은 그대로이고, unlock_title_id 가 NULL 이라 처음부터 누구나 살 수 있다.
+-- 분양가는 그대로이고, unlock_title_id 가 NULL 이라 처음부터 누구나 살 수 있다.
 -- required_count 는 그 테마의 가구 수를 넘지 않게 잡았다(프린세스·우주 2종, 동굴 1종).
 INSERT INTO theme_master (name, set_bonus_pct, required_count, unlock_title_id) VALUES
   ('오션',     0.00, 3, NULL),
