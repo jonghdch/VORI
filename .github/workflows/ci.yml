@@ -16,9 +16,10 @@ on:
     - cron: '0 0 * * 1' # 매주 월요일 09:00 KST
 
 # 같은 PR 에 새 커밋이 올라오면 이전 실행은 취소한다.
+# main 푸시·주간 검사는 커밋마다 끝까지 돌려 결과를 남긴다(서로 취소하지 않게 이벤트·커밋으로 묶음).
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -134,11 +135,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+      # npm audit 은 package-lock.json 만 읽어 설치(npm ci)가 필요 없다.
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
       # 배포되는 의존성만 본다. react-scripts·jest 같은 빌드·테스트 도구는 devDependencies 라
       # 브라우저에 실리지 않는다.
       - name: 프론트 npm audit (배포 의존성, high 이상)
@@ -154,12 +154,18 @@ jobs:
         id: trivy-date
         run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
+        id: trivy-cache
         with:
           path: ~/.cache/trivy
           key: trivy-db-${{ steps.trivy-date.outputs.date }}
           restore-keys: trivy-db-
+      # 오늘 받은 DB 가 캐시에 있으면 다시 받지 않는다.
       - name: 백엔드 Trivy (HIGH 이상)
+        env:
+          CACHE_HIT: ${{ steps.trivy-cache.outputs.cache-hit }}
         run: |
+          skip=()
+          if [ "$CACHE_HIT" = "true" ]; then skip=(--skip-db-update --skip-java-db-update); fi
           mkdir -p ~/.cache/trivy
           docker run --rm \
             -v "$HOME/.cache/trivy:/root/.cache/trivy" \
@@ -168,7 +174,7 @@ jobs:
             aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c \
             rootfs --scanners vuln --severity HIGH,CRITICAL \
             --java-db-repository mirror.gcr.io/aquasec/trivy-java-db:1,ghcr.io/aquasecurity/trivy-java-db:1 \
-            --ignorefile /.trivyignore --exit-code 1 /scan
+            --ignorefile /.trivyignore --exit-code 1 "${skip[@]}" /scan
 
   e2e:
     runs-on: ubuntu-latest
