@@ -5,6 +5,7 @@ import AppShell from "../../components/AppShell";
 import RecordCalendar, { dateKey } from "../../components/RecordCalendar";
 import { getMonthlyLedger } from "../../api/ledger";
 import { markMonthlyReportRead } from "../../api/monthlyReports";
+import { SIGNAL_STATUS } from "../../signalLabels";
 import "../Home/HomeDashboard.css";
 import "../Wallet/WalletPage.css";
 import "./ReportPage.css";
@@ -13,7 +14,6 @@ import "./ReportPage.css";
 const CHART_COLORS = ["#8fb07c", "#d9a68b", "#e3c38f", "#9db8c6"];
 
 // 합리성 시그널(백엔드 enum) → 한글 상태 + 배지 색상 클래스.
-const SIGNAL_STATUS = { GREEN: "합리적", GRAY: "중립", RED: "비합리적" };
 const SIGNAL_BADGE = {
   GREEN: "ledger-history-badge--green",
   GRAY: "ledger-history-badge--gray",
