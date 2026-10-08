@@ -1,5 +1,6 @@
 package com.vori.backend.admin;
 
+import com.vori.backend.admin.dto.AdminCoinResponse;
 import com.vori.backend.admin.dto.AdminTitleResponse;
 import com.vori.backend.admin.dto.AdminUserResponse;
 import com.vori.backend.admin.dto.AiLogResponse;
@@ -51,6 +52,7 @@ public class AdminController {
     private final SignalConfigService signalConfigService;
     private final AdminPetService adminPetService;
     private final AdminTitleService adminTitleService;
+    private final AdminCoinService adminCoinService;
 
     @GetMapping("/users")
     public ResponseEntity<PageResponse<AdminUserResponse>> listUsers(
@@ -132,6 +134,19 @@ public class AdminController {
     }
 
     // ───── 시연·QA 도구 ─────
+
+    /**
+     * POST /api/admin/users/{userId}/coins?amount=25000 — 지정한 사용자에게 코인을 지급한다.
+     * 시연·운영에 필요한 지급만 관리자 경로로 열어, 일일 보상과 상점 가격 규칙은 그대로 둔다.
+     */
+    @PostMapping("/users/{userId}/coins")
+    public ResponseEntity<AdminCoinResponse> grantUserCoins(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long userId,
+            @RequestParam int amount
+    ) {
+        return ResponseEntity.ok(adminCoinService.grant(principal.getId(), userId, amount));
+    }
 
     /**
      * POST /api/admin/users/{userId}/pet/grow?stage=ADULT  또는  ?level=30
