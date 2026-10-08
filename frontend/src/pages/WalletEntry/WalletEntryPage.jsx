@@ -791,6 +791,7 @@ function EntryRow({
             type="text"
             inputMode="numeric"
             className="ledger-row-input"
+            aria-label="금액"
             data-entry-field="amount"
             value={row.amount ? Number(row.amount).toLocaleString("ko-KR") : ""}
             onChange={(e) =>
