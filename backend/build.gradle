@@ -52,6 +52,10 @@ tasks.named('test') {
 	// 이게 없으면 BackendApplicationTests(컨텍스트 로드)가 .env 를 못 읽어
 	// "Access denied ... (using password: NO)" 로 실패한다.
 	workingDir = projectDir.parentFile
+
+	// Gradle 기본 테스트 힙(512MB)으로는 스프링 컨텍스트가 여러 개 캐시될 때
+	// 가끔 OutOfMemoryError 로 테스트 JVM 이 죽는다(로컬 MySQL 8.4 에서 2번 중 1번 재현).
+	maxHeapSize = '1g'
 }
 
 // .env 는 repo 루트에 있고 application.properties 의 spring.config.import 가
