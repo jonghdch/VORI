@@ -95,6 +95,28 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    // 탈퇴 요청 시각. NULL = 정상 계정, 값 있음 = 탈퇴 대기 — 유예 기간 안에 로그인하면 복구,
+    // 지나면 AccountDeletionService 가 영구 삭제한다.
+    @Column(name = "deletion_requested_at")
+    private LocalDateTime deletionRequestedAt;
+
+    /** 탈퇴 대기 중인가. */
+    public boolean isPendingDeletion() {
+        return deletionRequestedAt != null;
+    }
+
+    /** 탈퇴를 요청한다. 권한·본인 확인은 AccountDeletionService 가 한다. */
+    public void requestDeletion(LocalDateTime at) {
+        this.deletionRequestedAt = at;
+    }
+
+    /** 탈퇴 요청을 취소해 계정을 복구한다. 대기 중이 아니었으면 false. */
+    public boolean cancelDeletion() {
+        if (deletionRequestedAt == null) return false;
+        this.deletionRequestedAt = null;
+        return true;
+    }
+
     public void addTotalSaved(int amount) {
         this.totalSaved = (this.totalSaved == null ? 0 : this.totalSaved) + amount;
     }
