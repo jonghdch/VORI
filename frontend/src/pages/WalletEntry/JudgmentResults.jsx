@@ -1,7 +1,7 @@
 import { useState } from "react";
 import CoinIcon from "../../components/CoinIcon";
+import { SIGNAL_LABELS as LABELS } from "../../signalLabels";
 
-const LABELS = { GREEN: "초록 · 합리적", GRAY: "노랑 · 보통", RED: "빨강 · 과소비" };
 const STAT_LABELS = { ENERGY: "식비", CHARM: "쇼핑 · 뷰티", IQ: "문화 · 여가", ENDURANCE: "생활 · 고정비" };
 const REWARD_NAMES = { ENERGY: "에너지", CHARM: "매력", IQ: "지능", ENDURANCE: "지구력" };
 const EXHAUSTED_LABEL = "주황 · 예산 소진";
@@ -13,7 +13,7 @@ export function judgmentReason(expense, signal) {
   const comparison = saved > 0 ? `같은 스탯의 평균 소비보다 ${saved.toLocaleString("ko-KR")}원 적게 썼어요.` : saved < 0 ? `같은 스탯의 평균 소비보다 ${Math.abs(saved).toLocaleString("ko-KR")}원 많이 썼어요.` : "같은 스탯의 평균 소비와 비슷한 금액이에요.";
   if (expense.reasonCategory) return `${comparison} 입력한 지출 사유를 반영했어요.`;
   if (expense.zScore == null) return "이전 기록이 충분하지 않아 기본 기준으로 표시했어요.";
-  if (expense.isRecurring && signal === "GRAY") return `${comparison} 반복 결제는 주의 판정에서 제외해 보통으로 표시했어요.`;
+  if (expense.isRecurring && signal === "GRAY") return `${comparison} 반복 결제는 초과 판정에서 제외해 적정으로 표시했어요.`;
   return comparison;
 }
 
@@ -30,7 +30,7 @@ function rewardForGroup(judgment, statType) {
   return savedReward == null ? 0 : Number(savedReward);
 }
 
-// "합리적으로", "과소비로" — 받침 있으면 "으로", 없거나 ㄹ 받침이면 "로"
+// "여유로", "적정으로" — 받침 있으면 "으로", 없거나 ㄹ 받침이면 "로"
 function withRo(word) {
   const code = word.charCodeAt(word.length - 1) - 0xac00;
   if (code < 0 || code > 11171) return `${word}(으)로`;
@@ -38,7 +38,7 @@ function withRo(word) {
   return final === 0 || final === 8 ? `${word}로` : `${word}으로`;
 }
 
-// "과소비였지만", "보통이었지만" — 받침이 있으면 "이었지만"
+// "여유였지만", "적정이었지만" — 받침이 있으면 "이었지만"
 function withYeotJiman(word) {
   const code = word.charCodeAt(word.length - 1) - 0xac00;
   if (code < 0 || code > 11171) return `${word}였지만`;
@@ -57,9 +57,9 @@ function groupReason(group, softenedFrom) {
   const prefix = `월 예산 ${monthly}원, 하루 기본 예산 ${dailyBase}원이에요. 전날 남긴 금액의 절반만 반영해 오늘 사용할 수 있는 금액은 ${available}원이고, 오늘은 ${today}원 사용했어요. 이번 달 누적 지출은 ${monthSpent}원이에요.`;
   // 예외 지출 사유가 인정돼 완화된 그룹 — 금액 기준 설명(85% 이하 등)을 붙이면 실제 사용액과 어긋난다
   if (softenedFrom) return `${prefix} 1차 판정은 ${withYeotJiman(LABELS[softenedFrom])} 예외 지출 사유가 인정돼 ${withRo(LABELS[group.signal])} 바꿨어요.`;
-  if (group.signal === "GREEN") return `${prefix} 오늘 사용액이 사용 가능 금액의 85% 이하라 여유가 있어 합리적으로 판정했어요.`;
-  if (group.signal === "GRAY") return `${prefix} 오늘 사용액이 사용 가능 금액의 85%를 넘었지만 한도 안이라 보통으로 판정했어요.`;
-  return `${prefix} 오늘 사용액이 사용 가능 금액을 초과해 주의로 판정했어요.`;
+  if (group.signal === "GREEN") return `${prefix} 오늘 사용액이 사용 가능 금액의 85% 이하라 여유로 판정했어요.`;
+  if (group.signal === "GRAY") return `${prefix} 오늘 사용액이 사용 가능 금액의 85%를 넘었지만 한도 안이라 적정으로 판정했어요.`;
+  return `${prefix} 오늘 사용액이 사용 가능 금액을 넘어 초과로 판정했어요.`;
 }
 
 export default function JudgmentResults({ expenses, judgment }) {

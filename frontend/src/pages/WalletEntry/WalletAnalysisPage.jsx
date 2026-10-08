@@ -6,6 +6,7 @@ import { listExpensesByDate } from "../../api/ledger";
 import { finalizeDateJudgment, getDateJudgment, startDateJudgment } from "../../api/dailyJudgment";
 import JudgmentResults, { judgmentReason } from "./JudgmentResults";
 import { canUseAiJudge } from "../../config";
+import { SIGNAL_LABELS } from "../../signalLabels";
 import "./WalletEntry.css";
 
 // 소비 분석 — /wallet 의 ledger-ai-card 에서 저녁 이벤트로 진입하는 독립 페이지.
@@ -366,7 +367,7 @@ function WalletAnalysisPage({ user }) {
               </p>
               {judgment?.status === "PENDING" && (
                 <p className="ledger-hint">
-                  1차 판정은 {signalLabel(judgment.signal)}이에요. 사유를 답하거나 건너뛰면 최종 판정이 나고, 보상은 오늘 자정에 들어와요.
+                  1차 판정: {signalLabel(judgment.signal)}. 사유를 답하거나 건너뛰면 최종 판정이 나고, 보상은 오늘 자정에 들어와요.
                 </p>
               )}
             </div>
@@ -603,9 +604,7 @@ function getDailySignal(expenses) {
 }
 
 function signalLabel(signal) {
-  if (signal === "GREEN") return "초록 · 절약";
-  if (signal === "RED") return "빨강 · 과소비";
-  return "노랑 · 보통";
+  return SIGNAL_LABELS[signal] || SIGNAL_LABELS.GRAY;
 }
 
 export default WalletAnalysisPage;
