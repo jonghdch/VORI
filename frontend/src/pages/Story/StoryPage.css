@@ -256,6 +256,81 @@
   50%      { transform: translateY(6px); opacity: 0.85; }
 }
 
+/* ── 표지 배경 장식 (StoryCoverScene) ─────────────────────────
+   은은한 빛 번짐(orb)과 화면을 가로지르는 빛줄기(streak). */
+.story-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.story-scene-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  animation: story-scene-aurora 18s ease-in-out infinite;
+  /* 큰 블러가 매 프레임 다시 그려지지 않도록 레이어를 분리한다. */
+  will-change: transform;
+}
+.story-scene-orb--a {
+  top: 6%;
+  left: 8%;
+  width: 420px;
+  height: 420px;
+  background: rgba(90, 84, 117, 0.45);
+}
+.story-scene-orb--b {
+  right: 4%;
+  bottom: 4%;
+  width: 340px;
+  height: 340px;
+  background: rgba(170, 180, 200, 0.18);
+  animation-delay: -7s;
+}
+.story-scene-streaks {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.story-scene-streaks span {
+  position: absolute;
+  right: -30%;
+  width: 45%;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  filter: blur(1px);
+  opacity: 0;
+  animation: story-scene-streak 8.5s linear infinite;
+}
+.story-scene.is-paused * {
+  animation-play-state: paused !important;
+}
+@keyframes story-scene-aurora {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(8%, -6%) scale(1.15); }
+  66%      { transform: translate(-6%, 8%) scale(0.95); }
+}
+@keyframes story-scene-streak {
+  0%   { opacity: 0; transform: translateX(0); }
+  10%  { opacity: 0.9; }
+  60%  { opacity: 0.4; }
+  100% { opacity: 0; transform: translateX(-260%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-scene-orb,
+  .story-scene-streaks span {
+    animation: none;
+  }
+}
+@media (max-width: 640px) {
+  .story-scene-orb,
+  .story-scene-streaks {
+    display: none;
+  }
+}
+
 /* ── 챕터 wrapper — 달이 sticky 로 가운데 떠 있는 영역 ────── */
 /* 챕터별 배경 그라데이션을 wrapper 한 덩어리에 깔고 챕터 section 자체는
    transparent. 그래야 달이 챕터 사이로 드러납니다. */
