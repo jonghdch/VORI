@@ -115,6 +115,12 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        // 잘못 넣으면 브라우저 요청이 조용히 막히거나(빈 값) CORS 처리가 실패한다(* 는 쿠키 허용과 함께 못 쓴다).
+        // 운영에서 뒤늦게 알지 않도록 서버가 뜰 때 바로 멈춘다.
+        if (allowedOrigins.isEmpty() || allowedOrigins.stream().anyMatch(o -> o.isBlank() || o.contains("*"))) {
+            throw new IllegalStateException(
+                    "vori.cors.allowed-origins(CORS_ALLOWED_ORIGINS) 에는 빈 값이나 * 를 쓸 수 없습니다: " + allowedOrigins);
+        }
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
