@@ -181,8 +181,8 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 ```json
 // GET /api/furniture/products — 잠긴 상품 한 건
 {
-  "code": "DESKTOP_PC", "name": "컴퓨터", "category": "COMPUTER",
-  "statTarget": "IQ", "releaseBonusPct": 4.00, "price": 12000,
+  "code": "DESK", "name": "책상", "category": "DESK",
+  "statTarget": "IQ", "releaseBonusPct": 2.00, "price": 500,
   "themeName": "스터디", "themeSetBonusPct": 15.00,
   "locked": true, "unlockTitleName": "기록의 시작"
 }
@@ -351,11 +351,11 @@ const res = await fetch('http://localhost:8080/api/receipts', {
 | POST | `/api/pets/active/interact` | 상호작용(쓰다듬기 등) 1회 · 1% 확률로 매력 +1 · 응답 `{ charmUp, pet, newTitles }` — `newTitles` 는 이번 상호작용으로 받은 칭호 `[{ name, hidden }]`(대개 빈 배열) · 펫 없으면 400 |
 
 ```json
-[ { "grade": "BASIC",     "name": "기본 알",   "price": 2500,
+[ { "grade": "BASIC",     "name": "기본 알",   "price": 250,
     "probabilities": { "S": 1,  "A": 5,  "B": 24, "C": 70 } },
-  { "grade": "PREMIUM",   "name": "고급 알",   "price": 6000,
+  { "grade": "PREMIUM",   "name": "고급 알",   "price": 600,
     "probabilities": { "S": 5,  "A": 20, "B": 45, "C": 30 } },
-  { "grade": "LEGENDARY", "name": "최고급 알", "price": 15000,
+  { "grade": "LEGENDARY", "name": "최고급 알", "price": 1500,
     "probabilities": { "S": 20, "A": 50, "B": 30, "C": 0 } } ]
 ```
 

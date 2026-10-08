@@ -37,6 +37,13 @@ public class UserService {
     private final com.vori.backend.onboarding.BaselineSeeder baselineSeeder;
     private final SpendingPlanService spendingPlanService;
 
+    /**
+     * 가입 축하 코인(2026-10-08 팀 결정, 상점 가격 1/10 과 함께). 코인 0 으로 시작하면 경진대회 게스트가
+     * 가입한 날 상점을 하나도 못 써 본다. 새 계정은 시작 펫이 있어 알은 사도 배웅 전엔 못 까므로,
+     * 그날 해 볼 수 있는 건 가구다 — 1,000 이면 처음부터 열린 테마의 가구(300~500) 2~3개를 산다.
+     */
+    static final int WELCOME_COINS = 1_000;
+
     @Transactional
     public User signup(SignupRequest req) {
         Optional<User> existing = userRepository.findByEmail(req.email());
@@ -57,6 +64,7 @@ public class UserService {
             .termsAgreedAt(now)
             .privacyAgreedAt(now)
             .marketingAgreedAt(Boolean.TRUE.equals(req.marketingAgreed()) ? now : null)
+            .gameMoney(WELCOME_COINS)
             .createdAt(now)
             .build();
 
@@ -75,7 +83,7 @@ public class UserService {
      *    사람이 자기 비밀번호로 주인의 기록을 볼 수 있게 된다(탈취). 이미 다른 구글이 연결된 계정을
      *    덮어쓰는 일도 같이 막힌다.
      * 3) 둘 다 없으면 새로 만든다. 비밀번호는 없고(password_hash NULL), 약관은 구글 버튼
-     *    아래 안내 문구로 동의한 것으로 본다. 일반 가입과 같은 초기화(스탯·시작 펫)를 거친다.
+     *    아래 안내 문구로 동의한 것으로 본다. 일반 가입과 같은 초기화(스탯·시작 펫·가입 축하 코인)를 거친다.
      *    닉네임·이름은 가입 규칙(닉네임 2~12자, 이름 2~30자)에 맞춘다 — 어긋나면 설문 뒤 프로필
      *    저장이 400 으로 막힌다.
      *
@@ -101,6 +109,7 @@ public class UserService {
             .role(Role.USER)
             .termsAgreedAt(now)
             .privacyAgreedAt(now)
+            .gameMoney(WELCOME_COINS)
             .createdAt(now)
             .build();
 
