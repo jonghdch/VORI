@@ -40,6 +40,7 @@ public class MonthlyReportService {
     public int settleAll(YearMonth month) {
         int done = 0;
         for (User user : userRepository.findAll()) {
+            if (user.isPendingDeletion()) continue; // 탈퇴 대기 계정 — 곧 지워질 리포트를 만들지 않는다
             try {
                 if (settle(user.getId(), month)) done++;
             } catch (Exception e) {

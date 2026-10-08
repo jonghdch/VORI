@@ -31,6 +31,7 @@ import java.util.Set;
  * 로그아웃 전까지 앱을 계속 쓸 수 있었다. 여기서 매 요청 확인한다.
  * - 제재 중: 세션을 끊고 403 (로그인 거절과 같은 문구)
  * - 계정이 사라짐: 세션을 끊고 401
+ * - 탈퇴 대기: 세션을 끊고 401 (다른 기기에 남은 세션 포함)
  * - 역할이 바뀜: 권한을 새로 만들어 세션에 저장 (다시 로그인하지 않아도 반영)
  *
  * @Component 로 두지 않는다. 두면 Spring Boot 가 서블릿 필터로도 등록해 두 번 돈다.
@@ -85,6 +86,11 @@ public class AccountStatusFilter extends OncePerRequestFilter {
         }
 
         User user = current.get();
+        if (user.isPendingDeletion()) {
+            // 탈퇴한 기기 말고 다른 기기에 남은 세션도 끊는다. 다시 로그인하면 복구된다(AccountDeletionService.restoreOnLogin)
+            reject(request, response, HttpStatus.UNAUTHORIZED, "탈퇴 대기 중인 계정이에요. 다시 로그인하면 복구돼요.");
+            return;
+        }
         if (user.getRole() != principal.getRole()) {
             UserPrincipal refreshed = new UserPrincipal(user, false);
             refreshed.eraseCredentials();

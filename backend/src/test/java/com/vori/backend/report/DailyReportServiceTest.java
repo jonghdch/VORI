@@ -14,6 +14,7 @@ import com.vori.backend.pet.PetGrowthLogRepository;
 import com.vori.backend.pet.PetRepository;
 import com.vori.backend.pet.PetSpecies;
 import com.vori.backend.pet.PetSpeciesRepository;
+import com.vori.backend.user.UserRepository;
 import com.vori.backend.pet.PetStage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class DailyReportServiceTest {
     private final DailyReportService service = new DailyReportService(
             dailyReportRepository, expenseRepository, incomeRepository, petRepository,
             petSpeciesRepository, petGrowthLogRepository, aiInquiryRepository, geminiClient,
-            mock(TransactionTemplate.class), new ObjectMapper(), switches);
+            mock(TransactionTemplate.class), new ObjectMapper(), switches, mock(UserRepository.class));
 
     private static final Long USER = 7L;
     private static final LocalDate DAY = LocalDate.of(2026, 9, 30);

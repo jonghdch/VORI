@@ -46,8 +46,12 @@ public class UserService {
 
     @Transactional
     public User signup(SignupRequest req) {
-        if (userRepository.existsByEmail(req.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다");
+        Optional<User> existing = userRepository.findByEmail(req.email());
+        if (existing.isPresent()) {
+            // 탈퇴 대기 계정이면 새로 만들 게 아니라 로그인으로 복구하면 된다고 알려 준다
+            throw new ResponseStatusException(HttpStatus.CONFLICT, existing.get().isPendingDeletion()
+                ? "탈퇴 대기 중인 계정이에요. 로그인하면 복구돼요."
+                : "이미 사용 중인 이메일입니다");
         }
 
         LocalDateTime now = LocalDateTime.now();
