@@ -14,7 +14,7 @@
     python scripts/demo_seed.py --checkin --email <이메일>
         발표 당일 아침 — 전날 만든 계정을 오늘 날짜로 출석시킨다(출석 창은 그날 안 했으면 뜬다)
 
-리허설은 세팅 상태를 소모한다(지출 10번째·배치·분양·개봉을 실제로 해버린다).
+리허설은 세팅 상태를 소모한다(지출 10번째·배치·배웅·개봉을 실제로 해버린다).
 발표용 계정은 --rehearse 없이 만들 것.
 
 지출은 전부 식비 계열(categories 2~6, statType=ENERGY)을 쓴다. EMA 기준선이
@@ -246,13 +246,13 @@ def seed(email):
                   {"positionX": x, "positionY": y})
         print(f"  {f['name']} 구매·배치 ({f['price']:,} 코인)")
 
-    # ── 펫이 30레벨이 아니면 분양 조건에 맞춰 어드민 치트로 보정 ──
+    # ── 펫이 30레벨이 아니면 배웅 조건에 맞춰 어드민 치트로 보정 ──
     code, pet = user.call("GET", "/api/pets/active")
     if not isinstance(pet, dict):
         print("\n활성 펫이 없습니다. 가입 시 시작 펫이 지급되는지 확인하세요.")
         sys.exit(1)
     if pet.get("level", 0) < pet.get("maxLevel", 30):
-        print(f"\n펫이 {pet.get('level')}레벨 — 분양을 위해 30레벨로 보정")
+        print(f"\n펫이 {pet.get('level')}레벨 — 배웅을 위해 30레벨로 보정")
         admin = admin or admin_session()
         code, pet = admin.call("POST", f"/api/admin/users/{user_id}/pet/grow?level=30")
         if code != 200:
@@ -309,7 +309,7 @@ def verify(user, stage_coins):
     check("'절약 고수'는 미획득 (진행률 바 시연용)",
           t.get("절약 고수", {}).get("acquired") is False,
           f"{t.get('절약 고수', {}).get('progressPct')}%")
-    check("펫 30레벨 (분양 가능)", pet.get("level") == pet.get("maxLevel"),
+    check("펫 30레벨 (배웅 가능)", pet.get("level") == pet.get("maxLevel"),
           f"레벨 {pet.get('level')}/{pet.get('maxLevel')}")
     check("코인 충분 (무대 스터디 가구 2종)", coins >= stage_coins,
           f"보유 {coins:,} / 필요 {stage_coins:,} 코인")
@@ -484,27 +484,27 @@ def rehearse(user, user_id):
     check("우드는 2/3 라 미발동 (대비용)", wood.get("active") is False,
           f"{wood.get('placedCount')}/3")
 
-    print("\n[8] 펫 분양 — 세트 보너스 반영")
+    print("\n[8] 펫 배웅 — 세트 보너스 반영")
     _, pet = user.call("GET", "/api/pets/active")
     stat = pet["statTotal"]
     code, released = user.call("POST", f"/api/pets/{pet['id']}/release")
-    check("분양 200", code == 200, msg(released) if code != 200 else "")
+    check("배웅 200", code == 200, msg(released) if code != 200 else "")
     value = released.get("releaseValue")
     # 개별: 책장2.00 + 서랍장2.00 + 책상2.00 + 코르크1.50 = 7.50
     # 세트: 스터디 15.00 (우드는 2/3 라 미발동)  → 합계 22.50%
     expected = int(stat * 10 * 1.225)
-    check("분양가에 개별 7.50% + 스터디 세트 15.00% 반영 ⭐", value == expected,
+    check("배웅 선물에 개별 7.50% + 스터디 세트 15.00% 반영 ⭐", value == expected,
           f"스탯 {stat} → {value:,} 코인 (기대 {expected:,})")
     time.sleep(1.5)
     _, titles = user.call("GET", "/api/achievements")
-    check("'첫 분양' 획득 ⭐",
-          {x["name"]: x for x in titles}.get("첫 분양", {}).get("acquired") is True)
+    check("'첫 배웅' 획득 ⭐",
+          {x["name"]: x for x in titles}.get("첫 배웅", {}).get("acquired") is True)
 
     print("\n[9] 알 구매 → 개봉")
     code, egg = user.call("POST", "/api/eggs/buy?grade=BASIC")
     check("알 구매 200", code == 200, msg(egg) if code != 200 else "")
     code, result = user.call("POST", f"/api/eggs/{egg['id']}/open")
-    check("개봉 200 (분양 후라 가능) ⭐", code == 200, msg(result) if code != 200 else "")
+    check("개봉 200 (배웅 후라 가능) ⭐", code == 200, msg(result) if code != 200 else "")
     if code == 200:
         new_pet = result.get("pet", {})
         print(f"     {new_pet.get('speciesName')} · {new_pet.get('tier')}등급 "

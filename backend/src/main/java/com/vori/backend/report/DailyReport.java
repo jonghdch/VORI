@@ -45,7 +45,7 @@ public class DailyReport {
     @Column(name = "stat_delta_total")
     private Integer statDeltaTotal;
 
-    // 리포트 생성 시점의 펫 상태 JSON 스냅샷. 나중에 펫 분양해도 리포트엔 그 시점 상태 보존
+    // 리포트 생성 시점의 펫 상태 JSON 스냅샷. 나중에 펫 배웅해도 리포트엔 그 시점 상태 보존
     @Column(name = "pet_snapshot", columnDefinition = "JSON")
     private String petSnapshot;
 

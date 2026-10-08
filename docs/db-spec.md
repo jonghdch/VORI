@@ -367,8 +367,8 @@ UNIQUE(user_id, report_date)
 | 성장 단계 | `stage` |  | `ENUM('INFANT','JUVENILE','ADULT') DEFAULT 'INFANT'` | 성장 단계 |
 | 변종 종류 | `variant` |  | `ENUM('NORMAL','IRO','ALIEN') DEFAULT 'NORMAL'` | 변종 |
 | 생성 일시 | `created_at` |  | `DATETIME NOT NULL` | 생성 시각 |
-| 분양 일시 | `released_at` |  | `DATETIME NULL` | NULL이면 활성 펫 |
-| 분양가 | `release_value` |  | `INT UNSIGNED NULL` | 분양 보상 금액 |
+| 배웅 일시 | `released_at` |  | `DATETIME NULL` | NULL이면 활성 펫 |
+| 배웅 선물 | `release_value` |  | `INT UNSIGNED NULL` | 배웅 보상 금액 |
 
 인덱스:
 
@@ -448,7 +448,7 @@ INDEX(user_id, released_at)
 | 가구 이름 | `name` |  | `VARCHAR(50) NOT NULL` | 보유한 가구 이름 |
 | 가구 카테고리 | `category` |  | `ENUM('BED','WALLPAPER','FLOOR','MIRROR','VANITY','PICTURE','BOARD','SHELF','DRAWER','COMPUTER','TENT','PICNIC_MAT','CAMPFIRE','HAMMOCK','PARASOL','CAMP_CHAIR','CANOPY_BED','TEA_TABLE','FIREPLACE','ROCKING_CHAIR','TREASURE_CHEST','SLEEP_CAPSULE','TELESCOPE','SWIM_TUBE','BEACH_BALL','LEATHER_SOFA','GLASS_TABLE','LANTERN','ICEBOX','SAFE','DESK','FRIDGE','EMPTY_DESK') NOT NULL` | 가구 종류 |
 | 대상 스탯 | `stat_target` |  | `ENUM('ENERGY','CHARM','IQ','ENDURANCE') NOT NULL` | 보너스 대상 스탯 |
-| 분양 보너스율 | `release_bonus_pct` |  | `DECIMAL(5,2) DEFAULT 0` | 분양가 보너스율 |
+| 배웅 보너스율 | `release_bonus_pct` |  | `DECIMAL(5,2) DEFAULT 0` | 배웅 선물 보너스율 |
 | 테마 식별자 | `theme_id` | FK | `BIGINT NULL` | → `theme_master(id)` |
 | 가격 | `price_game_money` |  | `INT UNSIGNED NOT NULL` | 구매 당시 가구 가격 |
 | 배치 X 좌표 | `position_x` |  | `SMALLINT NULL` | NULL이면 인벤토리 |
@@ -532,7 +532,7 @@ V41 에서 「사랑둥이」(`PET_LOVELY`)는 펫 칭호로 옮기면서 `enabl
 UNIQUE(pet_id, pet_title_id)
 ```
 
-한 번 딴 칭호는 회수하지 않는다. 분양한 펫의 칭호는 그대로 기록으로 남는다.
+한 번 딴 칭호는 회수하지 않는다. 배웅한 펫의 칭호는 그대로 기록으로 남는다.
 
 ---
 

@@ -46,7 +46,7 @@ const CHARACTERS = PET_CATALOG.map((species) => ({
 }));
 
 // 마이룸 가구 — 백엔드 FurnitureCatalog 의 카테고리·보너스 스탯과 같게 유지한다.
-// 배치한 가구만 분양가 보너스에 들어간다 (docs/domain.md 분양가 계산 참조).
+// 배치한 가구만 배웅 선물 보너스에 들어간다 (docs/domain.md 배웅 선물 계산 참조).
 const ITEM_STAT = {
   BED: "ENERGY",
   MIRROR: "CHARM",
@@ -64,7 +64,7 @@ const ITEMS = Object.entries(ITEM_STAT).map(([category, stat]) => ({
   category,
   name: CATEGORY_LABEL[category] ?? category,
   tag: `마이룸 · ${STAT_LABEL[stat] ?? stat}`,
-  desc: "마이룸에 배치해 두면 친구를 분양할 때 보너스가 붙어요.",
+  desc: "마이룸에 배치해 두면 친구를 배웅할 때 보너스가 붙어요.",
 }));
 
 const STORY_TABS = [
@@ -649,7 +649,7 @@ function StoryPage({ user, onLogout }) {
                       합리적인 소비 기록이 쌓일수록 레벨이 오르고 진화합니다. Lv.{" "}
                       {EVOLUTION_STAGES[1].level}에 {EVOLUTION_STAGES[1].label}, Lv.{" "}
                       {EVOLUTION_STAGES[2].level}에 {EVOLUTION_STAGES[2].label}가 되고, Lv. {MAX_LEVEL}을
-                      달성하면 졸업합니다.
+                      달성하면 달나라로 배웅합니다.
                     </dd>
                   </div>
                   <div>

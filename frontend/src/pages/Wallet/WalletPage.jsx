@@ -8,6 +8,7 @@ import { listInquiriesByDate } from "../../api/inquiries";
 import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
 import CoinIcon from "../../components/CoinIcon";
 import BudgetCard from "./BudgetCard";
+import { SIGNAL_LABELS, SIGNAL_STATUS } from "../../signalLabels";
 import "../Home/HomeDashboard.css";
 import "./WalletPage.css";
 
@@ -23,7 +24,6 @@ const CHART_COLORS = [
 ];
 
 // 합리성 시그널(백엔드 enum) → 한글 상태 + 배지 색상 클래스.
-const SIGNAL_STATUS = { GREEN: "합리적", GRAY: "중립", RED: "비합리적" };
 // 1차 판정만 끝나고 예외 지출 사유를 기다리는 날(PENDING)은 아직 그날 결과가 아니다 — 색·보상을 확정된 날처럼 보이지 않는다.
 const isFinalJudgment = (judgment) => Boolean(judgment) && judgment.status !== "PENDING";
 
@@ -787,7 +787,7 @@ function WalletPage({ user, onLogout }) {
           <div className="ledger-day-reward-head">
             <div>
               <span>{selectedDateIso ? `${formatDateDisplay(selectedDateIso)} 판정 보상` : "선택한 날짜의 판정 보상"}</span>
-              <strong>{!selectedJudgment ? "아직 판정 전" : isFinalJudgment(selectedJudgment) ? `${SIGNAL_STATUS[selectedJudgment.signal] || "판정 완료"} 소비` : selectedDateIso < todayIso ? "1차 판정으로 확정 중" : "사유 답변 대기"}</strong>
+              <strong>{!selectedJudgment ? "아직 판정 전" : isFinalJudgment(selectedJudgment) ? (SIGNAL_LABELS[selectedJudgment.signal] || "판정 완료") : selectedDateIso < todayIso ? "1차 판정으로 확정 중" : "사유 답변 대기"}</strong>
             </div>
             {isFinalJudgment(selectedJudgment) && <span className={`ledger-history-badge ${SIGNAL_BADGE[selectedJudgment.signal] || "ledger-history-badge--gray"}`}>판정 완료</span>}
           </div>

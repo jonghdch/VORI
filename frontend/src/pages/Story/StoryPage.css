@@ -731,7 +731,7 @@
   border-color: var(--text-3);
 }
 
-/* 보조 정보 — 성장·업적·분양 */
+/* 보조 정보 — 성장·업적·배웅 */
 .story-info-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

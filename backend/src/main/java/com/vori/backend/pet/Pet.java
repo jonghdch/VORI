@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 
 /**
  * 사용자가 키우는 펫 1마리. 절약하면 stat_<type> 이 증가하고 stage 가 진전.
- * stage 전이 조건(INFANT→JUVENILE→ADULT), 분양(released_at·release_value) 룰은 TBD (docs/domain.md).
+ * stage 전이 조건(INFANT→JUVENILE→ADULT), 배웅(released_at·release_value) 룰은 TBD (docs/domain.md).
  * egg_id NULL = 시작 펫 (가챠 없이 받은 것), 값 있음 = 가챠로 부화한 펫.
  */
 @Entity
@@ -114,7 +114,7 @@ public class Pet {
         return nz(statEnergy) + nz(statCharm) + nz(statIq) + nz(statEndurance);
     }
 
-    /** EXP = 스탯 합 × 10. 레벨 판정과 분양가 산출의 기준값. */
+    /** EXP = 스탯 합 × 10. 레벨 판정과 배웅 선물 산출의 기준값. */
     public int exp() {
         return statTotal() * PetLevel.EXP_PER_STAT;
     }
@@ -134,7 +134,7 @@ public class Pet {
         return byLevel.ordinal() > stage.ordinal() ? byLevel : stage;
     }
 
-    /** 만렙(30)을 달성해 졸업(분양)할 수 있는가. */
+    /** 만렙(30)을 달성해 배웅할 수 있는가. */
     public boolean isGraduated() {
         return level() >= PetLevel.MAX_LEVEL;
     }
@@ -206,7 +206,7 @@ public class Pet {
         return releasedAt != null;
     }
 
-    /** 분양 처리. 보상 금액 산출은 PetService 가 맡는다(가구 보너스가 펫 밖의 정보라서). */
+    /** 배웅 처리. 보상 금액 산출은 PetService 가 맡는다(가구 보너스가 펫 밖의 정보라서). */
     public void release(int value, LocalDateTime at) {
         this.releasedAt = at;
         this.releaseValue = value;
@@ -216,11 +216,11 @@ public class Pet {
         return v == null ? 0 : v;
     }
 
-    // NULL = 현재 키우는 활성 펫. 값 있음 = 분양됨 (다 키워서 처분)
+    // NULL = 현재 키우는 활성 펫. 값 있음 = 배웅함 (다 키워 달나라로 보냄)
     @Column(name = "released_at")
     private LocalDateTime releasedAt;
 
-    // 분양 시 받은 게임머니 보상. 분양가 산출식은 TBD (스탯·가구 보너스 반영 예정)
+    // 배웅 시 받은 게임머니 보상. 배웅 선물 산출식은 TBD (스탯·가구 보너스 반영 예정)
     @Column(name = "release_value", columnDefinition = "INT UNSIGNED")
     private Integer releaseValue;
 }

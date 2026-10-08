@@ -41,13 +41,13 @@ function formatProgressText(item) {
     return `${current}마리 / ${threshold}마리 부화`;
   }
   if (code.startsWith("DEX_")) {
-    return `${current}종 / ${threshold}종 졸업`;
+    return `${current}종 / ${threshold}종 배웅`;
   }
   if (code.startsWith("PET_TITLE_") || code === "PET_ALLROUNDER" || code === "PET_SECRET_FOUND") {
     return `${current}개 / ${threshold}개`;
   }
   if (code.startsWith("PET_")) {
-    return `${current}마리 / ${threshold}마리 분양`;
+    return `${current}마리 / ${threshold}마리 배웅`;
   }
   if (code === "LUCKY") {
     return `${current}회 / ${threshold}회 S등급 획득`;

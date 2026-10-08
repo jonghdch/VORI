@@ -4,6 +4,7 @@ import AppShell from "../../components/AppShell";
 import {
   PetArt,
   petDisplayName,
+  withJosa,
   levelProgressPct,
   nextMilestone,
   MAX_LEVEL,
@@ -81,7 +82,7 @@ const ROOM_TIPS = [
   "펫과 가구를 드래그해서 원하는 위치에 배치해요.",
   "펫을 우클릭하면 쓰다듬거나 칭찬할 수 있어요.",
   "가구는 더블클릭하면 인벤토리로 회수돼요.",
-  "배치한 가구만 분양가 보너스에 반영돼요.",
+  "배치한 가구만 배웅 선물 보너스에 반영돼요.",
 ];
 
 function pickTipIndex(previous) {
@@ -122,7 +123,7 @@ function PetPage({ user, onLogout }) {
 
   const navigate = useNavigate();
 
-  // 키우는 펫 + 보유·분양 이력. pet === null 이면 "펫 없음"(신규 가입 직후·분양 직후).
+  // 키우는 펫 + 보유·배웅 이력. pet === null 이면 "펫 없음"(신규 가입 직후·배웅 직후).
   const [pet, setPet] = useState(null);
   const [petHistory, setPetHistory] = useState([]);
   const [petLoading, setPetLoading] = useState(true);
@@ -162,7 +163,7 @@ function PetPage({ user, onLogout }) {
   const handleRelease = async () => {
     if (!pet) return;
     const ok = window.confirm(
-      `${petDisplayName(pet)}을(를) 분양할까요? 분양하면 더 이상 키울 수 없고, 스탯에 따라 코인을 받아요.`,
+      `${withJosa(petDisplayName(pet), "을", "를")} 달로 배웅할까요? 배웅하면 더는 함께 지낼 수 없고, 스탯에 따라 배웅 선물로 코인을 받아요.`,
     );
     if (!ok) return;
     setReleasing(true);
@@ -172,16 +173,16 @@ function PetPage({ user, onLogout }) {
       await loadPets();
       setNotice({
         kind: "ok",
-        text: `${petDisplayName(released)}을(를) 분양하고 ${coin(released.releaseValue)}을 받았어요.`,
+        text: `${withJosa(petDisplayName(released), "이", "가")} 달로 돌아갔어요. 배웅 선물로 ${coin(released.releaseValue)}을 받았어요.`,
       });
     } catch (e) {
       setNotice({
         kind: "err",
         text:
           e.status === 400
-            ? e.message || `${MAX_LEVEL}레벨을 달성한 펫만 분양할 수 있어요.`
+            ? e.message || `${MAX_LEVEL}레벨을 달성한 펫만 배웅할 수 있어요.`
             : e.status === 409
-              ? "이미 분양한 펫이에요."
+              ? "이미 배웅한 펫이에요."
               : e.message,
       });
     } finally {
@@ -306,7 +307,7 @@ function PetPage({ user, onLogout }) {
       stat[item.statTarget] += pct;
       release += pct;
     });
-    // 발동한 테마 세트 보너스도 실제 분양가 계산에 포함되므로 총 분양가에 합산한다.
+    // 발동한 테마 세트 보너스도 실제 배웅 선물 계산에 포함되므로 총 배웅 선물에 합산한다.
     release += themes.filter((theme) => theme.active).reduce((sum, theme) => sum + Number(theme.setBonusPct || 0), 0);
     return { stat, release };
   }, [furniture, themes]);
@@ -596,7 +597,7 @@ function PetPage({ user, onLogout }) {
                 </h1>
                 <div className="pet-room-chips">
                   <ul className="pet-surface-chips pet-room-bonus-chips" aria-label="배치 가구 보너스">
-                    <li className="pet-room-bonus-chip--release">분양가 +{roomBonus.release}%</li>
+                    <li className="pet-room-bonus-chip--release">배웅 선물 +{roomBonus.release}%</li>
                     {Object.entries(roomBonus.stat).filter(([, pct]) => pct > 0).map(([stat, pct]) => (
                       <li key={stat}>{STAT_LABEL[stat]} +{pct}%</li>
                     ))}
@@ -799,13 +800,13 @@ function PetPage({ user, onLogout }) {
                         </div>
                       </div>
 
-                      {/* 레벨 진행도 — 레벨·진행 경험치는 서버(PetLevel) 값. 5레벨 2차, 15레벨 3차, 30레벨 졸업 */}
+                      {/* 레벨 진행도 — 레벨·진행 경험치는 서버(PetLevel) 값. 5레벨 2차, 15레벨 3차, 30레벨 배웅 */}
                       <div className="pet-evolve">
                         <div className="pet-evolve-head">
                           <span>Lv. {pet.level} / {pet.maxLevel}</span>
                           <strong>
                             {graduated
-                              ? "졸업 가능"
+                              ? "배웅할 수 있어요"
                               : `다음 레벨까지 ${pet.levelExp} / ${pet.levelExpNeeded}`}
                           </strong>
                         </div>
@@ -818,7 +819,7 @@ function PetPage({ user, onLogout }) {
                         <p className="pet-evolve-help">
                           {milestone
                             ? `Lv. ${milestone.level}에 ${milestone.label}. 하루 소비 판정과 출석 보상으로 경험치가 쌓여요.`
-                            : "30레벨을 달성했어요! 분양해서 졸업시키면 코인으로 바꿀 수 있어요. 분양가 = EXP."}
+                            : `30레벨을 달성했어요! 이제 ${withJosa(petDisplayName(pet), "과", "와")} 헤어질 시간이에요. 배웅해줍시다.`}
                         </p>
                         {graduated && (
                           <button
@@ -827,7 +828,7 @@ function PetPage({ user, onLogout }) {
                             disabled={releasing}
                             onClick={handleRelease}
                           >
-                            {releasing ? "분양 중…" : `분양하기 (${coin(pet.exp)}~)`}
+                            {releasing ? "배웅 중…" : `배웅하기 (${coin(pet.exp)}~)`}
                           </button>
                         )}
                       </div>
@@ -912,10 +913,10 @@ function PetPage({ user, onLogout }) {
                       {furniture.filter((f) => f.placed).length}개 배치중 · {furniture.length}개 보유
                     </span>
                   </div>
-                  <p className="pet-furniture-bonus-help">배치한 가구는 분양가 보너스와 함께, 해당 스탯 보상을 가구에 적힌 비율만큼 올려줘요.</p>
+                  <p className="pet-furniture-bonus-help">배치한 가구는 배웅 선물 보너스와 함께, 해당 스탯 보상을 가구에 적힌 비율만큼 올려줘요.</p>
                   {!furnitureLoading && furniture.length === 0 ? (
                     <div className="pet-empty">
-                      <p>아직 가구가 없어요. 상점에서 사서 배치하면 분양가가 올라가요.</p>
+                      <p>아직 가구가 없어요. 상점에서 사서 배치하면 배웅 선물이 올라가요.</p>
                       <button
                         type="button"
                         className="home-link-btn"
@@ -961,7 +962,7 @@ function PetPage({ user, onLogout }) {
                           onClick={() => (item.placed ? removeFurniture(item) : placeFurniture(item))}
                           title={`${CATEGORY_LABEL[item.category] ?? ""} · ${
                             STAT_LABEL[item.statTarget] ?? ""
-                          } · 분양가 +${item.releaseBonusPct}%${
+                          } · 배웅 선물 +${item.releaseBonusPct}%${
                             furnitureThemeKeyOf(item) === FURNITURE_THEME_NONE
                               ? ""
                               : ` · ${furnitureThemeKeyOf(item)} 테마`

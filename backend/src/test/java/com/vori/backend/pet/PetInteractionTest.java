@@ -25,7 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 펫 상호작용(쓰다듬기 등)의 매력 보너스 검증. 스탯은 진화·분양가로 이어지므로
+ * 펫 상호작용(쓰다듬기 등)의 매력 보너스 검증. 스탯은 진화·배웅 선물로 이어지므로
  * 확률이 선언한 값(1%)과 어긋나면 바로 잡아야 한다.
  * Spring 컨텍스트·DB 없이 도는 순수 단위 테스트.
  */

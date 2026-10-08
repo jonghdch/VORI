@@ -18,7 +18,7 @@ import { get, post, patch } from "./http";
  *   name: string,                  // "책장"
  *   category: string,              // BED|WALLPAPER|FLOOR|MIRROR|VANITY|PICTURE|BOARD|SHELF|DRAWER|COMPUTER
  *   statTarget: string,            // ENERGY|CHARM|IQ|ENDURANCE
- *   releaseBonusPct: number,       // 분양가 가산 % (배치했을 때만 적용)
+ *   releaseBonusPct: number,       // 배웅 선물 가산 % (배치했을 때만 적용)
  *   price: number,                 // 코인
  *   themeName: string|null,        // "우드"|"코지"|"스터디" — null 이면 테마 없는 가구(벽지·바닥)
  *   themeSetBonusPct: number|null, // 그 테마의 세트 보너스 %
@@ -30,7 +30,7 @@ import { get, post, patch } from "./http";
 /**
  * 보유 가구 한 개.
  *
- * placed:false 는 인벤토리에 있다는 뜻이고, **분양가 보너스에도 테마 세트에도 반영되지 않는다.**
+ * placed:false 는 인벤토리에 있다는 뜻이고, **배웅 선물 보너스에도 테마 세트에도 반영되지 않는다.**
  * 사는 것만으로는 아무 효과가 없고 배치해야 효과가 생긴다 — 시연 각본 5번의 핵심.
  *
  * @typedef {{
@@ -85,7 +85,7 @@ export const placeFurniture = (id, positionX, positionY) =>
   patch(`/furniture/${id}/place`, { positionX, positionY });
 
 /**
- * 인벤토리로 회수. 회수하면 분양가 보너스와 테마 세트에서 빠진다.
+ * 인벤토리로 회수. 회수하면 배웅 선물 보너스와 테마 세트에서 빠진다.
  *
  * @param {number} id Furniture.id
  * @returns {Promise<Furniture>} 403 = 남의 가구, 404 = 없는 가구

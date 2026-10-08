@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  * 판정을 두 군데서 하면 둘이 어긋났을 때 어느 쪽이 맞는지 알 수 없다.
  *
  * 세트 발동 기준은 PetService.calculateReleaseValue 와 같아야 한다: 마이룸에 **배치된** 가구만 센다.
- * 화면에 "발동 중"이라고 표시했는데 분양가에는 안 얹히면 그게 제일 나쁜 버그다.
+ * 화면에 "발동 중"이라고 표시했는데 배웅 선물에는 안 얹히면 그게 제일 나쁜 버그다.
  */
 @Service
 @RequiredArgsConstructor

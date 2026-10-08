@@ -30,7 +30,7 @@ const progressText = (item) => (item.hidden
 
 /**
  * 도감의 "칭호" 탭 — 지금 키우는 펫의 칭호 과제. 칭호는 펫이 얻고, 펫이 바뀌면 과제는 0부터 다시 시작한다.
- * 딴 칭호 중 하나를 장착하면 홈 배지에 보인다. 졸업한 펫의 칭호는 펫 탭의 상세 기록에서 본다.
+ * 딴 칭호 중 하나를 장착하면 홈 배지에 보인다. 배웅한 펫의 칭호는 펫 탭의 상세 기록에서 본다.
  */
 function PetTitlePanel({ knownTitleCount, onTitlesChanged }) {
   const navigate = useNavigate();
@@ -157,7 +157,7 @@ function PetTitlePanel({ knownTitleCount, onTitlesChanged }) {
             </li>
           ))}
         </ul>
-        <p className="ach-empty">졸업한 펫이 얻은 칭호는 펫 탭에서 그 펫을 눌러 볼 수 있어요.</p>
+        <p className="ach-empty">배웅한 펫이 얻은 칭호는 펫 탭에서 그 펫을 눌러 볼 수 있어요.</p>
       </section>
     </>
   );

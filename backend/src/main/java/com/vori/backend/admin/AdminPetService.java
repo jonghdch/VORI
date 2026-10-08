@@ -27,7 +27,7 @@ import java.util.List;
  * 어드민 전용 펫 조작 — 시연·QA 목적.
  *
  * 성체(스탯 합 300)까지 정상적으로 키우려면 누적 30만원어치 절약이 필요해 발표 자리에서
- * 분양을 보여줄 수 없다. 그렇다고 진화 임계값 자체를 낮추면 운영 규칙이 시연 때문에 왜곡되므로,
+ * 배웅을 보여줄 수 없다. 그렇다고 진화 임계값 자체를 낮추면 운영 규칙이 시연 때문에 왜곡되므로,
  * 어드민에만 열린 경로로 특정 펫의 스탯을 끌어올린다.
  *
  * 올린 스탯은 pet_growth_logs 에 reason=BONUS 로 남긴다. 흔적 없이 값만 바꾸면 나중에
@@ -43,7 +43,7 @@ public class AdminPetService {
     private final PetGrowthLogRepository petGrowthLogRepository;
     private final PetTitleService petTitleService;
 
-    /** 대상 사용자의 활성 펫을 지정한 레벨까지 성장시킨다(30 = 졸업). 이미 그 이상이면 그대로. */
+    /** 대상 사용자의 활성 펫을 지정한 레벨까지 성장시킨다(30 = 배웅 가능). 이미 그 이상이면 그대로. */
     @Transactional
     public PetResponse growActivePetToLevel(Long userId, int level) {
         int target = PetLevel.minExpFor(Math.max(1, Math.min(level, PetLevel.MAX_LEVEL))) / PetLevel.EXP_PER_STAT;
@@ -126,7 +126,7 @@ public class AdminPetService {
         return PetResponse.of(pet, species);
     }
 
-    /** 활성 펫의 레벨을 강제로 맞춘다(시연용, 내려가기 허용). 30 이면 졸업(분양) 버튼이 열린다. */
+    /** 활성 펫의 레벨을 강제로 맞춘다(시연용, 내려가기 허용). 30 이면 배웅 버튼이 열린다. */
     @Transactional
     public PetResponse setActivePetLevel(Long userId, int level) {
         List<Pet> pets = petRepository.findByUserIdAndReleasedAtIsNull(userId);
@@ -160,7 +160,7 @@ public class AdminPetService {
     }
 
     /**
-     * 활성 펫을 비운다 — 보상 0 으로 분양 처리. 성체 조건을 건너뛰므로 관리자 전용.
+     * 활성 펫을 비운다 — 보상 0 으로 배웅 처리. 성체 조건을 건너뛰므로 관리자 전용.
      * 알 개봉은 펫이 없어야 되므로(409) 개봉 흐름을 다시 보려면 이걸로 자리를 비운다.
      */
     @Transactional
@@ -168,7 +168,7 @@ public class AdminPetService {
         List<Pet> pets = petRepository.findByUserIdAndReleasedAtIsNull(userId);
         if (pets.isEmpty()) return;
         Pet pet = pets.get(0);
-        petTitleService.evaluate(pet); // 일반 분양과 같이, 내보내기 전에 마지막으로 칭호를 본다
+        petTitleService.evaluate(pet); // 일반 배웅과 같이, 내보내기 전에 마지막으로 칭호를 본다
         pet.release(0, LocalDateTime.now());
         log.warn("[ADMIN] 펫 비우기(시연용) — userId={}, petId={}", userId, pet.getId());
     }

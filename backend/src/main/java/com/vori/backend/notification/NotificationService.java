@@ -33,7 +33,7 @@ public class NotificationService {
     }
 
     /**
-     * 펫 경험치가 오른 뒤 부른다. levelBefore → 지금 레벨 사이에서 진화(5·15)·졸업(30) 지점을 넘었으면 알린다.
+     * 펫 경험치가 오른 뒤 부른다. levelBefore → 지금 레벨 사이에서 진화(5·15)·배웅(30) 지점을 넘었으면 알린다.
      */
     public void petGrew(Long userId, Pet pet, int levelBefore) {
         int after = pet.level();
@@ -50,8 +50,8 @@ public class NotificationService {
                     "pet:" + pet.getId() + ":lv" + PetLevel.ADULT_LEVEL);
         }
         if (levelBefore < PetLevel.MAX_LEVEL && after >= PetLevel.MAX_LEVEL) {
-            notify(userId, NotificationType.PET_GRADUATE_READY, who + "이(가) 30레벨이 됐어요. 졸업시킬 수 있어요!",
-                    "마이룸에서 분양하면 코인을 받아요", "/myroom",
+            notify(userId, NotificationType.PET_GRADUATE_READY, who + "이(가) 30레벨이 됐어요. 이제 달로 배웅할 수 있어요!",
+                    "마이룸에서 배웅하면 코인을 받아요", "/myroom",
                     "pet:" + pet.getId() + ":lv" + PetLevel.MAX_LEVEL);
         }
     }

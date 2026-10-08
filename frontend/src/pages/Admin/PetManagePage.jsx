@@ -122,9 +122,9 @@ function PetManagePage() {
                             className="adm-btn adm-btn--small adm-btn--primary"
                             disabled={working !== null}
                             onClick={() => grow(user, "GRADUATE")}
-                            title="30레벨까지 — 분양(졸업) 가능"
+                            title="30레벨까지 — 배웅 가능"
                           >
-                            {working === `${user.id}:GRADUATE` ? "처리 중…" : "졸업까지"}
+                            {working === `${user.id}:GRADUATE` ? "처리 중…" : "30레벨까지"}
                           </button>
                         </div>
                       </td>

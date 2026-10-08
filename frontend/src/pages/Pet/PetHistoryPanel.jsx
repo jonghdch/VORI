@@ -70,7 +70,7 @@ function PetHistoryList({ petHistory }) {
               </small>
             </div>
             <span className="pet-history-state">
-              {p.releasedAt ? `${formatDate(p.releasedAt)} 분양 · ${coin(p.releaseValue)}` : "키우는 중"}
+              {p.releasedAt ? `${formatDate(p.releasedAt)} 배웅 · ${coin(p.releaseValue)}` : "키우는 중"}
             </span>
           </li>
         ))}
