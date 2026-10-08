@@ -12,12 +12,16 @@ import java.util.Map;
  *
  * 구매 시점의 분포는 eggs.probability_distribution 에 JSON 으로 박제되므로,
  * 여기 값을 바꿔도 이미 팔린 알의 확률은 변하지 않는다.
+ *
+ * 가격은 2026-10-08 팀 결정으로 1/10 로 낮췄다(2,500/6,000/15,000 → 250/600/1,500).
+ * 하루 판정 보상(아낀 돈 ÷ 100)이 수백 코인이라 예전 값으로는 알 하나에 1주가 넘게 걸렸다.
+ * 보상 공식과 배웅 선물은 그대로 두었다. 가구 FurnitureCatalog 도 같이 낮췄다.
  */
 public enum EggGrade {
 
-    BASIC("기본 알", 2_500, 1, 5, 24, 70),
-    PREMIUM("고급 알", 6_000, 5, 20, 45, 30),
-    LEGENDARY("최고급 알", 15_000, 20, 50, 30, 0);
+    BASIC("기본 알", 250, 1, 5, 24, 70),
+    PREMIUM("고급 알", 600, 5, 20, 45, 30),
+    LEGENDARY("최고급 알", 1_500, 20, 50, 30, 0);
 
     private final String displayName;
     private final int price;
