@@ -144,7 +144,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     weekday: "long",
   }).format(today);
 
-  // 펫이 없으면(분양 직후 등) 0 으로 그린다.
+  // 펫이 없으면(배웅 직후 등) 0 으로 그린다.
   const stats = activePet;
   const spending = summary?.spending;
   const recent = summary?.recentExpenses ?? [];
@@ -214,7 +214,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             )}
             <div className="home-pet-body">
               {petLoaded && !activePet ? (
-                /* 키우는 펫이 없을 때(분양 직후·알 개봉 전) — 마이룸과 같은 안내 */
+                /* 키우는 펫이 없을 때(배웅 직후·알 개봉 전) — 마이룸과 같은 안내 */
                 <div className="home-pet-empty">
                   <strong>아직 키우는 펫이 없어요</strong>
                   <p>상점에서 새 친구를 데려올 수 있어요.</p>

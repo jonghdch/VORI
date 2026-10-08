@@ -128,7 +128,7 @@ public class User {
         this.activeTitleId = titleId;
     }
 
-    /** 게임머니 적립. 절약 전환·펫 분양 보상 등. */
+    /** 게임머니 적립. 절약 전환·펫 배웅 보상 등. */
     public void addGameMoney(int amount) {
         if (amount < 0) throw new IllegalArgumentException("적립액은 음수일 수 없습니다: " + amount);
         this.gameMoney = (this.gameMoney == null ? 0 : this.gameMoney) + amount;

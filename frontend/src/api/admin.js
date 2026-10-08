@@ -247,17 +247,17 @@ export function adminSetMyPetStage(stage) {
   return adminSend("PUT", `/admin/me/pet/stage?stage=${encodeURIComponent(stage)}`, undefined, "펫 단계 변경");
 }
 
-/** 활성 펫 레벨 강제(1~30). 30 이면 졸업(분양) 버튼이 열린다. */
+/** 활성 펫 레벨 강제(1~30). 30 이면 배웅 버튼이 열린다. */
 export function adminSetMyPetLevel(level) {
   return adminSend("PUT", `/admin/me/pet/level?level=${encodeURIComponent(level)}`, undefined, "펫 레벨 변경");
 }
 
-/** 활성 펫 비우기(보상 0 분양). */
+/** 활성 펫 비우기(보상 0 배웅). */
 export function adminClearMyPet() {
   return adminSend("DELETE", "/admin/me/pet", undefined, "펫 비우기");
 }
 
-/** 대상 사용자의 활성 펫을 지정한 성장 단계(또는 "GRADUATE" = 30레벨 졸업)까지 성장시킨다. */
+/** 대상 사용자의 활성 펫을 지정한 성장 단계(또는 "GRADUATE" = 30레벨, 배웅 가능)까지 성장시킨다. */
 export function growUserPet(userId, stage) {
   const query = stage === "GRADUATE" ? "level=30" : `stage=${encodeURIComponent(stage)}`;
   return adminSend(

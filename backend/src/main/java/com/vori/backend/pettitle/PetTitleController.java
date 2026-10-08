@@ -26,7 +26,7 @@ public class PetTitleController {
         return petTitleService.board(principal.getId());
     }
 
-    /** PUT /api/pets/{id}/equipped-title — 칭호 장착. body {awardId}, null 이면 장착 해제. 분양한 펫이면 409. */
+    /** PUT /api/pets/{id}/equipped-title — 칭호 장착. body {awardId}, null 이면 장착 해제. 배웅한 펫이면 409. */
     @PutMapping("/api/pets/{id}/equipped-title")
     public PetTitleBoardResponse equip(
             @AuthenticationPrincipal UserPrincipal principal,

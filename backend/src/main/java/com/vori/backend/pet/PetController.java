@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 펫 조회·이름 짓기·분양·상호작용·대화. 인증 필요(세션), 본인 데이터만.
+ * 펫 조회·이름 짓기·배웅·상호작용·대화. 인증 필요(세션), 본인 데이터만.
  */
 @RestController
 @RequestMapping("/api/pets")
@@ -36,7 +36,7 @@ public class PetController {
         return petService.getActive(principal.getId());
     }
 
-    /** GET /api/pets — 보유·분양 이력 전체 (최신순). */
+    /** GET /api/pets — 보유·배웅 이력 전체 (최신순). */
     @GetMapping
     public List<PetResponse> all(@AuthenticationPrincipal UserPrincipal principal) {
         return petService.listAll(principal.getId());
@@ -69,7 +69,7 @@ public class PetController {
         return petChatService.chat(principal.getId(), request);
     }
 
-    /** PUT /api/pets/{id}/name — 키우는 펫의 이름 짓기(1~10자). 분양한 펫이면 409. */
+    /** PUT /api/pets/{id}/name — 키우는 펫의 이름 짓기(1~10자). 배웅한 펫이면 409. */
     @PutMapping("/{id}/name")
     public PetResponse rename(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -79,7 +79,7 @@ public class PetController {
         return petService.rename(principal.getId(), id, request.name());
     }
 
-    /** POST /api/pets/{id}/release — 성체 펫 분양 → 게임머니 획득. */
+    /** POST /api/pets/{id}/release — 성체 펫 배웅 → 게임머니 획득. */
     @PostMapping("/{id}/release")
     public PetResponse release(
             @AuthenticationPrincipal UserPrincipal principal,

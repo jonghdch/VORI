@@ -10,14 +10,14 @@ public record TitleProgress(
         long totalSaved,      // 누적 절약액(원)
         long expenseCount,    // 지출 등록 건수
         long goalsAchieved,   // 달성한 절약 목표 수
-        long petsReleased,    // 분양한 펫 수
+        long petsReleased,    // 배웅한 펫 수
         long sTierPets,       // 뽑은 S 등급 펫 수
         long aiAnswers,       // 답변을 마친 AI 질문 수
         long receiptScans,    // 값을 읽어 낸 영수증 수 (영수증이 아닌 사진은 제외)
         long loginCount,      // 누적 로그인 횟수
         long petInteractions, // 가장 많이 상호작용한 펫의 상호작용 횟수 (업적 사랑둥이는 펫 칭호로 옮겨 지금은 안 씀)
         long petsHatched,     // 부화한(받은) 펫 수, 시작 펫 포함
-        long speciesGraduated,// 졸업시킨 서로 다른 종 수
+        long speciesGraduated,// 배웅한 서로 다른 종 수
         long petTitlesTotal,  // 모든 펫이 딴 칭호 합계
         long petTitleKinds,   // 한 번이라도 딴 서로 다른 공개 펫 칭호 수
         long petTitlesOnOnePet, // 한 펫이 딴 칭호 최대 개수

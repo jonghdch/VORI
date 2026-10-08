@@ -111,7 +111,7 @@ class PetNameTest {
     }
 
     @Test
-    @DisplayName("분양한 펫에는 이름을 붙일 수 없다")
+    @DisplayName("배웅한 펫에는 이름을 붙일 수 없다")
     void releasedPetIsRejected() {
         Pet pet = pet(USER_ID, LocalDateTime.now());
 

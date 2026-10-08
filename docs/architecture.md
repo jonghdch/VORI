@@ -152,7 +152,7 @@ React Router v7 (`BrowserRouter`) 사용. SPA 이지만 URL 이 페이지마다 
             → 사용자 개봉 클릭 → gacha_pulls INSERT (확률 분포 기반) + eggs.opened_at SET
             → pets INSERT (species_id, egg_id, hatched_at)
             → 소비 판정·상호작용·아이템 사용으로 스탯/레벨 성장
-            → 마이룸에서 가구 구매·배치, 성장 완료 후 분양
+            → 마이룸에서 가구 구매·배치, 성장 완료 후 배웅
 ```
 
 ## 빌드·실행 환경

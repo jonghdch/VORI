@@ -19,7 +19,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** 알림 저장 규칙 — 같은 일로 두 번 알리지 않고, 펫 성장은 진화·졸업 지점을 넘을 때만 알린다. */
+/** 알림 저장 규칙 — 같은 일로 두 번 알리지 않고, 펫 성장은 진화·배웅 지점을 넘을 때만 알린다. */
 class NotificationServiceTest {
 
     private final NotificationRepository repository = mock(NotificationRepository.class);
@@ -50,7 +50,7 @@ class NotificationServiceTest {
     }
 
     @Test
-    @DisplayName("레벨 14 → 30: 3차 진화와 졸업 알림 둘")
+    @DisplayName("레벨 14 → 30: 3차 진화와 배웅 알림 둘")
     void evolveAndGraduate() {
         Pet pet = pet(PetLevel.minExpFor(30) / PetLevel.EXP_PER_STAT);
         service.petGrew(1L, pet, 14);

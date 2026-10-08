@@ -243,7 +243,7 @@ public class DailyReportService {
     }
 
     /**
-     * 리포트 시점의 펫 상태를 JSON 으로 박제. 나중에 그 펫을 분양해도 리포트엔 그날의 모습이 남는다.
+     * 리포트 시점의 펫 상태를 JSON 으로 박제. 나중에 그 펫을 배웅해도 리포트엔 그날의 모습이 남는다.
      * 직렬화가 실패해도 리포트 생성을 막지는 않는다.
      */
     private String writeSnapshot(Pet pet, PetSpecies species) {

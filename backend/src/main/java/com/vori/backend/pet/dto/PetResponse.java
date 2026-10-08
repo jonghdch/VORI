@@ -14,7 +14,7 @@ import java.util.List;
  * statTotal 은 4대 스탯 합 — 프론트가 다시 더하지 않도록 서버가 내려준다. exp 는 그 × 10.
  * level·levelExp·levelExpNeeded 는 PetLevel 규칙으로 계산한 레벨과 현재 레벨 안의 진행도(EXP 단위).
  * 만렙(maxLevel)이면 levelExpNeeded 가 0 이다. 프론트는 레벨 공식을 따로 갖지 않는다.
- * titles·equippedTitle 은 이 펫이 딴 칭호와 장착한 칭호 — 분양한 펫이면 분양 순간의 기록이다.
+ * titles·equippedTitle 은 이 펫이 딴 칭호와 장착한 칭호 — 배웅한 펫이면 배웅 순간의 기록이다.
  */
 public record PetResponse(
         Long id,

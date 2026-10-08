@@ -135,11 +135,11 @@ function AdminTools() {
                   disabled={busy}
                   onClick={() => run(`Lv. ${lv}`, () => adminSetMyPetLevel(lv), { pet: true })}
                 >
-                  Lv. {lv}{lv === 30 ? " (졸업)" : ""}
+                  Lv. {lv}{lv === 30 ? " (배웅)" : ""}
                 </button>
               ))}
             </div>
-            <small>스탯은 그 단계·레벨의 최소값으로 맞춰져요. Lv. 30이면 분양(졸업) 버튼이 열립니다.</small>
+            <small>스탯은 그 단계·레벨의 최소값으로 맞춰져요. Lv. 30이면 배웅 버튼이 열립니다.</small>
           </section>
 
           <section className="admin-tools-section">
@@ -150,7 +150,7 @@ function AdminTools() {
                 className="home-btn"
                 disabled={busy}
                 onClick={() => {
-                  if (!window.confirm("활성 펫을 비울까요? (보상 0 으로 분양 처리)")) return;
+                  if (!window.confirm("활성 펫을 비울까요? (보상 0 으로 배웅 처리)")) return;
                   run("펫 비우기", () => adminClearMyPet(), { pet: true });
                 }}
               >

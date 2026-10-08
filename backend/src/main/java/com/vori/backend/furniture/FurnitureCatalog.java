@@ -11,7 +11,7 @@ import java.math.BigDecimal;
  * 구매 시 여기 값을 그대로 복사해 넣으므로, 나중에 이 표를 고쳐도 이미 팔린 가구는 변하지 않는다.
  * (알 EggGrade 와 같은 원칙)
  *
- * releaseBonusPct 는 펫 분양가에 가산되는 비율(%). 마이룸에 **배치한** 가구만 계산에 들어간다
+ * releaseBonusPct 는 펫 배웅 선물에 가산되는 비율(%). 마이룸에 **배치한** 가구만 계산에 들어간다
  * — PetService.calculateReleaseValue 참조.
  *
  * themeName 은 theme_master.name 을 가리킨다(id 가 아니라 이름 — 시드가 AUTO_INCREMENT 라

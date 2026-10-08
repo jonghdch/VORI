@@ -8,7 +8,7 @@
     python scripts/demo_seed.py              세팅만 (발표 당일 이걸 쓴다)
     python scripts/demo_seed.py --rehearse   세팅 + 무대 6단계를 실제로 눌러보는 리허설
 
-리허설은 세팅 상태를 소모한다(지출 10번째·배치·분양·개봉을 실제로 해버린다).
+리허설은 세팅 상태를 소모한다(지출 10번째·배치·배웅·개봉을 실제로 해버린다).
 발표용 계정은 --rehearse 없이 만들 것.
 
 지출은 전부 식비 계열(categories 2~6, statType=ENERGY)을 쓴다. EMA 기준선이
@@ -219,7 +219,7 @@ def verify(user):
     check("'절약 고수'는 미획득 (진행률 바 시연용)",
           t.get("절약 고수", {}).get("acquired") is False,
           f"{t.get('절약 고수', {}).get('progressPct')}%")
-    check("펫이 ADULT (분양 가능)", pet.get("stage") == "ADULT",
+    check("펫이 ADULT (배웅 가능)", pet.get("stage") == "ADULT",
           f"스탯 {pet.get('statTotal')}")
     check("코인 충분 (액자 3,000 + 알 2,500)", coins >= 10_000, f"{coins:,} 코인")
     check("우드 2/3 — 미발동 ⭐", th.get("우드", {}).get("placedCount") == 2
@@ -329,27 +329,27 @@ def rehearse(user, user_id):
     check("우드는 2/3 라 미발동 (대비용)", wood.get("active") is False,
           f"{wood.get('placedCount')}/3")
 
-    print("\n[6] 펫 분양 — 세트 보너스 반영")
+    print("\n[6] 펫 배웅 — 세트 보너스 반영")
     _, pet = user.call("GET", "/api/pets/active")
     stat = pet["statTotal"]
     code, released = user.call("POST", f"/api/pets/{pet['id']}/release")
-    check("분양 200", code == 200, msg(released) if code != 200 else "")
+    check("배웅 200", code == 200, msg(released) if code != 200 else "")
     value = released.get("releaseValue")
     # 개별: 책장2.00 + 서랍장2.00 + 컴퓨터4.00 + 코르크1.50 = 9.50
     # 세트: 스터디 15.00 (우드는 2/3 라 미발동)  → 합계 24.50%
     expected = int(stat * 10 * 1.245)
-    check("분양가에 개별 9.50% + 스터디 세트 15.00% 반영 ⭐", value == expected,
+    check("배웅 선물에 개별 9.50% + 스터디 세트 15.00% 반영 ⭐", value == expected,
           f"스탯 {stat} → {value:,} 코인 (기대 {expected:,})")
     time.sleep(1.5)
     _, titles = user.call("GET", "/api/titles")
-    check("'첫 분양' 획득 ⭐",
-          {x["name"]: x for x in titles}.get("첫 분양", {}).get("acquired") is True)
+    check("'첫 배웅' 획득 ⭐",
+          {x["name"]: x for x in titles}.get("첫 배웅", {}).get("acquired") is True)
 
     print("\n[7] 알 구매 → 개봉")
     code, egg = user.call("POST", "/api/eggs/buy?grade=BASIC")
     check("알 구매 200", code == 200, msg(egg) if code != 200 else "")
     code, result = user.call("POST", f"/api/eggs/{egg['id']}/open")
-    check("개봉 200 (분양 후라 가능) ⭐", code == 200, msg(result) if code != 200 else "")
+    check("개봉 200 (배웅 후라 가능) ⭐", code == 200, msg(result) if code != 200 else "")
     if code == 200:
         new_pet = result.get("pet", {})
         print(f"     {new_pet.get('speciesName')} · {new_pet.get('tier')}등급 "
