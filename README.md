@@ -257,4 +257,5 @@ navigate("/login");
 | [`docs/roadmap.md`](docs/roadmap.md) | 설계 철학·향후 확장·우선순위 |
 | [`docs/market-research.md`](docs/market-research.md) | 시장·경쟁 분석과 구현 배경 |
 | [`docs/plan-vs-reality.md`](docs/plan-vs-reality.md) | 초기 기획과 실제 구현의 차이 |
+| [`docs/final-demo-plan.md`](docs/final-demo-plan.md) | 11월 시연 계획(최종발표·경진대회) |
 | [`docs/demo-plan.md`](docs/demo-plan.md) | 중간발표 시연 계획(기록용) |
