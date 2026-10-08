@@ -6,6 +6,7 @@ import { PET_CATALOG, DEX_TIER_LABEL, STAGE_ORDER } from "../../components/petCa
 import { MAX_LEVEL, PetArt, STAGE_LABEL, STAGE_LEVEL } from "../../components/petVisual";
 import { FurnitureArt, CATEGORY_LABEL, STAT_LABEL } from "../../components/furnitureVisual";
 import useMediaQuery from "../../components/useMediaQuery";
+import StoryCoverScene from "./StoryCoverScene";
 // SiteHeader 가 .landing-header 등 랜딩 페이지의 헤더 클래스를 그대로 쓰기
 // 때문에, 이 페이지에서도 LandingPage.css 를 함께 import 합니다.
 import "../Landing/LandingPage.css";
@@ -532,6 +533,7 @@ function StoryPage({ user, onLogout }) {
 
       {/* ───────── ① 표지 (우주, 가장 어두움) ───────── */}
       <section className="story-cover">
+        <StoryCoverScene />
         <div className="story-cover-inner">
           <span className="story-eyebrow">VORI 의 작은 세계</span>
           <h1 className="story-cover-title">
