@@ -32,6 +32,7 @@ module.exports = defineConfig({
   webServer: {
     command: `npx serve -s build -l ${port}`,
     url: `http://localhost:${port}`,
-    reuseExistingServer: !process.env.CI,
+    // 이미 떠 있는 서버(예: npm start 개발 서버)를 재사용하지 않는다 — 빌드 결과를 테스트해야 CI 와 같다.
+    reuseExistingServer: false,
   },
 });
