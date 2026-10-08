@@ -8,6 +8,21 @@ function todayInSeoul() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
 }
 
+/** 서비스 기준(한국 시간) 오늘에서 days 만큼 옮긴 날짜 YYYY-MM-DD. */
+function dayInSeoul(days) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(
+    new Date(Date.now() + days * 24 * 60 * 60 * 1000),
+  );
+}
+
+/** 페이지를 새로 불러오지 않고 앱 안에서 주소만 바꾼다(브라우저 뒤로·앞으로와 같은 경로). */
+async function navigateInApp(page, path) {
+  await page.evaluate((to) => {
+    window.history.pushState({}, "", to);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, path);
+}
+
 /** 이메일로 가입하고 소비 설문 6단계를 마쳐 /onboarding 까지 간다. */
 async function signUpAndCompleteSurvey(page, { monthlyIncome = "1000000" } = {}) {
   const email = `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
@@ -39,4 +54,4 @@ async function signUpAndCompleteSurvey(page, { monthlyIncome = "1000000" } = {})
   return { email };
 }
 
-module.exports = { API_BASE, todayInSeoul, signUpAndCompleteSurvey };
+module.exports = { API_BASE, todayInSeoul, dayInSeoul, navigateInApp, signUpAndCompleteSurvey };
