@@ -8,6 +8,7 @@ import com.vori.backend.onboarding.UserSpendingProfileRepository;
 import com.vori.backend.sanction.SanctionPolicy;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,6 +41,10 @@ public class SecurityConfig {
     private final SanctionPolicy sanctionPolicy;
     private final ObjectMapper objectMapper;
     private final UserSpendingProfileRepository profileRepository;
+
+    // 세션 쿠키를 실어 API 를 부를 수 있는 프론트 주소. application.properties 참조.
+    @Value("${vori.cors.allowed-origins}")
+    private List<String> allowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -111,8 +116,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        // 127.0.0.1 도 허용 — 브라우저가 localhost 대신 127.0.0.1 로 접속해도 로그인되도록.
-        config.setAllowedOrigins(List.of("http://localhost:3000", "http://127.0.0.1:3000"));
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
