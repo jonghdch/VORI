@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import SiteHeader from "../../components/SiteHeader";
@@ -566,6 +566,19 @@ function StoryPage({ user, onLogout }) {
   const selectedCharacter = CHARACTERS.find(
     (character) => character.id === selectedCharacterId
   );
+
+  // 아래 useScroll({ target }) 은 컨테이너를 따로 주지 않으면 <html> 을 기준으로
+  // 위치를 잰다. <html> 이 position: static 이면 framer-motion 이 개발 모드에서
+  // "non-static position" 경고를 띄우므로, 이 페이지에 있는 동안만 relative 로 둔다.
+  // useScroll 보다 먼저 선언해야 첫 측정 전에 적용된다.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const previous = root.style.position;
+    root.style.position = "relative";
+    return () => {
+      root.style.position = previous;
+    };
+  }, []);
 
   // 페이지 전체 스크롤 진행도는 WebGL 달의 회전·조명에 사용합니다.
   // 이벤트 기반 렌더라 값이 바뀔 때만 다시 그려 idle CPU 부담은 낮게 유지됩니다.
