@@ -135,8 +135,9 @@ function WalletEntryPage({ user }) {
 
   // mount (또는 dateStr 변경) 시 DB 에서 그 날짜 기존 데이터를 항상 fetch한다.
   // 서버 행과 아직 저장하지 않은 임시 행을 함께 보여 준다.
+  // 임시 행은 응답이 온 시점의 폼에서 가져온다 — 읽는 동안 사용자가 추가한 행이 지워지지 않게.
   useEffect(() => {
-    const fresh = loadDraft();
+    const unsaved = (rows) => rows.filter((r) => !r.dbId);
     let cancelled = false;
     (async () => {
       try {
@@ -147,7 +148,7 @@ function WalletEntryPage({ user }) {
         ]);
         if (cancelled) return;
         const next = (e) => nextId.current++;
-        setExpense(
+        setExpense((rows) =>
           [...exps.map((e) => ({
             id: next(),
             dbId: e.id,
@@ -161,9 +162,9 @@ function WalletEntryPage({ user }) {
             // 같은 날짜를 다시 열면 저장된 지출도 바로 고칠 수 있게 한다.
             // 수정 링크의 쿼리가 사라져도 읽기 전용 행으로 잠기지 않는다.
             isEditing: true,
-          })), ...(fresh?.expense || [])],
+          })), ...unsaved(rows)],
         );
-        setIncome(
+        setIncome((rows) =>
           [...incs.map((i) => ({
             id: next(),
             dbId: i.id,
@@ -171,9 +172,9 @@ function WalletEntryPage({ user }) {
             amount: String(i.amount),
             categoryEnum: i.source,
             sourceTouched: true,
-          })), ...(fresh?.income || [])],
+          })), ...unsaved(rows)],
         );
-        setSavings(
+        setSavings((rows) =>
           [...savs.map((s) => ({
             id: next(),
             dbId: s.id,
@@ -181,7 +182,7 @@ function WalletEntryPage({ user }) {
             amount: String(s.amount),
             categoryEnum: s.savingType,
             sourceTouched: true,
-          })), ...(fresh?.savings || [])],
+          })), ...unsaved(rows)],
         );
       } catch {
         // fetch 실패는 무시 — 빈 폼으로 시작
