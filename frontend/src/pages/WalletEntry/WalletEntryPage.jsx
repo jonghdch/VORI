@@ -23,8 +23,10 @@ import {
 import { loadUserSettings } from "../Settings/SettingsPage";
 import "./WalletEntry.css";
 
-// ?date= 쿼리에서 작성할 날짜를 정한다. 없거나 잘못됐으면 오늘.
-function resolveEntryDate(params) {
+// Step 1 — 가계부 작성. 날짜는 다른 페이지에서 정해 ?date= 쿼리로 진입.
+function WalletEntryPage({ user }) {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
   const todayStr = toIsoDate();
   const requestedDate = params.get("date");
   const requestedDateValue = parseIsoDate(requestedDate);
@@ -33,14 +35,8 @@ function resolveEntryDate(params) {
     /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
     toIsoDate(requestedDateValue) === requestedDate;
   // 쿼리를 직접 수정해도 미래 날짜에는 가계부를 작성할 수 없다.
-  return requestedDateIsValid && requestedDate <= todayStr ? requestedDate : todayStr;
-}
-
-// Step 1 — 가계부 작성. 날짜는 다른 페이지에서 정해 ?date= 쿼리로 진입.
-function WalletEntryPage({ user }) {
-  const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const dateStr = resolveEntryDate(params);
+  const dateStr =
+    requestedDateIsValid && requestedDate <= todayStr ? requestedDate : todayStr;
   const isEditMode = params.get("edit") === "true";
   const past = isPastDate(dateStr);
 
@@ -137,11 +133,10 @@ function WalletEntryPage({ user }) {
     } catch {}
   };
 
-  // mount 시 DB 에서 그 날짜 기존 데이터를 항상 fetch한다(날짜가 바뀌면 WalletEntryRoute 가 새로 mount).
+  // mount (또는 dateStr 변경) 시 DB 에서 그 날짜 기존 데이터를 항상 fetch한다.
   // 서버 행과 아직 저장하지 않은 임시 행을 함께 보여 준다.
-  // 임시 행은 응답이 온 시점의 폼에서 가져온다 — 읽는 동안 사용자가 추가한 행이 지워지지 않게.
   useEffect(() => {
-    const unsaved = (rows) => rows.filter((r) => !r.dbId);
+    const fresh = loadDraft();
     let cancelled = false;
     (async () => {
       try {
@@ -151,41 +146,43 @@ function WalletEntryPage({ user }) {
           isEditMode ? Promise.resolve([]) : listSavingsByDate(dateStr),
         ]);
         if (cancelled) return;
-        // 행 id 는 updater 밖에서 붙인다 — updater 는 StrictMode 에서 두 번 불릴 수 있다.
-        const next = () => nextId.current++;
-        const expenseRows = exps.map((e) => ({
-          id: next(),
-          dbId: e.id,
-          paymentMethod: e.paymentMethod || "CREDIT",
-          name: e.item,
-          amount: String(e.amount),
-          categoryId: e.categoryId,
-          categoryTouched: true, // 저장된 카테고리 — 자동분류로 덮지 않음
-          memo: e.memo ?? "", // 다시 보낼 때 그대로 돌려줘야 지워지지 않는다
-          memoOpen: Boolean(e.memo), // 메모를 다 지우는 동안 칸이 접히지 않게
-          // 같은 날짜를 다시 열면 저장된 지출도 바로 고칠 수 있게 한다.
-          // 수정 링크의 쿼리가 사라져도 읽기 전용 행으로 잠기지 않는다.
-          isEditing: true,
-        }));
-        const incomeRows = incs.map((i) => ({
-          id: next(),
-          dbId: i.id,
-          name: i.item,
-          amount: String(i.amount),
-          categoryEnum: i.source,
-          sourceTouched: true,
-        }));
-        const savingRows = savs.map((s) => ({
-          id: next(),
-          dbId: s.id,
-          name: s.item,
-          amount: String(s.amount),
-          categoryEnum: s.savingType,
-          sourceTouched: true,
-        }));
-        setExpense((rows) => [...expenseRows, ...unsaved(rows)]);
-        setIncome((rows) => [...incomeRows, ...unsaved(rows)]);
-        setSavings((rows) => [...savingRows, ...unsaved(rows)]);
+        const next = (e) => nextId.current++;
+        setExpense(
+          [...exps.map((e) => ({
+            id: next(),
+            dbId: e.id,
+            paymentMethod: e.paymentMethod || "CREDIT",
+            name: e.item,
+            amount: String(e.amount),
+            categoryId: e.categoryId,
+            categoryTouched: true, // 저장된 카테고리 — 자동분류로 덮지 않음
+            memo: e.memo ?? "", // 다시 보낼 때 그대로 돌려줘야 지워지지 않는다
+            memoOpen: Boolean(e.memo), // 메모를 다 지우는 동안 칸이 접히지 않게
+            // 같은 날짜를 다시 열면 저장된 지출도 바로 고칠 수 있게 한다.
+            // 수정 링크의 쿼리가 사라져도 읽기 전용 행으로 잠기지 않는다.
+            isEditing: true,
+          })), ...(fresh?.expense || [])],
+        );
+        setIncome(
+          [...incs.map((i) => ({
+            id: next(),
+            dbId: i.id,
+            name: i.item,
+            amount: String(i.amount),
+            categoryEnum: i.source,
+            sourceTouched: true,
+          })), ...(fresh?.income || [])],
+        );
+        setSavings(
+          [...savs.map((s) => ({
+            id: next(),
+            dbId: s.id,
+            name: s.item,
+            amount: String(s.amount),
+            categoryEnum: s.savingType,
+            sourceTouched: true,
+          })), ...(fresh?.savings || [])],
+        );
       } catch {
         // fetch 실패는 무시 — 빈 폼으로 시작
       }
@@ -793,7 +790,6 @@ function EntryRow({
             type="text"
             inputMode="numeric"
             className="ledger-row-input"
-            aria-label="금액"
             data-entry-field="amount"
             value={row.amount ? Number(row.amount).toLocaleString("ko-KR") : ""}
             onChange={(e) =>
@@ -936,12 +932,4 @@ function Dropdown({ value, options, onChange, placeholder, align = "left", disab
   );
 }
 
-// 날짜·수정 모드·계정마다 작성 화면을 새로 그린다. 같은 화면에서 ?date= 만 바뀌면(예: 사이드바의
-// 가계부 작성) 이전 날짜의 저장 안 된 줄이 새 날짜 폼과 임시저장으로 넘어가 엉뚱한 날짜로 저장됐다.
-function WalletEntryRoute({ user }) {
-  const [params] = useSearchParams();
-  const key = `${user?.id ?? "anon"}-${resolveEntryDate(params)}-${params.get("edit") === "true"}`;
-  return <WalletEntryPage key={key} user={user} />;
-}
-
-export default WalletEntryRoute;
+export default WalletEntryPage;
