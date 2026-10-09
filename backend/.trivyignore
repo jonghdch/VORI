@@ -1,0 +1,6 @@
+# Trivy 가 찾았지만 지금 고칠 수 없는 취약점. 하나씩 이유를 적는다.
+# 고칠 수 있게 되면(예: Spring Boot 4 로 올리면) 그 줄을 지운다.
+
+# spring-webmvc XsltView 경로 제한 RCE. Spring 7.0.9 에서만 고쳐졌고 Spring Boot 3.5 로는 받을 수 없다.
+# 우리 코드는 XsltView(XSLT 뷰)를 쓰지 않아 공격 경로가 없다 — `grep -ri xslt src/` 0건.
+CVE-2026-47884

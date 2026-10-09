@@ -1,21 +1,33 @@
-# PR 과 main 푸시마다 백엔드 테스트·프론트 빌드를 돌리고,
-# 이미 머지된 Flyway 마이그레이션이 바뀌지 않았는지 확인한다.
+# PR 과 main 푸시마다 도는 검사.
+#   migrations-unchanged  머지된 Flyway 마이그레이션이 바뀌지 않았는지(PR 만)
+#   lint                  백엔드 Checkstyle · 프론트 ESLint
+#   backend-test          백엔드 단위·통합 테스트(실제 MySQL)
+#   frontend-build        프론트 프로덕션 빌드
+#   security              의존성 취약점 — 프론트 npm audit · 백엔드 Trivy
+#   e2e                   실제 백엔드+MySQL+빌드한 프론트를 띄워 Playwright 로 골든패스
+# 새 취약점은 코드가 그대로여도 생기므로 매주 월요일에도 한 번 돈다.
 name: CI
 
 on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: '0 0 * * 1' # 매주 월요일 09:00 KST
 
 # 같은 PR 에 새 커밋이 올라오면 이전 실행은 취소한다.
+# main 푸시·주간 검사는 커밋마다 끝까지 돌려 결과를 남긴다(서로 취소하지 않게 이벤트·커밋으로 묶음).
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
 
 jobs:
   # Flyway 는 주석까지 체크섬에 넣는다. 이미 머지된 V 파일을 고치면
   # 그 마이그레이션이 적용된 DB 에서 서버가 뜨지 않는다(#109).
-  # backend 잡은 매번 빈 DB 로 돌아서 이 문제를 못 잡으므로 따로 검사한다.
+  # 다른 잡은 매번 빈 DB 로 돌아서 이 문제를 못 잡으므로 따로 검사한다.
   migrations-unchanged:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -35,7 +47,30 @@ jobs:
           fi
           echo "머지된 마이그레이션 변경 없음"
 
-  backend:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 백엔드 Checkstyle
+        working-directory: backend
+        run: ./gradlew checkstyleMain checkstyleTest --no-daemon
+      - name: 프론트 ESLint
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run lint
+
+  backend-test:
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -74,7 +109,7 @@ jobs:
           name: backend-test-report
           path: backend/build/reports/tests/test
 
-  frontend:
+  frontend-build:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -90,3 +125,121 @@ jobs:
       # GitHub Actions 는 CI=true 라 ESLint 경고도 빌드 실패로 처리된다.
       - name: 빌드
         run: npm run build
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      # npm audit 은 package-lock.json 만 읽어 설치(npm ci)가 필요 없다.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # 배포되는 의존성만 본다. react-scripts·jest 같은 빌드·테스트 도구는 devDependencies 라
+      # 브라우저에 실리지 않는다.
+      - name: 프론트 npm audit (배포 의존성, high 이상)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+      # 실제로 배포되는 jar 안의 라이브러리를 검사한다. 고칠 수 없는 건 backend/.trivyignore 에 이유와 함께.
+      # 이미지는 digest 로 고정한다 — 태그가 바꿔치기돼도 검증된 이미지만 쓴다.
+      - name: 백엔드 jar 빌드
+        working-directory: backend
+        run: ./gradlew bootJar --no-daemon
+      # 취약점 DB(약 1GB)는 하루 단위로 캐시한다. 날짜가 바뀌면 새로 받는다.
+      - name: Trivy DB 캐시 키
+        id: trivy-date
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: trivy-cache
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ steps.trivy-date.outputs.date }}
+          restore-keys: trivy-db-
+      # 오늘 받은 DB 가 캐시에 있으면 다시 받지 않는다.
+      - name: 백엔드 Trivy (HIGH 이상)
+        env:
+          CACHE_HIT: ${{ steps.trivy-cache.outputs.cache-hit }}
+        run: |
+          skip=()
+          if [ "$CACHE_HIT" = "true" ]; then skip=(--skip-db-update --skip-java-db-update); fi
+          mkdir -p ~/.cache/trivy
+          docker run --rm \
+            -v "$HOME/.cache/trivy:/root/.cache/trivy" \
+            -v "$PWD/backend/build/libs:/scan:ro" \
+            -v "$PWD/backend/.trivyignore:/.trivyignore:ro" \
+            aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c \
+            rootfs --scanners vuln --severity HIGH,CRITICAL \
+            --java-db-repository mirror.gcr.io/aquasec/trivy-java-db:1,ghcr.io/aquasecurity/trivy-java-db:1 \
+            --ignorefile /.trivyignore --exit-code 1 "${skip[@]}" /scan
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci
+          MYSQL_DATABASE: vori
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      # 서비스 기준 시간대. 날짜 경계에서 서버와 브라우저(playwright.config.js)가 같은 날을 보게 한다.
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 백엔드 jar 빌드
+        working-directory: backend
+        run: ./gradlew bootJar --no-daemon
+      - name: 백엔드 실행
+        env:
+          DB_USERNAME: root
+          DB_PASSWORD: ci
+        run: |
+          nohup java -jar backend/build/libs/backend-0.0.1-SNAPSHOT.jar > backend.log 2>&1 &
+          for _ in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/auth/me || true)
+            if [ "$code" = "401" ]; then echo "백엔드 준비됨"; exit 0; fi
+            sleep 2
+          done
+          echo "::error::백엔드가 2분 안에 뜨지 않았습니다"
+          tail -100 backend.log
+          exit 1
+      - name: 프론트 빌드
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Playwright 브라우저 설치
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: E2E
+        working-directory: frontend
+        run: npm run e2e
+      - name: E2E 리포트·백엔드 로그 보관
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            backend.log

@@ -2,7 +2,6 @@ package com.vori.backend.onboarding;
 
 import com.vori.backend.common.StatType;
 import com.vori.backend.expense.ExpenseService;
-import com.vori.backend.expense.SignalConfig;
 import com.vori.backend.expense.SignalConfigService;
 import com.vori.backend.stats.UserStatStats;
 import com.vori.backend.stats.UserStatStatsRepository;

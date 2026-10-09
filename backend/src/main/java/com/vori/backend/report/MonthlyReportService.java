@@ -2,7 +2,6 @@ package com.vori.backend.report;
 
 import com.vori.backend.expense.ExpenseRepository;
 import com.vori.backend.expense.Signal;
-import com.vori.backend.income.Income;
 import com.vori.backend.income.IncomeRepository;
 import com.vori.backend.judgment.DailyJudgment;
 import com.vori.backend.judgment.DailyJudgmentRepository;
