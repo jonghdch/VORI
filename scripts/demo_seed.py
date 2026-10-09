@@ -246,15 +246,18 @@ def seed(email):
                   {"positionX": x, "positionY": y})
         print(f"  {f['name']} 구매·배치 ({f['price']:,} 코인)")
 
-    # ── 펫이 30레벨이 아니면 배웅 조건에 맞춰 어드민 치트로 보정 ──
+    # ── 펫이 만렙이 아니면 배웅 조건에 맞춰 어드민 치트로 보정 ──
+    # 만렙은 서버 응답(maxLevel)을 따른다. 숫자를 여기 박아 두면 만렙이 바뀔 때
+    # 펫이 덜 자라고 아래 verify 의 '만렙' 확인이 실패한다.
     code, pet = user.call("GET", "/api/pets/active")
     if not isinstance(pet, dict):
         print("\n활성 펫이 없습니다. 가입 시 시작 펫이 지급되는지 확인하세요.")
         sys.exit(1)
-    if pet.get("level", 0) < pet.get("maxLevel", 30):
-        print(f"\n펫이 {pet.get('level')}레벨 — 배웅을 위해 30레벨로 보정")
+    max_level = pet["maxLevel"]
+    if pet["level"] < max_level:
+        print(f"\n펫이 {pet['level']}레벨 — 배웅을 위해 {max_level}레벨로 보정")
         admin = admin or admin_session()
-        code, pet = admin.call("POST", f"/api/admin/users/{user_id}/pet/grow?level=30")
+        code, pet = admin.call("POST", f"/api/admin/users/{user_id}/pet/grow?level={max_level}")
         if code != 200:
             print(f"  치트 실패: {code} {msg(pet)}")
             sys.exit(1)
@@ -309,7 +312,7 @@ def verify(user, stage_coins):
     check("'절약 고수'는 미획득 (진행률 바 시연용)",
           t.get("절약 고수", {}).get("acquired") is False,
           f"{t.get('절약 고수', {}).get('progressPct')}%")
-    check("펫 30레벨 (배웅 가능)", pet.get("level") == pet.get("maxLevel"),
+    check("펫 만렙 (배웅 가능)", pet.get("level") == pet.get("maxLevel"),
           f"레벨 {pet.get('level')}/{pet.get('maxLevel')}")
     check("코인 충분 (무대 스터디 가구 2종)", coins >= stage_coins,
           f"보유 {coins:,} / 필요 {stage_coins:,} 코인")
