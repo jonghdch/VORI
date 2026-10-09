@@ -59,7 +59,14 @@ mysql -u root -e "CREATE DATABASE vori;"
 repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"는 사람이 1회, 그 다음은 백엔드가 자동.**
 
 ### 1회 수동 준비 (이게 안 되면 백엔드가 부팅 중 죽음 → 로그인 포함 전부 실패)
-0. **Node.js 22 설치** — 버전은 `frontend/.nvmrc` 가 기준이다. nvm 을 쓰면 `cd frontend && nvm install && nvm use`
+0. **Node.js 22 설치** — 버전 기준은 `frontend/.nvmrc`(22). 먼저 `node -v` 로 확인하고 `v22.x.x` 면 건너뛴다
+   - **Windows (팀 기본)** — 둘 중 하나
+     - Node 를 하나만 쓸 때: [nodejs.org 다운로드](https://nodejs.org/en/download) 에서 버전을 **v22** 로 골라 설치 파일(.msi)로 설치.
+       첫 화면 버튼은 최신 LTS(24)라서 그대로 받으면 22 가 아니다
+     - 여러 버전을 오갈 때: [nvm-windows](https://github.com/coreybutler/nvm-windows) 설치 후 PowerShell 에서 `nvm install 22` → `nvm use 22`.
+       nvm-windows 는 `.nvmrc` 를 읽지 않으므로 버전 `22` 를 직접 적는다. `nvm use` 는 관리자 권한 터미널이 필요할 수 있다
+   - macOS: `cd frontend && nvm install && nvm use` (nvm 이 `.nvmrc` 를 읽는다)
+   - 설치 뒤 **새 터미널**에서 `node -v` 가 `v22.x.x` 인지 확인
    - 다른 버전(특히 npm 11 이 붙은 Node 24 이상)으로 라이브러리를 추가하면 lock 파일이 CI(Node 22)와 어긋나 `npm ci` 가 실패할 수 있다
 1. **MySQL 설치 + 실행**
    - macOS: `brew install mysql && brew services start mysql`
