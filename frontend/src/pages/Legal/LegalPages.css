@@ -127,9 +127,6 @@
   vertical-align: top;
   line-height: 1.6;
   color: var(--legal-muted);
-  /* 좁은 화면에서 한국어 단어가 중간에 끊기지 않게 */
-  word-break: keep-all;
-  overflow-wrap: anywhere;
 }
 .legal-table th {
   background: #fff;

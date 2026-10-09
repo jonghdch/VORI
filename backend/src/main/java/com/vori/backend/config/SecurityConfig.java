@@ -8,7 +8,6 @@ import com.vori.backend.onboarding.UserSpendingProfileRepository;
 import com.vori.backend.sanction.SanctionPolicy;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -41,10 +40,6 @@ public class SecurityConfig {
     private final SanctionPolicy sanctionPolicy;
     private final ObjectMapper objectMapper;
     private final UserSpendingProfileRepository profileRepository;
-
-    // 세션 쿠키를 실어 API 를 부를 수 있는 프론트 주소. application.properties 참조.
-    @Value("${vori.cors.allowed-origins}")
-    private List<String> allowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -115,14 +110,9 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        // 잘못 넣으면 브라우저 요청이 조용히 막히거나(빈 값) CORS 처리가 실패한다(* 는 쿠키 허용과 함께 못 쓴다).
-        // 운영에서 뒤늦게 알지 않도록 서버가 뜰 때 바로 멈춘다.
-        if (allowedOrigins.isEmpty() || allowedOrigins.stream().anyMatch(o -> o.isBlank() || o.contains("*"))) {
-            throw new IllegalStateException(
-                    "vori.cors.allowed-origins(CORS_ALLOWED_ORIGINS) 에는 빈 값이나 * 를 쓸 수 없습니다: " + allowedOrigins);
-        }
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(allowedOrigins);
+        // 127.0.0.1 도 허용 — 브라우저가 localhost 대신 127.0.0.1 로 접속해도 로그인되도록.
+        config.setAllowedOrigins(List.of("http://localhost:3000", "http://127.0.0.1:3000"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
