@@ -46,7 +46,9 @@ class OnboardingRequiredFilterTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/api/expenses", "/api/users/me", "/api/daily-judgments/today", "/api/attendance", "/api/eggs/buy"})
+    @ValueSource(strings = {"/api/expenses", "/api/users/me", "/api/daily-judgments/today", "/api/attendance", "/api/eggs/buy",
+            // 설문은 회원가입 절차의 일부라, 가입을 마치기 전에는 탈퇴도 없다
+            "/api/users/me/withdrawal"})
     void 설문_전에는_다른_API_를_막는다(String path) throws Exception {
         loginAs(Role.USER);
         when(profiles.existsById(1L)).thenReturn(false);
@@ -66,17 +68,6 @@ class OnboardingRequiredFilterTest {
         when(profiles.existsById(1L)).thenReturn(false);
 
         filter.doFilter(request("GET", path), new MockHttpServletResponse(), chain);
-
-        verify(chain).doFilter(any(), any());
-    }
-
-    @Test
-    void 설문_전에도_회원_탈퇴는_열어_둔다() throws Exception {
-        // 약관대로 가입 직후 설문을 그만둔 계정도 언제든 탈퇴할 수 있어야 한다
-        loginAs(Role.USER);
-        when(profiles.existsById(1L)).thenReturn(false);
-
-        filter.doFilter(request("POST", "/api/users/me/withdrawal"), new MockHttpServletResponse(), chain);
 
         verify(chain).doFilter(any(), any());
     }
