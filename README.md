@@ -8,6 +8,7 @@
 |------|------|
 | 백엔드 | Java 17 + Spring Boot 3.x |
 | 프론트엔드 | React.js (JavaScript) + HTML5 + CSS3 |
+| 프론트 런타임 | Node.js 22 LTS (npm 10) — `frontend/.nvmrc` 가 기준, CI 도 같은 파일을 읽는다 |
 | DBMS | MySQL + MySQL Workbench |
 | AI | Google Gemini API (REST/JSON) |
 | IDE | IntelliJ IDEA · VS Code |
@@ -58,6 +59,8 @@ mysql -u root -e "CREATE DATABASE vori;"
 repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"는 사람이 1회, 그 다음은 백엔드가 자동.**
 
 ### 1회 수동 준비 (이게 안 되면 백엔드가 부팅 중 죽음 → 로그인 포함 전부 실패)
+0. **Node.js 22 설치** — 버전은 `frontend/.nvmrc` 가 기준이다. nvm 을 쓰면 `cd frontend && nvm install && nvm use`
+   - 다른 버전(특히 npm 11 이 붙은 Node 24 이상)으로 라이브러리를 추가하면 lock 파일이 CI(Node 22)와 어긋나 `npm ci` 가 실패할 수 있다
 1. **MySQL 설치 + 실행**
    - macOS: `brew install mysql && brew services start mysql`
    - Windows: MySQL Installer 설치 후 MySQL 서비스 시작
@@ -66,7 +69,8 @@ repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"
    - `DB_USERNAME` / `DB_PASSWORD` = 본인 MySQL 계정 (Windows root 는 보통 비밀번호 있음 → 반드시 명시)
    - `GEMINI_API_KEY` = 본인 키
 4. **백엔드 실행** — `cd backend && ./gradlew bootRun` (IDE 직접 실행 시엔 Working directory 를 repo 루트로)
-5. **프론트엔드**: `cd frontend && npm install && npm start`
+5. **프론트엔드**: `cd frontend && npm ci && npm start`
+   - `npm ci` 는 `package-lock.json` 그대로 설치하고 lock 을 바꾸지 않는다. 라이브러리를 **추가할 때만** `npm install <이름>` 후 lock 까지 커밋
 
 ### 백엔드가 자동으로 하는 것 (위 준비가 끝났으면)
 - MySQL 커넥션 풀 생성·연결
