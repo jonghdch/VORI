@@ -7,12 +7,12 @@ import LegalLayout, { Section, P, Ul } from "./LegalLayout";
  * 현재 코드(회원 가입 필드, User 엔티티, Gemini 연동)를 근거로 작성했다.
  * 실서비스 배포 시 개인정보 보호책임자 실명·연락처 기재와 전문가 검토가 필요하다.
  *
- * 개정 (2026-10-09): 처리위탁 표를 실제 Gemini 전송 항목(카테고리 분류·영수증 인식·펫 코멘트·펫 대화)에
+ * 개정 (2026-10-10): 처리위탁 표를 실제 Gemini 전송 항목(카테고리 분류·영수증 인식·펫 코멘트·펫 대화)에
  * 맞추고, 탈퇴 후 30일 보관·복구 문구를 반영했다. 위탁 항목이 바뀌면 시행일도 함께 올린다.
  */
 export default function PrivacyPage() {
   return (
-    <LegalLayout title="개인정보처리방침" effectiveDate="2026-10-09">
+    <LegalLayout title="개인정보처리방침" effectiveDate="2026-10-10">
       <Section title="1. 총칙">
         <P>
           VORI(이하 "서비스")는 이용자의 개인정보를 중요하게 생각하며, 「개인정보

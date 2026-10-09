@@ -7,12 +7,12 @@ import LegalLayout, { Section, P, Ul } from "./LegalLayout";
  * 조항은 의도적으로 제외했다. 실서비스로 배포하거나 결제를 도입할 경우
  * 사업자 정보(상호·대표자·사업자등록번호 등) 기재와 전문가 검토가 필요하다.
  *
- * 개정 (2026-10-09): 제4조에 탈퇴 후 30일 보관·복구, 제5조 AI 산출물에 펫 코멘트·펫 대화 추가.
+ * 개정 (2026-10-10): 제4조에 탈퇴 후 30일 보관·복구, 제5조 AI 산출물에 펫 코멘트·펫 대화 추가.
  * 개인정보처리방침과 같은 날 개정 — 두 문서의 탈퇴·AI 설명이 서로 맞아야 한다.
  */
 export default function TermsPage() {
   return (
-    <LegalLayout title="이용약관" effectiveDate="2026-10-09">
+    <LegalLayout title="이용약관" effectiveDate="2026-10-10">
       <Section title="제1조 (목적)">
         <P>
           이 약관은 VORI(이하 "서비스")의 이용과 관련하여 서비스를 제공하는
