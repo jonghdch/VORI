@@ -868,3 +868,121 @@
   color: var(--hm-faint);
   white-space: nowrap;
 }
+
+/* ── 홈·가계부 톤 — 배치는 그대로, 색·모양만 부드럽게 (상점과 같은 크림 + 세이지) ──
+   카드·버튼·핵심 숫자 카드·지출 줄은 홈(.hm-home)과 가계부(.lw)가 함께 쓴다. 펫·판정·스탯은 홈에만 있다.
+   가계부에만 있는 달력·하루 카드는 Wallet/WalletScreen.css 가 같은 색으로 맞춘다.
+   여백(padding)은 건드리지 않는다 — PC 대시보드 규칙(@container hm)과 겹치지 않게. */
+:is(.hm-home, .lw) {
+  --hm-sage-dark: #5b8449;
+  --hm-gold-bg: #fcf0d3;
+  --hm-gold-ink: #8a5a0c;
+}
+:is(.hm-home, .lw) .hm-card {
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(61, 56, 48, 0.06);
+}
+
+/* 주 버튼 — 짙은 갈색 대신 세이지 알약 */
+:is(.hm-home, .lw) .hm-btn--dark {
+  border-radius: 999px;
+  background: var(--hm-sage);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(111, 154, 92, 0.3);
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+:is(.hm-home, .lw) .hm-btn--dark:hover:not(:disabled) {
+  filter: none;
+  background: var(--hm-sage-dark);
+}
+:is(.hm-home, .lw) .hm-btn:disabled {
+  box-shadow: none;
+}
+.hm-home .hm-fab {
+  background: var(--hm-sage);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(111, 154, 92, 0.38);
+}
+.hm-home .hm-fab:hover {
+  background: var(--hm-sage-dark);
+}
+:is(.hm-home, .lw) .hm-text-link {
+  color: var(--hm-sage-dark);
+}
+:is(.hm-home, .lw) .hm-text-link:hover {
+  color: var(--hm-green-ink);
+}
+
+/* ① 오늘 남은 돈 — 오른쪽 위에 은은한 초록 빛, 막대는 조금 두껍게 */
+:is(.hm-home, .lw) .hm-hero {
+  background:
+    radial-gradient(circle at 100% 0%, var(--hm-sage-soft) 0%, rgba(255, 253, 249, 0) 45%),
+    var(--hm-surface);
+}
+:is(.hm-home, .lw) .hm-meter {
+  height: 10px;
+  background: #efe8db;
+}
+
+/* ② 펫 — 회색 상자 대신 따뜻한 빛, 그림은 살짝 떠 있게 */
+.hm-home .hm-bubble {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--hm-line);
+}
+.hm-home .hm-bubble--link {
+  background: var(--hm-sage-soft);
+  box-shadow: inset 0 0 0 1px #d8e8c9;
+}
+.hm-home .hm-pet-art {
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 62%, #eef5e6 0%, #f7f2e9 72%);
+}
+.hm-home .hm-pet-img {
+  filter: drop-shadow(0 5px 5px rgba(61, 56, 48, 0.14));
+  transition: transform 0.2s ease;
+}
+.hm-home .hm-pet-art:hover .hm-pet-img {
+  transform: translateY(-3px);
+}
+.hm-home .hm-pet-title {
+  border-color: transparent;
+  background: var(--hm-sunk);
+}
+.hm-home .hm-pet-exp-track {
+  height: 6px;
+}
+
+/* 오늘 판정 — 금빛 시계 + 왼쪽 위 은은한 빛 */
+.hm-home .hm-judge {
+  background:
+    radial-gradient(circle at 0% 0%, #fbf1d7 0%, rgba(255, 253, 249, 0) 50%),
+    var(--hm-surface);
+}
+.hm-home .hm-judge-icon {
+  background: var(--hm-gold-bg);
+  color: var(--hm-gold-ink);
+}
+
+/* ③ 반려 스탯 — 스탯마다 제 색으로 옅게 물든 칸 */
+.hm-home .hm-stat {
+  padding: 10px 4px 9px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--stat-color) 10%, #fffdf9);
+}
+.hm-home .hm-stat-track {
+  height: 6px;
+  background: rgba(255, 253, 249, 0.9);
+}
+.hm-home .hm-help {
+  background: var(--hm-sage-soft);
+  color: var(--hm-green-ink);
+}
+
+/* ④ 오늘 지출 — 초록 동그라미 아이콘 */
+:is(.hm-home, .lw) .hm-tx-icon {
+  background: var(--hm-sage-soft);
+  color: var(--hm-sage-dark);
+}
+:is(.hm-home, .lw) .hm-tx:hover {
+  background: #f7f2e9;
+}

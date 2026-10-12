@@ -264,7 +264,7 @@ function ShopPage({ user, onLogout }) {
                   const isBusy = busy === `buy:${item.grade}`;
                   const image = eggImageFor(item.grade, item.name);
                   return (
-                    <li key={item.grade} className="sp-card sp-egg">
+                    <li key={item.grade} className="sp-card sp-egg" data-grade={item.grade}>
                       <div className="sp-egg-top">
                         <span className="sp-tile">
                           <img src={image} alt={item.name} className="sp-pixel" />

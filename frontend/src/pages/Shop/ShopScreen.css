@@ -1,25 +1,30 @@
 /* ── 상점 (모바일 우선) ─────────────────────────────────────
    Figma「상점 — 알 분양」(1:1446)·「상점 — VORI」(1:1689) 의 값을 옮겼다.
-   흰 카드(모서리 12·16) + 회베이지 타일(#efede8) 위에 픽셀 그림. 화면 배경 그림은 두지 않는다.
+   배치는 Figma 그대로, 색은 홈·가계부와 같은 크림 + 세이지 톤으로 부드럽게.
+   크림 카드(모서리 20) · 둥근 알약 버튼 · 등급별 은은한 빛(알 카드). 화면 배경 그림은 두지 않는다.
    폭 375px 에서 옆으로 넘치지 않게: 모든 자식 min-width:0, 테마 칩 줄만 옆으로 민다.
    PC: 본문 폭(@container)이 넓으면 알 카드 3열 · 가구 카드 여러 열 · 보유 알/결과 2단. */
 
 .sp {
-  --sp-ink: #1c1b19;
-  --sp-sub: #5f5b54;
-  --sp-faint: #6e6a63;
-  --sp-line: #e4e1da;
-  --sp-surface: #ffffff;
-  --sp-tile: #efede8;
-  --sp-sunk: #f4f3f0;
-  --sp-seg: #efeeeb;
-  --sp-green-bg: #e6efe8;
-  --sp-green-ink: #3f6b4e;
-  --sp-gold-bg: #fbf1d9;
-  --sp-gold-ink: #8a6100;
-  --sp-blue: #5b7fbf;
+  --sp-ink: #3d3830;
+  --sp-sub: #6b6359;
+  --sp-faint: #8f8679;
+  --sp-line: #ece4d6;
+  --sp-surface: #fffdf9;
+  --sp-tile: #f3ede2;
+  --sp-sunk: #f7f2e9;
+  --sp-seg: #efe8db;
+  --sp-sage: #6f9a5c;
+  --sp-sage-dark: #5b8449;
+  --sp-green-bg: #e9f2df;
+  --sp-green-ink: #3f6b2e;
+  --sp-gold-bg: #fcf0d3;
+  --sp-gold-ink: #8a5a0c;
+  --sp-blue: #4f7fb5;
+  --sp-blue-bg: #e8eff8;
   --sp-red: #b4432f;
-  --sp-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  --sp-shadow: 0 2px 12px rgba(61, 56, 48, 0.06);
+  --sp-shadow-up: 0 10px 24px rgba(61, 56, 48, 0.1);
 
   container-type: inline-size;
   container-name: sp;
@@ -54,7 +59,8 @@
 }
 .sp-card {
   background: var(--sp-surface);
-  border-radius: 12px;
+  border: 1px solid var(--sp-line);
+  border-radius: 20px;
   box-shadow: var(--sp-shadow);
 }
 .sp-pixel {
@@ -101,15 +107,18 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  height: 40px;
-  padding: 0 14px;
+  height: 42px;
+  padding: 0 16px 0 12px;
+  border: 1px solid #f3dfa8;
   border-radius: 999px;
-  background: var(--sp-tile);
+  background: linear-gradient(180deg, #fff7e2 0%, var(--sp-gold-bg) 100%);
+  box-shadow: 0 2px 8px rgba(226, 169, 32, 0.15);
 }
 .sp-coins strong {
   font-size: 18px;
   font-weight: 900;
   letter-spacing: -0.01em;
+  color: var(--sp-gold-ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -118,7 +127,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 4px;
-  border-radius: 12px;
+  border-radius: 999px;
   background: var(--sp-seg);
 }
 .sp-seg button {
@@ -126,19 +135,24 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px;
+  padding: 10px 8px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 999px;
   background: none;
   font-size: 14px;
   font-weight: 700;
   color: var(--sp-sub);
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sp-seg button:hover:not(.is-active) {
+  color: var(--sp-ink);
 }
 .sp-seg button.is-active {
   background: var(--sp-surface);
-  color: var(--sp-ink);
-  box-shadow: var(--sp-shadow);
+  color: var(--sp-green-ink);
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(61, 56, 48, 0.1);
 }
 
 .sp-notice {
@@ -170,10 +184,14 @@
 /* ── 알 분양 ── */
 .sp-guide {
   margin: 0;
-  padding: 16px;
-  font-size: 15px;
-  line-height: 19px;
-  color: var(--sp-sub);
+  padding: 14px 18px;
+  border-color: #d8e8c9;
+  background: var(--sp-green-bg);
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--sp-green-ink);
   word-break: keep-all;
 }
 .sp-eggs {
@@ -184,10 +202,26 @@
   gap: 12px;
 }
 .sp-egg {
+  --glow: #f6ead3;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 15% 0%, var(--glow) 0%, rgba(255, 253, 249, 0) 55%),
+    var(--sp-surface);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.sp-egg[data-grade="PREMIUM"] {
+  --glow: #ece4fb;
+}
+.sp-egg[data-grade="LEGENDARY"] {
+  --glow: #fbeab4;
+  border-color: #f3dfa8;
+}
+.sp-egg:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sp-shadow-up);
 }
 .sp-egg-top {
   display: flex;
@@ -207,6 +241,7 @@
 }
 /* 그림은 칸 안에 고정 — 칸 크기가 바뀌어도 그림이 밖으로 넘치지 않게 */
 .sp-tile > .sp-pixel {
+  filter: drop-shadow(0 4px 4px rgba(61, 56, 48, 0.12));
   position: absolute;
   top: var(--pad);
   left: var(--pad);
@@ -294,8 +329,13 @@
   background: var(--sp-gold-bg);
   color: var(--sp-gold-ink);
 }
-.sp-prob--a b {
+.sp-prob--a {
+  background: var(--sp-blue-bg);
   color: var(--sp-blue);
+}
+.sp-prob--b {
+  background: var(--sp-green-bg);
+  color: var(--sp-green-ink);
 }
 .sp-prob--c b {
   color: var(--sp-faint);
@@ -334,19 +374,23 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  height: 36px;
-  padding: 0 17px;
-  border: 1px solid var(--sp-line);
-  border-radius: 8px;
-  background: var(--sp-surface);
-  box-shadow: var(--sp-shadow);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--sp-ink);
+  height: 40px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sp-sage);
+  box-shadow: 0 4px 10px rgba(111, 154, 92, 0.3);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
   cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease;
 }
 .sp-buy:hover:not(:disabled) {
-  background: var(--sp-sunk);
+  background: var(--sp-sage-dark);
+}
+.sp-buy:active:not(:disabled) {
+  transform: translateY(1px);
 }
 .sp-buy:disabled {
   background: var(--sp-tile);
@@ -403,7 +447,7 @@
   padding: 8px 0;
 }
 .sp-inv li + li {
-  border-top: 1px solid var(--sp-tile);
+  border-top: 1px dashed var(--sp-line);
 }
 .sp-inv-mid {
   flex: 1;
@@ -498,24 +542,38 @@
   height: 52px;
   padding: 0 16px;
   border: 0;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 16px;
+  font-size: 15px;
   font-weight: 800;
   cursor: pointer;
+  transition: background 0.15s ease, filter 0.15s ease, transform 0.08s ease;
+}
+.sp-btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 .sp-btn--sm {
   flex-shrink: 0;
   height: 36px;
-  padding: 0 14px;
-  border-radius: 10px;
+  padding: 0 16px;
+  border-radius: 999px;
   font-size: 13px;
 }
 .sp-btn--dark {
-  background: #000;
+  background: var(--sp-sage);
   color: #fff;
+  box-shadow: 0 4px 12px rgba(111, 154, 92, 0.3);
 }
 .sp-btn--dark:hover:not(:disabled) {
-  background: #2c2a27;
+  background: var(--sp-sage-dark);
+}
+/* 개봉하기 — 두근두근한 금빛 */
+.sp-inv .sp-btn--dark {
+  background: linear-gradient(180deg, #f7c948 0%, #e9ae22 100%);
+  color: #5a3d00;
+  box-shadow: 0 4px 10px rgba(226, 169, 32, 0.3);
+}
+.sp-inv .sp-btn--dark:hover:not(:disabled) {
+  filter: brightness(1.05);
 }
 .sp-btn--soft {
   background: var(--sp-sunk);
@@ -544,19 +602,25 @@
   gap: 6px;
   flex-shrink: 0;
   height: 36px;
-  padding: 0 14px;
-  border: 0;
+  padding: 0 15px;
+  border: 1px solid var(--sp-line);
   border-radius: 999px;
-  background: var(--sp-tile);
+  background: var(--sp-surface);
   font-size: 13px;
-  font-weight: 600;
-  color: var(--sp-ink);
+  font-weight: 700;
+  color: var(--sp-sub);
   white-space: nowrap;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sp-chip:hover:not(.is-active) {
+  background: var(--sp-sunk);
+  color: var(--sp-ink);
 }
 .sp-chip.is-active {
-  background: var(--sp-green-bg);
-  color: var(--sp-green-ink);
+  border-color: var(--sp-sage);
+  background: var(--sp-sage);
+  color: #fff;
   font-weight: 800;
 }
 .sp-fur-meta {
@@ -572,9 +636,9 @@
 }
 .sp-select {
   height: 32px;
-  padding: 0 8px;
+  padding: 0 10px;
   border: 1px solid var(--sp-line);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--sp-surface);
   font-family: inherit;
   font-size: 12px;
@@ -593,8 +657,11 @@
   flex-direction: column;
   gap: 4px;
   padding: 16px;
-  border-radius: 16px;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.03);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.sp-fur:hover:not(.is-locked) {
+  transform: translateY(-2px);
+  box-shadow: var(--sp-shadow-up);
 }
 .sp-fur-art {
   position: relative;
@@ -606,6 +673,11 @@
 .sp-fur-art .sp-pixel {
   width: 112px;
   height: 112px;
+  filter: drop-shadow(0 4px 4px rgba(61, 56, 48, 0.12));
+  transition: transform 0.2s ease;
+}
+.sp-fur:hover:not(.is-locked) .sp-fur-art .sp-pixel {
+  transform: scale(1.05);
 }
 .sp-fur-owned {
   position: absolute;
@@ -660,26 +732,27 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 36px;
+  height: 38px;
   margin-top: auto;
-  border: 0;
-  border-radius: 10px;
+  border: 1.5px solid var(--sp-sage);
+  border-radius: 999px;
   background: var(--sp-surface);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px var(--sp-line);
   font-size: 14px;
-  font-weight: 700;
-  color: var(--sp-ink);
+  font-weight: 800;
+  color: var(--sp-sage-dark);
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 .sp-fur > .sp-fur-buy {
   margin-top: 12px;
 }
 .sp-fur-buy:hover:not(:disabled) {
-  background: var(--sp-sunk);
+  background: var(--sp-sage);
+  color: #fff;
 }
 .sp-fur-buy:disabled {
+  border-color: transparent;
   background: var(--sp-sunk);
-  box-shadow: none;
   color: var(--sp-faint);
   opacity: 0.6;
   cursor: default;
@@ -696,7 +769,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(40, 36, 30, 0.42);
   animation: sp-fade 0.15s ease;
 }
 .sp-sheet {
@@ -717,7 +790,7 @@
   height: 4px;
   margin: 24px 0 20px;
   border-radius: 999px;
-  background: #dbdad7;
+  background: #e2d9c9;
 }
 .sp-sheet h2 {
   margin: 0 0 20px;
@@ -730,8 +803,9 @@
 .sp-sheet-sum {
   width: 100%;
   margin: 20px 0 24px;
-  padding: 16px;
-  border-radius: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--sp-line);
+  border-radius: 18px;
   background: var(--sp-sunk);
   display: flex;
   flex-direction: column;
