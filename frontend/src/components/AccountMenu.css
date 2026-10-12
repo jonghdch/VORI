@@ -182,3 +182,78 @@
     width: min(280px, calc(100vw - 32px));
   }
 }
+
+/* ── 폰 헤더: 코인 · 알림 · 내 정보 ─────────────────────── */
+.account-menu-avatar-btn {
+  display: none;
+}
+.account-menu-links {
+  display: none;
+}
+.account-menu-btn-icon {
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+
+@media (max-width: 1024px) {
+  .app-has-tabbar .home-topbar-inner > .account-menu {
+    margin-left: auto;
+    gap: 8px;
+  }
+  /* 닉네임은 내 정보 상자 안에 있으니 헤더에서는 코인만 */
+  .app-has-tabbar .home-account-nickname {
+    display: none;
+  }
+  .app-has-tabbar .home-account-summary {
+    padding: 0;
+  }
+  .app-has-tabbar .home-account-coins {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  .account-menu-avatar-btn {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #3d3830;
+    color: #fffdf9;
+    cursor: pointer;
+  }
+  .account-menu-avatar-btn:focus-visible {
+    outline: 2px solid var(--home-green-dark);
+    outline-offset: 2px;
+  }
+  .account-menu-popover {
+    width: min(300px, calc(100vw - 32px));
+  }
+  .account-menu-links {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    list-style: none;
+    margin: 12px 0;
+    padding: 0;
+  }
+  .account-menu-links button {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 4px;
+    border: 1px solid var(--home-card-border);
+    border-radius: 12px;
+    background: #fff;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    color: #3d3830;
+    cursor: pointer;
+    word-break: keep-all;
+  }
+}

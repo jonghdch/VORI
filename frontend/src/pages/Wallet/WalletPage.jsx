@@ -2,19 +2,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
+import Icon from "../../components/Icon";
+import SignalChip, { SIGNAL_META, categoryIcon, signalForUsage } from "../../components/SignalChip";
 import { getMonthlyLedger } from "../../api/ledger";
 import { getMonthlyJudgments } from "../../api/dailyJudgment";
 import { listInquiriesByDate } from "../../api/inquiries";
+import { getSpendingPlan } from "../../api/spendingPlan";
 import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
 import CoinIcon from "../../components/CoinIcon";
-import BudgetCard from "./BudgetCard";
-import { SIGNAL_LABELS, SIGNAL_STATUS } from "../../signalLabels";
+import { SIGNAL_STATUS } from "../../signalLabels";
+// .home-main(본문 틀)은 HomeDashboard.css, 카드·버튼·판정 칩은 홈과 같은 HomeScreen.css(.hm-*)를 쓴다.
+// 가계부에만 있는 달력·하루 카드·내역은 WalletScreen.css(.lw-*).
 import "../Home/HomeDashboard.css";
-import "./WalletPage.css";
+import "../Home/HomeScreen.css";
+import "./WalletScreen.css";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-// 카테고리 차트·도넛 공용 팔레트 (상위 카테고리 순서대로 순환).
+// 카테고리 막대 공용 팔레트 (상위 카테고리 순서대로 순환).
 // 베이지 화면에 튀지 않게 채도를 낮춘 세이지·클레이·샌드·더스티블루.
 const CHART_COLORS = [
   "#8fb07c",
@@ -23,7 +28,15 @@ const CHART_COLORS = [
   "#9db8c6",
 ];
 
-// 합리성 시그널(백엔드 enum) → 한글 상태 + 배지 색상 클래스.
+// 판정 보상 스탯 — 홈 반려 스탯과 같은 이름·색. 이모지 대신 색 점 + 글자.
+const STAT_REWARDS = [
+  { key: "ENERGY", label: "에너지", color: "#7fb069" },
+  { key: "CHARM", label: "매력", color: "#e07a7a" },
+  { key: "IQ", label: "지능", color: "#6b9bd1" },
+  { key: "ENDURANCE", label: "지구력", color: "#c9913f" },
+];
+
+// 합리성 시그널(백엔드 enum) → 한글 상태.
 // 1차 판정만 끝나고 예외 지출 사유를 기다리는 날(PENDING)은 아직 그날 결과가 아니다 — 색·보상을 확정된 날처럼 보이지 않는다.
 const isFinalJudgment = (judgment) => Boolean(judgment) && judgment.status !== "PENDING";
 
@@ -35,35 +48,11 @@ const PAYMENT_LABEL = {
   TRANSFER: "계좌이체",
   MOBILE_PAY: "모바일페이",
 };
-const SIGNAL_BADGE = {
-  GREEN: "ledger-history-badge--green",
-  GRAY: "ledger-history-badge--gray",
-  RED: "ledger-history-badge--red",
-};
 
-// 상세 패널의 AI 판정 상자 색. 표 배지와 같은 판정 → 같은 색.
-const SIGNAL_DETAIL = {
-  GREEN: "ledger-detail-ai--green",
-  GRAY: "ledger-detail-ai--gray",
-  RED: "ledger-detail-ai--red",
-};
-
-// 카테고리/타입 → 아이콘 (백엔드가 아이콘을 주지 않으므로 프론트에서 매핑).
-const CATEGORY_ICON = {
-  식비: "🍚",
-  카페: "☕",
-  문화: "🎟️",
-  쇼핑: "🛍️",
-  교통: "🚌",
-  생활: "🧺",
-  고정비: "🏠",
-  의료: "💊",
-  교육: "📚",
-};
-
+// 카테고리/타입 → 선 아이콘 (백엔드가 아이콘을 주지 않으므로 프론트에서 매핑).
 function iconFor(row) {
-  if (row.type === "INCOME") return "💰";
-  return CATEGORY_ICON[row.cat] || "💸";
+  if (row.type === "INCOME") return "wallet";
+  return categoryIcon(row.cat);
 }
 
 function pad2(n) {
@@ -72,6 +61,12 @@ function pad2(n) {
 
 function formatWon(value) {
   return `${value.toLocaleString("ko-KR")}원`;
+}
+
+// 달력 칸에 들어가는 짧은 금액 — 15000 → "1.5만", 4500 → "4,500"
+function shortWon(value) {
+  if (value >= 10000) return `${Math.round(value / 1000) / 10}만`;
+  return value.toLocaleString("ko-KR");
 }
 
 // "2026-06-09" → "2026. 06. 09"
@@ -85,17 +80,6 @@ function dayLabel(year, month, day) {
     new Date(year, month - 1, day),
   );
   return `${month}월 ${day}일 (${weekday})`;
-}
-
-// 판정이 끝난 날 — 날짜 숫자 오른쪽에 작은 체크
-function JudgedMark() {
-  return (
-    <span className="ledger-cal-judged" title="판정 완료" aria-label="판정 완료" role="img">
-      <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true">
-        <path d="M3.5 8.5 6.5 11.5 12.5 5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-  );
 }
 
 function toIsoDate(year, month, day) {
@@ -127,6 +111,53 @@ function toRow(item) {
   };
 }
 
+// 달력 한 칸 — 날짜 · 그날 지출(짧게) · 판정 아이콘. 판정은 아이콘 모양 + 아래 범례 글자로도 구분된다.
+function CalendarCell({ day, weekday, rows, signal, judged, isToday, isSelected, isFuture, onSelect, month }) {
+  const expense = rows.filter((r) => r.type === "EXPENSE").reduce((s, r) => s + r.amountNum, 0);
+  const income = rows.filter((r) => r.type === "INCOME").reduce((s, r) => s + r.amountNum, 0);
+  const meta = signal ? SIGNAL_META[signal] : null;
+  const label = [
+    `${month}월 ${day}일`,
+    isToday ? "오늘" : null,
+    expense > 0 ? `지출 ${formatWon(expense)}` : null,
+    income > 0 ? `수입 ${formatWon(income)}` : null,
+    meta ? meta.text : null,
+    judged ? "판정 완료" : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  return (
+    <button
+      type="button"
+      className={[
+        "lw-cell",
+        weekday === 0 ? "is-sun" : "",
+        weekday === 6 ? "is-sat" : "",
+        isToday ? "is-today" : "",
+        isSelected ? "is-selected" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      aria-pressed={isSelected}
+      aria-label={label}
+      disabled={isFuture}
+      onClick={onSelect}
+    >
+      <span className="lw-cell-day">{day}</span>
+      {expense > 0 ? (
+        <span className="lw-cell-amt">-{shortWon(expense)}</span>
+      ) : income > 0 ? (
+        <span className="lw-cell-amt lw-cell-amt--in">+{shortWon(income)}</span>
+      ) : null}
+      {meta && (
+        <span className={`lw-cell-sig lw-cell-sig--${meta.tone} ${judged ? "is-final" : ""}`}>
+          <Icon name={meta.icon} size={12} strokeWidth={2.4} />
+        </span>
+      )}
+    </button>
+  );
+}
+
 function WalletPage({ user, onLogout }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -154,7 +185,7 @@ function WalletPage({ user, onLogout }) {
   // 주/월 보기 전환
   const [viewMode, setViewMode] = useState("month");
 
-  // 지출 내역 표 페이지네이션
+  // 지출 내역 페이지네이션
   const [historyPage, setHistoryPage] = useState(1);
 
   // 달 경계를 넘는 주 이동 시 fetch 후 선택할 날짜를 임시 보관
@@ -169,6 +200,7 @@ function WalletPage({ user, onLogout }) {
 
   // 기본 선택 = 오늘 (이번 달 한정)
   const [selectedDay, setSelectedDay] = useState(() => initialDate.getDate());
+  // 하루 카드에서 펼쳐 둔 내역 (상세). null = 모두 접힘.
   const [selectedId, setSelectedId] = useState(null);
   // 일반 사용자는 20시부터, 관리자는 시연·검증을 위해 항상 사용할 수 있다.
   const [isAiActive, setIsAiActive] = useState(() => canUseAiJudge(user));
@@ -203,10 +235,7 @@ function WalletPage({ user, onLogout }) {
     getMonthlyLedger(`${viewYear}-${pad2(viewMonth)}`)
       .then((data) => {
         if (!alive) return;
-        const mapped = Array.isArray(data) ? data.map(toRow) : [];
-        setRows(mapped);
-        const dayRows = mapped.filter((r) => r.day === defaultDay);
-        setSelectedId(dayRows[0]?.id ?? null);
+        setRows(Array.isArray(data) ? data.map(toRow) : []);
       })
       .catch((e) => {
         if (!alive) return;
@@ -243,6 +272,24 @@ function WalletPage({ user, onLogout }) {
       alive = false;
     };
   }, [viewYear, viewMonth, navigate, today, selectedDateParam, initialDate]);
+
+  // 이번 달 사용 가능 예산 — 프로필 수입·고정비·설문으로 계산된 스탯별 예산의 합.
+  // undefined = 불러오는 중, null = 실패. 실패해도 지출 숫자는 그대로 보여 준다.
+  const [plan, setPlan] = useState(undefined);
+  useEffect(() => {
+    let alive = true;
+    setPlan(undefined);
+    getSpendingPlan(`${viewYear}-${pad2(viewMonth)}`)
+      .then((p) => alive && setPlan(p ?? null))
+      .catch(() => alive && setPlan(null));
+    return () => {
+      alive = false;
+    };
+  }, [viewYear, viewMonth]);
+  const monthBudget = Object.values(plan?.budgets || {}).reduce(
+    (sum, amount) => sum + Number(amount || 0),
+    0,
+  );
 
   // 달력 셀 구성 (선행 빈칸 + 1일~말일).
   const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
@@ -285,7 +332,11 @@ function WalletPage({ user, onLogout }) {
   // AI 질문을 거친 예외 지출 수 (이 달 기준).
   const aiJudgedCount = expenseRows.filter((r) => r.aiJudged).length;
 
-  // 카테고리별 지출 집계 — 금액 내림차순 상위 4개 (차트·도넛 공용).
+  // 이번 달 예산 대비 — 핵심 숫자 아래 막대·판정 칩에 쓴다. 홈과 같은 85%/100% 기준.
+  const budgetPct = monthBudget > 0 ? Math.round((monthExpenseTotal / monthBudget) * 100) : 0;
+  const budgetSignal = monthBudget > 0 ? signalForUsage(monthExpenseTotal, monthBudget) : null;
+
+  // 카테고리별 지출 집계 — 금액 내림차순 상위 4개.
   const categoryBreakdown = useMemo(() => {
     const byCat = new Map();
     expenseRows.forEach((r) => {
@@ -302,21 +353,6 @@ function WalletPage({ user, onLogout }) {
       }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]);
-
-  // 도넛 = 상위 카테고리 비중 conic-gradient (CSS 고정값 대신 실데이터).
-  const donutGradient = useMemo(() => {
-    if (monthExpenseTotal <= 0) return null;
-    let acc = 0;
-    const stops = categoryBreakdown.map((c) => {
-      const from = acc;
-      acc += (c.amount / monthExpenseTotal) * 360;
-      return `${c.color} ${from}deg ${acc}deg`;
-    });
-    // 상위 4개 밖 나머지 금액은 회색으로 채움.
-    if (acc < 359.9) stops.push(`#e8e3d8 ${acc}deg 360deg`);
-    return `conic-gradient(${stops.join(", ")})`;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryBreakdown, monthExpenseTotal]);
 
   // 오늘 미답변 AI 질문 수 — 실카운트. 실패 시 null 로 두고 문구 숨김.
   const [pendingCount, setPendingCount] = useState(null);
@@ -337,9 +373,7 @@ function WalletPage({ user, onLogout }) {
 
   const selectedDayRows = selectedDay ? rowsByDay.get(selectedDay) ?? [] : [];
   const selectedDayExpenses = selectedDayRows.filter((r) => r.type === "EXPENSE");
-  const selectedRow = selectedId
-    ? rows.find((r) => r.id === selectedId) ?? null
-    : null;
+  const selectedDaySignal = selectedDay ? signalByDay.get(selectedDay) ?? null : null;
 
   const selectedDateIso = selectedDay
     ? toIsoDate(viewYear, viewMonth, selectedDay)
@@ -350,6 +384,7 @@ function WalletPage({ user, onLogout }) {
     today.getDate(),
   );
   const selectedDateIsFuture = selectedDateIso && selectedDateIso > todayIso;
+  const selectedIsToday = selectedDateIso === todayIso;
   const selectedJudgment = selectedDateIso ? judgmentsByDate[selectedDateIso] ?? null : null;
 
   const handleAddOrEditExpense = () => {
@@ -400,13 +435,15 @@ function WalletPage({ user, onLogout }) {
   const selectDay = (day) => {
     if (toIsoDate(viewYear, viewMonth, day) > todayIso) return;
     setSelectedDay(day);
-    const dayRows = rowsByDay.get(day) ?? [];
-    setSelectedId(dayRows[0]?.id ?? null);
+    setSelectedId(null);
   };
 
+  // 내역 목록에서 고르면 그날로 옮기고 그 내역을 펼친 채 하루 카드로 올라간다.
+  const dayCardRef = useRef(null);
   const selectRow = (row) => {
     setSelectedDay(row.day);
     setSelectedId(row.id);
+    dayCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   // 주 보기 — selectedDay 가 속한 주의 7일 배열 (일요일 시작)
@@ -449,12 +486,39 @@ function WalletPage({ user, onLogout }) {
   // 날짜 네비 표시 문자열
   const dateDisplayLabel = useMemo(() => {
     if (viewMode === "month") {
-      return `${viewYear}. ${pad2(viewMonth)}`;
+      return `${viewYear}년 ${viewMonth}월`;
     }
     const first = weekDates[0];
     const last = weekDates[6];
-    return `${pad2(first.getMonth() + 1)}. ${pad2(first.getDate())} ~ ${pad2(last.getMonth() + 1)}. ${pad2(last.getDate())}`;
+    return `${first.getMonth() + 1}월 ${first.getDate()}일 ~ ${last.getMonth() + 1}월 ${last.getDate()}일`;
   }, [viewMode, viewYear, viewMonth, weekDates]);
+
+  const nextDisabled =
+    viewMode === "month"
+      ? viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1
+      : (() => {
+          const next = new Date(viewYear, viewMonth - 1, selectedDay ?? 1);
+          next.setDate(next.getDate() + 7);
+          return next > today;
+        })();
+
+  // 판정 버튼 — 판정은 오늘 소비를 본다. 관리자는 시연할 날짜를 골라 아무 날이나 볼 수 있다.
+  const isAdmin = user?.role === "ADMIN";
+  const showJudgeButton = isAdmin || selectedIsToday;
+  const judgeLabel = !isAiActive
+    ? `${AI_ACTIVE_FROM_HOUR}시부터 판정`
+    : isFinalJudgment(selectedJudgment)
+      ? "판정 보기"
+      : "판정 받기";
+
+  // 하루 카드 아래 판정·보상 안내 상자
+  const rewardStatus = !selectedJudgment
+    ? "아직 판정 전"
+    : isFinalJudgment(selectedJudgment)
+      ? "판정 완료"
+      : selectedDateIso < todayIso
+        ? "1차 판정으로 확정 중"
+        : "사유 답변 대기";
 
   return (
     <AppShell
@@ -463,596 +527,453 @@ function WalletPage({ user, onLogout }) {
       user={user}
       onLogout={onLogout}
     >
-      <main className="home-main ledger-main">
-        <div className="ledger-header">
-          <h1 className="ledger-greeting">
-            <span className="ledger-greeting-icon" aria-hidden>💸</span>
-            <span className="ledger-greeting-label">총 지출액</span>
-            <strong className="ledger-greeting-value">{formatWon(monthExpenseTotal)}</strong>
-          </h1>
-          <div className="ledger-header-actions">
-            <div className="ledger-view-toggle" role="group" aria-label="보기 방식">
-              <button
-                type="button"
-                className={viewMode === "week" ? "is-active" : ""}
-                aria-pressed={viewMode === "week"}
-                onClick={() => setViewMode("week")}
-              >
-                주
-              </button>
-              <button
-                type="button"
-                className={viewMode === "month" ? "is-active" : ""}
-                aria-pressed={viewMode === "month"}
-                onClick={() => setViewMode("month")}
-              >
-                월
-              </button>
+      <main className="home-main hm lw">
+        <div className="lw-layout">
+          {/* 제목 + 주/월 보기 */}
+          <div className="lw-head">
+            <h1 className="lw-title">가계부</h1>
+            <div className="lw-seg" role="group" aria-label="보기 방식">
+              {[
+                ["week", "주"],
+                ["month", "월"],
+              ].map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={viewMode === mode ? "is-active" : ""}
+                  aria-pressed={viewMode === mode}
+                  onClick={() => setViewMode(mode)}
+                >
+                  {viewMode === mode && <Icon name="check" size={13} strokeWidth={2.4} />}
+                  {label}
+                </button>
+              ))}
             </div>
-            <div className="ledger-date-nav" aria-label="달 선택">
+          </div>
+
+          {/* 왼쪽 단(PC) — 기간 이동 · 총 지출 · 달력. 폰에서는 단이 풀려 한 줄로 이어진다 */}
+          <div className="lw-col lw-col--main">
+            {/* 기간 이동 */}
+            <nav className="hm-card lw-period" aria-label={viewMode === "week" ? "주 선택" : "달 선택"}>
               <button
                 type="button"
-                className="ledger-date-arrow"
+                className="hm-icon-btn"
                 aria-label={viewMode === "week" ? "이전 주" : "이전 달"}
-                onClick={() => viewMode === "week" ? changeWeek(-1) : changeMonth(-1)}
+                onClick={() => (viewMode === "week" ? changeWeek(-1) : changeMonth(-1))}
               >
-                ‹
+                <Icon name="chevronLeft" size={18} />
               </button>
-              <span className="ledger-date-display">
+              <span className="lw-period-label">
+                <Icon name="calendar" size={16} />
                 {dateDisplayLabel}
               </span>
               <button
                 type="button"
-                className="ledger-date-arrow"
+                className="hm-icon-btn"
                 aria-label={viewMode === "week" ? "다음 주" : "다음 달"}
-                onClick={() => viewMode === "week" ? changeWeek(1) : changeMonth(1)}
-                disabled={
-                  viewMode === "month"
-                    ? viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1
-                    : (() => {
-                        const next = new Date(viewYear, viewMonth - 1, selectedDay ?? 1);
-                        next.setDate(next.getDate() + 7);
-                        return next > today;
-                      })()
-                }
+                onClick={() => (viewMode === "week" ? changeWeek(1) : changeMonth(1))}
+                disabled={nextDisabled}
               >
-                ›
+                <Icon name="chevronRight" size={18} />
               </button>
-            </div>
-          </div>
-        </div>
+            </nav>
 
-        <div className="ledger-row ledger-row-calendar">
-          <section className="home-card ledger-calendar-card ledger-sec--sage">
-            <div className="ledger-cal-weekdays">
-              {WEEKDAYS.map((weekday, i) => (
-                <span key={weekday} className={`ledger-cal-weekday ${i === 0 ? "ledger-cal-weekday--sun" : ""} ${i === 6 ? "ledger-cal-weekday--sat" : ""}`}>
-                  {weekday}
-                </span>
-              ))}
-            </div>
-            {viewMode === "month" ? (
-              <div className="ledger-cal-grid">
-                {calendarCells.map((day, index) => {
-                  if (day === null) {
-                    return (
-                      <div
-                        key={`empty-${index}`}
-                        className="ledger-cal-cell ledger-cal-cell--empty"
-                        aria-hidden
-                      />
-                    );
-                  }
-
-                  const dayRows = rowsByDay.get(day) ?? [];
-                  const daySignal = signalByDay.get(day)?.toLowerCase();
-                  const isToday = day === todayDay;
-                  const dayIso = toIsoDate(viewYear, viewMonth, day);
-                  const isFuture = dayIso > todayIso;
-                  const isJudged = isFinalJudgment(judgmentsByDate[dayIso]);
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      className={[
-                        "ledger-cal-cell",
-                        dayRows.length > 0 ? "ledger-cal-cell--highlight" : "",
-                        daySignal ? `ledger-cal-cell--signal-${daySignal}` : "",
-                        isToday ? "ledger-cal-cell--today" : "",
-                        selectedDay === day ? "ledger-cal-cell--selected" : "",
-                        isFuture ? "ledger-cal-cell--future" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      aria-pressed={selectedDay === day}
-                      disabled={isFuture}
-                      onClick={() => selectDay(day)}
-                    >
-                      <span className="ledger-cal-head">
-                        <span className="ledger-cal-day">{day}</span>
-                        {isJudged && <JudgedMark />}
-                      </span>
-                      <div className="ledger-cal-events">
-                        {dayRows.map((row) => (
-                          <span
-                            key={row.id}
-                            className={`ledger-cal-event ledger-cal-event--${
-                              row.type === "INCOME" ? "income" : "expense"
-                            }`}
-                          >
-                            {row.name} {row.amountNum.toLocaleString("ko-KR")}
-                          </span>
-                        ))}
-                      </div>
-                    </button>
-                  );
-                })}
+            {/* ① 이번 달 총 지출 — 이 화면의 핵심 숫자 */}
+            <section className="hm-card hm-hero" aria-labelledby="lw-hero-label">
+              <div className="hm-hero-top">
+                <p className="hm-hero-label" id="lw-hero-label">
+                  {viewMonth}월 총 지출
+                </p>
+                {monthBudget > 0 ? (
+                  <span className="lw-hero-budget">월 예산 {formatWon(monthBudget)}</span>
+                ) : null}
               </div>
-            ) : (
-              <div className="ledger-week-grid">
-                {weekDates.map((d) => {
-                  const isCurrentMonth = d.getMonth() + 1 === viewMonth && d.getFullYear() === viewYear;
-                  const day = d.getDate();
-                  const isToday = isCurrentMonth && day === todayDay;
-                  const dayRows = isCurrentMonth ? (rowsByDay.get(day) ?? []) : [];
-                  const daySignal = isCurrentMonth ? signalByDay.get(day)?.toLowerCase() : null;
-                  const isSelected = isCurrentMonth && selectedDay === day;
-                  const dayIso = toIsoDate(d.getFullYear(), d.getMonth() + 1, day);
-                  const isFuture = dayIso > todayIso;
-                  const isJudged = isCurrentMonth && isFinalJudgment(judgmentsByDate[dayIso]);
-
-                  if (!isCurrentMonth) {
-                    return (
-                      <div
-                        key={d.toISOString()}
-                        className="ledger-cal-cell ledger-week-cell ledger-week-cell--other"
-                        aria-hidden
-                      >
-                        <span className="ledger-cal-day">{day}</span>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <button
-                      key={d.toISOString()}
-                      type="button"
-                      className={[
-                        "ledger-cal-cell",
-                        "ledger-week-cell",
-                        dayRows.length > 0 ? "ledger-cal-cell--highlight" : "",
-                        daySignal ? `ledger-cal-cell--signal-${daySignal}` : "",
-                        isToday ? "ledger-cal-cell--today" : "",
-                        isSelected ? "ledger-cal-cell--selected" : "",
-                        isFuture ? "ledger-cal-cell--future" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      aria-pressed={isSelected}
-                      disabled={isFuture}
-                      onClick={() => selectDay(day)}
-                    >
-                      <span className="ledger-cal-head">
-                        <span className="ledger-cal-day">{day}</span>
-                        {isJudged && <JudgedMark />}
-                      </span>
-                      <div className="ledger-cal-events">
-                        {dayRows.map((row) => (
-                          <span
-                            key={row.id}
-                            className={`ledger-cal-event ledger-cal-event--${
-                              row.type === "INCOME" ? "income" : "expense"
-                            }`}
-                          >
-                            {row.name} {row.amountNum.toLocaleString("ko-KR")}
-                          </span>
-                        ))}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            {loading && (
-              <p className="ledger-cal-state">불러오는 중…</p>
-            )}
-            {error && !loading && (
-              <p className="ledger-cal-state ledger-cal-state--error">
-                {error}
-              </p>
-            )}
-          </section>
-
-          <div className="ledger-day-col">
-          <section className="home-card ledger-day-card ledger-sec--sky">
-            <div className="ledger-day-head">
-              <h2 className="home-card-title home-card-title--sm ledger-sec-title">
-                <span className="ledger-sec-icon" aria-hidden>🗓️</span>
-                {selectedDay
-                  ? dayLabel(viewYear, viewMonth, selectedDay)
-                  : "날짜를 선택하세요"}
-              </h2>
-              {selectedDay && (
-                <button
-                  type="button"
-                  className="home-btn home-btn-primary ledger-add-btn"
-                  onClick={handleAddOrEditExpense}
-                  disabled={selectedDateIsFuture}
-                >
-                  {selectedDayExpenses.length > 0 ? "지출 수정" : "+ 지출 추가"}
-                </button>
-              )}
-            </div>
-
-            <div className="ledger-day-body">
-            <ul className="home-tx-list">
-              {selectedDayRows.map((row) => (
-                <li key={row.id} className="ledger-detail-list-item">
-                  <button
-                    type="button"
-                    className={`home-tx-row ledger-detail-row ${
-                      selectedId === row.id ? "is-selected" : ""
-                    }`}
-                    onClick={() => setSelectedId(row.id)}
-                  >
-                    <span className="home-tx-icon">{iconFor(row)}</span>
-                    <div className="home-tx-mid">
-                      <span className="home-tx-name">{row.name}</span>
-                      <span className="home-tx-cat">{row.cat}</span>
-                    </div>
-                    <span className="home-tx-amount">{row.amount}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {selectedDay && selectedDayRows.length === 0 && (
-              <div className="ledger-day-empty">
-                <p>이 날짜에는 등록된 내역이 없어요.</p>
-              </div>
-            )}
-
-            {selectedRow && (
-              <div className="ledger-expense-detail" aria-live="polite">
-                <div className="ledger-expense-detail-head">
-                  <p className="ledger-detail-eyebrow">상세 내역</p>
-                  <div className="ledger-detail-title-row">
-                    <span className="ledger-detail-icon" aria-hidden>
-                      {iconFor(selectedRow)}
-                    </span>
-                    <div className="ledger-detail-title-amount">
-                      <h3 className="ledger-detail-title">{selectedRow.name}</h3>
-                      <span className="ledger-detail-amount">
-                        {selectedRow.amount}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <dl className="ledger-detail-grid">
-                  <div>
-                    <dt>날짜</dt>
-                    <dd>{selectedRow.date}</dd>
-                  </div>
-                  <div>
-                    <dt>구분</dt>
-                    <dd>
-                      <span
-                        className={`ledger-detail-type ${
-                          selectedRow.type === "INCOME"
-                            ? "ledger-detail-type--income"
-                            : "ledger-detail-type--expense"
-                        }`}
-                      >
-                        {selectedRow.type === "INCOME" ? "수입" : "지출"}
-                      </span>
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>카테고리</dt>
-                    <dd>{selectedRow.cat}</dd>
-                  </div>
-                  <div>
-                    <dt>결제수단</dt>
-                    <dd>{selectedRow.payment || "—"}</dd>
-                  </div>
-                </dl>
-
-                <div className="ledger-detail-note">
-                  <span>메모</span>
-                  <p>{selectedRow.memo}</p>
-                </div>
-                {selectedRow.reason && (
-                  <div className="ledger-detail-note">
-                    <span>소비 사유</span>
-                    <p>{selectedRow.reason}</p>
-                  </div>
-                )}
-                {selectedRow.aiStatus && (
-                  // 표 배지(SIGNAL_BADGE)와 같은 색을 쓴다 — 예전엔 판정과 상관없이 초록이었다.
-                  <div className={`ledger-detail-ai ${SIGNAL_DETAIL[selectedRow.signal] || "ledger-detail-ai--gray"}`}>
-                    <span className="ledger-detail-ai-badge">
-                      AI 판정 · {selectedRow.aiStatus}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-            </div>
-          </section>
-          </div>
-        </div>
-
-        <section className="ledger-day-reward" aria-label="선택한 날짜의 판정 보상">
-          <div className="ledger-day-reward-head">
-            <div>
-              <span>{selectedDateIso ? `${formatDateDisplay(selectedDateIso)} 판정 보상` : "선택한 날짜의 판정 보상"}</span>
-              <strong>{!selectedJudgment ? "아직 판정 전" : isFinalJudgment(selectedJudgment) ? (SIGNAL_LABELS[selectedJudgment.signal] || "판정 완료") : selectedDateIso < todayIso ? "1차 판정으로 확정 중" : "사유 답변 대기"}</strong>
-            </div>
-            {isFinalJudgment(selectedJudgment) && <span className={`ledger-history-badge ${SIGNAL_BADGE[selectedJudgment.signal] || "ledger-history-badge--gray"}`}>판정 완료</span>}
-          </div>
-          {judgmentLoading ? (
-            <p className="ledger-day-reward-empty">보상 정보를 불러오는 중이에요.</p>
-          ) : judgmentError ? (
-            <p className="ledger-day-reward-empty ledger-day-reward-error">{judgmentError}</p>
-          ) : selectedJudgment && !isFinalJudgment(selectedJudgment) ? (
-            <p className="ledger-day-reward-empty">
-              {selectedDateIso < todayIso
-                ? "자정이 지나 1차 판정 내용으로 확정돼요. 잠시 뒤 다시 확인해 주세요."
-                : "예외 지출 사유를 답하거나 건너뛰면 최종 판정이 나요. 보상은 오늘 자정에 들어와요."}
-            </p>
-          ) : selectedJudgment ? (
-            <div className="ledger-day-reward-values">
-              <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span><CoinIcon className="ledger-day-reward-coin" /> {selectedJudgment.rewarded ? "받은 코인" : "자정에 받을 코인"}</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
-              {[["ENERGY", "⚡ 에너지"], ["CHARM", "✨ 매력"], ["IQ", "🧠 지능"], ["ENDURANCE", "🛡️ 지구력"]].filter(([key]) => Number(selectedJudgment.statRewards?.[key] ?? 0) > 0).map(([key, label]) => <div className="ledger-day-reward-value" key={key}><span>{label}</span><strong>+{selectedJudgment.statRewards[key]}</strong></div>)}
-            </div>
-          ) : (
-            <p className="ledger-day-reward-empty">
-              {selectedDateIso && selectedDateIso >= todayIso
-                ? "판정하지 않아도 지출을 적은 날은 자정에 신호등 판정이 내려지고 보상이 들어와요."
-                : "이 날짜는 판정 기록이 없어 지급된 보상이 없어요."}
-            </p>
-          )}
-        </section>
-
-        <section className="ledger-history-card ledger-sec--apricot">
-          <div className="ledger-history-head">
-            <span className="ledger-history-chip ledger-sec-title">
-              <span className="ledger-sec-icon" aria-hidden>📋</span>
-              {viewMode === "week" ? "주간 지출 내역" : "월간 지출 내역"}
-            </span>
-            <span className="ledger-history-chip ledger-history-chip--total">총 {formatWon(visibleExpenseTotal)}</span>
-          </div>
-
-          <div className="ledger-history-table-wrap">
-            <table className="ledger-history-table">
-              <thead>
-                <tr>
-                  <th>날짜</th>
-                  <th>내역</th>
-                  <th>카테고리</th>
-                  <th>AI 판정</th>
-                  <th>금액</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedExpenseRows.map((row) => (
-                  <tr
-                    key={row.id}
-                    role="button"
-                    tabIndex={0}
-                    className={selectedId === row.id ? "is-selected" : ""}
-                    onClick={() => selectRow(row)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        selectRow(row);
-                      }
-                    }}
-                  >
-                    <td>
-                      <span className="ledger-history-date">{row.date}</span>
-                    </td>
-                    <td>
-                      <span className="ledger-history-name">
-                        {iconFor(row)} {row.name}
-                      </span>
-                    </td>
-                    <td>{row.cat}</td>
-                    <td>
-                      {row.aiStatus ? (
-                        <span
-                          className={`ledger-history-badge ${
-                            SIGNAL_BADGE[row.signal] ||
-                            "ledger-history-badge--gray"
-                          }`}
-                        >
-                          {row.aiStatus}
-                        </span>
-                      ) : (
-                        // 예외 지출이 아니면 AI 판정 미표시
-                        <span className="ledger-history-ai-none" aria-hidden>—</span>
-                      )}
-                    </td>
-                    <td className="ledger-history-amount">{row.amount}</td>
-                  </tr>
-                ))}
-                {!loading && visibleExpenseRows.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="ledger-history-empty-cell">
-                      {viewMode === "week" ? "이 기간에는 지출이 없어요." : "이 달에는 등록된 지출이 없어요."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {historyTotalPages > 1 && (
-            <div className="ledger-history-pager">
-              <button type="button" aria-label="이전 페이지" disabled={safeHistoryPage === 1}
-                onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}>‹</button>
-              <span>{safeHistoryPage} / {historyTotalPages}</span>
-              <button type="button" aria-label="다음 페이지" disabled={safeHistoryPage === historyTotalPages}
-                onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}>›</button>
-            </div>
-          )}
-        </section>
-
-        <div className="ledger-row ledger-row-insights">
-          <section className="home-card ledger-report-card ledger-sec--apricot">
-            <h2 className="home-card-title home-card-title--sm ledger-sec-title"><span className="ledger-sec-icon" aria-hidden>📊</span>보이는 리포트</h2>
-            {donutGradient ? (
-              <>
-                <div className="ledger-donut-wrap">
-                  <div
-                    className="ledger-donut"
-                    role="img"
-                    aria-label={`이번 달 지출 ${formatWon(monthExpenseTotal)}`}
-                    style={{ background: donutGradient }}
-                  >
-                    <div className="ledger-donut-hole">
-                      <span className="ledger-donut-amount">
-                        {formatWon(monthExpenseTotal)}
-                      </span>
-                      <span className="ledger-donut-budget">이번 달 지출</span>
-                    </div>
-                  </div>
-                </div>
-                <ul className="ledger-donut-legend">
-                  {categoryBreakdown.map((item) => (
-                    <li key={item.label}>
-                      <span className="ledger-legend-dot" style={{ background: item.color }} />
-                      {item.label} {item.pct}%
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <p className="ledger-card-empty">이번 달 지출이 없어요.</p>
-            )}
-            <button
-              type="button"
-              className="home-link-btn ledger-report-more"
-              onClick={() => navigate("/report")}
-            >
-              자세히보기 →
-            </button>
-          </section>
-
-          <section className="home-card ledger-ai-card ledger-sec--sky">
-            <h2 className="home-card-title home-card-title--sm ledger-sec-title"><span className="ledger-sec-icon" aria-hidden>🐾</span>AI 소비 판정</h2>
-            <div className="ledger-ai-box">
-              <p className="ledger-ai-text">보리가 오늘 소비를 분석해요</p>
-            </div>
-            <div className="ledger-ai-actions">
-              {user?.role === "ADMIN" && (
-                <label>시연할 날짜 <input type="date" value={demoDate} onChange={(e) => setDemoDate(e.target.value)} aria-label="관리자 판정 날짜" /></label>
-              )}
-              <button
-                type="button"
-                className={`home-btn ledger-ai-action-btn ${
-                  isAiActive
-                    ? "ledger-ai-action-btn--active"
-                    : "ledger-ai-action-btn--waiting"
-                }`}
-                disabled={!isAiActive || (user?.role === "ADMIN" && !demoDate)}
-                onClick={() => navigate(user?.role === "ADMIN" ? `/wallet/analysis?date=${demoDate}` : "/wallet/analysis")}
-              >
-                {isAiActive
-                  ? user?.role === "ADMIN"
-                    ? "판정 시작하기 (관리자)"
-                    : "판정 시작하기"
-                  : `대기 중 (${AI_ACTIVE_FROM_HOUR}시 활성화)`}
-              </button>
-              {pendingCount != null && (
-                <p className="ledger-ai-footnote">
-                  오늘 미답변 질문 {pendingCount}건
+              {loading ? (
+                <p className="hm-hero-value hm-skeleton" aria-busy="true">
+                  <span className="hm-sr">불러오는 중</span>
+                </p>
+              ) : (
+                <p className={`hm-hero-value ${budgetSignal === "RED" ? "is-over" : ""}`}>
+                  {monthExpenseTotal.toLocaleString("ko-KR")}
+                  <span className="hm-hero-unit">원</span>
                 </p>
               )}
-            </div>
-          </section>
+              {monthBudget > 0 && budgetSignal ? (
+                <>
+                  <div
+                    className={`hm-meter hm-meter--${SIGNAL_META[budgetSignal].tone}`}
+                    role="progressbar"
+                    aria-label={`${viewMonth}월 예산 사용률`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.min(budgetPct, 100)}
+                    aria-valuetext={`${budgetPct}% 사용, ${SIGNAL_META[budgetSignal].text}`}
+                  >
+                    <span style={{ width: `${Math.min(budgetPct, 100)}%` }} />
+                  </div>
+                  <p className="hm-hero-foot">
+                    <span>
+                      {monthBudget - monthExpenseTotal >= 0
+                        ? <>예산에서 <strong>{formatWon(monthBudget - monthExpenseTotal)}</strong> 남았어요</>
+                        : <>예산보다 <strong>{formatWon(monthExpenseTotal - monthBudget)}</strong> 더 썼어요</>}
+                    </span>
+                    <span className="lw-hero-right">
+                      <SignalChip signal={budgetSignal} />
+                      <span className="hm-hero-pct">예산의 {budgetPct}%</span>
+                    </span>
+                  </p>
+                </>
+              ) : plan === null ? (
+                <p className="hm-hero-foot">예산을 불러오지 못했어요.</p>
+              ) : plan !== undefined ? (
+                <p className="hm-hero-foot">월수입을 입력하면 고정비·예비비를 뺀 예산과 비교해 드려요.</p>
+              ) : null}
+              <p className="lw-hero-sub">
+                수입 {formatWon(monthIncomeTotal)} · 기록 {rows.length}건 · AI 판정 {aiJudgedCount}건
+              </p>
+            </section>
 
-          <div className="ledger-side-col">
-            <section className="home-card ledger-cat-card ledger-sec--sage">
-              <h2 className="home-card-title home-card-title--sm ledger-sec-title">
-                <span className="ledger-sec-icon" aria-hidden>🗂️</span>
-                카테고리별 지출
-              </h2>
-              {categoryBreakdown.length > 0 ? (
-                <div className="ledger-cat-chart">
-                  {categoryBreakdown.map((category) => (
-                    <div key={category.label} className="home-cat-row">
-                      <span className="home-cat-label">{category.label}</span>
-                      <div className="home-cat-track">
-                        <div
-                          className="home-cat-fill"
-                          style={{ width: `${category.pct}%`, background: category.color }}
+            {/* ② 달력 */}
+            <section className="hm-card lw-cal" aria-label={viewMode === "week" ? "주간 달력" : "월간 달력"}>
+              <div className="lw-cal-weekdays" aria-hidden>
+                {WEEKDAYS.map((weekday, i) => (
+                  <span key={weekday} className={i === 0 ? "is-sun" : i === 6 ? "is-sat" : ""}>
+                    {weekday}
+                  </span>
+                ))}
+              </div>
+              <div className="lw-cal-grid">
+                {viewMode === "month"
+                  ? calendarCells.map((day, index) => {
+                      if (day === null) {
+                        return <span key={`empty-${index}`} className="lw-cell lw-cell--empty" aria-hidden />;
+                      }
+                      const dayIso = toIsoDate(viewYear, viewMonth, day);
+                      return (
+                        <CalendarCell
+                          key={day}
+                          day={day}
+                          month={viewMonth}
+                          weekday={(firstWeekday + day - 1) % 7}
+                          rows={rowsByDay.get(day) ?? []}
+                          signal={signalByDay.get(day)}
+                          judged={isFinalJudgment(judgmentsByDate[dayIso])}
+                          isToday={day === todayDay}
+                          isSelected={selectedDay === day}
+                          isFuture={dayIso > todayIso}
+                          onSelect={() => selectDay(day)}
                         />
-                      </div>
-                      <span className="home-cat-amount">
-                        {category.amount.toLocaleString("ko-KR")}
-                      </span>
-                    </div>
-                  ))}
+                      );
+                    })
+                  : weekDates.map((d) => {
+                      const isCurrentMonth = d.getMonth() + 1 === viewMonth && d.getFullYear() === viewYear;
+                      const day = d.getDate();
+                      if (!isCurrentMonth) {
+                        return (
+                          <span key={d.toISOString()} className="lw-cell lw-cell--other" aria-hidden>
+                            <span className="lw-cell-day">{day}</span>
+                          </span>
+                        );
+                      }
+                      const dayIso = toIsoDate(viewYear, viewMonth, day);
+                      return (
+                        <CalendarCell
+                          key={d.toISOString()}
+                          day={day}
+                          month={viewMonth}
+                          weekday={d.getDay()}
+                          rows={rowsByDay.get(day) ?? []}
+                          signal={signalByDay.get(day)}
+                          judged={isFinalJudgment(judgmentsByDate[dayIso])}
+                          isToday={day === todayDay}
+                          isSelected={selectedDay === day}
+                          isFuture={dayIso > todayIso}
+                          onSelect={() => selectDay(day)}
+                        />
+                      );
+                    })}
+              </div>
+              {loading && <p className="lw-cal-state">불러오는 중…</p>}
+              {error && !loading && <p className="lw-cal-state lw-cal-state--error">{error}</p>}
+              <ul className="lw-legend" aria-label="판정 범례">
+                {["GREEN", "GRAY", "RED"].map((s) => (
+                  <li key={s} className={`lw-legend-item lw-legend-item--${SIGNAL_META[s].tone}`}>
+                    <Icon name={SIGNAL_META[s].icon} size={13} strokeWidth={2.4} />
+                    {SIGNAL_META[s].text}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+
+          {/* 오른쪽 단(PC) — 선택한 날 · 지출 내역 · 카테고리 */}
+          <div className="lw-col lw-col--side">
+            {/* ③ 선택한 날 — 그날 내역 · 판정 보상 · 지출 수정 / 판정 */}
+            <section className="hm-card lw-day" ref={dayCardRef} aria-labelledby="lw-day-title">
+              <div className="hm-card-head">
+                <h2 className="hm-card-title" id="lw-day-title">
+                  {selectedDay ? dayLabel(viewYear, viewMonth, selectedDay) : "날짜를 선택하세요"}
+                  {selectedIsToday && <small>오늘</small>}
+                </h2>
+                {selectedDaySignal && (
+                  <SignalChip
+                    signal={selectedDaySignal}
+                    label={
+                      isFinalJudgment(selectedJudgment)
+                        ? SIGNAL_META[selectedDaySignal].text
+                        : `${SIGNAL_META[selectedDaySignal].text} (예상)`
+                    }
+                  />
+                )}
+              </div>
+
+              {selectedDayRows.length === 0 ? (
+                <div className="hm-empty">
+                  <p>이 날짜에는 등록된 내역이 없어요.</p>
                 </div>
               ) : (
-                <p className="ledger-card-empty">이번 달 지출이 없어요.</p>
+                <ul className="lw-day-list">
+                  {selectedDayRows.map((row) => {
+                    const open = selectedId === row.id;
+                    return (
+                      <li key={row.id} className={open ? "is-open" : ""}>
+                        <button
+                          type="button"
+                          className="lw-day-row"
+                          aria-expanded={open}
+                          onClick={() => setSelectedId(open ? null : row.id)}
+                        >
+                          <span className="hm-tx-icon">
+                            <Icon name={iconFor(row)} size={18} />
+                          </span>
+                          <span className="hm-tx-mid">
+                            <span className="hm-tx-name">{row.name}</span>
+                            <span className="hm-tx-cat">{row.cat}</span>
+                          </span>
+                          <span className="hm-tx-right">
+                            <span className={`hm-tx-amount ${row.type === "INCOME" ? "lw-amt-in" : ""}`}>
+                              {row.type === "INCOME" ? "+" : "-"}
+                              {row.amount}
+                            </span>
+                            {row.aiStatus && <SignalChip signal={row.signal} />}
+                          </span>
+                          <Icon name="chevronDown" size={16} className="lw-day-caret" />
+                        </button>
+                        {open && (
+                          <div className="lw-detail" aria-live="polite">
+                            <dl className="lw-detail-grid">
+                              <div>
+                                <dt>구분</dt>
+                                <dd>{row.type === "INCOME" ? "수입" : "지출"}</dd>
+                              </div>
+                              <div>
+                                <dt>결제수단</dt>
+                                <dd>{row.payment || "—"}</dd>
+                              </div>
+                              <div>
+                                <dt>날짜</dt>
+                                <dd>{row.date}</dd>
+                              </div>
+                              <div>
+                                <dt>카테고리</dt>
+                                <dd>{row.cat}</dd>
+                              </div>
+                            </dl>
+                            {row.memo && (
+                              <p className="lw-detail-note">
+                                <span>메모</span>
+                                {row.memo}
+                              </p>
+                            )}
+                            {row.reason && (
+                              <p className="lw-detail-note">
+                                <span>소비 사유</span>
+                                {row.reason}
+                              </p>
+                            )}
+                            {row.aiStatus && (
+                              <p className="lw-detail-ai">
+                                AI 판정 <SignalChip signal={row.signal} />
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              {/* 판정 보상 */}
+              {selectedDateIso && !selectedDateIsFuture && (
+                <div className="lw-reward" aria-label="선택한 날짜의 판정 보상">
+                  <div className="lw-reward-head">
+                    <Icon name="paw" size={16} />
+                    <strong>{rewardStatus}</strong>
+                  </div>
+                  {judgmentLoading ? (
+                    <p>보상 정보를 불러오는 중이에요.</p>
+                  ) : judgmentError ? (
+                    <p className="lw-reward-error">{judgmentError}</p>
+                  ) : selectedJudgment && !isFinalJudgment(selectedJudgment) ? (
+                    <p>
+                      {selectedDateIso < todayIso
+                        ? "자정이 지나 1차 판정 내용으로 확정돼요. 잠시 뒤 다시 확인해 주세요."
+                        : "예외 지출 사유를 답하거나 건너뛰면 최종 판정이 나요. 보상은 오늘 자정에 들어와요."}
+                    </p>
+                  ) : selectedJudgment ? (
+                    <ul className="lw-reward-values">
+                      <li className="lw-reward-coin">
+                        <CoinIcon size={16} />
+                        {selectedJudgment.rewarded ? "받은 코인" : "자정에 받을 코인"}
+                        <strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong>
+                      </li>
+                      {STAT_REWARDS.filter(({ key }) => Number(selectedJudgment.statRewards?.[key] ?? 0) > 0).map(
+                        ({ key, label, color }) => (
+                          <li key={key} className="lw-reward-stat" style={{ "--stat-color": color }}>
+                            {label} <strong>+{selectedJudgment.statRewards[key]}</strong>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  ) : (
+                    <p>
+                      {selectedDateIso >= todayIso
+                        ? "판정하지 않아도 지출을 적은 날은 자정에 신호등 판정이 내려지고 보상이 들어와요."
+                        : "이 날짜는 판정 기록이 없어 지급된 보상이 없어요."}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {selectedDay && !selectedDateIsFuture && (
+                <div className={`lw-day-actions ${showJudgeButton ? "" : "is-single"}`}>
+                  <button type="button" className="hm-btn lw-btn-soft" onClick={handleAddOrEditExpense}>
+                    <Icon name={selectedDayExpenses.length > 0 ? "pencil" : "plus"} size={16} strokeWidth={2.2} />
+                    {selectedDayExpenses.length > 0 ? "지출 수정" : "지출 추가"}
+                  </button>
+                  {showJudgeButton && (
+                    <button
+                      type="button"
+                      className="hm-btn hm-btn--dark"
+                      disabled={!isAiActive || (isAdmin && !demoDate)}
+                      onClick={() => navigate(isAdmin ? `/wallet/analysis?date=${demoDate}` : "/wallet/analysis")}
+                    >
+                      {judgeLabel}
+                      {isAiActive && <Icon name="arrowRight" size={16} strokeWidth={2.2} />}
+                    </button>
+                  )}
+                </div>
+              )}
+              {isAdmin && (
+                <label className="lw-admin-date">
+                  시연할 날짜 (관리자)
+                  <input
+                    type="date"
+                    value={demoDate}
+                    onChange={(e) => setDemoDate(e.target.value)}
+                    aria-label="관리자 판정 날짜"
+                  />
+                </label>
+              )}
+              {showJudgeButton && pendingCount != null && pendingCount > 0 && (
+                <p className="lw-footnote">오늘 답하지 않은 질문 {pendingCount}건</p>
               )}
             </section>
 
-            <BudgetCard
-              yearMonth={`${viewYear}-${pad2(viewMonth)}`}
-              spent={loading ? null : monthExpenseTotal}
-            />
-          </div>
-        </div>
-
-        <div className="ledger-row ledger-row-summary ledger-row-summary--bottom">
-          {[
-            {
-              key: "expense",
-              icon: "💸",
-              title: "이번 달 지출",
-              value: formatWon(monthExpenseTotal),
-              sub: `지출 ${expenseRows.length}건`,
-            },
-            {
-              key: "income",
-              icon: "💰",
-              title: "이번 달 수입",
-              value: formatWon(monthIncomeTotal),
-              sub: `수입 ${incomeRows.length}건`,
-            },
-            {
-              key: "ai",
-              icon: "🐾",
-              title: "AI 판정",
-              value: `${aiJudgedCount}건`,
-              sub:
-                pendingCount != null
-                  ? `오늘 미답변 ${pendingCount}건`
-                  : "예외적인 지출만 판정해요",
-            },
-            {
-              key: "records",
-              icon: "📝",
-              title: "이번 달 기록",
-              value: `${rows.length}건`,
-              sub: `지출 ${expenseRows.length} · 수입 ${incomeRows.length}`,
-            },
-          ].map((card) => (
-            <article
-              key={card.key}
-              className={`home-card ledger-summary-card ledger-summary-card--${card.key}`}
-            >
-              <div className="ledger-summary-head">
-                <h3 className="home-kpi-title">{card.title}</h3>
-                <span className="ledger-summary-icon" aria-hidden>{card.icon}</span>
+            {/* ④ 지출 내역 — 표 대신 목록(폰에서 옆으로 넘치지 않게) */}
+            <section className="hm-card" aria-labelledby="lw-history-title">
+              <div className="hm-card-head">
+                <h2 className="hm-card-title" id="lw-history-title">
+                  {viewMode === "week" ? "주간 지출 내역" : "월간 지출 내역"}
+                  <small>{visibleExpenseRows.length}건</small>
+                </h2>
+                <span className="lw-total">총 {formatWon(visibleExpenseTotal)}</span>
               </div>
-              <p className="home-kpi-value">{card.value}</p>
-              <p className="home-kpi-sub">{card.sub}</p>
-            </article>
-          ))}
+              {!loading && visibleExpenseRows.length === 0 ? (
+                <div className="hm-empty">
+                  <p>{viewMode === "week" ? "이 기간에는 지출이 없어요." : "이 달에는 등록된 지출이 없어요."}</p>
+                </div>
+              ) : (
+                <ul className="hm-tx-list">
+                  {pagedExpenseRows.map((row) => (
+                    <li key={row.id}>
+                      <button type="button" className="hm-tx" onClick={() => selectRow(row)}>
+                        <span className="hm-tx-icon">
+                          <Icon name={iconFor(row)} size={18} />
+                        </span>
+                        <span className="hm-tx-mid">
+                          <span className="hm-tx-name">{row.name}</span>
+                          <span className="hm-tx-cat">
+                            {viewMonth}.{pad2(row.day)} · {row.cat}
+                          </span>
+                        </span>
+                        <span className="hm-tx-right">
+                          <span className="hm-tx-amount">-{row.amount}</span>
+                          {row.aiStatus && <SignalChip signal={row.signal} />}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {historyTotalPages > 1 && (
+                <div className="lw-pager">
+                  <button
+                    type="button"
+                    className="hm-icon-btn"
+                    aria-label="이전 페이지"
+                    disabled={safeHistoryPage === 1}
+                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                  >
+                    <Icon name="chevronLeft" size={16} />
+                  </button>
+                  <span>
+                    {safeHistoryPage} / {historyTotalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="hm-icon-btn"
+                    aria-label="다음 페이지"
+                    disabled={safeHistoryPage === historyTotalPages}
+                    onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
+                  >
+                    <Icon name="chevronRight" size={16} />
+                  </button>
+                </div>
+              )}
+            </section>
+
+            {/* ⑤ 카테고리별 지출 — 리포트로 이어진다 */}
+            <section className="hm-card" aria-labelledby="lw-cat-title">
+              <div className="hm-card-head">
+                <h2 className="hm-card-title" id="lw-cat-title">
+                  카테고리별 지출
+                </h2>
+                <button type="button" className="hm-text-link" onClick={() => navigate("/report")}>
+                  리포트 <Icon name="chevronRight" size={14} />
+                </button>
+              </div>
+              {categoryBreakdown.length > 0 ? (
+                <ul className="lw-cats">
+                  {categoryBreakdown.map((c) => (
+                    <li key={c.label} style={{ "--cat-color": c.color }}>
+                      <span className="lw-cat-label">{c.label}</span>
+                      <span className="lw-cat-track">
+                        <span style={{ width: `${c.pct}%` }} />
+                      </span>
+                      <span className="lw-cat-pct">{c.pct}%</span>
+                      <span className="lw-cat-amt">{c.amount.toLocaleString("ko-KR")}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="hm-empty">
+                  <p>이번 달 지출이 없어요.</p>
+                </div>
+              )}
+            </section>
+          </div>
         </div>
       </main>
 
