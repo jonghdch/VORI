@@ -1,0 +1,851 @@
+/* ── 상점 (모바일 우선) ─────────────────────────────────────
+   Figma「상점 — 알 분양」(1:1446)·「상점 — VORI」(1:1689) 의 값을 옮겼다.
+   흰 카드(모서리 12·16) + 회베이지 타일(#efede8) 위에 픽셀 그림. 화면 배경 그림은 두지 않는다.
+   폭 375px 에서 옆으로 넘치지 않게: 모든 자식 min-width:0, 테마 칩 줄만 옆으로 민다.
+   PC: 본문 폭(@container)이 넓으면 알 카드 3열 · 가구 카드 여러 열 · 보유 알/결과 2단. */
+
+.sp {
+  --sp-ink: #1c1b19;
+  --sp-sub: #5f5b54;
+  --sp-faint: #6e6a63;
+  --sp-line: #e4e1da;
+  --sp-surface: #ffffff;
+  --sp-tile: #efede8;
+  --sp-sunk: #f4f3f0;
+  --sp-seg: #efeeeb;
+  --sp-green-bg: #e6efe8;
+  --sp-green-ink: #3f6b4e;
+  --sp-gold-bg: #fbf1d9;
+  --sp-gold-ink: #8a6100;
+  --sp-blue: #5b7fbf;
+  --sp-red: #b4432f;
+  --sp-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+
+  container-type: inline-size;
+  container-name: sp;
+  color: var(--sp-ink);
+}
+.sp *,
+.sp *::before,
+.sp *::after {
+  min-width: 0;
+}
+.sp button {
+  font-family: inherit;
+}
+.sp button:focus-visible,
+.sp select:focus-visible {
+  outline: 2px solid var(--sp-green-ink);
+  outline-offset: 2px;
+}
+
+.sp-layout {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sp-card {
+  background: var(--sp-surface);
+  border-radius: 12px;
+  box-shadow: var(--sp-shadow);
+}
+.sp-pixel {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+/* ── 머리 ── */
+.sp-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sp-title {
+  margin: 0 auto 0 0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.sp-history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sp-sub);
+  cursor: pointer;
+}
+.sp-history-btn:hover {
+  background: var(--sp-tile);
+  color: var(--sp-ink);
+}
+.sp-coins {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--sp-tile);
+}
+.sp-coins strong {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 알 분양 / 가구 ── */
+.sp-seg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--sp-seg);
+}
+.sp-seg button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sp-sub);
+  cursor: pointer;
+}
+.sp-seg button.is-active {
+  background: var(--sp-surface);
+  color: var(--sp-ink);
+  box-shadow: var(--sp-shadow);
+}
+
+.sp-notice {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--sp-green-bg);
+  color: var(--sp-green-ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+.sp-notice--err {
+  background: #fbe5e2;
+  color: var(--sp-red);
+}
+.sp-state {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--sp-faint);
+}
+.sp-state--error {
+  color: var(--sp-red);
+}
+
+/* ── 알 분양 ── */
+.sp-guide {
+  margin: 0;
+  padding: 16px;
+  font-size: 15px;
+  line-height: 19px;
+  color: var(--sp-sub);
+  word-break: keep-all;
+}
+.sp-eggs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.sp-egg {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+.sp-egg-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+/* 픽셀 그림 자리 — 바탕 없이 그림만 크게 둔다 */
+.sp-tile {
+  --pad: 0px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  color: var(--sp-faint);
+}
+/* 그림은 칸 안에 고정 — 칸 크기가 바뀌어도 그림이 밖으로 넘치지 않게 */
+.sp-tile > .sp-pixel {
+  position: absolute;
+  top: var(--pad);
+  left: var(--pad);
+  width: calc(100% - var(--pad) * 2);
+  height: calc(100% - var(--pad) * 2);
+}
+.sp-tile--sm {
+  width: 48px;
+  height: 48px;
+}
+.sp-tile--lg {
+  width: 104px;
+  height: 104px;
+}
+.sp-tile--xl {
+  width: 128px;
+  height: 128px;
+}
+.sp-egg-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.sp-egg-meta h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 26px;
+  letter-spacing: -0.01em;
+}
+.sp-egg-meta p {
+  margin: 2px 0 0;
+  font-size: 15px;
+  line-height: 18px;
+  color: var(--sp-sub);
+  word-break: keep-all;
+}
+.sp-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--sp-sub);
+}
+.sp-price strong {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 26px;
+  color: var(--sp-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 등장 확률 칩 — S 는 금색, A 글자는 파랑, 0% 는 흐리게 */
+.sp-probs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.sp-probs-label {
+  padding-right: 4px;
+  font-size: 11px;
+  color: var(--sp-faint);
+}
+.sp-prob {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--sp-tile);
+  font-size: 12px;
+  color: var(--sp-sub);
+  font-variant-numeric: tabular-nums;
+}
+.sp-prob b {
+  font-weight: 800;
+}
+.sp-prob--s {
+  background: var(--sp-gold-bg);
+  color: var(--sp-gold-ink);
+}
+.sp-prob--a b {
+  color: var(--sp-blue);
+}
+.sp-prob--c b {
+  color: var(--sp-faint);
+}
+.sp-prob.is-zero {
+  opacity: 0.6;
+  color: var(--sp-faint);
+}
+
+.sp-egg-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+.sp-short {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--sp-faint);
+}
+.sp-short .vori-icon,
+.sp-short b {
+  color: var(--sp-gold-ink);
+}
+.sp-short b {
+  font-weight: 700;
+}
+.sp-buy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 17px;
+  border: 1px solid var(--sp-line);
+  border-radius: 8px;
+  background: var(--sp-surface);
+  box-shadow: var(--sp-shadow);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sp-ink);
+  cursor: pointer;
+}
+.sp-buy:hover:not(:disabled) {
+  background: var(--sp-sunk);
+}
+.sp-buy:disabled {
+  background: var(--sp-tile);
+  box-shadow: none;
+  color: var(--sp-faint);
+  cursor: default;
+}
+
+/* 보유 알 · 새로 태어난 친구 */
+.sp-lower {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+}
+.sp-section {
+  padding: 16px;
+}
+.sp-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.sp-section-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+.sp-section-head span {
+  font-size: 12px;
+  color: var(--sp-faint);
+}
+.sp-empty {
+  margin: 0;
+  padding: 10px 0 4px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--sp-faint);
+  word-break: keep-all;
+}
+.sp-empty p {
+  margin: 0 0 6px;
+}
+.sp-inv {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sp-inv li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+.sp-inv li + li {
+  border-top: 1px solid var(--sp-tile);
+}
+.sp-inv-mid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sp-inv-mid strong {
+  font-size: 14px;
+}
+.sp-inv-mid small {
+  font-size: 12px;
+  color: var(--sp-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sp-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.sp-result-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sp-result-text strong {
+  font-size: 17px;
+}
+.sp-result-text p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--sp-sub);
+  word-break: keep-all;
+}
+.sp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sp-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--sp-tile);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sp-sub);
+}
+.sp-tag--s,
+.sp-tag--variant {
+  background: var(--sp-gold-bg);
+  color: var(--sp-gold-ink);
+}
+.sp-tag--a {
+  color: var(--sp-blue);
+}
+.sp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  align-self: flex-start;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--sp-green-ink);
+  cursor: pointer;
+}
+.sp-footnote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 0;
+  font-size: 12px;
+  color: var(--sp-faint);
+  text-align: center;
+  word-break: keep-all;
+}
+
+/* 버튼 공통 */
+.sp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 52px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.sp-btn--sm {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.sp-btn--dark {
+  background: #000;
+  color: #fff;
+}
+.sp-btn--dark:hover:not(:disabled) {
+  background: #2c2a27;
+}
+.sp-btn--soft {
+  background: var(--sp-sunk);
+  color: var(--sp-ink);
+}
+.sp-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ── 가구 ── */
+.sp-chips {
+  display: flex;
+  gap: 8px;
+  margin: 0 -2px;
+  padding: 0 2px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sp-chips::-webkit-scrollbar {
+  display: none;
+}
+.sp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sp-tile);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sp-ink);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sp-chip.is-active {
+  background: var(--sp-green-bg);
+  color: var(--sp-green-ink);
+  font-weight: 800;
+}
+.sp-fur-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sp-fur-meta p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--sp-faint);
+}
+.sp-select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--sp-line);
+  border-radius: 8px;
+  background: var(--sp-surface);
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--sp-ink);
+}
+.sp-fur-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.sp-fur {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.03);
+}
+.sp-fur-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 130px;
+  color: var(--sp-faint);
+}
+.sp-fur-art .sp-pixel {
+  width: 112px;
+  height: 112px;
+}
+.sp-fur-owned {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--sp-green-bg);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--sp-green-ink);
+}
+.sp-fur h2 {
+  margin: 0;
+  padding-top: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 23px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sp-fur-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sp-sub);
+  font-variant-numeric: tabular-nums;
+}
+.sp-fur-sub {
+  font-size: 11px;
+  color: var(--sp-faint);
+  word-break: keep-all;
+}
+.sp-fur-short {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sp-red);
+}
+.sp-fur-lock {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--sp-gold-ink);
+  word-break: keep-all;
+}
+.sp-fur-buy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 36px;
+  margin-top: auto;
+  border: 0;
+  border-radius: 10px;
+  background: var(--sp-surface);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px var(--sp-line);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sp-ink);
+  cursor: pointer;
+}
+.sp-fur > .sp-fur-buy {
+  margin-top: 12px;
+}
+.sp-fur-buy:hover:not(:disabled) {
+  background: var(--sp-sunk);
+}
+.sp-fur-buy:disabled {
+  background: var(--sp-sunk);
+  box-shadow: none;
+  color: var(--sp-faint);
+  opacity: 0.6;
+  cursor: default;
+}
+.sp-fur.is-locked .sp-fur-art {
+  opacity: 0.6;
+}
+
+/* ── 구매 확인 창 ── */
+.sp-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  animation: sp-fade 0.15s ease;
+}
+.sp-sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 0 24px calc(24px + env(safe-area-inset-bottom, 0px));
+  border-radius: 28px 28px 0 0;
+  background: var(--sp-surface);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  color: var(--sp-ink);
+  outline: none;
+  animation: sp-rise 0.2s ease;
+}
+.sp-sheet-grip {
+  width: 40px;
+  height: 4px;
+  margin: 24px 0 20px;
+  border-radius: 999px;
+  background: #dbdad7;
+}
+.sp-sheet h2 {
+  margin: 0 0 20px;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 26px;
+  text-align: center;
+  word-break: keep-all;
+}
+.sp-sheet-sum {
+  width: 100%;
+  margin: 20px 0 24px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--sp-sunk);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sp-sheet-sum div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.sp-sheet-sum dt {
+  color: var(--sp-sub);
+}
+.sp-sheet-sum dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.sp-sheet-sum .sp-sheet-price {
+  padding-bottom: 4px;
+  font-size: 15px;
+}
+.sp-sheet-price dd {
+  font-weight: 800;
+}
+.sp-sheet-actions {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+@keyframes sp-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sp-rise {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-sheet-backdrop,
+  .sp-sheet {
+    animation: none;
+  }
+}
+
+/* 아주 좁은 폰 — 알 그림 받침만 조금 줄인다 */
+@media (max-width: 360px) {
+  .sp-tile {
+    width: 76px;
+    height: 76px;
+  }
+  .sp-fur-grid {
+    gap: 8px;
+  }
+  .sp-fur {
+    padding: 12px;
+  }
+}
+
+/* PC 의 구매 확인은 가운데 창 */
+@media (min-width: 1025px) {
+  .sp-sheet-backdrop {
+    align-items: center;
+    padding: 24px;
+  }
+  .sp-sheet {
+    width: min(420px, 100%);
+    border-radius: 28px;
+    padding-bottom: 24px;
+  }
+  .sp-sheet-grip {
+    visibility: hidden;
+    margin-bottom: 8px;
+  }
+}
+
+/* 넓은 본문 — 알 카드 3열, 가구 카드 여러 열, 보유 알/결과 2단. 기본 규칙보다 뒤에 둬야 덮어쓴다 */
+@container sp (min-width: 760px) {
+  .sp-layout {
+    max-width: 1080px;
+  }
+  .sp-seg {
+    max-width: 420px;
+  }
+  .sp-eggs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .sp-egg-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sp-egg .sp-tile {
+    --pad: 4px;
+    width: 100%;
+    height: 140px;
+  }
+  .sp-egg-foot .sp-buy {
+    flex: 1;
+    justify-content: center;
+  }
+  .sp-lower {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .sp-fur-grid {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 16px;
+  }
+}
