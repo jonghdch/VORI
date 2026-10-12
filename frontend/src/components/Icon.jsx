@@ -13,8 +13,11 @@ const PATHS = {
   ),
   ledger: (
     <>
-      <rect x="4.5" y="3.5" width="15" height="17" rx="2" />
-      <path d="M8.5 8h7M8.5 12h7M8.5 16h4" />
+      <path d="M13 20.5H6.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2V11" />
+      <path d="M8.5 3.5v17" />
+      <path d="M11.5 8h3.5M11.5 11.5h2" />
+      <circle cx="17.5" cy="17" r="3.5" />
+      <path d="M17.5 15.5v3" />
     </>
   ),
   store: (

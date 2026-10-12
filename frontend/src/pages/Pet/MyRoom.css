@@ -1,0 +1,787 @@
+/* ── 마이룸 (모바일 우선) ───────────────────────────────────
+   배치: 방 이름 · 배치하기 → 방 → 테마 세트 칩 · 팁 → 탭 → 펫 상태(레벨 크게) · 놀기 버튼 · 배웅.
+   색은 홈·가계부·상점과 같은 크림 + 세이지. 픽셀 그림은 방 칸(.mr-stage)·펫·가구·아이템 그림에만 —
+   예전처럼 카드 전체를 방 그림으로 덮지 않는다.
+   방 안 물건·펫·말풍선·우클릭 메뉴·대화방·내역 모양은 PetPage.css 가 그대로 맡는다.
+   폭 375px 에서 옆으로 넘치지 않게: 모든 자식 min-width:0, 탭 줄만 옆으로 민다.
+   PC: 본문 폭(@container)이 넓으면 왼쪽 방 · 오른쪽 탭 패널. */
+
+.mr {
+  --mr-ink: #3d3830;
+  --mr-sub: #6b6359;
+  --mr-faint: #8f8679;
+  --mr-line: #ece4d6;
+  --mr-surface: #fffdf9;
+  --mr-sunk: #f7f2e9;
+  --mr-seg: #efe8db;
+  --mr-sage: #6f9a5c;
+  --mr-sage-dark: #5b8449;
+  --mr-green-bg: #e9f2df;
+  --mr-green-ink: #3f6b2e;
+  --mr-gold-bg: #fcf0d3;
+  --mr-gold-ink: #8a5a0c;
+  --mr-red: #b4432f;
+  --mr-shadow: 0 2px 12px rgba(61, 56, 48, 0.06);
+
+  container-type: inline-size;
+  container-name: mr;
+  color: var(--mr-ink);
+}
+.mr *,
+.mr *::before,
+.mr *::after {
+  min-width: 0;
+}
+.mr button {
+  font-family: inherit;
+}
+.mr button:focus-visible {
+  outline: 2px solid var(--mr-sage);
+  outline-offset: 2px;
+}
+
+.mr-layout {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+/* 폰에서는 단 묶음을 풀어 한 줄로 */
+.mr-col {
+  display: contents;
+}
+.mr-card {
+  background: var(--mr-surface);
+  border: 1px solid var(--mr-line);
+  border-radius: 20px;
+  box-shadow: var(--mr-shadow);
+}
+.mr-pixel {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+/* ── 머리 ── */
+.mr-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mr-title {
+  flex: 1;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mr-place-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  height: 38px;
+  padding: 0 16px;
+  border: 1.5px solid var(--mr-sage);
+  border-radius: 999px;
+  background: var(--mr-surface);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--mr-sage-dark);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mr-place-btn:hover {
+  background: var(--mr-sage);
+  color: #fff;
+}
+
+/* ── 방 ── */
+.mr-room {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 10px 14px;
+}
+/* 방 그림 칸 — 4:3 고정. 그림은 이 칸에만 깔린다 */
+.mr .mr-stage {
+  flex: none;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  border: 0;
+  border-radius: 14px;
+  background-color: #efe6d4;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+.mr-placed-fallback,
+.mr-pet-fallback {
+  color: var(--mr-sub);
+}
+
+/* 테마 세트 · 배웅 선물 칩 */
+.mr-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mr-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--mr-sunk);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mr-sub);
+  white-space: nowrap;
+}
+.mr-chips li.is-on {
+  background: var(--mr-green-bg);
+  color: var(--mr-green-ink);
+}
+.mr-chips li b {
+  font-weight: 900;
+}
+.mr-chips .mr-chip-release {
+  background: var(--mr-gold-bg);
+  color: var(--mr-gold-ink);
+}
+
+/* 팁 — PetPage.css 의 애니메이션은 그대로, 모양만 */
+.mr .pet-room-help {
+  margin: 0 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--mr-sunk);
+  box-shadow: none;
+}
+.mr .pet-room-help-label {
+  background: var(--mr-sage);
+  color: #fff;
+}
+
+/* ── 탭 ── */
+.mr-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 -2px;
+  padding: 2px 2px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mr-tabs::-webkit-scrollbar {
+  display: none;
+}
+.mr-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 15px;
+  border: 1px solid var(--mr-line);
+  border-radius: 999px;
+  background: var(--mr-surface);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mr-sub);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mr-tabs button:hover:not(.is-active) {
+  background: var(--mr-sunk);
+  color: var(--mr-ink);
+}
+.mr-tabs button.is-active {
+  border-color: var(--mr-sage);
+  background: var(--mr-sage);
+  color: #fff;
+  font-weight: 800;
+}
+.mr-tabs .mr-tab-history {
+  margin-left: auto;
+  border-color: transparent;
+  background: none;
+}
+
+/* ── 패널 ── */
+.mr-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+}
+/* 대화방은 안에서 스크롤하므로 높이를 정해 둔다 */
+.mr-panel.is-chat {
+  height: min(560px, 78vh);
+}
+.mr-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.mr-panel-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+.mr-panel-head span {
+  font-size: 12px;
+  color: var(--mr-faint);
+}
+.mr-empty {
+  margin: 0;
+  padding: 18px 0 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--mr-faint);
+  word-break: keep-all;
+}
+.mr-empty p {
+  margin: 0 0 8px;
+}
+.mr-help {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mr-faint);
+  word-break: keep-all;
+}
+.mr-help--sub {
+  margin-top: 2px;
+}
+.mr-help--box {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--mr-green-bg);
+  color: var(--mr-green-ink);
+}
+.mr-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--mr-sage-dark);
+  cursor: pointer;
+}
+.mr-notice {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--mr-green-bg);
+  color: var(--mr-green-ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+.mr-notice--err {
+  background: #fbe5e2;
+  color: var(--mr-red);
+}
+
+/* 버튼 공통 */
+.mr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease, filter 0.15s ease, transform 0.08s ease;
+}
+.mr-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.mr-btn--sm {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+.mr-btn--sage {
+  background: var(--mr-sage);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(111, 154, 92, 0.3);
+}
+.mr-btn--sage:hover:not(:disabled) {
+  background: var(--mr-sage-dark);
+}
+.mr-btn:disabled {
+  background: var(--mr-sunk);
+  color: var(--mr-faint);
+  box-shadow: none;
+  cursor: default;
+}
+
+/* ── 펫 상태 ── */
+.mr-pet-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mr-pet-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.mr-pet-name strong {
+  max-width: 100%;
+  font-size: 20px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mr-title-chip {
+  max-width: 100%;
+  padding: 3px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mr-sunk);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mr-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.mr-title-chip:hover {
+  background: var(--mr-green-bg);
+  color: var(--mr-green-ink);
+}
+/* 레벨 — 마이룸의 핵심 숫자 */
+.mr-level {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  flex-shrink: 0;
+  margin: 0;
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--mr-green-ink);
+  font-variant-numeric: tabular-nums;
+}
+.mr-level span {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.mr-level small {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--mr-faint);
+}
+
+.mr-exp {
+  margin-top: 16px;
+}
+.mr-exp-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mr-sub);
+}
+.mr-exp-head b {
+  color: var(--mr-green-ink);
+  font-variant-numeric: tabular-nums;
+}
+.mr-exp-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--mr-seg);
+  overflow: hidden;
+}
+.mr-exp-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8fb87b, var(--mr-sage));
+  transition: width 0.5s ease;
+}
+
+/* 스탯 — 스탯마다 제 색으로 옅게 물든 칸 (홈 반려 스탯과 같은 색) */
+.mr-stats {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.mr-stats li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px 9px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--stat-color) 10%, #fffdf9);
+  text-align: center;
+}
+.mr-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mr-sub);
+  white-space: nowrap;
+}
+.mr-stat-label::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--stat-color);
+}
+.mr-stats strong {
+  font-size: 20px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.mr-stat-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.9);
+  overflow: hidden;
+}
+.mr-stat-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--stat-color);
+}
+
+/* 놀기 버튼 */
+.mr-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+.mr-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  border: 1px solid var(--mr-line);
+  border-radius: 14px;
+  background: var(--mr-sunk);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--mr-ink);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.mr-action .vori-icon {
+  color: var(--mr-sage-dark);
+}
+.mr-action:hover {
+  border-color: #c9ddb8;
+  background: var(--mr-green-bg);
+}
+
+/* 배웅 */
+.mr-release {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--mr-line);
+  text-align: center;
+}
+.mr-btn--release {
+  width: 100%;
+  border: 1.5px solid #f3dfa8;
+  background: linear-gradient(180deg, #fff7e2 0%, var(--mr-gold-bg) 100%);
+  color: var(--mr-gold-ink);
+}
+.mr-btn--release:hover:not(:disabled) {
+  filter: brightness(0.98);
+}
+.mr-btn--release:disabled {
+  border-color: var(--mr-line);
+}
+
+/* ── 방 테마 ── */
+.mr-bg-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.mr-bg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 6px 8px;
+  border: 1.5px solid var(--mr-line);
+  border-radius: 14px;
+  background: var(--mr-surface);
+  text-align: left;
+  cursor: pointer;
+}
+.mr-bg.is-selected {
+  border-color: var(--mr-sage);
+  background: var(--mr-green-bg);
+}
+.mr-bg-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  background-color: #efe6d4;
+  background-position: center;
+  background-size: cover;
+  image-rendering: pixelated;
+}
+.mr-bg-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--mr-sage);
+  color: #fff;
+}
+.mr-bg-name {
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mr-bg small {
+  font-size: 11px;
+  color: var(--mr-faint);
+}
+
+/* ── 보유 가구 ── */
+.mr-theme-chips {
+  display: flex;
+  gap: 6px;
+  margin: 0 -2px 12px;
+  padding: 0 2px 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mr-theme-chips::-webkit-scrollbar {
+  display: none;
+}
+.mr-theme-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--mr-line);
+  border-radius: 999px;
+  background: var(--mr-surface);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mr-sub);
+  cursor: pointer;
+}
+.mr-theme-chips button span {
+  font-size: 11px;
+  color: var(--mr-faint);
+}
+.mr-theme-chips button.is-active {
+  border-color: var(--mr-sage);
+  background: var(--mr-sage);
+  color: #fff;
+}
+.mr-theme-chips button.is-active span {
+  color: rgba(255, 255, 255, 0.85);
+}
+.mr-fur-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.mr-fur {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border: 1.5px solid var(--mr-line);
+  border-radius: 14px;
+  background: var(--mr-surface);
+  color: var(--mr-ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.mr-fur:hover:not(:disabled) {
+  border-color: #c9ddb8;
+}
+.mr-fur:disabled {
+  cursor: progress;
+}
+.mr-fur.is-placed {
+  border-color: var(--mr-sage);
+  background: var(--mr-green-bg);
+}
+.mr-fur-art {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  color: var(--mr-faint);
+}
+.mr-fur-art .mr-pixel {
+  filter: drop-shadow(0 3px 3px rgba(61, 56, 48, 0.12));
+}
+.mr-fur strong {
+  max-width: 100%;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mr-fur small {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mr-sage-dark);
+}
+.mr-fur.is-placed small {
+  color: var(--mr-green-ink);
+}
+
+/* ── 아이템 ── */
+.mr-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mr-items li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+.mr-items li + li {
+  border-top: 1px dashed var(--mr-line);
+}
+.mr-item-art {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  color: var(--mr-faint);
+}
+.mr-item-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mr-item-text strong {
+  font-size: 14px;
+}
+.mr-item-text small {
+  font-size: 12px;
+  color: var(--mr-green-ink);
+  font-weight: 700;
+}
+
+/* 아주 좁은 폰 */
+@media (max-width: 360px) {
+  .mr-level {
+    font-size: 34px;
+  }
+  .mr-stats {
+    gap: 6px;
+  }
+  .mr-stats strong {
+    font-size: 17px;
+  }
+  .mr-bg-list,
+  .mr-fur-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* PC — 본문이 넓으면 왼쪽 방 · 오른쪽 탭 패널. 기본 규칙보다 뒤에 둬야 덮어쓴다 */
+@container mr (min-width: 900px) {
+  .mr-layout {
+    /* 방은 가로로 넓게(16:9) — 높이는 4:3 일 때와 비슷하게 두고 폭만 늘린다. 오른쪽 패널은 360~400px */
+    max-width: 1420px;
+    display: grid;
+    grid-template-columns: minmax(0, 1000px) minmax(360px, 400px);
+    justify-content: center;
+    align-items: start;
+    gap: 16px 20px;
+  }
+  .mr-head {
+    grid-column: 1 / -1;
+  }
+  .mr-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .mr-room {
+    padding: 12px 12px 16px;
+  }
+  /* 그림은 위아래가 조금 잘리고(cover) 바닥 쪽을 남긴다 — 가구·펫 좌표는 칸 기준(%)이라 그대로 맞는다 */
+  .mr .mr-stage {
+    aspect-ratio: 16 / 9;
+    background-position: center 70%;
+  }
+  /* 가구가 많아도 패널이 끝없이 길어지지 않게 화면 안에 묶고, 안(.pet-tab-panel)에서 스크롤 */
+  .mr-panel {
+    min-height: 520px;
+    max-height: max(520px, calc(100vh - 170px));
+  }
+  .mr-panel.is-chat {
+    height: 600px;
+  }
+}
