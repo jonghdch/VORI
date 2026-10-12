@@ -186,6 +186,9 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
   const remaining = allowance - todaySpent;
   const usagePct = allowance > 0 ? Math.round((todaySpent / allowance) * 100) : todaySpent > 0 ? 100 : 0;
   const todaySignal = signalForUsage(todaySpent, allowance);
+  // 판정 전(또는 사유를 기다리는 1차 판정)의 칩은 예상이다 — 실제 판정은 전날 남긴 돈까지 넣어 계산해 결과가 바뀔 수 있다.
+  const todaySignalFinal = Boolean(judgment) && judgment.status !== "PENDING";
+  const todaySignalText = `${SIGNAL_META[todaySignal].text}${todaySignalFinal ? "" : " 예상"}`;
   const heroLoading = loading || plan === undefined || judgment === undefined;
 
   // ── 오늘 지출 목록 ────────────────────────────────────
@@ -272,7 +275,12 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 <p className="hm-hero-label" id="hm-hero-label">
                   {dateLabel} · {allowanceInfo && remaining < 0 ? "오늘 넘은 돈" : "오늘 남은 돈"}
                 </p>
-                {!heroLoading && allowanceInfo && <SignalChip signal={todaySignal} />}
+                {!heroLoading && allowanceInfo && (
+                  <span className="hm-hero-signal">
+                    {!todaySignalFinal && <span className="hm-hero-est-tag">예상 결과</span>}
+                    <SignalChip signal={todaySignal} />
+                  </span>
+                )}
               </div>
 
               {heroLoading ? (
@@ -292,7 +300,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={Math.min(usagePct, 100)}
-                    aria-valuetext={`${usagePct}% 사용, ${SIGNAL_META[todaySignal].text}`}
+                    aria-valuetext={`${usagePct}% 사용, ${todaySignalText}`}
                   >
                     <span style={{ width: `${Math.min(usagePct, 100)}%` }} />
                   </div>
