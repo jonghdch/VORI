@@ -151,6 +151,7 @@ UNIQUE(parent_id, name)
 | 시각 입력 여부 | `time_provided` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | TRUE = 사용자가 시각까지 입력, FALSE = 날짜만 |
 | 지출 금액 | `amount` |  | `INT UNSIGNED NOT NULL` | 실제 지출액 |
 | 결제 수단 | `payment_method` |  | `ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY') NULL` | 현금/체크/신용/이체/모바일페이. 미입력은 NULL |
+| 내 카드·계좌 | `payment_instrument_id` | FK | `BIGINT NULL` | → `payment_instruments(id)` `ON DELETE SET NULL`. 등록한 카드·계좌를 골랐을 때만 값. 있으면 `payment_method` 는 그 카드 종류로 맞춘다 (V53) |
 | 품목 | `item` |  | `VARCHAR(100) NOT NULL` | 지출 항목 |
 | 메모 | `memo` |  | `VARCHAR(200) NULL` | 사용자 자발적 메모. 입력해두면 AI 사유 질문 안 함 |
 | 반복 결제 | `is_recurring` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | 통신비·구독 등 자동 결제. TRUE 면 신호등 산정 시 RED 자동 제외 |
@@ -178,7 +179,9 @@ FK:
 CONSTRAINT fk_expenses_user
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 CONSTRAINT fk_expenses_category
-  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT,
+CONSTRAINT fk_expenses_payment_instrument
+  FOREIGN KEY (payment_instrument_id) REFERENCES payment_instruments(id) ON DELETE SET NULL
 ```
 
 (상세 사유는 변경 이력 #3 `expenses` 변경 — 카테고리 컬럼 교체 / #8 `expenses` 컬럼 정리 / #12 일반 가계부 표준 필드 보강 참조)
@@ -534,6 +537,26 @@ UNIQUE(pet_id, pet_title_id)
 ```
 
 한 번 딴 칭호는 회수하지 않는다. 배웅한 펫의 칭호는 그대로 기록으로 남는다.
+
+---
+
+### 23. 내 카드·계좌 `payment_instruments` (V53)
+
+환경설정 > 카드·계좌에서 사용자가 직접 등록한다. 자동 연동이 아니라 "이 카드를 쓴다"는 꼬리표라 거래·잔액을 가져오지 않고, 카드 번호 같은 민감 정보는 받지 않는다.
+
+| 논리명 | 물리명 | 키 | 타입 | 설명 |
+|---|---|---|---|---|
+| 결제수단 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | |
+| 사용자 식별자 | `user_id` | FK, IDX | `BIGINT NOT NULL` | → `users(id)` `ON DELETE CASCADE` |
+| 종류 | `kind` |  | `ENUM('DEBIT','CREDIT','CHECKING','SAVINGS','CASH') NOT NULL` | 체크/신용/입출금 계좌/예적금/현금. 지출의 `payment_method` 로는 DEBIT·CREDIT·TRANSFER(입출금)·CASH 에 대응, 예적금은 결제수단으로 못 고른다 |
+| 카드사·은행 | `issuer` |  | `VARCHAR(20) NOT NULL` | 코드(`TOSSBANK`, `KB` …). 이름·색은 프론트 `constants/issuers.js` |
+| 이름 | `name` |  | `VARCHAR(40) NOT NULL` | 사용자가 붙인 이름 (예: K-패스) |
+| 등록 시 잔액 | `opening_balance` |  | `INT UNSIGNED NOT NULL DEFAULT 0` | 계좌·예적금·현금만. 카드는 0. 이후 입출금은 아직 반영하지 않는다 |
+| 보관 일시 | `archived_at` | IDX | `DATETIME NULL` | 삭제 = 보관. 목록에서만 빠지고 이 카드로 적은 지출의 연결은 남는다 |
+| 등록 일시 | `created_at` |  | `DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP` | |
+| 수정 일시 | `updated_at` |  | `DATETIME NULL ON UPDATE CURRENT_TIMESTAMP` | |
+
+인덱스: `idx_payment_instruments_user (user_id, archived_at)`. 한 사람당 보관 안 한 카드·계좌는 30개까지 (서비스에서 제한).
 
 ---
 
@@ -964,3 +987,18 @@ VORI 의 AI 사유 질문은 **이례적인 지출에만** 적용. 그 외 입�
 마이그레이션: `V2__add_payment_memo_recurring.sql`.
 
 V1 으로 만든 행은 `payment_method=NULL`, `memo=NULL`, `is_recurring=FALSE`, `updated_at=NULL` 로 자동 채워짐 (DEFAULT 또는 NULL).
+
+### 13. 내 카드·계좌 — `payment_instruments` 신설, `expenses.payment_instrument_id` 추가 (V53)
+
+V2 때 보류한 "계좌·지갑명"을 별도 테이블로 정규화했다. 사용자가 쓰는 카드·계좌를 등록해 두고, 지출을 적을 때 그중 하나를 고른다.
+
+| 변경 | 대상 | 비고 |
+|---|---|---|
+| 신설 | `payment_instruments` | 위 23번 표 참조 |
+| 추가 | `expenses.payment_instrument_id BIGINT NULL` | FK `ON DELETE SET NULL`. 고르지 않은 지출과 V53 이전 지출은 NULL |
+
+- API: `GET/POST /api/payment-instruments`, `DELETE /api/payment-instruments/{id}` (보관). `POST /api/ledger/entries` 의 지출 행에 `paymentInstrumentId` 를 받고, `GET /api/ledger`·`GET /api/expenses` 응답에 같은 필드가 붙는다.
+- 카드를 고르면 서버가 `payment_method` 를 그 카드 종류로 맞춘다. 남의 카드는 404, 예적금은 400.
+- 지출의 결제수단 종류가 바뀌면 `payment_instrument_id` 를 비운다 (다른 카드라는 뜻).
+
+마이그레이션: `V53__payment_instruments.sql`.
