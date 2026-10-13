@@ -4,14 +4,16 @@ import AccountMenu from "./AccountMenu";
 import AdminTools from "./AdminTools";
 import PetNameGate from "./PetNameGate";
 import AttendanceGate from "./AttendanceGate";
+import Icon from "./Icon";
 import { getMe } from "../api/user";
 import "./AppShell.css";
 
+// 주 메뉴 4개 — 데스크톱은 헤더 가운데 글자 메뉴, 1024px 이하는 화면 아래 탭 바(아이콘 + 글자)로 같은 목록을 쓴다.
 const TOP_NAV = [
-  { id: "home", label: "홈" },
-  { id: "wallet", label: "가계부" },
-  { id: "shop", label: "상점" },
-  { id: "myroom", label: "마이룸" },
+  { id: "home", label: "홈", icon: "home" },
+  { id: "wallet", label: "가계부", icon: "ledger" },
+  { id: "shop", label: "상점", icon: "store" },
+  { id: "myroom", label: "마이룸", icon: "room" },
 ];
 
 // page: null = 아직 화면이 없는 메뉴 — 누르면 아무 일도 없는 척하지 않도록
@@ -92,7 +94,7 @@ function AppShell({
   };
 
   return (
-    <div className="home">
+    <div className="home app-has-tabbar">
       <header className="home-topbar">
         <div className="home-topbar-inner">
           <div className="home-topbar-left">
@@ -217,7 +219,7 @@ function AppShell({
           {isAdmin && (
             <div className="home-side-block home-side-block--admin">
               <div className="home-side-title">
-                <span className="home-side-title-icon" aria-hidden>🛠️</span>
+                <Icon name="tool" className="home-side-title-icon" />
                 관리
               </div>
               <ul className="home-side-list">
@@ -238,6 +240,25 @@ function AppShell({
 
         {children}
       </div>
+
+      {/* 하단 탭 바 — 1024px 이하에서만 보인다(AppShell.css). 햄버거·헤더 글자 메뉴를 대신한다. */}
+      <nav className="app-tabbar" aria-label="하단 메뉴">
+        {TOP_NAV.map((item) => {
+          const active = item.id === activeTop;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`app-tabbar-item ${active ? "is-active" : ""}`}
+              aria-current={active ? "page" : undefined}
+              onClick={() => go(item.id)}
+            >
+              <Icon name={item.icon} size={22} strokeWidth={active ? 2.1 : 1.8} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       {isAdmin && <AdminTools />}
       <PetNameGate />

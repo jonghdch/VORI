@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
+import Icon from "../../components/Icon";
 import {
-  PetArt,
+  petVisual,
   petDisplayName,
   withJosa,
   levelProgressPct,
@@ -17,20 +18,22 @@ import { listStatItems, consumeStatItem } from "../../api/attendance";
 import {
   CATEGORY_LABEL,
   DEFAULT_POSITION,
-  FurnitureArt,
   SURFACE_POSITION,
   furnitureVisual,
   STAT_LABEL,
   isSurface,
 } from "../../components/furnitureVisual";
-import { PetActionMenu, PetReaction, REACTION_MS, pickLine } from "./PetInteraction";
+import { PET_ACTIONS, PetActionMenu, PetReaction, REACTION_MS, pickLine } from "./PetInteraction";
 import PetHistoryPanel from "./PetHistoryPanel";
 import PetChatPanel from "./PetChatPanel";
 import { ROOM_BACKGROUNDS } from "./roomBackgrounds";
 import { itemImageFor } from "../../components/itemVisual";
 import "../Home/HomeDashboard.css";
 import "./PetPage.css";
+import "./MyRoom.css";
 
+// 마이룸 배치: 머리(방 이름 · 배치하기) → 방(픽셀 그림은 방 칸 안에만) → 테마 세트 칩 → 탭 → 펫 상태.
+// 폰은 한 줄, PC(본문이 넓을 때)는 왼쪽 방 · 오른쪽 탭 패널 (MyRoom.css).
 // 펫은 GET /api/pets/active, 가구는 GET /api/furniture 로 받는다.
 // 방 테마(ROOM_BACKGROUNDS)는 백엔드에 대응 개념이 없어 브라우저(localStorage)에만 저장하는 개인 취향값.
 // 벽지·바닥은 백엔드 가구(WALLPAPER/FLOOR)라 보유 가구 쪽에서 다룬다.
@@ -53,6 +56,8 @@ const PANEL_TABS = [
 // 탭 줄 오른쪽 끝 "내역 보기" — 펫 이력·아이템 내역을 한곳에서 (PetHistoryPanel)
 const HISTORY_TAB = "history";
 const PET_TAB_PANEL_ID = "pet-tab-panel";
+// 상호작용 버튼 아이콘 (PetInteraction 의 PET_ACTIONS id → Icon)
+const ACTION_ICON = { pat: "paw", praise: "checkCircle", greet: "user", play: "gift" };
 
 function readStoredBackground() {
   try {
@@ -64,10 +69,10 @@ function readStoredBackground() {
 
 // 스탯 4종 표시 메타 — 값은 펫 본인의 스탯(PetResponse.stat*). 100 을 바 만점으로 본다.
 const STAT_META = [
-  { key: "statEnergy", label: "에너지", color: "var(--home-bar-green)" },
-  { key: "statCharm", label: "매력", color: "var(--home-bar-red)" },
-  { key: "statIq", label: "지능", color: "var(--home-bar-orange)" },
-  { key: "statEndurance", label: "지구력", color: "var(--home-bar-blue)" },
+  { key: "statEnergy", label: "에너지", color: "#7fb069" },
+  { key: "statCharm", label: "매력", color: "#e07a7a" },
+  { key: "statIq", label: "지능", color: "#6b9bd1" },
+  { key: "statEndurance", label: "지구력", color: "#c9913f" },
 ];
 
 const formatDate = (iso) => (iso ? iso.slice(0, 10).replaceAll("-", ". ") : "");
@@ -80,7 +85,7 @@ function clamp(value, min, max) {
 // 방 카드 아래에 한 문장씩 돌아가며 보여주는 팁
 const ROOM_TIPS = [
   "펫과 가구를 드래그해서 원하는 위치에 배치해요.",
-  "펫을 우클릭하면 쓰다듬거나 칭찬할 수 있어요.",
+  "펫을 우클릭하거나 아래 버튼으로 쓰다듬고 칭찬할 수 있어요.",
   "가구는 더블클릭하면 인벤토리로 회수돼요.",
   "배치한 가구만 배웅 선물 보너스에 반영돼요.",
 ];
@@ -498,7 +503,8 @@ function PetPage({ user, onLogout }) {
   }, []);
 
   const handlePetAction = (action) => {
-    closePetMenu(true);
+    // 우클릭 메뉴에서 골랐으면 메뉴를 닫고 펫으로 초점을 돌린다. 펫 상태 탭의 버튼에서 누르면 초점은 그대로.
+    if (petMenu) closePetMenu(true);
     reactionSeqRef.current += 1;
     const reactionId = reactionSeqRef.current;
     setReaction((previous) => ({
@@ -563,106 +569,77 @@ function PetPage({ user, onLogout }) {
     startDrag({ type: "furniture", id: item.id }, event);
   };
 
+  const placedCount = furniture.filter((f) => f.placed).length;
+  const equippedTitle = pet?.equippedTitle ?? null;
+  const petImage = selectedPet ? petVisual(selectedPet.appearanceKey, selectedPet.stage).image : null;
+  // 테마 세트 현황 칩 — 가구를 하나라도 놓은 테마만 (잠긴·빈 테마는 보여 줘도 할 게 없다)
+  const themeChips = themes.filter((theme) => theme.active || theme.placedCount > 0);
+
+  // 「배치하기」 — 보유 가구 탭을 열고 그쪽으로 내려간다
+  const panelRef = useRef(null);
+  const openFurnitureTab = () => {
+    setActiveTab("furniture");
+    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <AppShell
-      activeTop="myroom"
-      activeSide="myroom"
-      user={user}
-      onLogout={onLogout}
-    >
-      <main className="home-main pet-main">
+    <AppShell activeTop="myroom" activeSide="myroom" user={user} onLogout={onLogout}>
+      <main className="home-main mr">
+        <div className="mr-layout">
+          {/* 머리 — 방 이름 · 배치하기 */}
+          <div className="mr-head">
+            <h1 className="mr-title">
+              {selectedPet ? `${selectedPet.name}의 방` : `${nickname}님의 방`}
+            </h1>
+            <button type="button" className="mr-place-btn" onClick={openFurnitureTab}>
+              <Icon name="sofa" size={16} />
+              배치하기
+            </button>
+          </div>
 
-        <div className="pet-myroom-layout">
-          {/* 왼쪽: 방 */}
-          <div className="pet-myroom-main">
-            <section
-              className={`home-card pet-room-card ${selectedBackground.className} ${
-                selectedBackground.image ? "pet-room-card--image" : ""
-              }`}
-              style={
-                selectedBackground.image
-                  ? { backgroundImage: `url(${selectedBackground.image})` }
-                  : undefined
-              }
-            >
-              <div className="pet-room-top">
-                {/* 방 제목 — 펫이 있으면 "(펫 이름)의 방" */}
-                <h1 className="pet-title">
-                  <span className="pet-title-badge" aria-hidden>
-                    🏠
-                  </span>
-                  <span className="pet-title-text">
-                    {selectedPet ? `${selectedPet.name}의 방` : `${nickname}님의 방`}
-                  </span>
-                </h1>
-                <div className="pet-room-chips">
-                  <ul className="pet-surface-chips pet-room-bonus-chips" aria-label="배치 가구 보너스">
-                    <li className="pet-room-bonus-chip--release">배웅 선물 +{roomBonus.release}%</li>
-                    {Object.entries(roomBonus.stat).filter(([, pct]) => pct > 0).map(([stat, pct]) => (
-                      <li key={stat}>{STAT_LABEL[stat]} +{pct}%</li>
-                    ))}
-                    {roomBonus.release === 0 && <li>배치 가구 보너스 없음</li>}
-                  </ul>
-                </div>
-              </div>
-
+          {/* 왼쪽(PC) / 위(폰): 방 — 픽셀 그림은 방 칸 안에만 */}
+          <div className="mr-col mr-col--room">
+            <section className="mr-card mr-room" aria-label="마이룸">
               <div
                 ref={roomStageRef}
-                className={`pet-room-stage ${
-                  selectedBackground.image ? "pet-room-stage--image" : ""
-                }`}
+                className="pet-room-stage mr-stage"
+                style={selectedBackground.image ? { backgroundImage: `url(${selectedBackground.image})` } : undefined}
                 aria-label="펫 방 미리보기"
               >
-                {!selectedBackground.image && (
-                  <>
-                    <div className="pet-room-window" aria-hidden />
-                    <div className="pet-room-floor" aria-hidden />
-                  </>
-                )}
-
                 {placedFurniture.map((item) => {
                   const pos = positionOf(item);
+                  const image = furnitureVisual(item.category).image;
                   return (
                     <button
                       key={item.id}
                       type="button"
                       className={`pet-placed-item ${
-                        dragTarget?.type === "furniture" && dragTarget.id === item.id
-                          ? "is-dragging"
-                          : ""
+                        dragTarget?.type === "furniture" && dragTarget.id === item.id ? "is-dragging" : ""
                       } ${
                         // 이미지가 있는 가구는 침대처럼 방 크기에 맞춘 그림으로 놓는다.
-                        // 종류별 클래스는 이미지·이모지 모두에 붙여 크기를 따로 정할 수 있게 한다.
-                        furnitureVisual(item.category).image ? "pet-placed-item--image" : ""
-                      } pet-placed-item--${item.category.toLowerCase()} ${
-                        furnitureBusy === item.id ? "is-busy" : ""
-                      }`}
+                        image ? "pet-placed-item--image" : ""
+                      } pet-placed-item--${item.category.toLowerCase()} ${furnitureBusy === item.id ? "is-busy" : ""}`}
                       style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                       onPointerDown={(event) => handleFurniturePointerDown(item, event)}
-                      onPointerMove={(event) =>
-                        continueDrag({ type: "furniture", id: item.id }, event)
-                      }
+                      onPointerMove={(event) => continueDrag({ type: "furniture", id: item.id }, event)}
                       onPointerUp={endDrag}
                       onPointerCancel={endDrag}
                       onDoubleClick={(event) => event.preventDefault()}
                       aria-label={`${item.name} 이동`}
                       title={`${item.name} 드래그 이동, 더블클릭 회수`}
                     >
-                      <FurnitureArt
-                        category={item.category}
-                        name={item.name}
-                        className="pet-placed-image"
-                        emojiClassName="pet-placed-emoji"
-                      />
+                      {image ? (
+                        <img src={image} alt={item.name} className="pet-placed-image" />
+                      ) : (
+                        <Icon name="sofa" size={32} className="mr-placed-fallback" />
+                      )}
                     </button>
                   );
                 })}
 
                 {selectedPet ? (
                   <div
-                    className={`pet-current ${
-                      dragTarget?.type === "pet" ? "is-dragging" : ""
-                    }`}
+                    className={`pet-current ${dragTarget?.type === "pet" ? "is-dragging" : ""}`}
                     style={{
                       "--pet-accent": selectedPet.color,
                       left: `${petPosition.x}%`,
@@ -672,9 +649,7 @@ function PetPage({ user, onLogout }) {
                     role="button"
                     tabIndex={0}
                     onPointerDown={(event) => startDrag({ type: "pet", id: selectedPet.id }, event)}
-                    onPointerMove={(event) =>
-                      continueDrag({ type: "pet", id: selectedPet.id }, event)
-                    }
+                    onPointerMove={(event) => continueDrag({ type: "pet", id: selectedPet.id }, event)}
                     onPointerUp={endDrag}
                     onPointerCancel={endDrag}
                     onContextMenu={openPetMenu}
@@ -686,26 +661,14 @@ function PetPage({ user, onLogout }) {
                     aria-label={`${selectedPet.name} 이동, 상호작용 메뉴 열기`}
                     title={`${selectedPet.name} 드래그 이동, 우클릭 상호작용`}
                   >
-                    {reaction && (
-                      <PetReaction
-                        key={reaction.id}
-                        reaction={reaction}
-                        petPosition={petPosition}
-                      />
-                    )}
+                    {reaction && <PetReaction key={reaction.id} reaction={reaction} petPosition={petPosition} />}
                     <span className="pet-current-shadow" aria-hidden />
-                    <span
-                      ref={petIconRef}
-                      className="pet-current-icon"
-                      aria-label={selectedPet.name}
-                    >
-                      <PetArt
-                        appearanceKey={selectedPet.appearanceKey}
-                        stage={selectedPet.stage}
-                        name={selectedPet.name}
-                        className="pet-current-image"
-                        emojiClassName="pet-current-emoji"
-                      />
+                    <span ref={petIconRef} className="pet-current-icon" aria-label={selectedPet.name}>
+                      {petImage ? (
+                        <img src={petImage} alt={selectedPet.name} className="pet-current-image" />
+                      ) : (
+                        <Icon name="paw" size={64} className="mr-pet-fallback" />
+                      )}
                     </span>
                   </div>
                 ) : (
@@ -713,11 +676,7 @@ function PetPage({ user, onLogout }) {
                     <div className="pet-room-empty">
                       <strong>아직 키우는 펫이 없어요</strong>
                       <p>상점에서 새 친구를 데려올 수 있어요.</p>
-                      <button
-                        type="button"
-                        className="home-btn home-btn-primary"
-                        onClick={() => navigate("/shop")}
-                      >
+                      <button type="button" className="mr-btn mr-btn--sage" onClick={() => navigate("/shop")}>
                         상점 가기
                       </button>
                     </div>
@@ -732,41 +691,52 @@ function PetPage({ user, onLogout }) {
                   : ""}
               </p>
 
+              {/* 테마 세트 · 배웅 선물 보너스 */}
+              <ul className="mr-chips" aria-label="배치 가구 보너스">
+                {themeChips.map((theme) => (
+                  <li key={theme.id} className={theme.active ? "is-on" : ""}>
+                    {theme.active && <Icon name="check" size={13} strokeWidth={2.4} />}
+                    {theme.name} {theme.placedCount}/{theme.requiredCount}
+                    {theme.active && Number(theme.setBonusPct) > 0 && <b>+{theme.setBonusPct}%</b>}
+                  </li>
+                ))}
+                <li className="mr-chip-release">
+                  {roomBonus.release > 0 ? `배웅 선물 +${roomBonus.release}% 반영 중` : "배치 가구 보너스 없음"}
+                </li>
+                {Object.entries(roomBonus.stat)
+                  .filter(([, pct]) => pct > 0)
+                  .map(([stat, pct]) => (
+                    <li key={stat}>
+                      {STAT_LABEL[stat]} +{pct}%
+                    </li>
+                  ))}
+              </ul>
+
               <RoomTips />
             </section>
           </div>
 
-          {/* 오른쪽: 펫 상태 · 대화방 · 방 테마 · 보유 가구 · 아이템 · 내역을 한 카드에서 탭으로 전환 */}
-          <aside className="pet-myroom-side">
-            <section className="home-card pet-panel pet-tab-card">
-              <div className="pet-tab-bar" role="tablist" aria-label="마이룸 메뉴">
-                {PANEL_TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    id={`pet-tab-${tab.id}`}
-                    aria-selected={activeTab === tab.id}
-                    aria-controls={activeTab === tab.id ? PET_TAB_PANEL_ID : undefined}
-                    className={`pet-tab-btn ${activeTab === tab.id ? "is-active" : ""}`}
-                    onClick={() => setActiveTab(tab.id)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+          {/* 오른쪽(PC) / 아래(폰): 펫 상태 · 대화방 · 방 테마 · 보유 가구 · 아이템 · 내역 */}
+          <div className="mr-col mr-col--panel" ref={panelRef}>
+            <div className="mr-tabs" role="tablist" aria-label="마이룸 메뉴">
+              {[...PANEL_TABS, { id: HISTORY_TAB, label: "내역" }].map((tab) => (
                 <button
+                  key={tab.id}
                   type="button"
                   role="tab"
-                  id={`pet-tab-${HISTORY_TAB}`}
-                  aria-selected={activeTab === HISTORY_TAB}
-                  aria-controls={activeTab === HISTORY_TAB ? PET_TAB_PANEL_ID : undefined}
-                  className={`pet-tab-btn pet-tab-btn--history ${activeTab === HISTORY_TAB ? "is-active" : ""}`}
-                  onClick={() => setActiveTab(HISTORY_TAB)}
+                  id={`pet-tab-${tab.id}`}
+                  aria-selected={activeTab === tab.id}
+                  aria-controls={activeTab === tab.id ? PET_TAB_PANEL_ID : undefined}
+                  className={`${activeTab === tab.id ? "is-active" : ""} ${tab.id === HISTORY_TAB ? "mr-tab-history" : ""}`}
+                  onClick={() => setActiveTab(tab.id)}
                 >
-                  내역 보기
+                  {tab.label}
+                  {tab.id === HISTORY_TAB && <Icon name="chevronRight" size={14} />}
                 </button>
-              </div>
+              ))}
+            </div>
 
+            <section className={`mr-card mr-panel ${activeTab === "chat" ? "is-chat" : ""}`}>
               {/* 탭 패널 — 활성 탭 내용만 렌더하므로 패널 하나를 두고 aria-labelledby 만 바꾼다 */}
               <div
                 className="pet-tab-panel-host"
@@ -774,250 +744,291 @@ function PetPage({ user, onLogout }) {
                 role="tabpanel"
                 aria-labelledby={`pet-tab-${activeTab}`}
               >
-              {activeTab === "pet" && (
-                <div className="pet-tab-panel">
-                  <div className="pet-panel-head">
-                    <h2 className="home-card-title home-card-title--sm">펫 상태</h2>
-                    <span>{pet ? "한 마리만 키우는 중" : petLoading ? "불러오는 중…" : "펫 없음"}</span>
-                  </div>
-                  {petError && <p className="pet-inline-error">{petError}</p>}
-                  {pet && selectedPet && (
-                    <>
-                      <div className="pet-profile-card" style={{ "--pet-accent": selectedPet.color }}>
-                        <span className="pet-profile-icon">
-                          <PetArt
-                            appearanceKey={selectedPet.appearanceKey}
-                            stage={selectedPet.stage}
-                            name={selectedPet.name}
-                            className="pet-profile-image"
-                            emojiClassName="pet-profile-emoji"
-                          />
-                        </span>
-                        <div>
-                          <strong>{selectedPet.name}</strong>
-                          <small>{selectedPet.type}</small>
-                          <p>{formatDate(pet.hatchedAt)} 부화 · Lv. {pet.level}</p>
+                {activeTab === "pet" && (
+                  <div className="pet-tab-panel mr-pet">
+                    {petError && <p className="pet-inline-error">{petError}</p>}
+                    {petLoading && !pet && <p className="mr-empty">불러오는 중…</p>}
+                    {pet && selectedPet && (
+                      <>
+                        {/* 이름 · 칭호 · 레벨(이 화면의 핵심 숫자) */}
+                        <div className="mr-pet-head">
+                          <div className="mr-pet-name">
+                            <strong>{selectedPet.name}</strong>
+                            <button
+                              type="button"
+                              className="mr-title-chip"
+                              onClick={() => navigate("/dex?tab=titles")}
+                              aria-label={`장착 칭호 ${equippedTitle?.name ?? "없음"} — 칭호 도감 열기`}
+                            >
+                              {equippedTitle?.name ?? "칭호 없음"}
+                            </button>
+                          </div>
+                          <p className="mr-level">
+                            <span>Lv.</span>
+                            {pet.level}
+                            <small>/ {pet.maxLevel}</small>
+                          </p>
                         </div>
-                      </div>
 
-                      {/* 레벨 진행도 — 레벨·진행 경험치는 서버(PetLevel) 값. 5레벨 2차, 15레벨 3차, 30레벨 배웅 */}
-                      <div className="pet-evolve">
-                        <div className="pet-evolve-head">
-                          <span>Lv. {pet.level} / {pet.maxLevel}</span>
-                          <strong>
-                            {graduated
-                              ? "배웅할 수 있어요"
-                              : `다음 레벨까지 ${pet.levelExp} / ${pet.levelExpNeeded}`}
-                          </strong>
-                        </div>
-                        <div className="pet-status-track">
+                        {/* 레벨 진행도 — 레벨·진행 경험치는 서버(PetLevel) 값. 5레벨 2차, 15레벨 3차, 30레벨 배웅 */}
+                        <div className="mr-exp">
+                          <div className="mr-exp-head">
+                            <span>성장 경험치</span>
+                            <b>{graduated ? "MAX" : `${pet.levelExp} / ${pet.levelExpNeeded}`}</b>
+                          </div>
                           <div
-                            className="pet-status-fill"
-                            style={{ width: `${levelProgressPct(pet)}%`, background: "var(--home-green)" }}
-                          />
+                            className="mr-exp-track"
+                            role="progressbar"
+                            aria-label="다음 레벨까지 경험치"
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={levelProgressPct(pet)}
+                          >
+                            <span style={{ width: `${levelProgressPct(pet)}%` }} />
+                          </div>
+                          <p className="mr-help">
+                            {milestone
+                              ? `Lv. ${milestone.level}에 ${milestone.label}. 하루 소비 판정과 출석 보상으로 경험치가 쌓여요.`
+                              : `${MAX_LEVEL}레벨을 달성했어요! 이제 ${withJosa(petDisplayName(pet), "과", "와")} 헤어질 시간이에요. 배웅해줍시다.`}
+                          </p>
+                          <p className="mr-help mr-help--sub">{formatDate(pet.hatchedAt)} 부화</p>
                         </div>
-                        <p className="pet-evolve-help">
-                          {milestone
-                            ? `Lv. ${milestone.level}에 ${milestone.label}. 하루 소비 판정과 출석 보상으로 경험치가 쌓여요.`
-                            : `30레벨을 달성했어요! 이제 ${withJosa(petDisplayName(pet), "과", "와")} 헤어질 시간이에요. 배웅해줍시다.`}
-                        </p>
-                        {graduated && (
+
+                        {/* 누적 스탯 — 합리적인 지출을 기록하면 자란다 */}
+                        <ul className="mr-stats" aria-label="누적 스탯">
+                          {STAT_META.map((meta) => {
+                            const value = pet?.[meta.key] ?? 0;
+                            return (
+                              <li key={meta.key} style={{ "--stat-color": meta.color }}>
+                                <span className="mr-stat-label">{meta.label}</span>
+                                <strong>{value}</strong>
+                                <span className="mr-stat-track">
+                                  <span style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }} />
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+
+                        {/* 상호작용 — 우클릭이 없는 폰에서도 누를 수 있게 버튼으로도 둔다 */}
+                        <div className="mr-actions" role="group" aria-label={`${selectedPet.name}와 놀기`}>
+                          {PET_ACTIONS.map((action) => (
+                            <button
+                              key={action.id}
+                              type="button"
+                              className="mr-action"
+                              onClick={() => handlePetAction(action)}
+                            >
+                              <Icon name={ACTION_ICON[action.id]} size={16} />
+                              {action.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="mr-release">
                           <button
                             type="button"
-                            className="home-btn home-btn-primary pet-release-btn"
-                            disabled={releasing}
+                            className="mr-btn mr-btn--release"
+                            disabled={!graduated || releasing}
                             onClick={handleRelease}
                           >
-                            {releasing ? "배웅 중…" : `배웅하기 (${coin(pet.exp)}~)`}
+                            {releasing ? "배웅 중…" : `배웅하기 · ${coin(pet.exp)}부터`}
                           </button>
-                        )}
+                          {!graduated && <p className="mr-help">Lv.{pet.maxLevel}부터 배웅할 수 있어요</p>}
+                        </div>
+                      </>
+                    )}
+                    {!pet && !petLoading && !petError && (
+                      <p className="mr-empty">키우는 펫이 없어요. 상점에서 알을 개봉해 새 친구를 만나 보세요.</p>
+                    )}
+                  </div>
+                )}
+                {activeTab === "chat" &&
+                  (pet ? (
+                    <PetChatPanel key={pet.id} pet={pet} />
+                  ) : (
+                    <div className="pet-tab-panel">
+                      <p className="mr-empty">키우는 펫이 있어야 대화할 수 있어요.</p>
+                    </div>
+                  ))}
+                {activeTab === "background" && (
+                  <div className="pet-tab-panel">
+                    <div className="mr-panel-head">
+                      <h2>방 테마</h2>
+                      <span>이 브라우저에만 저장</span>
+                    </div>
+                    <div className="mr-bg-list">
+                      {ROOM_BACKGROUNDS.map((background) => {
+                        const on = selectedBackgroundId === background.id;
+                        return (
+                          <button
+                            key={background.id}
+                            type="button"
+                            className={`mr-bg ${on ? "is-selected" : ""}`}
+                            onClick={() => chooseBackground(background.id)}
+                            aria-pressed={on}
+                          >
+                            {/* 그림 위에 글씨를 얹으면 잘 안 보여서 썸네일과 이름을 위아래로 나눈다 */}
+                            <span
+                              className="mr-bg-thumb"
+                              style={background.image ? { backgroundImage: `url(${background.image})` } : undefined}
+                              aria-hidden
+                            >
+                              {on && (
+                                <span className="mr-bg-check">
+                                  <Icon name="check" size={13} strokeWidth={2.6} />
+                                </span>
+                              )}
+                            </span>
+                            <span className="mr-bg-name">{background.name}</span>
+                            <small>{background.slot}</small>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {activeTab === "furniture" && (
+                  <div className="pet-tab-panel">
+                    <div className="mr-panel-head">
+                      <h2>보유 가구</h2>
+                      <span>
+                        {placedCount}개 배치 중 · {furniture.length}개 보유
+                      </span>
+                    </div>
+                    <p className="mr-help mr-help--box">
+                      배치한 가구는 배웅 선물 보너스와 함께, 해당 스탯 보상을 가구에 적힌 비율만큼 올려줘요.
+                    </p>
+                    {!furnitureLoading && furniture.length === 0 ? (
+                      <div className="mr-empty">
+                        <p>아직 가구가 없어요. 상점에서 사서 배치하면 배웅 선물이 올라가요.</p>
+                        <button type="button" className="mr-link" onClick={() => navigate("/shop?tab=furniture")}>
+                          가구 상점 가기 <Icon name="chevronRight" size={14} />
+                        </button>
                       </div>
-
-                      {/* 누적 스탯 — 합리적인 지출을 기록하면 자란다 */}
-                      <ul className="pet-status-list" aria-label="누적 스탯">
-                        {STAT_META.map((meta) => {
-                          const value = pet?.[meta.key] ?? 0;
-                          const width = Math.min(Math.max(value, 0), 100);
+                    ) : (
+                      <>
+                        {/* 테마가 둘 이상일 때만 — 한 묶음뿐이면 고를 게 없다 */}
+                        {furnitureThemeOptions.length > 1 && (
+                          <div className="mr-theme-chips" role="group" aria-label="테마로 골라 보기">
+                            {[{ key: FURNITURE_THEME_ALL, label: "전체", count: furniture.length }, ...furnitureThemeOptions].map(
+                              (option) => {
+                                const on = activeFurnitureTheme === option.key;
+                                return (
+                                  <button
+                                    key={option.key}
+                                    type="button"
+                                    className={on ? "is-active" : ""}
+                                    aria-pressed={on}
+                                    onClick={() => setFurnitureTheme(option.key)}
+                                  >
+                                    {option.label}
+                                    <span>{option.count}</span>
+                                  </button>
+                                );
+                              },
+                            )}
+                          </div>
+                        )}
+                        <div className="mr-fur-grid">
+                          {visibleFurniture.map((item) => {
+                            const image = furnitureVisual(item.category).image;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                className={`mr-fur ${item.placed ? "is-placed" : ""}`}
+                                disabled={furnitureBusy !== null}
+                                onClick={() => (item.placed ? removeFurniture(item) : placeFurniture(item))}
+                                title={`${CATEGORY_LABEL[item.category] ?? ""} · ${
+                                  STAT_LABEL[item.statTarget] ?? ""
+                                } · 배웅 선물 +${item.releaseBonusPct}%${
+                                  furnitureThemeKeyOf(item) === FURNITURE_THEME_NONE
+                                    ? ""
+                                    : ` · ${furnitureThemeKeyOf(item)} 테마`
+                                }`}
+                              >
+                                <span className="mr-fur-art">
+                                  {image ? (
+                                    <img src={image} alt="" className="mr-pixel" />
+                                  ) : (
+                                    <Icon name="sofa" size={28} />
+                                  )}
+                                </span>
+                                <strong>{item.name}</strong>
+                                <small>
+                                  {furnitureBusy === item.id ? (
+                                    "저장 중…"
+                                  ) : item.placed ? (
+                                    <>
+                                      <Icon name="check" size={12} strokeWidth={2.6} /> 배치됨 · 회수
+                                    </>
+                                  ) : (
+                                    "배치하기"
+                                  )}
+                                </small>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {activeTab === "items" && (
+                  <div className="pet-tab-panel">
+                    <div className="mr-panel-head">
+                      <h2>아이템</h2>
+                      <span>{statItems.length}개 보유</span>
+                    </div>
+                    {statItems.length === 0 ? (
+                      <p className="mr-empty">보유한 아이템이 없어요. 출석 탭에서 출석 보상을 받아 보세요.</p>
+                    ) : (
+                      <ul className="mr-items">
+                        {statItems.map((item) => {
+                          const image = itemImageFor(item.statType, item.name);
                           return (
-                            <li key={meta.key}>
-                              <div className="pet-status-row">
-                                <span>{meta.label}</span>
-                                <strong>{value}</strong>
-                              </div>
-                              <div className="pet-status-track">
-                                <div
-                                  className="pet-status-fill"
-                                  style={{ width: `${width}%`, background: meta.color }}
-                                />
-                              </div>
+                            <li key={item.id}>
+                              <span className="mr-item-art">
+                                {image ? <img src={image} alt="" className="mr-pixel" /> : <Icon name="gift" size={22} />}
+                              </span>
+                              <span className="mr-item-text">
+                                <strong>{item.name}</strong>
+                                <small>
+                                  {STAT_LABEL[item.statType]} +{item.statDelta}
+                                </small>
+                              </span>
+                              <button
+                                type="button"
+                                className="mr-btn mr-btn--sage mr-btn--sm"
+                                disabled={itemBusy || !pet}
+                                onClick={() => handleUseItem(item)}
+                              >
+                                사용하기
+                              </button>
                             </li>
                           );
                         })}
                       </ul>
-                    </>
-                  )}
-                  {!pet && !petLoading && !petError && (
-                    <p className="pet-empty">
-                      키우는 펫이 없어요. 상점에서 알을 개봉해 새 친구를 만나 보세요.
-                    </p>
-                  )}
-                </div>
-              )}
-              {activeTab === "chat" &&
-                (pet ? (
-                  <PetChatPanel key={pet.id} pet={pet} />
-                ) : (
-                  <div className="pet-tab-panel">
-                    <p className="pet-empty">키우는 펫이 있어야 대화할 수 있어요.</p>
-                  </div>
-                ))}
-              {activeTab === "background" && (
-                <div className="pet-tab-panel">
-                  <div className="pet-panel-head">
-                    <h2 className="home-card-title home-card-title--sm">방 테마</h2>
-                    <span>이 브라우저에만 저장</span>
-                  </div>
-                  <div className="pet-background-list">
-                        {ROOM_BACKGROUNDS.map((background) => (
-                      <button
-                        key={background.id}
-                        type="button"
-                        className={`pet-background-card ${
-                          selectedBackgroundId === background.id ? "is-selected" : ""
-                        }`}
-                        onClick={() => chooseBackground(background.id)}
-                        aria-pressed={selectedBackgroundId === background.id}
-                      >
-                        {/* 그림 위에 글씨를 얹으면 잘 안 보여서 썸네일과 이름을 위아래로 나눈다 */}
-                        <span
-                          className={`pet-background-thumb ${background.className}`}
-                          style={
-                            background.image
-                              ? { backgroundImage: `url(${background.image})` }
-                              : undefined
-                          }
-                          aria-hidden
-                        />
-                        <span className="pet-background-name">{background.name}</span>
-                        <strong>{background.slot}</strong>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {activeTab === "furniture" && (
-                <div className="pet-tab-panel">
-                  <div className="pet-panel-head">
-                    <h2 className="home-card-title home-card-title--sm">보유 가구</h2>
-                    <span>
-                      {furniture.filter((f) => f.placed).length}개 배치중 · {furniture.length}개 보유
-                    </span>
-                  </div>
-                  <p className="pet-furniture-bonus-help">배치한 가구는 배웅 선물 보너스와 함께, 해당 스탯 보상을 가구에 적힌 비율만큼 올려줘요.</p>
-                  {!furnitureLoading && furniture.length === 0 ? (
-                    <div className="pet-empty">
-                      <p>아직 가구가 없어요. 상점에서 사서 배치하면 배웅 선물이 올라가요.</p>
-                      <button
-                        type="button"
-                        className="home-link-btn"
-                        onClick={() => navigate("/shop?tab=furniture")}
-                      >
-                        가구 상점 가기 →
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                    {/* 테마가 둘 이상일 때만 — 한 묶음뿐이면 고를 게 없다 */}
-                    {furnitureThemeOptions.length > 1 && (
-                      <div className="pet-furniture-themes" role="group" aria-label="테마로 골라 보기">
-                        <button
-                          type="button"
-                          className={`pet-theme-chip ${activeFurnitureTheme === FURNITURE_THEME_ALL ? "is-active" : ""}`}
-                          aria-pressed={activeFurnitureTheme === FURNITURE_THEME_ALL}
-                          onClick={() => setFurnitureTheme(FURNITURE_THEME_ALL)}
-                        >
-                          전체<span>{furniture.length}</span>
-                        </button>
-                        {furnitureThemeOptions.map((option) => (
-                          <button
-                            key={option.key}
-                            type="button"
-                            className={`pet-theme-chip ${activeFurnitureTheme === option.key ? "is-active" : ""}`}
-                            aria-pressed={activeFurnitureTheme === option.key}
-                            onClick={() => setFurnitureTheme(option.key)}
-                          >
-                            {option.label}
-                            <span>{option.count}</span>
-                          </button>
-                        ))}
-                      </div>
                     )}
-                    <div className="pet-furniture-grid">
-                      {visibleFurniture.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className={`pet-furniture-card ${item.placed ? "is-placed" : ""}`}
-                          disabled={furnitureBusy !== null}
-                          onClick={() => (item.placed ? removeFurniture(item) : placeFurniture(item))}
-                          title={`${CATEGORY_LABEL[item.category] ?? ""} · ${
-                            STAT_LABEL[item.statTarget] ?? ""
-                          } · 배웅 선물 +${item.releaseBonusPct}%${
-                            furnitureThemeKeyOf(item) === FURNITURE_THEME_NONE
-                              ? ""
-                              : ` · ${furnitureThemeKeyOf(item)} 테마`
-                          }`}
-                        >
-                          <span>
-                            <FurnitureArt
-                              category={item.category}
-                              name={item.name}
-                              className="pet-furniture-image"
-                              emojiClassName="pet-furniture-emoji"
-                            />
-                          </span>
-                          <strong>{item.name}</strong>
-                          <small>
-                            {furnitureBusy === item.id
-                              ? "저장 중…"
-                              : item.placed
-                                ? "회수하기"
-                                : "배치하기"}
-                          </small>
-                        </button>
-                      ))}
-                    </div>
-                    </>
-                  )}
-                </div>
-              )}
-              {activeTab === "items" && (
-                <div className="pet-tab-panel">
-                  <div className="pet-panel-head"><h2 className="home-card-title home-card-title--sm">아이템</h2><span>{statItems.length}개 보유</span></div>
-                  {statItems.length === 0 ? <p className="pet-empty">보유한 아이템이 없어요. 출석 탭에서 출석 보상을 받아 보세요.</p> : <div className="pet-item-list">{statItems.map((item) => <article key={item.id} className="pet-item-card">{itemImageFor(item.statType, item.name) && <img src={itemImageFor(item.statType, item.name)} alt="" className="pet-item-image" />}<div className="pet-item-text"><strong>{item.name}</strong><span>{STAT_LABEL[item.statType]} +{item.statDelta}</span></div><button type="button" disabled={itemBusy || !pet} onClick={() => handleUseItem(item)}>사용하기</button></article>)}</div>}
-                </div>
-              )}
-              {activeTab === HISTORY_TAB && <PetHistoryPanel petHistory={petHistory} />}
+                  </div>
+                )}
+                {activeTab === HISTORY_TAB && <PetHistoryPanel petHistory={petHistory} />}
               </div>
               {notice && (
                 <p
-                  className={`pet-notice ${notice.kind === "err" ? "pet-notice--err" : ""}`}
+                  className={`mr-notice ${notice.kind === "err" ? "mr-notice--err" : ""}`}
                   role={notice.kind === "err" ? "alert" : "status"}
                 >
                   {notice.text}
                 </p>
               )}
             </section>
-          </aside>
+          </div>
         </div>
 
         {petMenu && selectedPet && (
-          <PetActionMenu
-            anchor={petMenu}
-            petName={selectedPet.name}
-            onSelect={handlePetAction}
-            onClose={closePetMenu}
-          />
+          <PetActionMenu anchor={petMenu} petName={selectedPet.name} onSelect={handlePetAction} onClose={closePetMenu} />
         )}
       </main>
     </AppShell>

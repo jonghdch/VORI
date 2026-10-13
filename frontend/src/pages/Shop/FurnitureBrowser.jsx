@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { FurnitureArt, STAT_LABEL } from "../../components/furnitureVisual";
+import Icon from "../../components/Icon";
+import CoinIcon from "../../components/CoinIcon";
+import { STAT_LABEL, furnitureVisual } from "../../components/furnitureVisual";
 
-// 가구 상점 — 전체 가구를 한 화면에 펼쳐 보는 그리드.
-// 3개씩 넘겨 보던 진열대는 가구가 30종을 넘기면서 끝까지 보려면 화살표를 열 번 눌러야 했다.
-// 여기서는 전부 펼쳐 놓고, 테마·스탯으로 걸러 보게 한다.
+// 가구 상점 — Figma「상점 — VORI」: 테마 칩 줄 + 2열 카드(그림 · 이름 · 가격 · 구매).
+// 가구가 30종을 넘어 넘겨 보는 진열대 대신 전부 펼쳐 놓고, 테마·스탯으로 걸러 보게 한다.
+// 같은 가구를 여러 개 살 수 있어서, 가진 가구도 「보유 N」 표시만 붙이고 구매 버튼은 그대로 둔다.
 
 const ALL = "ALL";
 // themeName 이 null 인 가구를 묶는 칩의 키 — 실제 테마 이름과 겹치지 않는 값
 const NO_THEME = "__none__";
 
-const coin = (n) => `${(n ?? 0).toLocaleString("ko-KR")} 코인`;
+const num = (n) => (n ?? 0).toLocaleString("ko-KR");
 const themeKeyOf = (item) => item.themeName ?? NO_THEME;
 
 /**
@@ -18,10 +20,11 @@ const themeKeyOf = (item) => item.themeName ?? NO_THEME;
  *   loading: boolean,
  *   error: string|null,
  *   ownedCountByName: Record<string, number>,
+ *   ownedTotal: number,
  *   gameMoney: number,
  *   unlimitedCoins: boolean,
  *   busy: string|null,          // ShopPage 의 busy — "furniture:CODE" 면 그 가구를 사는 중
- *   onBuy: (product) => void,
+ *   onBuy: (product) => void,   // 구매 확인 창을 연다
  * }} props
  */
 function FurnitureBrowser({
@@ -31,6 +34,7 @@ function FurnitureBrowser({
   loading,
   error,
   ownedCountByName,
+  ownedTotal,
   gameMoney,
   unlimitedCoins,
   busy,
@@ -47,7 +51,6 @@ function FurnitureBrowser({
   const byStat = products.filter((item) => activeStat === ALL || item.statTarget === activeStat);
 
   // 테마 칩 — 상품에 실제로 있는 테마만, 처음 나온(가장 싼) 순서대로.
-  // 개수는 스탯 필터를 거친 뒤의 값이라 칩 숫자와 눌렀을 때 나오는 카드 수가 같다.
   const themeOptions = [];
   for (const item of products) {
     const key = themeKeyOf(item);
@@ -55,56 +58,49 @@ function FurnitureBrowser({
       themeOptions.push({ key, label: item.themeName ?? "테마 없음" });
     }
   }
-  const countOf = (key) => byStat.filter((item) => themeKeyOf(item) === key).length;
   // 상품 목록이 바뀌어 고른 테마가 사라졌으면 전체로 되돌린다
   const activeTheme = themeOptions.some((option) => option.key === theme) ? theme : ALL;
 
   const visible = byStat.filter((item) => activeTheme === ALL || themeKeyOf(item) === activeTheme);
   const filtered = activeTheme !== ALL || activeStat !== ALL;
 
-  const resetFilters = () => {
-    setTheme(ALL);
-    setStat(ALL);
+  const chip = (key, label) => {
+    const on = activeTheme === key;
+    return (
+      <button
+        key={key}
+        type="button"
+        className={`sp-chip ${on ? "is-active" : ""}`}
+        aria-pressed={on}
+        onClick={() => setTheme(key)}
+      >
+        {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+        {label}
+      </button>
+    );
   };
 
   return (
-    <div className="shop-furniture-browser" id={id} role="tabpanel" aria-labelledby={labelledBy}>
+    <div className="sp-panel" id={id} role="tabpanel" aria-labelledby={labelledBy}>
       {error ? (
-        <p className="shop-shelf-state shop-shelf-state--error">{error}</p>
+        <p className="sp-state sp-state--error">{error}</p>
       ) : loading ? (
-        <p className="shop-shelf-state">가구를 불러오는 중…</p>
+        <p className="sp-state">가구를 불러오는 중…</p>
       ) : (
         <>
-          <div className="shop-furniture-chips" role="group" aria-label="테마로 골라 보기">
-            <button
-              type="button"
-              className={`shop-chip ${activeTheme === ALL ? "is-active" : ""}`}
-              aria-pressed={activeTheme === ALL}
-              onClick={() => setTheme(ALL)}
-            >
-              전체<span className="shop-chip-count">{byStat.length}</span>
-            </button>
-            {themeOptions.map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                className={`shop-chip ${activeTheme === option.key ? "is-active" : ""}`}
-                aria-pressed={activeTheme === option.key}
-                onClick={() => setTheme(option.key)}
-              >
-                {option.label}
-                <span className="shop-chip-count">{countOf(option.key)}</span>
-              </button>
-            ))}
+          {/* 테마 칩 — 폰에서는 옆으로 밀어 본다 */}
+          <div className="sp-chips" role="group" aria-label="테마로 골라 보기">
+            {chip(ALL, "전체")}
+            {themeOptions.map((option) => chip(option.key, option.label))}
           </div>
 
-          <div className="shop-furniture-meta">
-            <p className="shop-furniture-count" role="status">
-              가구 {visible.length}개
+          <div className="sp-fur-meta">
+            <p role="status">
+              가구 {visible.length}개 · 보유 {ownedTotal}개
             </p>
             {statOptions.length > 1 && (
               <select
-                className="shop-furniture-stat"
+                className="sp-select"
                 aria-label="올려 주는 스탯으로 골라 보기"
                 value={activeStat}
                 onChange={(e) => setStat(e.target.value)}
@@ -120,62 +116,62 @@ function FurnitureBrowser({
           </div>
 
           {visible.length === 0 ? (
-            <div className="shop-furniture-empty">
+            <div className="sp-empty">
               <p>조건에 맞는 가구가 없어요.</p>
               {filtered && (
-                <button type="button" className="home-link-btn" onClick={resetFilters}>
+                <button
+                  type="button"
+                  className="sp-link"
+                  onClick={() => {
+                    setTheme(ALL);
+                    setStat(ALL);
+                  }}
+                >
                   전체 가구 보기
                 </button>
               )}
             </div>
           ) : (
-            // 카드가 많으면 이 안에서만 세로로 넘긴다 — 가게 배경이 늘어나 깨지지 않게.
-            // tabIndex 는 구매 버튼이 전부 비활성일 때도 키보드로 스크롤할 수 있게 하려는 것.
-            <ul className="shop-furniture-grid" tabIndex={0} aria-label="가구 목록">
+            <ul className="sp-fur-grid" aria-label="가구 목록">
               {visible.map((item) => {
                 const affordable = unlimitedCoins || gameMoney >= item.price;
                 const isBusy = busy === `furniture:${item.code}`;
                 const owned = ownedCountByName[item.name] || 0;
+                const { image } = furnitureVisual(item.category);
                 return (
-                  <li
-                    key={item.code}
-                    className={`shop-furniture-card ${item.locked ? "is-locked" : ""}`}
-                  >
-                    <div className="shop-furniture-card-art">
-                      <FurnitureArt
-                        category={item.category}
-                        name={item.name}
-                        className="shop-furniture-card-image"
-                        emojiClassName="shop-furniture-card-emoji"
-                      />
-                    </div>
-                    <h2>
-                      {item.name}
-                      {owned > 0 && <em className="shop-furniture-card-owned">보유 {owned}</em>}
-                    </h2>
-                    <p>
-                      {STAT_LABEL[item.statTarget] ?? item.statTarget} · 배웅 선물 +{item.releaseBonusPct}%
-                    </p>
-                    {item.themeName && (
-                      <small className="shop-furniture-theme">
-                        {item.themeName} 테마
-                        {/* 분류만 하는 테마(세트 보너스 0%)는 "세트 +0%" 를 붙이지 않는다 */}
-                        {Number(item.themeSetBonusPct) > 0 && ` · 세트 +${item.themeSetBonusPct}%`}
+                  <li key={item.code} className={`sp-card sp-fur ${item.locked ? "is-locked" : ""}`}>
+                    <span className="sp-fur-art">
+                      {image ? (
+                        <img src={image} alt={item.name} className="sp-pixel" />
+                      ) : (
+                        <Icon name="sofa" size={36} />
+                      )}
+                      {owned > 0 && <span className="sp-fur-owned">보유 {owned}</span>}
+                    </span>
+                    <h2>{item.name}</h2>
+                    <span className="sp-fur-price">
+                      <CoinIcon size={13} />
+                      {num(item.price)} 코인
+                    </span>
+                    <small className="sp-fur-sub">
+                      {STAT_LABEL[item.statTarget] ?? item.statTarget} · 배웅 +{item.releaseBonusPct}%
+                      {item.themeName && Number(item.themeSetBonusPct) > 0 && ` · 세트 +${item.themeSetBonusPct}%`}
+                    </small>
+                    {item.locked ? (
+                      <small className="sp-fur-lock">
+                        <Icon name="lock" size={12} /> 칭호 "{item.unlockTitleName ?? "?"}" 획득 시 해금
                       </small>
+                    ) : (
+                      !affordable && <small className="sp-fur-short">코인 {num(item.price - gameMoney)} 부족</small>
                     )}
-                    {item.locked && (
-                      <small className="shop-furniture-lock">
-                        🔒 칭호 "{item.unlockTitleName ?? "?"}" 획득 시 해금
-                      </small>
-                    )}
-                    <strong>{coin(item.price)}</strong>
                     <button
                       type="button"
-                      className="home-btn home-btn-primary shop-buy-btn"
+                      className="sp-fur-buy"
                       disabled={item.locked || !affordable || busy !== null}
                       onClick={() => onBuy(item)}
                     >
-                      {isBusy ? "구매 중…" : item.locked ? "잠김" : affordable ? "구매하기" : "코인 부족"}
+                      {item.locked && <Icon name="lock" size={13} />}
+                      {isBusy ? "구매 중…" : item.locked ? "잠김" : "구매"}
                     </button>
                   </li>
                 );

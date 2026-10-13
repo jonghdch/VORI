@@ -1,20 +1,23 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppShell from "../../components/AppShell";
+import Icon from "../../components/Icon";
 import PurchaseHistoryModal from "../../components/PurchaseHistoryModal";
 import CoinIcon from "../../components/CoinIcon";
-import { PetArt, STAGE_LABEL, TIER_LABEL, VARIANT_LABEL } from "../../components/petVisual";
+import { STAGE_LABEL, TIER_LABEL, VARIANT_LABEL, petVisual } from "../../components/petVisual";
 import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
 import { getMe, notifyPetChanged } from "../../api/user";
-import { isSurface } from "../../components/furnitureVisual";
-import { EGG_IMAGE, eggImageFor } from "../../components/eggVisual";
-import useMediaQuery from "../../components/useMediaQuery";
+import { furnitureVisual, isSurface } from "../../components/furnitureVisual";
+import { eggImageFor } from "../../components/eggVisual";
 import FurnitureBrowser from "./FurnitureBrowser";
-import shopBackgroundImage from "../../assets/shop/shop-background.png";
-import furnitureIconImage from "../../assets/shop/furniture-icon.png";
 import "../Home/HomeDashboard.css";
-import "./ShopPage.css";
+import "./ShopScreen.css";
+
+// 상점 — Figma「상점 — 알 분양」「상점 — VORI(가구)」 배치.
+// 머리(상점 · 보유 코인) → 알 분양/가구 전환 → 알: 안내 + 세로 카드 / 가구: 테마 칩 + 2열 카드.
+// 구매는 바로 사지 않고 「○○을 살까요?」 확인 창(가격 · 지금 코인 · 구매 후)을 거친다.
+// 픽셀 그림은 알·가구·펫 그림에만 — 화면 배경 그림은 두지 않는다.
 
 // 등급별 소개 문구 — 가격·확률은 백엔드(EggGrade)가 단일 출처, 문구만 프론트.
 const GRADE_COPY = {
@@ -25,76 +28,18 @@ const GRADE_COPY = {
 
 const TIER_ORDER = ["S", "A", "B", "C"];
 
-// 세로로 든 휴대폰처럼 좁은 화면에서는 알을 1개씩 보여준다 — 3개를 세로로
-// 쌓으면 간판을 덮고 잘린다. ShopPage.css 의 진열대 미디어 쿼리와 같은 값이어야 한다.
-// (가구는 넘겨 보지 않고 FurnitureBrowser 가 전부 펼쳐 보여준다.)
-const NARROW_QUERY = "(max-width: 720px)";
-
-const coin = (n) => `${(n ?? 0).toLocaleString("ko-KR")} 코인`;
-
-// 진열대 쪽 나누기. 위치를 쪽 번호가 아니라 그 쪽 첫 상품의 순번(start)으로 기억해서,
-// 화면을 돌려 한 쪽 개수가 바뀌어도 보던 상품이 그대로 남는다.
-function paginate(items, start, perPage) {
-  const pageCount = Math.max(1, Math.ceil(items.length / perPage));
-  // 상품 수가 줄어 현재 쪽이 사라져도 마지막 쪽을 보여준다
-  const page = Math.min(Math.floor(start / perPage), pageCount - 1);
-  return {
-    page,
-    pageCount,
-    visible: items.slice(page * perPage, (page + 1) * perPage),
-    prevStart: (page - 1) * perPage,
-    nextStart: (page + 1) * perPage,
-  };
-}
-
-// 양옆 화살표로 넘기는 진열대. noun 은 화살표 안내 문구("이전 알 보기")에 쓴다.
-function PagedShelf({ id, labelledBy, noun, pager, onMove, showIndicator, children }) {
-  return (
-    <div className="shop-paged-stage" id={id} role="tabpanel" aria-labelledby={labelledBy}>
-      <button
-        type="button"
-        className="shop-page-arrow"
-        aria-label={`이전 ${noun} 보기`}
-        disabled={pager.page === 0}
-        onClick={() => onMove(pager.prevStart)}
-      >
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-          <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      <div className="shop-paged-shelf" aria-live="polite">
-        {children}
-      </div>
-      <button
-        type="button"
-        className="shop-page-arrow"
-        aria-label={`다음 ${noun} 보기`}
-        disabled={pager.page >= pager.pageCount - 1}
-        onClick={() => onMove(pager.nextStart)}
-      >
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-          <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      {showIndicator && (
-        <p className="shop-page-indicator">
-          {pager.page + 1} / {pager.pageCount}
-        </p>
-      )}
-    </div>
-  );
-}
+const num = (n) => (n ?? 0).toLocaleString("ko-KR");
+const coin = (n) => `${num(n)} 코인`;
 
 function ShopPage({ user, onLogout }) {
   const navigate = useNavigate();
-  const nickname = user?.nickname || "사용자";
 
   const [products, setProducts] = useState([]);
   const [me, setMe] = useState(null); // gameMoney 는 세션 user 가 아니라 여기서
   const [eggs, setEggs] = useState([]); // 미개봉 보유 알
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(null); // "buy:BASIC" | "open:12"
+  const [busy, setBusy] = useState(null); // "buy:BASIC" | "open:12" | "furniture:CODE"
   const [notice, setNotice] = useState(null); // { kind: "ok"|"err", text }
   const [result, setResult] = useState(null); // 개봉 결과 { pet, remainGameMoney }
 
@@ -104,18 +49,16 @@ function ShopPage({ user, onLogout }) {
   const [furnitureError, setFurnitureError] = useState(null);
   const [furnitureLoading, setFurnitureLoading] = useState(true);
 
-  // 상점 이미지 안 진열대에 무엇을 보여줄지 — "egg"(알 상점) | "furniture"(가구 상점)
-  // /shop?tab=furniture 로 들어오면 가구 상점부터 연다 (마이룸의 "가구 상점 가기").
+  // "egg"(알 분양) | "furniture"(가구). /shop?tab=furniture 로 들어오면 가구부터 연다 (마이룸의 "가구 상점 가기").
   const [searchParams] = useSearchParams();
   const [shopTab, setShopTab] = useState(() =>
     searchParams.get("tab") === "furniture" ? "furniture" : "egg",
   );
-  // 진열대에서 지금 보는 쪽의 첫 상품 순번 (paginate 참고)
-  const [eggStart, setEggStart] = useState(0);
-  const narrow = useMediaQuery(NARROW_QUERY);
 
   // 구매 내역 팝업 — 닫힐 때 포커스 복귀는 모달이 맡는다(열기 전 포커스로 되돌림)
   const [historyOpen, setHistoryOpen] = useState(false);
+  // 구매 확인 창 — { kind: "egg"|"furniture", product, image }
+  const [confirm, setConfirm] = useState(null);
 
   const reload = useCallback(async () => {
     const [meRes, eggRes] = await Promise.all([getMe(), listMyEggs(true)]);
@@ -203,8 +146,6 @@ function ShopPage({ user, onLogout }) {
     } catch (e) {
       // 서버가 보여줄 문구를 message 로 준다(GlobalExceptionHandler). 상태 코드로 문구를
       // 정하면 같은 코드에 사유가 추가될 때 틀린 안내가 나간다 — 실제로 그랬다.
-      // 개봉 409 는 "이미 개봉한 알" 뿐이었는데 "키우던 펫이 있음" 이 추가되면서,
-      // 펫 보유 중 개봉을 눌러도 "이미 개봉한 알이에요" 가 떴다.
       setNotice({ kind: "err", text: e.message });
       // 409 면 목록이 낡았을 수 있으므로 다시 맞춘다
       if (e.status === 409) reload().catch(() => {});
@@ -231,171 +172,233 @@ function ShopPage({ user, onLogout }) {
     }
   };
 
+  const confirmBuy = async () => {
+    if (!confirm) return;
+    const { kind, product } = confirm;
+    if (kind === "egg") await handleBuy(product);
+    else await handleBuyFurniture(product);
+    setConfirm(null);
+  };
+
   // 벽지·바닥(방 전체에 깔리는 면)은 상점 진열대에 올리지 않는다
   const shelfFurniture = furnitureProducts.filter((item) => !isSurface(item.category));
-  // 알은 넓은 화면에서 전부 한 줄에 놓고(넘기지 않음), 좁은 화면에서만 1개씩 넘긴다
-  const eggPager = paginate(products, eggStart, 1);
-
-  const eggShelfBody = (
-    <>
-      {loading && products.length === 0 && (
-        <p className="shop-shelf-state">상품을 불러오는 중…</p>
-      )}
-      {error && <p className="shop-shelf-state shop-shelf-state--error">{error}</p>}
-      {(narrow ? eggPager.visible : products).map((item) => {
-        const affordable = unlimitedCoins || gameMoney >= item.price;
-        const isBusy = busy === `buy:${item.grade}`;
-        return (
-          <article key={item.grade} className="shop-display-item">
-            <div className="shop-display-image-wrap">
-              <img src={eggImageFor(item.grade, item.name)} alt={item.name} className="shop-display-image" />
-            </div>
-            <div className="shop-display-info">
-              <h2>{item.name}</h2>
-              <p>{GRADE_COPY[item.grade] ?? "새 친구가 태어날 알이에요."}</p>
-              <ul className="shop-prob-list" aria-label="등급별 확률">
-                {TIER_ORDER.filter((t) => item.probabilities?.[t] > 0).map((t) => (
-                  <li key={t} className={`shop-prob shop-prob--${t.toLowerCase()}`}>
-                    {t} {item.probabilities[t]}%
-                  </li>
-                ))}
-              </ul>
-              <strong>{coin(item.price)}</strong>
-              <button
-                type="button"
-                className="home-btn home-btn-primary shop-buy-btn"
-                disabled={!affordable || isBusy || busy !== null}
-                onClick={() => handleBuy(item)}
-                title={affordable ? undefined : "코인이 부족해요"}
-              >
-                {isBusy ? "구매 중…" : affordable ? "구매하기" : "코인 부족"}
-              </button>
-            </div>
-          </article>
-        );
-      })}
-    </>
-  );
-
   const ownedCountByName = myFurniture.reduce((acc, f) => {
     acc[f.name] = (acc[f.name] || 0) + 1;
     return acc;
   }, {});
 
-  return (
-    <AppShell
-      activeTop="shop"
-      activeSide="shop"
-      user={user}
-      onLogout={onLogout}
-    >
-      <main className="home-main shop-main">
-        <section
-          className={`shop-hero ${shopTab === "furniture" ? "shop-hero--furniture" : ""}`}
-          style={{ backgroundImage: `url(${shopBackgroundImage})` }}
-          aria-label="VORI 상점"
-        >
-          <div className="shop-hero-panel">
-            <p className="shop-eyebrow">VORI SHOP</p>
-            {shopTab === "egg" ? (
-              <>
-                <h1>{nickname}님, 어떤 알을 데려갈까요?</h1>
-                <p>
-                  절약한 돈이 코인이 되고, 코인으로 새 친구가 태어날 알을 살 수 있어요.
-                </p>
-              </>
-            ) : (
-              <>
-                <h1>{nickname}님, 어떤 가구를 들여볼까요?</h1>
-                <p>
-                  마이룸에 배치해야 효과가 생겨요 · 보유 가구 {myFurniture.length}개
-                </p>
-              </>
-            )}
-          </div>
+  const coinLabel = loading ? "…" : unlimitedCoins ? "∞" : num(gameMoney);
+  const resultPet = result?.pet;
+  const resultImage = resultPet ? petVisual(resultPet.appearanceKey, resultPet.stage).image : null;
 
-          <div className="shop-hero-corner">
+  return (
+    <AppShell activeTop="shop" activeSide="shop" user={user} onLogout={onLogout}>
+      <main className="home-main sp">
+        <div className="sp-layout">
+          {/* 머리 — 이 화면의 핵심 숫자는 보유 코인 */}
+          <div className="sp-head">
+            <h1 className="sp-title">상점</h1>
             <button
               type="button"
-              className="shop-history-btn"
+              className="sp-history-btn"
               onClick={() => setHistoryOpen(true)}
               aria-haspopup="dialog"
             >
-              <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
-                <path
-                  d="M3.5 1.5h9v13l-2.2-1.4L8 14.5l-2.3-1.4-2.2 1.4zM6 5.5h4M6 8.5h4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <Icon name="receipt" size={15} />
               구매 내역
             </button>
             <div
-              className="shop-coin-badge"
+              className="sp-coins"
               role="status"
               aria-live="polite"
-              aria-label={`보유 코인 ${loading ? "확인 중" : unlimitedCoins ? "무제한" : gameMoney.toLocaleString("ko-KR")}`}
+              aria-label={`보유 코인 ${loading ? "확인 중" : unlimitedCoins ? "무제한" : num(gameMoney)}`}
             >
-              <CoinIcon className="shop-coin-badge-icon" />
-              {loading ? "…" : unlimitedCoins ? "∞" : gameMoney.toLocaleString("ko-KR")}
+              <CoinIcon size={18} />
+              <strong>{coinLabel}</strong>
             </div>
           </div>
 
-          {/* 알 / 가구 상점 전환 — 아이콘을 누르면 진열대가 바뀐다 */}
-          <div className="shop-tabs" role="tablist" aria-label="상점 종류">
-            <button
-              type="button"
-              role="tab"
-              id="shop-tab-egg"
-              aria-selected={shopTab === "egg"}
-              aria-controls={shopTab === "egg" ? "shop-panel-egg" : undefined}
-              className={`shop-tab ${shopTab === "egg" ? "is-active" : ""}`}
-              onClick={() => setShopTab("egg")}
-            >
-              <img src={EGG_IMAGE.BASIC} alt="" />
-              <span>알</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              id="shop-tab-furniture"
-              aria-selected={shopTab === "furniture"}
-              aria-controls={shopTab === "furniture" ? "shop-panel-furniture" : undefined}
-              className={`shop-tab ${shopTab === "furniture" ? "is-active" : ""}`}
-              onClick={() => setShopTab("furniture")}
-            >
-              <img src={furnitureIconImage} alt="" />
-              <span>가구</span>
-            </button>
+          {/* 알 분양 / 가구 */}
+          <div className="sp-seg" role="tablist" aria-label="상점 종류">
+            {[
+              ["egg", "알 분양", "egg"],
+              ["furniture", "가구", "sofa"],
+            ].map(([id, label, icon]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                id={`shop-tab-${id}`}
+                aria-selected={shopTab === id}
+                aria-controls={`shop-panel-${id}`}
+                className={shopTab === id ? "is-active" : ""}
+                onClick={() => setShopTab(id)}
+              >
+                <Icon name={icon} size={16} />
+                {label}
+              </button>
+            ))}
           </div>
 
-          {shopTab === "egg" &&
-            (narrow ? (
-              <PagedShelf
-                id="shop-panel-egg"
-                labelledBy="shop-tab-egg"
-                noun="알"
-                pager={eggPager}
-                onMove={setEggStart}
-                showIndicator={products.length > 0}
-              >
-                {eggShelfBody}
-              </PagedShelf>
-            ) : (
-              <div
-                className="shop-display-shelf"
-                id="shop-panel-egg"
-                role="tabpanel"
-                aria-labelledby="shop-tab-egg"
-              >
-                {eggShelfBody}
-              </div>
-            ))}
+          {notice && (
+            <p
+              className={`sp-notice ${notice.kind === "err" ? "sp-notice--err" : ""}`}
+              role={notice.kind === "err" ? "alert" : "status"}
+            >
+              {notice.text}
+            </p>
+          )}
 
-          {shopTab === "furniture" && (
+          {shopTab === "egg" ? (
+            <div className="sp-panel" id="shop-panel-egg" role="tabpanel" aria-labelledby="shop-tab-egg">
+              <p className="sp-card sp-guide">
+                절약한 돈이 코인이 되고, 코인으로 새 친구가 태어날 알을 살 수 있어요.
+              </p>
+
+              {loading && products.length === 0 && <p className="sp-state">상품을 불러오는 중…</p>}
+              {error && <p className="sp-state sp-state--error">{error}</p>}
+
+              <ul className="sp-eggs">
+                {products.map((item) => {
+                  const affordable = unlimitedCoins || gameMoney >= item.price;
+                  const isBusy = busy === `buy:${item.grade}`;
+                  const image = eggImageFor(item.grade, item.name);
+                  return (
+                    <li key={item.grade} className="sp-card sp-egg" data-grade={item.grade}>
+                      <div className="sp-egg-top">
+                        <span className="sp-tile">
+                          <img src={image} alt={item.name} className="sp-pixel" />
+                        </span>
+                        <div className="sp-egg-meta">
+                          <h2>{item.name}</h2>
+                          <p>{GRADE_COPY[item.grade] ?? "새 친구가 태어날 알이에요."}</p>
+                          <span className="sp-price">
+                            <CoinIcon size={15} />
+                            <strong>{num(item.price)}</strong> 코인
+                          </span>
+                        </div>
+                      </div>
+                      <ul className="sp-probs" aria-label="등장 확률">
+                        <li className="sp-probs-label" aria-hidden>
+                          등장 확률
+                        </li>
+                        {TIER_ORDER.map((t) => {
+                          const pct = item.probabilities?.[t] ?? 0;
+                          return (
+                            <li
+                              key={t}
+                              className={`sp-prob sp-prob--${t.toLowerCase()} ${pct > 0 ? "" : "is-zero"}`}
+                            >
+                              <b>{t}</b> {pct}%
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <div className="sp-egg-foot">
+                        {!affordable && (
+                          <span className="sp-short">
+                            <Icon name="info" size={13} />
+                            <b>코인 {num(item.price - gameMoney)} 부족</b>
+                            <span>(보유 {num(gameMoney)})</span>
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="sp-buy"
+                          disabled={!affordable || busy !== null}
+                          onClick={() => setConfirm({ kind: "egg", product: item, image })}
+                        >
+                          {!affordable && <Icon name="lock" size={13} />}
+                          {isBusy ? "구매 중…" : "구매"}
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="sp-lower">
+                {/* 보유 알 — 개봉하면 가챠가 돌아 펫이 태어난다 */}
+                <section className="sp-card sp-section" aria-labelledby="sp-inv-title">
+                  <div className="sp-section-head">
+                    <h2 id="sp-inv-title">보유 알</h2>
+                    <span>{eggs.length}개 미개봉</span>
+                  </div>
+                  {!loading && eggs.length === 0 ? (
+                    <p className="sp-empty">아직 개봉할 알이 없어요. 위에서 알을 데려와 보세요.</p>
+                  ) : (
+                    <ul className="sp-inv">
+                      {eggs.map((egg) => {
+                        const isBusy = busy === `open:${egg.id}`;
+                        return (
+                          <li key={egg.id}>
+                            <span className="sp-tile sp-tile--sm">
+                              <img src={eggImageFor(egg.grade, egg.gradeName)} alt="" className="sp-pixel" />
+                            </span>
+                            <span className="sp-inv-mid">
+                              <strong>{egg.gradeName}</strong>
+                              <small>
+                                {coin(egg.price)} · {egg.purchasedAt?.slice(0, 10)} 구매
+                              </small>
+                            </span>
+                            <button
+                              type="button"
+                              className="sp-btn sp-btn--dark sp-btn--sm"
+                              disabled={busy !== null}
+                              onClick={() => handleOpen(egg)}
+                            >
+                              {isBusy ? "개봉 중…" : "개봉하기"}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+
+                {/* 개봉 결과 — 마지막으로 태어난 펫 */}
+                <section className="sp-card sp-section" aria-labelledby="sp-result-title" aria-live="polite">
+                  <div className="sp-section-head">
+                    <h2 id="sp-result-title">새로 태어난 친구</h2>
+                  </div>
+                  {resultPet ? (
+                    <div className="sp-result">
+                      <span className="sp-tile sp-tile--lg">
+                        {resultImage ? (
+                          <img src={resultImage} alt={resultPet.speciesName} className="sp-pixel" />
+                        ) : (
+                          <Icon name="paw" size={32} />
+                        )}
+                      </span>
+                      <div className="sp-result-text">
+                        <strong>{resultPet.speciesName}</strong>
+                        <div className="sp-tags">
+                          <span className={`sp-tag sp-tag--${(resultPet.tier || "c").toLowerCase()}`}>
+                            {TIER_LABEL[resultPet.tier] ?? resultPet.tier}
+                          </span>
+                          <span className="sp-tag">{STAGE_LABEL[resultPet.stage] ?? resultPet.stage}</span>
+                          {VARIANT_LABEL[resultPet.variant] && (
+                            <span className="sp-tag sp-tag--variant">{VARIANT_LABEL[resultPet.variant]}</span>
+                          )}
+                        </div>
+                        <p>알에서 {resultPet.speciesName}이(가) 태어났어요! 마이룸에서 키워 보세요.</p>
+                        <button type="button" className="sp-link" onClick={() => navigate("/myroom")}>
+                          마이룸 가기 <Icon name="chevronRight" size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="sp-empty">알을 개봉하면 여기에 새 친구가 나타나요.</p>
+                  )}
+                </section>
+              </div>
+
+              <p className="sp-footnote">
+                <Icon name="checkCircle" size={14} />
+                부화한 반려동물은 마이룸에서 언제든 함께 지낼 수 있어요
+              </p>
+            </div>
+          ) : (
             <FurnitureBrowser
               id="shop-panel-furniture"
               labelledBy="shop-tab-furniture"
@@ -403,108 +406,104 @@ function ShopPage({ user, onLogout }) {
               loading={furnitureLoading}
               error={furnitureError}
               ownedCountByName={ownedCountByName}
+              ownedTotal={myFurniture.length}
               gameMoney={gameMoney}
               unlimitedCoins={unlimitedCoins}
               busy={busy}
-              onBuy={handleBuyFurniture}
+              onBuy={(product) =>
+                setConfirm({ kind: "furniture", product, image: furnitureVisual(product.category).image })
+              }
             />
           )}
-        </section>
-
-        {notice && (
-          <p
-            className={`shop-notice ${notice.kind === "err" ? "shop-notice--err" : ""}`}
-            role={notice.kind === "err" ? "alert" : "status"}
-          >
-            {notice.text}
-          </p>
-        )}
-
-        <div className="shop-lower">
-          {/* 보유 알 — 개봉하면 가챠가 돌아 펫이 태어난다 */}
-          <section className="home-card shop-inventory">
-            <div className="shop-section-head">
-              <h2 className="home-card-title home-card-title--sm">보유 알</h2>
-              <span>{eggs.length}개 미개봉</span>
-            </div>
-            {!loading && eggs.length === 0 ? (
-              <p className="shop-empty">아직 개봉할 알이 없어요. 위에서 알을 데려와 보세요.</p>
-            ) : (
-              <ul className="shop-egg-list">
-                {eggs.map((egg) => {
-                  const isBusy = busy === `open:${egg.id}`;
-                  return (
-                    <li key={egg.id} className="shop-egg-item">
-                      <img src={eggImageFor(egg.grade, egg.gradeName)} alt="" className="shop-egg-thumb" />
-                      <div className="shop-egg-info">
-                        <strong>{egg.gradeName}</strong>
-                        <small>{coin(egg.price)} · {egg.purchasedAt?.slice(0, 10)} 구매</small>
-                      </div>
-                      <button
-                        type="button"
-                        className="home-btn home-btn-primary shop-open-btn"
-                        disabled={busy !== null}
-                        onClick={() => handleOpen(egg)}
-                      >
-                        {isBusy ? "개봉 중…" : "개봉하기"}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-
-          {/* 개봉 결과 — 마지막으로 태어난 펫 */}
-          <section className="home-card shop-result" aria-live="polite">
-            <div className="shop-section-head">
-              <h2 className="home-card-title home-card-title--sm">새로 태어난 친구</h2>
-            </div>
-            {result ? (
-              <div className="shop-result-body">
-                <span className="shop-result-art">
-                  <PetArt
-                    appearanceKey={result.pet.appearanceKey}
-                    stage={result.pet.stage}
-                    name={result.pet.speciesName}
-                    className="shop-result-image"
-                    emojiClassName="shop-result-emoji"
-                  />
-                </span>
-                <div className="shop-result-text">
-                  <strong>{result.pet.speciesName}</strong>
-                  <div className="shop-result-tags">
-                    <span className={`shop-tag shop-tag--${(result.pet.tier || "c").toLowerCase()}`}>
-                      {TIER_LABEL[result.pet.tier] ?? result.pet.tier}
-                    </span>
-                    <span className="shop-tag">{STAGE_LABEL[result.pet.stage] ?? result.pet.stage}</span>
-                    {VARIANT_LABEL[result.pet.variant] && (
-                      <span className="shop-tag shop-tag--variant">
-                        ✨ {VARIANT_LABEL[result.pet.variant]}
-                      </span>
-                    )}
-                  </div>
-                  <p>알에서 {result.pet.speciesName}이(가) 태어났어요! 마이룸에서 키워 보세요.</p>
-                  <button
-                    type="button"
-                    className="home-link-btn"
-                    onClick={() => navigate("/myroom")}
-                  >
-                    마이룸 가기 →
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className="shop-empty">알을 개봉하면 여기에 새 친구가 나타나요.</p>
-            )}
-          </section>
         </div>
 
-        {historyOpen && (
-          <PurchaseHistoryModal onClose={() => setHistoryOpen(false)} />
+        {confirm && (
+          <BuySheet
+            product={confirm.product}
+            image={confirm.image}
+            gameMoney={gameMoney}
+            unlimitedCoins={unlimitedCoins}
+            busy={busy !== null}
+            onCancel={() => setConfirm(null)}
+            onConfirm={confirmBuy}
+          />
         )}
+
+        {historyOpen && <PurchaseHistoryModal onClose={() => setHistoryOpen(false)} />}
       </main>
     </AppShell>
+  );
+}
+
+// 받침 있는 이름이면 「을」, 없으면 「를」 — "책상을 살까요?" / "소파를 살까요?"
+function objectParticle(word = "") {
+  const last = word.trim().slice(-1);
+  const code = last.charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return "을(를)";
+  return code % 28 === 0 ? "를" : "을";
+}
+
+// 구매 확인 — 폰은 아래에서 올라오는 시트, PC 는 가운데 창. Esc·바깥 누르기·취소로 닫는다.
+function BuySheet({ product, image, gameMoney, unlimitedCoins, busy, onCancel, onConfirm }) {
+  const panelRef = useRef(null);
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && !busy && onCancel();
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    panelRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onCancel, busy]);
+
+  const after = gameMoney - product.price;
+  return (
+    <div className="sp-sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && !busy && onCancel()}>
+      <div
+        className="sp-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sp-sheet-title"
+        tabIndex={-1}
+        ref={panelRef}
+      >
+        <span className="sp-sheet-grip" aria-hidden />
+        <h2 id="sp-sheet-title">
+          {product.name}
+          {objectParticle(product.name)} 살까요?
+        </h2>
+        <span className="sp-tile sp-tile--xl">
+          {image ? <img src={image} alt="" className="sp-pixel" /> : <Icon name="sofa" size={40} />}
+        </span>
+        <dl className="sp-sheet-sum">
+          <div className="sp-sheet-price">
+            <dt>가격</dt>
+            <dd>
+              <CoinIcon size={15} />
+              {coin(product.price)}
+            </dd>
+          </div>
+          <div>
+            <dt>지금 코인</dt>
+            <dd>{unlimitedCoins ? "무제한" : num(gameMoney)}</dd>
+          </div>
+          <div>
+            <dt>구매 후</dt>
+            <dd>{unlimitedCoins ? "무제한" : num(after)}</dd>
+          </div>
+        </dl>
+        <div className="sp-sheet-actions">
+          <button type="button" className="sp-btn sp-btn--soft" onClick={onCancel} disabled={busy}>
+            취소
+          </button>
+          <button type="button" className="sp-btn sp-btn--dark" onClick={onConfirm} disabled={busy}>
+            {busy ? "구매 중…" : "구매하기"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
