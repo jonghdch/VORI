@@ -3,6 +3,7 @@ import AppShell from "../../components/AppShell";
 import ProfileSettingsPanel from "./ProfileSettingsPanel";
 import GeneralSettingsPanel from "./GeneralSettingsPanel";
 import AccountSettingsPanel from "./AccountSettingsPanel";
+import PaymentSettingsPanel from "./PaymentSettingsPanel";
 import "./SettingsPage.css";
 
 // 가계부 입력(WalletEntryPage)이 기본 결제수단을 여기서 읽는다.
@@ -13,6 +14,7 @@ export { loadUserSettings } from "./GeneralSettingsPanel";
 const TABS = [
   { id: "profile", label: "프로필", desc: "내 정보를 수정하면 VORI 화면에 바로 반영됩니다." },
   { id: "general", label: "기본 설정", desc: "가계부 입력에 쓰이는 기본값을 정합니다." },
+  { id: "payment", label: "카드·계좌", desc: "쓰고 있는 카드·계좌를 등록하면 지출을 적을 때 바로 고를 수 있습니다." },
   // 관리자 계정은 탈퇴할 수 없어 탭을 숨긴다(서버도 403)
   { id: "account", label: "계정", desc: "회원 탈퇴를 신청할 수 있습니다.", hideForAdmin: true },
 ];
@@ -51,6 +53,7 @@ function SettingsPage({ user, onLogout, onUserUpdate }) {
               <ProfileSettingsPanel user={user} onUserUpdate={onUserUpdate} />
             )}
             {current.id === "general" && <GeneralSettingsPanel />}
+            {current.id === "payment" && <PaymentSettingsPanel />}
             {current.id === "account" && <AccountSettingsPanel user={user} onLogout={onLogout} />}
           </section>
         </div>

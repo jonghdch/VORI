@@ -20,6 +20,8 @@ import {
   listSavingsByDate,
 } from "../../api/ledger";
 import { loadUserSettings } from "../Settings/SettingsPage";
+import { listInstruments } from "../../api/paymentInstruments";
+import { INSTRUMENT_KINDS } from "../../constants/issuers";
 import "./WalletRecord.css";
 
 // 지출 기록 — 한 건씩 적는다. 날짜는 다른 화면에서 ?date= 로 정해 들어오고, 머리의 날짜 칩으로 바꿀 수 있다.
@@ -72,6 +74,21 @@ function WalletEntryPage({ user }) {
 
   // 사용자 설정의 기본 결제수단 — 없으면 CREDIT
   const defaultPayment = loadUserSettings().defaultPaymentMethod || "CREDIT";
+
+  // 설정 > 카드·계좌에 등록한 결제수단 — 결제 수단 칩 앞에 붙는다. 예적금은 결제에 안 쓰여 뺀다.
+  // 못 불러와도 종류 칩 5개로 그대로 적을 수 있으니 조용히 넘어간다.
+  const [instruments, setInstruments] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    listInstruments()
+      .then((list) => {
+        if (alive) setInstruments(list.filter((i) => i.group !== "SAVINGS"));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
   const emptyForm = useCallback(
     (keep = {}) => ({
       name: "",
@@ -81,6 +98,7 @@ function WalletEntryPage({ user }) {
       categoryEnum: null, // 수입 출처 / 저축 유형
       sourceTouched: false,
       paymentMethod: defaultPayment,
+      paymentInstrumentId: null, // 설정 > 카드·계좌에서 등록한 카드를 골랐으면 그 id
       memo: "",
       memoOpen: false,
       dbId: null, // 저장된 지출을 고치는 중이면 그 id
@@ -179,6 +197,7 @@ function WalletEntryPage({ user }) {
           categoryId: e.categoryId ?? null,
           categoryTouched: true, // 저장된 카테고리 — 자동 분류로 덮지 않음
           paymentMethod: e.paymentMethod || defaultPayment,
+          paymentInstrumentId: e.paymentInstrumentId ?? null,
           memo: e.memo ?? "", // 다시 보낼 때 그대로 돌려줘야 지워지지 않는다
           memoOpen: Boolean(e.memo),
         }),
@@ -244,7 +263,7 @@ function WalletEntryPage({ user }) {
     if (next === type || form.dbId) return;
     setType(next);
     // 내역·금액은 그대로, 분류만 새 종류에 맞게 다시
-    setForm((f) => emptyForm({ name: f.name, amount: f.amount, paymentMethod: f.paymentMethod, memo: f.memo, memoOpen: f.memoOpen }));
+    setForm((f) => emptyForm({ name: f.name, amount: f.amount, paymentMethod: f.paymentMethod, paymentInstrumentId: f.paymentInstrumentId, memo: f.memo, memoOpen: f.memoOpen }));
   };
 
   // ── 영수증 OCR ──────────────────────────────────────────
@@ -359,6 +378,7 @@ function WalletEntryPage({ user }) {
                 amount: amountNum,
                 categoryId: form.categoryId,
                 paymentMethod: form.paymentMethod,
+                paymentInstrumentId: form.paymentInstrumentId ?? null,
                 spentAt: `${dateStr}T00:00:00`,
                 memo: form.memo ?? "", // 빈 글자 = 메모 없음(수정이면 지움)
               }]
@@ -384,7 +404,7 @@ function WalletEntryPage({ user }) {
         return;
       }
       // 하나 더 — 종류·결제수단은 그대로 두고 비운 뒤 금액부터 다시
-      setForm(emptyForm({ paymentMethod: form.paymentMethod }));
+      setForm(emptyForm({ paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId }));
       setNotice({ kind: "ok", text: `'${item}' ${won(amountNum)}을 저장했어요. 다음 것을 적어 주세요.` });
       loadDay();
       amountRef.current?.focus();
@@ -400,7 +420,7 @@ function WalletEntryPage({ user }) {
     if (!window.confirm(`'${form.name || "이 지출"}'을 삭제할까요?`)) return;
     try {
       await deleteExpense(form.dbId);
-      setForm(emptyForm({ paymentMethod: form.paymentMethod }));
+      setForm(emptyForm({ paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId }));
       setNotice({ kind: "ok", text: "삭제했어요." });
       loadDay();
     } catch (error) {
@@ -514,7 +534,7 @@ function WalletEntryPage({ user }) {
           {editing && (
             <div className="wr-editing">
               <span>저장된 지출을 고치는 중이에요</span>
-              <button type="button" onClick={() => setForm(emptyForm({ paymentMethod: form.paymentMethod }))}>
+              <button type="button" onClick={() => setForm(emptyForm({ paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId }))}>
                 새로 쓰기
               </button>
             </div>
@@ -670,10 +690,37 @@ function WalletEntryPage({ user }) {
           {/* 결제 수단 (지출만) */}
           {type === "expense" && (
             <div className="wr-field">
-              <span className="wr-label">결제 수단</span>
+              <div className="wr-label-row">
+                <span className="wr-label">결제 수단</span>
+                <button type="button" className="wr-label-link" onClick={() => navigate("/settings/payment")}>
+                  카드·계좌 관리 <Icon name="chevronRight" size={13} />
+                </button>
+              </div>
               <div className="wr-chips" role="radiogroup" aria-label="결제 수단">
+                {/* 내 카드·계좌 — 고르면 종류(paymentMethod)도 그 카드에 맞춘다 */}
+                {instruments.map((inst) => {
+                  const on = form.paymentInstrumentId === inst.id;
+                  return (
+                    <button
+                      key={`inst-${inst.id}`}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      className={`wr-chip wr-chip--mine ${on ? "is-on" : ""}`}
+                      onClick={() =>
+                        patch({ paymentInstrumentId: inst.id, paymentMethod: INSTRUMENT_KINDS[inst.kind].paymentMethod })
+                      }
+                    >
+                      {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                      {inst.name}
+                    </button>
+                  );
+                })}
+                {instruments.length > 0 && <span className="wr-chip-divider" aria-hidden />}
                 {PAYMENT_METHODS.map((p) => {
-                  const on = form.paymentMethod === p.value;
+                  // 등록한 카드를 고른 동안은 종류 칩을 켜지 않는다. 보관해서 목록에 없는 카드면 종류로 보여 준다.
+                  const pickedMine = instruments.some((i) => i.id === form.paymentInstrumentId);
+                  const on = !pickedMine && form.paymentMethod === p.value;
                   return (
                     <button
                       key={p.value}
@@ -681,7 +728,7 @@ function WalletEntryPage({ user }) {
                       role="radio"
                       aria-checked={on}
                       className={`wr-chip ${on ? "is-on" : ""}`}
-                      onClick={() => patch({ paymentMethod: p.value })}
+                      onClick={() => patch({ paymentMethod: p.value, paymentInstrumentId: null })}
                     >
                       {on && <Icon name="check" size={13} strokeWidth={2.4} />}
                       {p.label}

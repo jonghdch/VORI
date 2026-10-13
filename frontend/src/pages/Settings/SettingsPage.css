@@ -248,3 +248,20 @@
     gap: 12px;
   }
 }
+
+/* 카드·계좌 탭 */
+.pay-form { display:flex; flex-direction:column; gap:12px; margin-top:12px; }
+.pay-kind { display:flex; flex-wrap:wrap; gap:6px; }
+.pay-kind-btn { border:1px solid #d8d4ca; border-radius:999px; background:#fff; padding:6px 14px; font:inherit; font-size:13px; color:var(--home-muted); cursor:pointer; }
+.pay-kind-btn.is-active { border-color:#7c9e6b; background:#eaf3de; color:#3f5a30; font-weight:700; }
+.pay-fields { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; }
+.pay-field { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--home-muted); }
+.pay-field--grow { flex:1; min-width:160px; }
+.pay-field .settings-input { width:100%; box-sizing:border-box; }
+.pay-add-btn { height:40px; }
+.pay-list { display:grid; gap:7px; margin:12px 0 0; padding:0; list-style:none; }
+.pay-item { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; background:var(--home-bg); }
+.pay-item-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.pay-item-text strong { color:var(--home-text); font-size:14px; }
+.pay-item-text span { color:var(--home-muted); font-size:12px; }
+.pay-item-archive { margin-left:auto; border:0; background:transparent; color:#a35d5d; cursor:pointer; font:inherit; font-size:13px; }
