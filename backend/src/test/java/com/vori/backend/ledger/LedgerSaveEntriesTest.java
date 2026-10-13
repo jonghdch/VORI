@@ -17,6 +17,9 @@ import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.ledger.dto.LedgerSaveRequest;
 import com.vori.backend.ledger.dto.LedgerSaveRequest.ExpenseEntry;
 import com.vori.backend.ledger.dto.LedgerSaveResponse;
+import com.vori.backend.paymentinstrument.InstrumentKind;
+import com.vori.backend.paymentinstrument.PaymentInstrument;
+import com.vori.backend.paymentinstrument.PaymentInstrumentService;
 import com.vori.backend.savings.SavingService;
 import com.vori.backend.savings.SavingType;
 import com.vori.backend.savings.dto.SavingCreateRequest;
@@ -61,11 +64,12 @@ class LedgerSaveEntriesTest {
     private final ExpenseService expenseService = mock(ExpenseService.class);
     private final IncomeService incomeService = mock(IncomeService.class);
     private final SavingService savingService = mock(SavingService.class);
+    private final PaymentInstrumentService paymentInstrumentService = mock(PaymentInstrumentService.class);
     private final CountingTransactionManager transactions = new CountingTransactionManager();
     private final LedgerService service = transactional(new LedgerService(
             expenseRepository, mock(IncomeRepository.class), mock(CategoryRepository.class),
             mock(UserRepository.class), mock(AiInquiryRepository.class),
-            expenseService, incomeService, savingService));
+            expenseService, incomeService, savingService, paymentInstrumentService));
 
     /** 저장돼 있는 지출 7번 — 저녁 12,000원, 체크카드, 메모 「옛 메모」. */
     private Expense saved(long userId) {
@@ -94,6 +98,7 @@ class LedgerSaveEntriesTest {
     void allRowsAreSavedInOneTransactionInRequestOrder() {
         ExpenseResponse created = mock(ExpenseResponse.class);
         ExpenseResponse updated = mock(ExpenseResponse.class);
+        when(updated.paymentInstrumentId()).thenReturn(null); // 카드 없이 저장된 지출 (목은 기본값 0L 을 돌려준다)
         IncomeResponse income = mock(IncomeResponse.class);
         SavingResponse saving = mock(SavingResponse.class);
         when(expenseService.createExpense(eq(USER_ID), any())).thenReturn(created);
@@ -263,6 +268,80 @@ class LedgerSaveEntriesTest {
         assertEquals(403, error.getStatusCode().value());
         assertEquals("옛 메모", e.getMemo());
         verifyNoInteractions(expenseService);
+    }
+
+    /** 사용자 1의 K-패스(신용카드) 4번 — 보관했으면 archivedAt 이 있다. */
+    private PaymentInstrument instrument(long id, long ownerId, InstrumentKind kind) {
+        PaymentInstrument p = PaymentInstrument.builder().id(id).userId(ownerId).kind(kind)
+                .issuer("KBANK").name("K-패스").build();
+        if (ownerId == USER_ID) when(paymentInstrumentService.requireOwned(USER_ID, id)).thenReturn(p);
+        else when(paymentInstrumentService.requireOwned(USER_ID, id))
+                .thenThrow(new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND));
+        return p;
+    }
+
+    @Test
+    void newExpenseWithInstrumentTakesItsKindAndKeepsTheLink() {
+        instrument(4L, USER_ID, InstrumentKind.CREDIT);
+        ExpenseResponse created = mock(ExpenseResponse.class);
+        when(created.id()).thenReturn(21L);
+        when(created.withPaymentInstrumentId(4L)).thenReturn(created);
+        when(expenseService.createExpense(eq(USER_ID), any())).thenReturn(created);
+        Expense row = Expense.builder().id(21L).userId(USER_ID).item("버스").amount(1500).categoryId(3L)
+                .paymentMethod(PaymentMethod.CREDIT).spentAt(SPENT_AT).build();
+        when(expenseRepository.findById(21L)).thenReturn(Optional.of(row));
+
+        // 화면이 종류를 현금으로 잘못 보내도 카드(신용) 종류로 저장된다
+        service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                new ExpenseEntry(null, 3L, 1500, "버스", SPENT_AT, PaymentMethod.CASH, null, 4L)), null, null));
+
+        ArgumentCaptor<ExpenseCreateRequest> req = ArgumentCaptor.forClass(ExpenseCreateRequest.class);
+        verify(expenseService).createExpense(eq(USER_ID), req.capture());
+        assertEquals(PaymentMethod.CREDIT, req.getValue().paymentMethod());
+        assertEquals(4L, row.getPaymentInstrumentId());
+    }
+
+    @Test
+    void someoneElsesInstrumentIsRejectedBeforeSaving() {
+        instrument(9L, 99L, InstrumentKind.DEBIT);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                        new ExpenseEntry(null, 3L, 1500, "버스", SPENT_AT, PaymentMethod.DEBIT, null, 9L)), null, null)));
+
+        assertEquals(404, error.getStatusCode().value());
+        verifyNoInteractions(expenseService);
+    }
+
+    @Test
+    void savingsAccountIsNotAPaymentMethod() {
+        instrument(5L, USER_ID, InstrumentKind.SAVINGS);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                        new ExpenseEntry(null, 3L, 1500, "버스", SPENT_AT, PaymentMethod.DEBIT, null, 5L)), null, null)));
+
+        assertEquals(400, error.getStatusCode().value());
+        verifyNoInteractions(expenseService);
+    }
+
+    @Test
+    void editingSwitchesTheCardAndClearingItKeepsTheKind() {
+        Expense e = saved(USER_ID);
+        instrument(4L, USER_ID, InstrumentKind.CREDIT);
+
+        // 체크카드로 적은 저녁을 K-패스(신용)로 — 판정 항목이 그대로라 다시 판정하지 않는다
+        service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                new ExpenseEntry(7L, 3L, 12000, "저녁", SPENT_AT, PaymentMethod.DEBIT, null, 4L)), null, null));
+        assertEquals(PaymentMethod.CREDIT, e.getPaymentMethod());
+        assertEquals(4L, e.getPaymentInstrumentId());
+        verify(expenseService, never()).updateExpense(any(), any(), any());
+
+        // 카드 없이 종류만 고르면 연결을 끊는다
+        service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                new ExpenseEntry(7L, 3L, 12000, "저녁", SPENT_AT, PaymentMethod.CREDIT, null)), null, null));
+        assertNull(e.getPaymentInstrumentId());
+        assertEquals(PaymentMethod.CREDIT, e.getPaymentMethod());
     }
 
     @Test

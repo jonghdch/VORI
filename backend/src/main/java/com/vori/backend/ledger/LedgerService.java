@@ -1,6 +1,7 @@
 package com.vori.backend.ledger;
 
 import com.vori.backend.category.CategoryRepository;
+import com.vori.backend.common.PaymentMethod;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.ExpenseRepository;
 import com.vori.backend.expense.ExpenseService;
@@ -14,6 +15,8 @@ import com.vori.backend.inquiry.AiInquiry;
 import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.ledger.dto.LedgerSaveRequest;
 import com.vori.backend.ledger.dto.LedgerSaveResponse;
+import com.vori.backend.paymentinstrument.PaymentInstrument;
+import com.vori.backend.paymentinstrument.PaymentInstrumentService;
 import com.vori.backend.savings.SavingService;
 import com.vori.backend.savings.dto.SavingResponse;
 import com.vori.backend.user.User;
@@ -31,6 +34,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,6 +49,7 @@ public class LedgerService {
     private final ExpenseService expenseService;
     private final IncomeService incomeService;
     private final SavingService savingService;
+    private final PaymentInstrumentService paymentInstrumentService;
 
     /** 해당 월(yyyy-MM) 의 본인 지출+수입을 날짜 오름차순으로 병합. */
     @Transactional(readOnly = true)
@@ -102,7 +107,8 @@ public class LedgerService {
     @Transactional
     public LedgerSaveResponse saveEntries(Long userId, LedgerSaveRequest req) {
         List<ExpenseResponse> expenses = new ArrayList<>();
-        for (LedgerSaveRequest.ExpenseEntry e : req.expenses()) {
+        for (LedgerSaveRequest.ExpenseEntry raw : req.expenses()) {
+            LedgerSaveRequest.ExpenseEntry e = withInstrumentMethod(userId, raw);
             expenses.add(e.id() == null ? createExpense(userId, e) : updateExpense(userId, e));
         }
         List<IncomeResponse> incomes = req.incomes().stream()
@@ -114,9 +120,30 @@ public class LedgerService {
         return new LedgerSaveResponse(expenses, incomes, savings);
     }
 
+    /**
+     * 내 카드·계좌를 골랐으면 본인 것인지 확인하고, 결제수단 종류를 그 카드에 맞춘다
+     * (화면이 보낸 종류와 카드가 어긋나 저장되는 일을 막는다). 예적금은 결제수단이 아니라 거절.
+     */
+    private LedgerSaveRequest.ExpenseEntry withInstrumentMethod(Long userId, LedgerSaveRequest.ExpenseEntry e) {
+        if (e.paymentInstrumentId() == null) return e;
+        PaymentInstrument instrument = paymentInstrumentService.requireOwned(userId, e.paymentInstrumentId());
+        PaymentMethod method = instrument.getKind().paymentMethod();
+        if (method == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "예적금은 결제수단으로 고를 수 없어요.");
+        }
+        return new LedgerSaveRequest.ExpenseEntry(e.id(), e.categoryId(), e.amount(), e.item(), e.spentAt(),
+                method, e.memo(), e.paymentInstrumentId());
+    }
+
     private ExpenseResponse createExpense(Long userId, LedgerSaveRequest.ExpenseEntry e) {
-        return expenseService.createExpense(userId, new ExpenseCreateRequest(
+        ExpenseResponse created = expenseService.createExpense(userId, new ExpenseCreateRequest(
                 e.categoryId(), e.amount(), e.item(), e.spentAt(), null, e.paymentMethod(), normalizeMemo(e.memo()), null));
+        if (e.paymentInstrumentId() == null) return created;
+        // 판정·EMA 는 카드와 무관해 ExpenseService 는 그대로 두고, 만든 행에 카드만 붙인다(같은 트랜잭션).
+        expenseRepository.findById(created.id())
+                .orElseThrow(() -> new IllegalStateException("방금 저장한 지출을 찾을 수 없습니다."))
+                .updatePaymentInstrument(e.paymentInstrumentId());
+        return created.withPaymentInstrumentId(e.paymentInstrumentId());
     }
 
     private ExpenseResponse updateExpense(Long userId, LedgerSaveRequest.ExpenseEntry e) {
@@ -135,12 +162,18 @@ public class LedgerService {
         // 판정 없이 이름만 고친다(금액·카테고리가 바뀌어야 다시 판정하고 AI 질문·답변을 새로 만든다 — docs/judgment-flow.md D6).
         // 결제수단은 판정 계산·AI 질문 문구에 쓰지 않아 여기서 그대로 바꾼다. 결제수단이 비어 있던 예전 지출은
         // 화면이 기본값(신용카드)을 채워 보내는데, 그것도 다시 판정할 이유가 아니다.
+        // 카드는 종류를 바꾼 뒤에 붙인다 — 종류가 바뀌면 updatePaymentMethod 가 예전 카드를 비우기 때문.
         if (sameJudgedFields(current, e)) {
             if (current.getPaymentMethod() != e.paymentMethod()) current.updatePaymentMethod(e.paymentMethod());
+            current.updatePaymentInstrument(e.paymentInstrumentId());
             return ExpenseResponse.from(current);
         }
-        return expenseService.updateExpense(userId, e.id(), new ExpenseUpdateRequest(
+        ExpenseResponse updated = expenseService.updateExpense(userId, e.id(), new ExpenseUpdateRequest(
                 e.item(), e.amount(), e.categoryId(), e.paymentMethod()));
+        current.updatePaymentInstrument(e.paymentInstrumentId());
+        return Objects.equals(updated.paymentInstrumentId(), e.paymentInstrumentId())
+                ? updated
+                : updated.withPaymentInstrumentId(e.paymentInstrumentId());
     }
 
     /** 다시 판정할 필요가 없는지 — 내역(AI 질문 문구에 들어감)·금액·카테고리가 저장된 값과 같다. */

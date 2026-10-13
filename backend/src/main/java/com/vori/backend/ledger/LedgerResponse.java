@@ -13,6 +13,7 @@ import java.time.LocalDate;
  * paymentMethod 는 PaymentMethod enum 이름(CASH/DEBIT/CREDIT/TRANSFER/MOBILE_PAY), 미입력 시 null.
  * aiJudged: 예외적 지출로 AI 질문(판정)을 거쳤는지. true 인 지출에만 "AI 판정" 배지 노출. (수입은 항상 false)
  * reason: AI 질문에 사용자가 답한 소비 사유(answerText). 질문이 없거나 미답변이면 null.
+ * paymentInstrumentId: 지출을 낸 내 카드·계좌(payment_instruments.id). 고르지 않았거나 수입이면 null.
  */
 public record LedgerResponse(
         Long id,
@@ -25,7 +26,8 @@ public record LedgerResponse(
         String paymentMethod,
         String memo,
         boolean aiJudged,
-        String reason
+        String reason,
+        Long paymentInstrumentId
 ) {
     public static LedgerResponse expense(Expense e, String categoryName, boolean aiJudged, String reason) {
         return new LedgerResponse(
@@ -39,7 +41,8 @@ public record LedgerResponse(
                 e.getPaymentMethod() == null ? null : e.getPaymentMethod().name(),
                 e.getMemo(),
                 aiJudged,
-                reason);
+                reason,
+                e.getPaymentInstrumentId());
     }
 
     public static LedgerResponse income(Income i) {
@@ -54,6 +57,7 @@ public record LedgerResponse(
                 i.getPaymentMethod() == null ? null : i.getPaymentMethod().name(),
                 null,
                 false,
+                null,
                 null);
     }
 }

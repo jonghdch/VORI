@@ -24,8 +24,15 @@ public record ExpenseResponse(
         Integer statDelta,
         Boolean isRecurring,
         String memo,
-        com.vori.backend.inquiry.ReasonCategory reasonCategory
+        com.vori.backend.inquiry.ReasonCategory reasonCategory,
+        Long paymentInstrumentId
 ) {
+    /** 같은 응답에 카드·계좌 id 만 바꾼 것 — 저장 뒤 카드를 붙일 때 사유(reasonCategory)를 잃지 않으려고. */
+    public ExpenseResponse withPaymentInstrumentId(Long id) {
+        return new ExpenseResponse(this.id, spentAt, timeProvided, amount, item, categoryId, paymentMethod, statType,
+                zScore, signalInitial, signalFinal, savedAmount, statDelta, isRecurring, memo, reasonCategory, id);
+    }
+
     public static ExpenseResponse from(Expense e) {
         return from(e, null);
     }
@@ -47,7 +54,8 @@ public record ExpenseResponse(
                 e.getStatDelta(),
                 e.getIsRecurring(),
                 e.getMemo(),
-                reason
+                reason,
+                e.getPaymentInstrumentId()
         );
     }
 }
