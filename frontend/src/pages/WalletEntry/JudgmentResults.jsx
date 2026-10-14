@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CoinIcon from "../../components/CoinIcon";
 import Icon from "../../components/Icon";
 import SignalChip from "../../components/SignalChip";
@@ -20,7 +20,6 @@ const STAT_REWARD_COLORS = {
   IQ: "#6b9bd1",
   ENDURANCE: "#c9913f",
 };
-const SIGNAL_RANK = { GREEN: 1, GRAY: 2, RED: 3 };
 const NO_RECORD_LABEL = "기록 없음";
 
 // 판정 규칙(DailyJudgmentService)이 바뀌면 여기만 고친다.
@@ -39,6 +38,8 @@ export const RULE_TEXT = {
   summaryExhausted: (groups) => `${groups}는 이번 달 예산을 다 써서 예산 소진으로 표시했어요.`,
   summaryAllGreen: "모든 그룹이 쓸 수 있는 돈의 85% 안이에요.",
   summaryNoExceeded: "넘은 그룹은 없어요.",
+  // 스탯별 상세가 저장되기 전(V49 이전) 판정 — 그룹을 따질 수 없으니 맨 위 칩과 어긋나는 말을 하지 않는다
+  summaryNoDetail: "그룹별 상세가 저장되기 전 판정이라 그룹별 비교를 보여 드릴 수 없어요.",
   groupExhausted: (monthlyBudget) => `이번 달 예산 ${monthlyBudget}원을 다 써서 오늘 쓸 수 있는 돈이 0원이에요.`,
   groupGreen: "쓸 수 있는 돈의 85% 안에서 썼어요.",
   groupGray: "쓸 수 있는 돈의 85%를 넘었지만 한도 안이에요.",
@@ -81,44 +82,40 @@ function withRo(word) {
   return final === 0 || final === 8 ? `${word}로` : `${word}으로`;
 }
 
-function groupSignal(group, judgment) {
-  return signalForGroup(group.statType, judgment);
+// 그 그룹에서 사유가 인정된 지출. 승인된 질문 id 는 받지 않으므로 지출 신호(처음 RED → 최종 RED 아님)로 어림한다.
+export function recognizedExpensesFor(statType, expenses) {
+  return expenses.filter((expense) =>
+    (expense.statType || "ENDURANCE") === statType
+      && expense.signalInitial === "RED"
+      && expense.signalFinal
+      && expense.signalFinal !== "RED"
+  );
 }
 
-function isSoftened(group, judgment) {
-  const initial = judgment?.initialGroupJudgments?.[group.statType]?.signal;
-  const final = groupSignal(group, judgment);
-  return Boolean(initial && final && SIGNAL_RANK[final] < SIGNAL_RANK[initial]);
+// 예외 지출 사유가 인정돼 풀린 그룹인지. 1차보다 순해졌다는 것만으로는 부족하다 — 판정 대기(PENDING) 중에
+// 지출을 고치거나 지워도 확정 때 다시 계산돼 순해진다. 서버는 1차가 RED 인 그룹을, 인정된 지출이 있을 때만
+// 그 지출의 신호까지 완화하므로(DailyJudgmentService) 같은 조건을 본다.
+export function isSoftenedByReason(statType, judgment, expenses) {
+  const initial = judgment?.initialGroupJudgments?.[statType]?.signal;
+  const final = judgment?.groupJudgments?.[statType]?.signal;
+  if (initial !== "RED" || !final || final === "RED") return false;
+  return recognizedExpensesFor(statType, expenses).length > 0;
 }
 
 function reasonCategoryLabel(category) {
   return REASON_CHIPS.find((chip) => chip.value === category)?.label;
 }
 
-function groupReason(group, softenedFrom) {
+function groupReason(group) {
   const detail = group.detail;
   if (!detail) return `이 판정은 스탯별 상세가 저장되기 전에 기록돼 예산 비교를 다시 보여 드릴 수 없어요. 이 그룹에서 ${formatWon(group.total)}을 사용했어요.`;
   const available = Number(detail.availableToday || 0);
   const todaySpent = Number(detail.todaySpent || 0);
   if (detail.budgetExhausted) return RULE_TEXT.groupExhausted(Number(detail.monthlyBudget || 0).toLocaleString("ko-KR"));
-  if (softenedFrom) {
-    const status = SIGNAL_STATUS[group.signal] || SIGNAL_STATUS.GRAY;
-    return RULE_TEXT.softenedJudgment(withRo(status), todaySpent > available);
-  }
   if (group.signal === "GREEN") return RULE_TEXT.groupGreen;
   if (group.signal === "GRAY") return RULE_TEXT.groupGray;
   if (group.signal === "RED") return RULE_TEXT.groupOverrun(Math.max(0, todaySpent - available).toLocaleString("ko-KR"));
   return "그룹 판정 기록을 확인할 수 없어요.";
-}
-
-function getRecognizedExpenses(group) {
-  // 승인 예외 ID를 직접 받지 않으므로 이전·최종 지출 신호로 화면에서 인정된 항목을 어림한다.
-  return group.items.filter((expense) =>
-    expense.statType === group.statType
-      && expense.signalInitial === "RED"
-      && expense.signalFinal
-      && expense.signalFinal !== "RED"
-  );
 }
 
 function JudgmentTimeline({ group, initialSignal, recognizedExpenses }) {
@@ -229,10 +226,16 @@ export default function JudgmentResults({ expenses, judgment }) {
 
 function GroupJudgmentCard({ group, judgment }) {
   const initialSignal = judgment?.initialGroupJudgments?.[group.statType]?.signal;
-  const changed = isSoftened(group, judgment);
+  // 사유로 풀린 그룹에만 판정 과정(1차 → 사유 인정 → 최종)을 보여 준다. 지출을 고쳐 순해진 그룹은 평소 이유 한 줄.
+  const changed = isSoftenedByReason(group.statType, judgment, group.items);
   const exhausted = Boolean(group.detail?.budgetExhausted);
-  const recognizedExpenses = changed ? getRecognizedExpenses(group) : [];
+  const recognizedExpenses = changed ? recognizedExpensesFor(group.statType, group.items) : [];
   const [open, setOpen] = useState(() => changed || group.signal === "RED" || exhausted);
+  // 확정 직후에는 답변 전 지출 목록으로 먼저 그려져 「사유 인정」이 아직 안 보인다 — 새 목록이 와서
+  // 사유로 풀린 그룹이 되면 그때 펼친다(처음 펼침 상태만 정하면 접힌 채 남는다).
+  useEffect(() => {
+    if (changed) setOpen(true);
+  }, [changed]);
   const reward = rewardForGroup(judgment, group.statType);
   const id = `judgment-group-${group.statType}`;
   const available = group.detail ? Number(group.detail.availableToday || 0) : 0;
@@ -296,7 +299,7 @@ function GroupJudgmentCard({ group, judgment }) {
 
           {group.detail && !changed && (
             <>
-              <p className="ja-group-reason">{groupReason(group, null)}</p>
+              <p className="ja-group-reason">{groupReason(group)}</p>
               <p className="ja-group-monthly">
                 월 예산 {formatWon(monthlyBudget)} · 하루 기본 {formatWon(dailyBase)} · 이번 달 쓴 돈 {formatWon(monthSpent)}
               </p>

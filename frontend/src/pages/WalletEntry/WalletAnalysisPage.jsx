@@ -5,7 +5,7 @@ import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
 import { listExpensesByDate } from "../../api/ledger";
 import { getActivePet } from "../../api/pet";
 import { finalizeDateJudgment, getDateJudgment, startDateJudgment } from "../../api/dailyJudgment";
-import JudgmentResults, { judgmentReason, RULE_TEXT } from "./JudgmentResults";
+import JudgmentResults, { isSoftenedByReason, judgmentReason, RULE_TEXT } from "./JudgmentResults";
 import { canUseAiJudge } from "../../config";
 import { SIGNAL_STATUS } from "../../signalLabels";
 import { petDisplayName } from "../../components/petVisual";
@@ -24,8 +24,6 @@ const STAT_LABELS = {
   IQ: "문화·여가",
   ENDURANCE: "생활·고정비",
 };
-const SIGNAL_RANK = { GREEN: 1, GRAY: 2, RED: 3 };
-
 function formatDateTitle(dateStr) {
   const [, month, day] = dateStr.split("-");
   return `${Number(month)}월 ${Number(day)}일 판정`;
@@ -36,14 +34,11 @@ function formatTime(expense) {
   return String(expense.spentAt).split(/[T ]/)[1]?.slice(0, 5) || null;
 }
 
-function getResultSummary(judgment) {
+function getResultSummary(judgment, expenses) {
   const finalGroups = judgment?.groupJudgments || {};
-  const initialGroups = judgment?.initialGroupJudgments || {};
-  const softened = STAT_TYPES.filter((statType) => {
-    const initial = initialGroups[statType]?.signal;
-    const final = finalGroups[statType]?.signal;
-    return initial && final && SIGNAL_RANK[final] < SIGNAL_RANK[initial];
-  });
+  if (Object.keys(finalGroups).length === 0) return RULE_TEXT.summaryNoDetail;
+  // 그룹 카드의 판정 과정과 같은 기준 — 지출을 고쳐 순해진 그룹을 「사유가 인정돼」라고 하지 않는다
+  const softened = STAT_TYPES.filter((statType) => isSoftenedByReason(statType, judgment, expenses));
   const exceeded = STAT_TYPES.filter((statType) =>
     finalGroups[statType]?.signal === "RED" && !finalGroups[statType]?.budgetExhausted
   );
@@ -241,14 +236,20 @@ function WalletAnalysisPage({ user }) {
   const goDone = () => navigate(`/wallet?date=${dateStr}`);
   const goBack = goDone;
 
-  // 답변 입력된 inquiry 들만 POST 한 뒤 판정을 확정한다(withAnswers=false 면 건너뛰기 — 답변 없이 1차 판정 그대로 확정).
-  // 확정 응답이 최종 판정·보상이다. 갱신된 소비별 판정 결과를 보여준다.
-  const finish = async (withAnswers) => {
+  // 칩을 고르거나 글을 적은 질문이 하나라도 있는지 — 건너뛰기 버튼 문구를 바꾼다.
+  const hasTypedAnswer = inquiries.some(
+    (inq) => (answers[inq.inquiryId] || "").trim() || reasons[inq.inquiryId]
+  );
+
+  // 답변 입력된 inquiry 들만 POST 한 뒤 판정을 확정한다. 확정 응답이 최종 판정·보상이다.
+  // 「건너뛰고 판정 받기」도 같다 — 앞 질문에 적어 둔 답은 버리지 않고, 안 적은 질문만 건너뛴다
+  // (1번에 답하고 2번에서 건너뛰면 1번 답까지 사라지던 문제). 아무것도 안 적었으면 1차 판정 그대로 확정된다.
+  const finish = async () => {
     if (submitting) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      for (const inq of withAnswers ? inquiries : []) {
+      for (const inq of inquiries) {
         if (submittedRef.current.has(inq.inquiryId)) continue;
         const text = (answers[inq.inquiryId] || "").trim();
         const reason = reasons[inq.inquiryId] || null;
@@ -367,7 +368,7 @@ function WalletAnalysisPage({ user }) {
               <p>
                 {judgedExpenseCount === 0
                   ? "보상은 아래에서 확인해 주세요."
-                  : getResultSummary(judgment)}
+                  : getResultSummary(judgment, expenses)}
               </p>
             </section>
             {questionPending && (
@@ -500,13 +501,13 @@ function WalletAnalysisPage({ user }) {
                     <button
                       type="button"
                       className="hm-btn hm-btn--dark hm-btn--block ja-primary"
-                      onClick={isLastQuestion ? () => finish(true) : goNext}
+                      onClick={isLastQuestion ? finish : goNext}
                       disabled={submitting}
                     >
                       {submitting ? "판정하는 중…" : isLastQuestion ? "답하고 판정 받기" : "다음 질문"}
                     </button>
-                    <button type="button" className="ja-skip" onClick={() => finish(false)} disabled={submitting}>
-                      건너뛰고 판정 받기
+                    <button type="button" className="ja-skip" onClick={finish} disabled={submitting}>
+                      {hasTypedAnswer ? "남은 질문 건너뛰고 판정 받기" : "건너뛰고 판정 받기"}
                     </button>
                   </div>
                   <p className="ja-leave-note">나가도 오늘 안에는 이어서 답할 수 있어요. 자정까지 답하지 않으면 1차 판정 그대로 보상을 받아요.</p>
