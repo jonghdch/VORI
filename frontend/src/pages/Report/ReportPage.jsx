@@ -5,6 +5,8 @@ import AppShell from "../../components/AppShell";
 import RecordCalendar, { dateKey } from "../../components/RecordCalendar";
 import { getMonthlyLedger } from "../../api/ledger";
 import { markMonthlyReportRead } from "../../api/monthlyReports";
+import { listInstruments } from "../../api/paymentInstruments";
+import IssuerBadge from "../../components/IssuerBadge";
 import { SIGNAL_STATUS } from "../../signalLabels";
 import "../Home/HomeDashboard.css";
 import "../Wallet/WalletPage.css";
@@ -61,6 +63,14 @@ function formatDateDisplay(isoDate) {
   return `${y}. ${m}. ${d}`;
 }
 
+// 이름 뒤 조사 「로/으로」 — 받침이 없거나 ㄹ 받침이면 「로」 (K-패스로, 생활통장으로, 지갑로 X → 지갑으로).
+function withRo(word) {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  if (code < 0 || code > 11171) return `${word}로`; // 한글이 아니면(영문·숫자) 「로」
+  const jong = code % 28;
+  return jong === 0 || jong === 8 ? `${word}로` : `${word}으로`;
+}
+
 function dayLabel(year, month, day) {
   const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "short" }).format(
     new Date(year, month - 1, day),
@@ -87,6 +97,8 @@ function toRow(item) {
     aiJudged: Boolean(item.aiJudged),
     aiStatus: item.aiJudged && item.signal ? SIGNAL_STATUS[item.signal] : null,
     payment: item.paymentMethod ? PAYMENT_LABEL[item.paymentMethod] : null,
+    paymentMethod: item.paymentMethod || null,
+    paymentInstrumentId: item.paymentInstrumentId ?? null,
     memo: item.memo || "",
     // AI 질문에 답한 소비 사유 — 답변한 예외 지출에만 존재.
     reason: item.reason || "",
@@ -232,6 +244,48 @@ function ReportPage({ user, onLogout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yearMonths, periodKeySet, periodDates, containsToday, navigate, today, reloadKey]);
 
+  // 등록한 카드·계좌 — 결제수단별 지출에서 카드 이름·배지를 붙인다. 못 불러와도 종류별로는 묶인다.
+  const [instruments, setInstruments] = useState([]);
+  useEffect(() => {
+    listInstruments().then(setInstruments).catch(() => {});
+  }, []);
+
+  // 직전 기간(지난달 / 지난주) — 스냅샷의 비교 한 줄용. null = 불러오는 중, 실패하면 [] 로 두고 문구를 숨긴다.
+  const prevPeriodDates = useMemo(() => {
+    if (viewMode === "month") {
+      const y = anchor.getFullYear();
+      const m = anchor.getMonth() - 1;
+      const n = new Date(y, m + 1, 0).getDate();
+      return Array.from({ length: n }, (_, i) => new Date(y, m, i + 1));
+    }
+    return periodDates.map((d) => {
+      const p = new Date(d);
+      p.setDate(p.getDate() - 7);
+      return p;
+    });
+  }, [viewMode, anchor, periodDates]);
+  const [prevRows, setPrevRows] = useState(null);
+  const [prevFailed, setPrevFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setPrevRows(null);
+    setPrevFailed(false);
+    const months = [...new Set(prevPeriodDates.map((d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`))];
+    Promise.all(months.map((ym) => getMonthlyLedger(ym)))
+      .then((results) => {
+        if (alive) setPrevRows(results.flat().map(toRow));
+      })
+      .catch(() => {
+        if (alive) {
+          setPrevRows([]);
+          setPrevFailed(true);
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, [prevPeriodDates]);
+
   const expenseRows = rows.filter((r) => r.type === "EXPENSE");
   const incomeRows = rows.filter((r) => r.type === "INCOME");
   const weekExpenseTotal = expenseRows.reduce((sum, r) => sum + r.amountNum, 0);
@@ -296,6 +350,84 @@ function ReportPage({ user, onLogout }) {
 
   // 순저축 = 수입 − 지출 (마이너스면 이번 기간 적자).
   const netSaved = incomeTotal - weekExpenseTotal;
+
+  // ── 지난달(지난주) 비교 ─────────────────────────────────
+  // 오늘이 든 기간이면 지난 기간도 같은 날 수만큼만(1일~오늘 vs 지난달 1일~같은 날), 지나간 기간이면 기간 전체끼리.
+  const elapsedInPeriod = periodDates.filter((d) => d <= today).length;
+  const prevUnit = viewMode === "week" ? "지난주" : "지난달";
+  const comparison = useMemo(() => {
+    if (loading || prevRows == null || prevFailed || elapsedInPeriod === 0) return null;
+    const prevKeys = new Set(
+      (containsToday ? prevPeriodDates.slice(0, elapsedInPeriod) : prevPeriodDates).map((d) =>
+        dateKey(d.getFullYear(), d.getMonth() + 1, d.getDate()),
+      ),
+    );
+    const prevTotal = prevRows
+      .filter((r) => r.type === "EXPENSE" && prevKeys.has(dateKey(r.year, r.month, r.day)))
+      .reduce((sum, r) => sum + r.amountNum, 0);
+    if (prevTotal === 0 && weekExpenseTotal === 0) return null;
+    const diff = weekExpenseTotal - prevTotal;
+    const span = containsToday ? `${prevUnit} 같은 기간` : prevUnit;
+    const text =
+      diff === 0
+        ? `${span}과 똑같이 ${containsToday ? "쓰고 있어요" : "썼어요"}`
+        : `${span}보다 ${formatWon(Math.abs(diff))} ${diff > 0 ? "더" : "덜"} ${containsToday ? "쓰는 중" : "썼어요"}`;
+    return { diff, text };
+  }, [loading, prevRows, prevFailed, elapsedInPeriod, containsToday, prevPeriodDates, weekExpenseTotal, prevUnit]);
+
+  // ── 결제수단별 지출 · 판정 ─────────────────────────────
+  // 등록한 카드를 고른 지출은 카드별로, 안 고른 지출은 결제수단 종류별로 묶는다.
+  // 판정은 모든 지출의 신호등(여유·적정·초과) — 위 "AI 판정 분포"는 AI 질문을 거친 지출만 센다.
+  const paymentBreakdown = useMemo(() => {
+    const byKey = new Map();
+    expenseRows.forEach((r) => {
+      const inst = r.paymentInstrumentId != null ? instruments.find((i) => i.id === r.paymentInstrumentId) : null;
+      const key = r.paymentInstrumentId != null ? `inst-${r.paymentInstrumentId}` : `kind-${r.paymentMethod ?? "NONE"}`;
+      if (!byKey.has(key)) {
+        byKey.set(key, {
+          key,
+          label:
+            r.paymentInstrumentId != null
+              ? inst?.name ?? "삭제한 카드·계좌"
+              : r.paymentMethod
+                ? PAYMENT_LABEL[r.paymentMethod]
+                : "결제수단 미입력",
+          sub: r.paymentInstrumentId != null ? null : r.paymentMethod ? "카드를 고르지 않은 지출" : null,
+          issuer: inst?.issuer ?? null,
+          amount: 0,
+          count: 0,
+          signalAmount: { GREEN: 0, GRAY: 0, RED: 0 },
+          signalCount: { GREEN: 0, GRAY: 0, RED: 0 },
+        });
+      }
+      const g = byKey.get(key);
+      g.amount += r.amountNum;
+      g.count += 1;
+      if (r.signal && g.signalCount[r.signal] != null) {
+        g.signalCount[r.signal] += 1;
+        g.signalAmount[r.signal] += r.amountNum;
+      }
+    });
+    return [...byKey.values()]
+      .map((g) => {
+        const judgedCount = g.signalCount.GREEN + g.signalCount.GRAY + g.signalCount.RED;
+        return {
+          ...g,
+          pct: weekExpenseTotal > 0 ? Math.round((g.amount / weekExpenseTotal) * 100) : 0,
+          judgedCount,
+          redPct: judgedCount > 0 ? Math.round((g.signalCount.RED / judgedCount) * 100) : null,
+        };
+      })
+      .sort((a, b) => b.amount - a.amount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, instruments, weekExpenseTotal]);
+  // 초과 비율이 가장 높은 결제수단 — 판정된 지출이 2건 이상인 결제수단이 둘 이상일 때만 비교한다.
+  const worstPayment = useMemo(() => {
+    const comparable = paymentBreakdown.filter((g) => g.judgedCount >= 2);
+    if (comparable.length < 2) return null;
+    const worst = [...comparable].sort((a, b) => b.redPct - a.redPct)[0];
+    return worst.redPct > 0 ? worst : null;
+  }, [paymentBreakdown]);
 
   // 우측 카드 기준 — 호버 중엔 미리보기, 벗어나면 고정(selected)으로 복귀.
   const active = preview ?? selected;
@@ -455,6 +587,16 @@ function ReportPage({ user, onLogout }) {
               </div>
             </div>
 
+            {comparison && (
+              <p
+                className={`report-compare ${
+                  comparison.diff > 0 ? "report-compare--up" : comparison.diff < 0 ? "report-compare--down" : ""
+                }`}
+              >
+                {comparison.text}
+              </p>
+            )}
+
             <div className="report-hero-body">
               <div className="report-donut-wrap">
                 {donutGradient ? (
@@ -558,6 +700,89 @@ function ReportPage({ user, onLogout }) {
             </section>
           </div>
         </div>
+
+        <section className="home-card report-pay-card" aria-labelledby="report-pay-title">
+          <div className="report-pay-head">
+            <h2 id="report-pay-title" className="home-card-title home-card-title--sm report-card-title">
+              결제수단별 지출
+              <span className="report-card-period">{periodLabel}</span>
+            </h2>
+            <button type="button" className="report-pay-manage" onClick={() => navigate("/settings/payment")}>
+              카드·계좌 관리 ›
+            </button>
+          </div>
+          {worstPayment && (
+            <p className="report-pay-insight">
+              <strong>{withRo(worstPayment.label)}</strong> 쓴 지출의 초과 비율이 가장 높아요 ({worstPayment.redPct}%).
+            </p>
+          )}
+          {paymentBreakdown.length === 0 ? (
+            <p className="report-signal-empty">
+              {loading ? "불러오는 중…" : `이 ${unitLabel}에는 지출이 없어요.`}
+            </p>
+          ) : (
+            <ul className="report-pay-list">
+              {paymentBreakdown.map((g) => (
+                <li key={g.key} className="report-pay-row">
+                  <span className="report-pay-name">
+                    {g.issuer ? (
+                      <IssuerBadge issuer={g.issuer} size={26} />
+                    ) : (
+                      <span className="report-pay-kind-dot" aria-hidden />
+                    )}
+                    <span className="report-pay-name-text">
+                      <span>{g.label}</span>
+                      {g.sub && <small>{g.sub}</small>}
+                    </span>
+                  </span>
+                  {/* 막대 길이 = 전체 지출 중 비중, 안의 색 = 판정별 금액 */}
+                  <span
+                    className="report-pay-track"
+                    role="img"
+                    aria-label={`${g.label} ${formatWon(g.amount)}, 전체의 ${g.pct}%. 여유 ${g.signalCount.GREEN}건, 적정 ${g.signalCount.GRAY}건, 초과 ${g.signalCount.RED}건`}
+                  >
+                    <span className="report-pay-fill" style={{ width: `${Math.max(g.pct, 2)}%` }}>
+                      {["GREEN", "GRAY", "RED"].map((sig) =>
+                        g.signalAmount[sig] > 0 ? (
+                          <span
+                            key={sig}
+                            className={`report-pay-seg report-signal-seg--${sig.toLowerCase()}`}
+                            style={{ flexGrow: g.signalAmount[sig] }}
+                          />
+                        ) : null,
+                      )}
+                      {g.judgedCount < g.count && (
+                        <span
+                          className="report-pay-seg report-pay-seg--none"
+                          style={{
+                            flexGrow: g.amount - g.signalAmount.GREEN - g.signalAmount.GRAY - g.signalAmount.RED,
+                          }}
+                        />
+                      )}
+                    </span>
+                  </span>
+                  <span className="report-pay-amount">
+                    {formatWon(g.amount)}
+                    <small>
+                      {g.pct}% · {g.count}건
+                      {g.redPct != null && g.redPct > 0 && (
+                        <b className="report-pay-red"> · 초과 {g.redPct}%</b>
+                      )}
+                    </small>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <ul className="report-signal-legend report-pay-legend" aria-hidden>
+            {["GREEN", "GRAY", "RED"].map((sig) => (
+              <li key={sig}>
+                <i className={`report-signal-dot report-signal-seg--${sig.toLowerCase()}`} />
+                {SIGNAL_STATUS[sig]}
+              </li>
+            ))}
+          </ul>
+        </section>
 
         <div className="ledger-row report-week-row">
           <section className="ledger-history-card report-week-table">

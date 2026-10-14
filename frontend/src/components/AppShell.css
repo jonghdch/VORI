@@ -772,3 +772,98 @@
   font-size: 12px;
   letter-spacing: 0;
 }
+
+/* ── 하단 탭 바 (1024px 이하) ─────────────────────────────
+   폰에서는 햄버거 드로어·헤더 글자 메뉴 대신 화면 아래 탭 4개로 옮긴다.
+   소비 리포트·도감·환경설정은 오른쪽 위 내 정보 상자(AccountMenu)에서 연다. */
+.app-tabbar {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .home.app-has-tabbar {
+    /* 주소창이 접히고 펴질 때 높이가 튀지 않게 dvh, 미지원 브라우저는 위의 100vh */
+    height: 100dvh;
+  }
+
+  .app-has-tabbar .home-menu-toggle,
+  .app-has-tabbar .home-topnav,
+  .app-has-tabbar .home-sidebar--left,
+  .app-has-tabbar .home-sidebar-backdrop,
+  .app-has-tabbar .home-sidebar--right {
+    display: none;
+  }
+
+  /* 헤더 한 줄: 로고(왼쪽) · 코인·알림·내 정보(오른쪽) */
+  .app-has-tabbar .home-topbar-inner {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 16px;
+  }
+  .app-has-tabbar .home-logo {
+    display: inline-block;
+    font-size: 20px;
+  }
+
+  /* 본문이 탭 바 뒤로 숨지 않게 아래 여백을 탭 바 높이만큼 */
+  .app-has-tabbar .home-shell {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
+  }
+
+  .app-tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 35;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 0 8px env(safe-area-inset-bottom, 0px);
+    background: var(--home-bar-surface);
+    border-top: 1px solid var(--home-card-border);
+    box-shadow: 0 -4px 16px rgba(61, 56, 48, 0.04);
+  }
+  .app-tabbar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    border: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    color: #8f877b;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app-tabbar-item.is-active {
+    color: #3d3830;
+    font-weight: 800;
+  }
+  .app-tabbar-item:focus-visible {
+    outline: 2px solid var(--home-green-dark);
+    outline-offset: -4px;
+    border-radius: 12px;
+  }
+
+  /* 관리자 도구 버튼 — 탭 바·기록 버튼과 겹치지 않게 왼쪽 위로 */
+  .app-has-tabbar ~ .admin-tools,
+  .app-has-tabbar .admin-tools {
+    left: 16px;
+    right: auto;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    align-items: flex-start;
+  }
+}
+
+.home-side-title-icon {
+  vertical-align: -2px;
+}

@@ -49,6 +49,11 @@ public class Expense {
         columnDefinition = "ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY')")
     private PaymentMethod paymentMethod;
 
+    // 설정 > 카드·계좌에서 등록한 결제수단(payment_instruments.id). 고르지 않았으면 NULL.
+    // 결제수단 종류(paymentMethod)가 바뀌면 다른 카드라는 뜻이라 비운다 — 아래 update* 참조.
+    @Column(name = "payment_instrument_id")
+    private Long paymentInstrumentId;
+
     @Column(nullable = false, length = 100)
     private String item;
 
@@ -124,7 +129,7 @@ public class Expense {
         this.amount = amount;
         this.categoryId = categoryId;
         this.statType = statType;
-        this.paymentMethod = paymentMethod;
+        updatePaymentMethod(paymentMethod);
     }
 
     /** 내역 이름만 고친다. 신호는 금액·카테고리로만 계산하므로 다시 판정하지 않는다(docs/judgment-flow.md D6). */
@@ -139,6 +144,12 @@ public class Expense {
 
     /** 결제수단만 고친다. 판정 계산·AI 질문 문구에 쓰지 않으므로 다시 계산할 것이 없다. */
     public void updatePaymentMethod(PaymentMethod paymentMethod) {
+        if (this.paymentMethod != paymentMethod) this.paymentInstrumentId = null;
         this.paymentMethod = paymentMethod;
+    }
+
+    /** 어느 카드·계좌로 냈는지. 종류는 호출하는 쪽(LedgerService)이 카드에 맞춰 먼저 바꿔 둔다. */
+    public void updatePaymentInstrument(Long paymentInstrumentId) {
+        this.paymentInstrumentId = paymentInstrumentId;
     }
 }

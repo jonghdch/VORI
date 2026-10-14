@@ -1,0 +1,988 @@
+/* ── 홈 화면 (모바일 우선) ─────────────────────────────────
+   배치: 오늘 남은 돈(핵심 숫자) → 펫 · 오늘 판정(두 칸) → 반려 스탯 → 오늘 지출 → 기록 버튼.
+   색은 기존 홈 톤(크림 카드 + 세이지) 유지, 주 버튼만 짙은 갈색으로 또렷하게.
+   픽셀 아트는 펫 그림에만 — 카드 배경에는 무늬를 두지 않는다.
+   폭 375px 에서 옆으로 넘치지 않게: 모든 flex/grid 자식에 min-width:0, 긴 글자는 말줄임. */
+
+.hm {
+  --hm-ink: #3d3830;
+  --hm-sub: #7a7268;
+  --hm-faint: #a39a8d;
+  --hm-line: #ebe5d9;
+  --hm-surface: #fffdf9;
+  --hm-sunk: #f4f0e8;
+  --hm-sage: #6f9a5c;
+  --hm-sage-soft: #eaf3de;
+
+  /* 판정 색 — 글자색은 바탕 위 대비 4.5:1 이상으로 진하게 */
+  --hm-green: #5f9548;
+  --hm-green-ink: #3f6b2e;
+  --hm-green-bg: #e8f2df;
+  --hm-amber: #e0a33e;
+  --hm-amber-ink: #8a5a0c;
+  --hm-amber-bg: #fbefd6;
+  --hm-red: #d9645a;
+  --hm-red-ink: #a8352c;
+  --hm-red-bg: #fbe5e2;
+
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--hm-ink);
+}
+
+.hm *,
+.hm *::before,
+.hm *::after {
+  min-width: 0;
+}
+
+.hm-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── 카드 공통 ── */
+.hm-card {
+  background: var(--hm-surface);
+  border: 1px solid var(--hm-line);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(61, 56, 48, 0.04);
+}
+
+.hm-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.hm-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hm-card-title small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hm-faint);
+}
+
+.hm-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  cursor: pointer;
+}
+.hm-text-link:hover {
+  color: var(--hm-ink);
+}
+
+.hm-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--hm-faint);
+  cursor: pointer;
+}
+.hm-icon-btn:hover,
+.hm-icon-btn[aria-expanded="true"] {
+  background: var(--hm-sunk);
+  color: var(--hm-ink);
+}
+
+.hm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  word-break: keep-all;
+  cursor: pointer;
+  transition: filter 0.12s ease, transform 0.08s ease;
+}
+.hm-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.hm-btn--dark {
+  background: var(--hm-ink);
+  color: #fffdf9;
+}
+.hm-btn--dark:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+.hm-btn:disabled {
+  background: var(--hm-sunk);
+  color: var(--hm-faint);
+  cursor: default;
+}
+.hm-btn--sm {
+  padding: 9px 14px;
+  font-size: 13px;
+}
+.hm-btn--block {
+  width: 100%;
+}
+
+.hm button:focus-visible {
+  outline: 2px solid var(--hm-sage);
+  outline-offset: 2px;
+}
+
+/* ── 판정 칩: 색 + 아이콘 + 글자 ── */
+.hm-signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.hm-signal--lg {
+  padding: 5px 11px 5px 8px;
+  font-size: 13px;
+}
+.hm-signal--green {
+  background: var(--hm-green-bg);
+  color: var(--hm-green-ink);
+}
+.hm-signal--amber {
+  background: var(--hm-amber-bg);
+  color: var(--hm-amber-ink);
+}
+.hm-signal--red {
+  background: var(--hm-red-bg);
+  color: var(--hm-red-ink);
+}
+
+/* ── ① 오늘 남은 돈 ── */
+.hm-hero {
+  padding: 18px 18px 16px;
+}
+.hm-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.hm-hero-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hm-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hm-hero-value {
+  margin: 6px 0 14px;
+  font-size: clamp(34px, 10vw, 44px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.hm-hero-value.is-over {
+  color: var(--hm-red-ink);
+}
+.hm-hero-unit {
+  margin-left: 4px;
+  font-size: 0.45em;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.hm-skeleton {
+  width: 60%;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--hm-sunk), #faf7f1, var(--hm-sunk));
+  background-size: 200% 100%;
+  animation: hm-shimmer 1.2s linear infinite;
+}
+@keyframes hm-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-skeleton {
+    animation: none;
+  }
+}
+
+.hm-meter {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--hm-sunk);
+  overflow: hidden;
+}
+.hm-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.5s ease;
+}
+.hm-meter--green > span {
+  background: var(--hm-green);
+}
+.hm-meter--amber > span {
+  background: var(--hm-amber);
+}
+.hm-meter--red > span {
+  background: var(--hm-red);
+}
+
+.hm-hero-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--hm-sub);
+  line-height: 1.5;
+  word-break: keep-all;
+}
+.hm-hero-foot strong {
+  color: var(--hm-ink);
+  font-weight: 800;
+}
+.hm-hero-est {
+  font-style: normal;
+  color: var(--hm-faint);
+  margin-left: 2px;
+}
+.hm-hero-pct {
+  flex-shrink: 0;
+  font-weight: 800;
+  color: var(--hm-ink);
+  font-variant-numeric: tabular-nums;
+}
+.hm-hero .hm-text-link {
+  margin-top: 6px;
+}
+
+/* ── ② 펫 · 오늘 판정 ── */
+.hm-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hm-pet {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 12px 14px;
+}
+
+.hm-bubble {
+  position: relative;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--hm-sunk);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--hm-ink);
+  text-align: left;
+  word-break: keep-all;
+  /* 대사가 길어도 카드 높이가 들쭉날쭉하지 않게 세 줄까지 */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hm-bubble--link {
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px #d8e8c9;
+  background: var(--hm-sage-soft);
+}
+
+.hm-pet-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1 / 0.8;
+  max-height: 140px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--hm-sunk);
+  cursor: pointer;
+  overflow: hidden;
+}
+/* 그림을 칸 안에 고정해 맞춘다 — 칸 높이가 max-height 로 줄어도 그림이 아래로 잘리지 않게 */
+.hm-pet-img {
+  position: absolute;
+  inset: 9%;
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.hm-pet-fallback {
+  color: var(--hm-faint);
+}
+
+.hm-pet-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 10px;
+}
+.hm-pet-name strong {
+  font-size: 14px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.hm-pet-lv {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--hm-sage);
+}
+.hm-pet-title {
+  max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid var(--hm-line);
+  border-radius: 999px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.hm-pet-exp {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hm-sub);
+}
+.hm-pet-exp-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--hm-sunk);
+  overflow: hidden;
+}
+.hm-pet-exp-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--hm-sage);
+}
+.hm-pet-exp-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--hm-ink);
+}
+
+.hm-pet-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  word-break: keep-all;
+}
+.hm-pet-empty strong {
+  font-size: 13px;
+}
+.hm-pet-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--hm-sunk);
+  color: var(--hm-faint);
+}
+
+.hm-judge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px;
+}
+.hm-judge-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--hm-sunk);
+  color: var(--hm-sub);
+}
+.hm-judge-title {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+.hm-judge-desc {
+  margin: 0 0 auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--hm-sub);
+  word-break: keep-all;
+}
+.hm-judge .hm-btn {
+  margin-top: 12px;
+  padding: 11px 10px;
+  font-size: 13px;
+}
+
+/* 리포트 띠 */
+.hm-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-green-ink);
+  background: var(--hm-sage-soft);
+  border-color: #d8e8c9;
+  text-align: left;
+  cursor: pointer;
+}
+.hm-banner span {
+  flex: 1;
+}
+
+/* ── ③ 반려 스탯 ── */
+.hm-help {
+  margin: -4px 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--hm-sunk);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--hm-sub);
+  word-break: keep-all;
+}
+.hm-stat-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.hm-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.hm-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  white-space: nowrap;
+}
+.hm-stat-label::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--stat-color);
+  flex-shrink: 0;
+}
+.hm-stat-value {
+  font-size: 20px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.hm-stat-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hm-sunk);
+  overflow: hidden;
+}
+.hm-stat-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--stat-color);
+}
+.hm-stat-group {
+  font-size: 11px;
+  color: var(--hm-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ── ④ 오늘 지출 ── */
+.hm-tx-list {
+  list-style: none;
+  margin: 0 -6px;
+  padding: 0;
+}
+.hm-tx-list li + li {
+  border-top: 1px solid var(--hm-line);
+}
+.hm-tx {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 6px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hm-tx:hover {
+  background: #faf7f1;
+}
+.hm-tx-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--hm-sunk);
+  color: var(--hm-sub);
+}
+.hm-tx-mid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hm-tx-name,
+.hm-tx-cat {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hm-tx-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+.hm-tx-cat {
+  font-size: 12px;
+  color: var(--hm-faint);
+}
+.hm-tx-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.hm-tx-amount {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hm-empty {
+  margin: 0;
+  padding: 18px 0 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--hm-faint);
+}
+.hm-empty p {
+  margin: 0;
+}
+
+.hm-footnote {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--hm-faint);
+}
+
+/* ── 기록 버튼 (떠 있는) ── */
+.hm-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(64px + 16px + env(safe-area-inset-bottom, 0px));
+  z-index: 34;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 13px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--hm-ink);
+  color: #fffdf9;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(61, 56, 48, 0.28);
+  cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+  .hm {
+    gap: 10px;
+  }
+  .hm-fab {
+    display: inline-flex;
+  }
+  /* 마지막 카드가 기록 버튼 뒤에 가리지 않게 */
+  .hm-footnote {
+    margin-bottom: 64px;
+  }
+}
+
+/* 아주 좁은 폰(360px 이하) — 두 칸 카드 안 여백만 줄인다 */
+@media (max-width: 360px) {
+  .hm-card {
+    padding: 14px;
+  }
+  .hm-pet,
+  .hm-judge {
+    padding: 10px;
+  }
+  .hm-stat-value {
+    font-size: 17px;
+  }
+}
+
+/* ── 틀: 폰 한 줄 / 넓으면 두 단 ──
+   두 단으로 나누는 기준은 창 폭이 아니라 본문 폭이다(@container). PC 는 왼쪽 메뉴·오른쪽 패널이
+   본문을 좁히므로, 창이 넓어도 본문이 좁으면 한 줄로 둔다. 가계부(WalletScreen.css)와 같은 방식. */
+.hm-home.hm {
+  max-width: none;
+  container-type: inline-size;
+  container-name: hm;
+}
+.hm-layout {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* 폰에서는 단 묶음을 풀고, 코드 순서(돈 단 → 펫 단) 대신 order 로
+   오늘 남은 돈 → 펫·판정 → 리포트 띠 → 스탯 → 오늘 지출 → 안내 순서를 만든다 */
+.hm-col {
+  display: contents;
+}
+.hm-layout .hm-hero {
+  order: 1;
+}
+.hm-layout .hm-duo {
+  order: 2;
+}
+.hm-layout .hm-banner {
+  order: 3;
+}
+.hm-layout .hm-stats {
+  order: 4;
+}
+.hm-layout .hm-today {
+  order: 5;
+}
+.hm-layout .hm-footnote {
+  order: 6;
+}
+
+@media (max-width: 1024px) {
+  .hm-layout {
+    gap: 10px;
+  }
+}
+
+/* ── PC 전용 ── 아래 규칙은 모두 1025px 이상(또는 넓은 본문)에서만 걸린다. 폰 화면은 건드리지 않는다. */
+
+/* PC 한 줄 배치(본문이 좁을 때) — 펫 칸을 조금 넓고 크게 */
+@media (min-width: 1025px) {
+  .hm-duo {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 12px;
+  }
+  .hm-pet-art {
+    max-height: 200px;
+  }
+}
+
+/* 넓은 본문(PC) — 3칸 대시보드. 기본 규칙보다 뒤에 둬야 덮어쓴다.
+     오늘 남은 돈 · 오늘 남은 돈 · 오늘 판정
+     (리포트 띠 — 있을 때만 한 줄)
+     펫          · 반려 스탯    · 반려 스탯
+     펫          · 오늘 지출    · 오늘 지출
+     안내 문구 (가운데)
+   단 묶음(.hm-col)과 펫·판정 묶음(.hm-duo)은 풀고 카드마다 자리를 준다. */
+@container hm (min-width: 860px) {
+  .hm-layout {
+    max-width: 1120px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "hero   hero   judge"
+      "banner banner banner"
+      "pet    stats  stats"
+      "pet    today  today"
+      "foot   foot   foot";
+    grid-template-rows: minmax(min-content, 0.8fr) auto minmax(min-content, 1fr) minmax(min-content, 1.3fr) auto;
+    gap: 20px;
+    /* 본문 높이를 채워 카드가 위로 몰리지 않게 — 남는 높이는 위 줄 비율대로 나눈다 */
+    flex: 1 0 auto;
+    padding-bottom: 4px;
+  }
+  /* 리포트 띠가 없는 기간 — 빈 줄 때문에 간격이 두 배로 벌어지지 않게 그 줄을 뺀다 */
+  .hm-layout:not(:has(.hm-banner)) {
+    grid-template-areas:
+      "hero   hero   judge"
+      "pet    stats  stats"
+      "pet    today  today"
+      "foot   foot   foot";
+    grid-template-rows: minmax(min-content, 0.8fr) minmax(min-content, 1fr) minmax(min-content, 1.3fr) auto;
+  }
+  .hm-col,
+  .hm-layout .hm-duo {
+    display: contents;
+  }
+  .hm-layout .hm-hero {
+    grid-area: hero;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 24px 28px;
+  }
+  .hm-layout .hm-judge {
+    grid-area: judge;
+  }
+  .hm-layout .hm-banner {
+    grid-area: banner;
+  }
+  .hm-layout .hm-pet {
+    grid-area: pet;
+  }
+  .hm-layout .hm-stats {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 22px 24px;
+    grid-area: stats;
+  }
+  .hm-layout .hm-today {
+    grid-area: today;
+  }
+  .hm-layout .hm-footnote {
+    grid-area: foot;
+  }
+  .hm-hero-value {
+    font-size: 52px;
+  }
+  /* 펫 칸은 두 줄 높이 — 그림이 남는 높이를 채운다 */
+  .hm-pet {
+    padding: 16px;
+  }
+  .hm-pet-art {
+    flex: 1;
+    aspect-ratio: auto;
+    min-height: 220px;
+    max-height: none;
+  }
+  .hm-judge {
+    padding: 22px;
+  }
+}
+
+/* 판정 전 칩 옆 「예상 결과」 — 칩 글자(여유·적정·초과)는 그대로 두고 따로 붙인다 */
+.hm-hero-signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.hm-hero-est-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hm-faint);
+  white-space: nowrap;
+}
+
+/* ── 홈·가계부 톤 — 배치는 그대로, 색·모양만 부드럽게 (상점과 같은 크림 + 세이지) ──
+   카드·버튼·핵심 숫자 카드·지출 줄은 홈(.hm-home)과 가계부(.lw)가 함께 쓴다. 펫·판정·스탯은 홈에만 있다.
+   가계부에만 있는 달력·하루 카드는 Wallet/WalletScreen.css 가 같은 색으로 맞춘다.
+   여백(padding)은 건드리지 않는다 — PC 대시보드 규칙(@container hm)과 겹치지 않게. */
+:is(.hm-home, .lw) {
+  --hm-sage-dark: #5b8449;
+  --hm-gold-bg: #fcf0d3;
+  --hm-gold-ink: #8a5a0c;
+}
+:is(.hm-home, .lw) .hm-card {
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(61, 56, 48, 0.06);
+}
+
+/* 주 버튼 — 짙은 갈색 대신 세이지 알약 */
+:is(.hm-home, .lw) .hm-btn--dark {
+  border-radius: 999px;
+  background: var(--hm-sage);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(111, 154, 92, 0.3);
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+:is(.hm-home, .lw) .hm-btn--dark:hover:not(:disabled) {
+  filter: none;
+  background: var(--hm-sage-dark);
+}
+:is(.hm-home, .lw) .hm-btn:disabled {
+  box-shadow: none;
+}
+.hm-home .hm-fab {
+  background: var(--hm-sage);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(111, 154, 92, 0.38);
+}
+.hm-home .hm-fab:hover {
+  background: var(--hm-sage-dark);
+}
+:is(.hm-home, .lw) .hm-text-link {
+  color: var(--hm-sage-dark);
+}
+:is(.hm-home, .lw) .hm-text-link:hover {
+  color: var(--hm-green-ink);
+}
+
+/* ① 오늘 남은 돈 — 오른쪽 위에 은은한 초록 빛, 막대는 조금 두껍게 */
+:is(.hm-home, .lw) .hm-hero {
+  background:
+    radial-gradient(circle at 100% 0%, var(--hm-sage-soft) 0%, rgba(255, 253, 249, 0) 45%),
+    var(--hm-surface);
+}
+:is(.hm-home, .lw) .hm-meter {
+  height: 10px;
+  background: #efe8db;
+}
+
+/* ② 펫 — 회색 상자 대신 따뜻한 빛, 그림은 살짝 떠 있게 */
+.hm-home .hm-bubble {
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--hm-line);
+}
+.hm-home .hm-bubble--link {
+  background: var(--hm-sage-soft);
+  box-shadow: inset 0 0 0 1px #d8e8c9;
+}
+.hm-home .hm-pet-art {
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 62%, #eef5e6 0%, #f7f2e9 72%);
+}
+.hm-home .hm-pet-img {
+  filter: drop-shadow(0 5px 5px rgba(61, 56, 48, 0.14));
+  transition: transform 0.2s ease;
+}
+.hm-home .hm-pet-art:hover .hm-pet-img {
+  transform: translateY(-3px);
+}
+.hm-home .hm-pet-title {
+  border-color: transparent;
+  background: var(--hm-sunk);
+}
+.hm-home .hm-pet-exp-track {
+  height: 6px;
+}
+
+/* 오늘 판정 — 금빛 시계 + 왼쪽 위 은은한 빛 */
+.hm-home .hm-judge {
+  background:
+    radial-gradient(circle at 0% 0%, #fbf1d7 0%, rgba(255, 253, 249, 0) 50%),
+    var(--hm-surface);
+}
+.hm-home .hm-judge-icon {
+  background: var(--hm-gold-bg);
+  color: var(--hm-gold-ink);
+}
+
+/* ③ 반려 스탯 — 스탯마다 제 색으로 옅게 물든 칸 */
+.hm-home .hm-stat {
+  padding: 10px 4px 9px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--stat-color) 10%, #fffdf9);
+}
+.hm-home .hm-stat-track {
+  height: 6px;
+  background: rgba(255, 253, 249, 0.9);
+}
+.hm-home .hm-help {
+  background: var(--hm-sage-soft);
+  color: var(--hm-green-ink);
+}
+
+/* ④ 오늘 지출 — 초록 동그라미 아이콘 */
+:is(.hm-home, .lw) .hm-tx-icon {
+  background: var(--hm-sage-soft);
+  color: var(--hm-sage-dark);
+}
+:is(.hm-home, .lw) .hm-tx:hover {
+  background: #f7f2e9;
+}

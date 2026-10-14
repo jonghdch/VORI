@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import StepIndicator from "./StepIndicator";
+import Icon from "../../components/Icon";
+import { categoryIcon } from "../../components/SignalChip";
 import {
   CATEGORIES_BY_TYPE,
   PAYMENT_METHODS,
   categorize,
-  formatToday,
-  isPastDate,
   parseIsoDate,
   toIsoDate,
 } from "./utils";
@@ -21,546 +20,19 @@ import {
   listSavingsByDate,
 } from "../../api/ledger";
 import { loadUserSettings } from "../Settings/SettingsPage";
-import "./WalletEntry.css";
+import { listInstruments } from "../../api/paymentInstruments";
+import { INSTRUMENT_KINDS, issuerOf } from "../../constants/issuers";
+import "./WalletRecord.css";
 
-// Step 1 — 가계부 작성. 날짜는 다른 페이지에서 정해 ?date= 쿼리로 진입.
-function WalletEntryPage({ user }) {
-  const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const todayStr = toIsoDate();
-  const requestedDate = params.get("date");
-  const requestedDateValue = parseIsoDate(requestedDate);
-  const requestedDateIsValid =
-    requestedDate &&
-    /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
-    toIsoDate(requestedDateValue) === requestedDate;
-  // 쿼리를 직접 수정해도 미래 날짜에는 가계부를 작성할 수 없다.
-  const dateStr =
-    requestedDateIsValid && requestedDate <= todayStr ? requestedDate : todayStr;
-  const isEditMode = params.get("edit") === "true";
-  const past = isPastDate(dateStr);
+// 지출 기록 — 한 건씩 적는다. 날짜는 다른 화면에서 ?date= 로 정해 들어오고, 머리의 날짜 칩으로 바꿀 수 있다.
+// 폰: 한 줄 + 아래 고정 버튼. PC: 가운데 입력 카드 한 장. 그날 기록은 머리의 「기록 내역」 버튼으로 여는 창에서 본다.
+// 지출 수정(?edit=true)으로 들어오면 그날 첫 지출을 불러와 고치고, 목록에서 다른 지출을 눌러 바꿔 고친다.
 
-  // 같은 날짜의 입력값을 sessionStorage 에 보관 — Step 2/3 갔다 와도 유지.
-  // 성공적으로 POST 한 뒤에는 clearDraft() 로 비움 (중복 저장 방지).
-  //
-  // 키에 사용자 id 를 넣는다. 날짜만 쓰면 같은 브라우저에서 계정을 바꿔 로그인했을 때
-  // 앞 사람의 입력이 그대로 떠오르고, 그 행이 dbId 를 달고 있어 "저장됨" 으로까지 표시된다
-  // (실제로는 이 계정에 없는 지출이다). 시연 리허설을 다른 계정으로 해 본 뒤 무대 계정으로
-  // 로그인하면 바로 겪는다.
-  const storageKey = `ledger-entry-${user?.id ?? "anon"}-${dateStr}${isEditMode ? "-edit" : ""}`;
-  const loadDraft = () => {
-    try {
-      const raw = sessionStorage.getItem(storageKey);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      // 저장된 행의 dbId 를 임시저장하면 삭제 뒤에도 과거 행이 되살아나 404가 난다.
-      // 임시저장은 아직 서버에 저장하지 않은 행만 보관한다.
-      return {
-        income: (parsed.income || []).filter((row) => !row.dbId),
-        expense: (parsed.expense || []).filter((row) => !row.dbId),
-        savings: (parsed.savings || []).filter((row) => !row.dbId),
-      };
-    } catch {
-      return null;
-    }
-  };
-  const draft = loadDraft();
-
-  // 행 id 시퀀스 — 복원된 데이터가 있으면 그 max id 다음, 없으면 1 부터.
-  const draftRows = (draft?.income || []).concat(
-    draft?.expense || [],
-    draft?.savings || [],
-  );
-  const maxDraftId = draftRows.reduce((m, r) => Math.max(m, r.id || 0), 0);
-  const nextId = useRef(1 + maxDraftId);
-  // 사용자 설정의 기본 결제수단 — 없으면 CREDIT
-  const defaultPayment =
-    loadUserSettings().defaultPaymentMethod || "CREDIT";
-  const newRow = () => ({
-    id: nextId.current++,
-    paymentMethod: defaultPayment,
-    name: "",
-    amount: "",
-    memo: "",
-  });
-
-  // 초기엔 빈 행을 강제하지 않음 (행 0개로 시작). 사용자가 "+ 추가"로 직접 넣음.
-  const [income, setIncome] = useState(draft?.income || []);
-  const [expense, setExpense] = useState(draft?.expense || []);
-  const [savings, setSavings] = useState(draft?.savings || []);
-
-  // 지출 카테고리 편집 드롭다운 옵션 — 백엔드 카테고리 트리를 평면화 (value=leafId).
-  const [expenseCatOptions, setExpenseCatOptions] = useState([]);
-  useEffect(() => {
-    let alive = true;
-    listCategoryTree()
-      .then((tree) => {
-        if (!alive) return;
-        const opts = [];
-        (tree || []).forEach((p) =>
-          (p.children || []).forEach((leaf) =>
-            opts.push({ value: leaf.id, label: `${p.name} · ${leaf.name}` }),
-          ),
-        );
-        setExpenseCatOptions(opts);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  // 아직 서버에 없는 행만 임시저장한다. DB 행은 매 진입 때 서버에서 새로 읽는다.
-  useEffect(() => {
-    try {
-      const draftRows = {
-        income: income.filter((row) => !row.dbId),
-        expense: expense.filter((row) => !row.dbId),
-        savings: savings.filter((row) => !row.dbId),
-      };
-      if (draftRows.income.length || draftRows.expense.length || draftRows.savings.length) {
-        sessionStorage.setItem(storageKey, JSON.stringify(draftRows));
-      } else {
-        sessionStorage.removeItem(storageKey);
-      }
-    } catch {}
-  }, [income, expense, savings, storageKey]);
-
-  // draft 비우는 helper. 성공적으로 POST 한 뒤 호출 → 다음 mount 에서는 DB fetch 로 폼 채움.
-  const clearDraft = () => {
-    try {
-      sessionStorage.removeItem(storageKey);
-    } catch {}
-  };
-
-  // mount (또는 dateStr 변경) 시 DB 에서 그 날짜 기존 데이터를 항상 fetch한다.
-  // 서버 행과 아직 저장하지 않은 임시 행을 함께 보여 준다.
-  useEffect(() => {
-    const fresh = loadDraft();
-    let cancelled = false;
-    (async () => {
-      try {
-        const [exps, incs, savs] = await Promise.all([
-          listExpensesByDate(dateStr),
-          isEditMode ? Promise.resolve([]) : listIncomesByDate(dateStr),
-          isEditMode ? Promise.resolve([]) : listSavingsByDate(dateStr),
-        ]);
-        if (cancelled) return;
-        const next = (e) => nextId.current++;
-        setExpense(
-          [...exps.map((e) => ({
-            id: next(),
-            dbId: e.id,
-            paymentMethod: e.paymentMethod || "CREDIT",
-            name: e.item,
-            amount: String(e.amount),
-            categoryId: e.categoryId,
-            categoryTouched: true, // 저장된 카테고리 — 자동분류로 덮지 않음
-            memo: e.memo ?? "", // 다시 보낼 때 그대로 돌려줘야 지워지지 않는다
-            memoOpen: Boolean(e.memo), // 메모를 다 지우는 동안 칸이 접히지 않게
-            // 같은 날짜를 다시 열면 저장된 지출도 바로 고칠 수 있게 한다.
-            // 수정 링크의 쿼리가 사라져도 읽기 전용 행으로 잠기지 않는다.
-            isEditing: true,
-          })), ...(fresh?.expense || [])],
-        );
-        setIncome(
-          [...incs.map((i) => ({
-            id: next(),
-            dbId: i.id,
-            name: i.item,
-            amount: String(i.amount),
-            categoryEnum: i.source,
-            sourceTouched: true,
-          })), ...(fresh?.income || [])],
-        );
-        setSavings(
-          [...savs.map((s) => ({
-            id: next(),
-            dbId: s.id,
-            name: s.item,
-            amount: String(s.amount),
-            categoryEnum: s.savingType,
-            sourceTouched: true,
-          })), ...(fresh?.savings || [])],
-        );
-      } catch {
-        // fetch 실패는 무시 — 빈 폼으로 시작
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateStr, isEditMode]);
-
-
-  const addRow = (setter) => setter((rows) => [...rows, newRow()]);
-  const removeRow = (setter, id) =>
-    setter((rows) => rows.filter((r) => r.id !== id));
-
-  const deleteExpenseRow = async (row) => {
-    if (row.dbId) {
-      if (!window.confirm(`'${row.name || "이 지출"}'을 삭제할까요?`)) return;
-      try {
-        await deleteExpense(row.dbId);
-      } catch (error) {
-        setSubmitError(error.message || "지출을 삭제하지 못했어요.");
-        return;
-      }
-    }
-    removeRow(setExpense, row.id);
-  };
-
-  // 현재 카드의 금액 입력이 끝나면 이미 만들어져 있는 다음 빈 카드로만 이동한다.
-  // 새 카드를 자동 생성하지는 않는다. 섹션 표시 순서(수입 → 지출 → 저축)를 그대로 따른다.
-  const focusNextEmptyCard = (currentType, currentId) => {
-    const orderedRows = [
-      ...income.map((row) => ({ ...row, entryType: "income" })),
-      ...expense.map((row) => ({ ...row, entryType: "expense" })),
-      ...savings.map((row) => ({ ...row, entryType: "savings" })),
-    ];
-    const currentIndex = orderedRows.findIndex(
-      (row) => row.entryType === currentType && row.id === currentId,
-    );
-    if (currentIndex < 0) return;
-    const current = orderedRows[currentIndex];
-    if (!(current.name || "").trim() || !String(current.amount || "").trim()) return;
-
-    const nextEmpty = orderedRows
-      .slice(currentIndex + 1)
-      .find((row) => !row.dbId && !(row.name || "").trim() && !String(row.amount || "").trim());
-    if (!nextEmpty) return;
-
-    const input = document.querySelector(
-      `[data-entry-type="${nextEmpty.entryType}"][data-row-id="${nextEmpty.id}"] [data-entry-field="name"]`,
-    );
-    input?.focus();
-  };
-
-  // ── 영수증 OCR ──────────────────────────────────────────────────────────
-  // 인식 결과를 바로 저장하지 않고 지출 행으로 채워만 준다. 흐린 영수증은 일부만
-  // 읽히므로(모든 필드가 null 일 수 있다) 사용자가 확인·수정하는 단계를 반드시 남긴다.
-  const receiptInput = useRef(null);
-  const [receiptBusy, setReceiptBusy] = useState(false);
-  const [receiptNotice, setReceiptNotice] = useState(null);
-
-  const onReceiptPick = async (e) => {
-    const file = e.target.files?.[0];
-    // 같은 파일을 다시 골라도 change 가 발생하도록 값을 비운다.
-    e.target.value = "";
-    if (!file) return;
-
-    setReceiptBusy(true);
-    setReceiptNotice({ kind: "info", text: "사진을 읽는 중이에요. 10~15초쯤 걸려요." });
-    try {
-      // 업로드 전에 긴 변 2048px 로 줄인다. 용량이 큰 원본일수록 인식이 느려진다 — prepareReceiptImage 참조.
-      const photo = await prepareReceiptImage(file);
-
-      // 서버 상한을 넘으면 413 이 오는데 message 가 실리지 않는다. 미리 걸러야 안내가 된다.
-      // 축소한 뒤에 검사한다 — 10MB 가 넘는 원본도 줄이고 나면 대부분 올라간다.
-      if (photo.size > MAX_RECEIPT_BYTES) {
-        const mb = (photo.size / 1024 / 1024).toFixed(1);
-        setReceiptNotice({ kind: "err", text: `사진이 너무 커요 (${mb}MB). 10MB 이하로 올려주세요.` });
-        return;
-      }
-
-      const r = await uploadReceipt(photo);
-
-      // 영수증이 아니거나 판독 불가여도 200 이 온다 — 값이 비었는지로 판단한다.
-      // 사진 종류(sourceType)로 이유를 나눠 안내한다. 여러 건이 찍힌 캡처는 서버가 값을 비워 보낸다.
-      if (r.amount == null && !r.item) {
-        const source = r.extracted?.sourceType;
-        const text =
-          r.errorMessage ||
-          (source === "MULTIPLE"
-            ? "결제가 여러 건 보여요. 한 건만 보이게 잘라서 다시 올려주세요."
-            : source === "NOT_PAYMENT"
-              ? "결제 내역이 보이지 않아요. 취소·환불·입금 내역은 지출로 채우지 않아요."
-              : "사진을 읽지 못했어요. 더 밝은 곳에서 다시 찍거나 캡처를 다시 올려주세요.");
-        setReceiptNotice({ kind: "err", text });
-        return;
-      }
-
-      setExpense((rows) => [
-        ...rows,
-        {
-          ...newRow(),
-          name: r.item || r.extracted?.storeName || "",
-          amount: r.amount != null ? String(r.amount) : "",
-          // 프롬프트가 결제수단을 우리 enum 으로 뽑으므로 그대로 쓴다. UNKNOWN·미인식이면 기본값 유지.
-          paymentMethod: PAYMENT_METHODS.some((p) => p.value === r.extracted?.paymentMethod)
-            ? r.extracted.paymentMethod
-            : defaultPayment,
-        },
-      ]);
-
-      // 사진 속 날짜가 지금 보는 날짜와 다르면 알려만 준다. 날짜를 임의로 바꾸면
-      // 이미 입력한 다른 행들이 엉뚱한 날짜로 저장된다.
-      const other = r.date && r.date !== dateStr;
-      setReceiptNotice({
-        kind: other ? "warn" : "ok",
-        text: other
-          ? `사진 속 날짜는 ${r.date} 예요. 지금은 ${dateStr} 을 작성 중이라 금액만 채웠어요.`
-          : "사진을 읽었어요. 금액과 항목을 확인해주세요.",
-      });
-    } catch (err) {
-      setReceiptNotice({ kind: "err", text: err.message });
-    } finally {
-      setReceiptBusy(false);
-    }
-  };
-  // autoCategory: 자동 분류 응답에서 온 패치. 응답을 기다리는 사이 사용자가 직접 골랐으면
-  // (categoryTouched) 그 선택을 덮지 않고, 다시 묻는 칩도 띄우지 않는다(이전 이름의 칩도 비운다).
-  // 최신 행 상태를 여기서 봐야 늦게 온 응답도 걸러진다.
-  const updateRow = (setter, id, patch) =>
-    setter((rows) =>
-      rows.map((r) => {
-        if (r.id !== id) return r;
-        const { autoCategory, ...rest } = patch;
-        if (autoCategory && r.categoryTouched) {
-          delete rest.categoryId;
-          rest.askType = null;
-          rest.candidates = [];
-        }
-        return { ...r, ...rest };
-      }),
-    );
-
-  // 빈 행(내역·금액 둘 다 비어있음)은 제출 시 무시한다 → 강제 삭제 불필요.
-  const isRowEmpty = (r) =>
-    !(r.name && r.name.trim()) && !(r.amount && String(r.amount).trim());
-  const isRowComplete = (r) =>
-    r.name && r.name.trim().length > 0 && r.amount && String(r.amount).length > 0;
-  const allRows = [...income, ...expense, ...savings];
-  const filledRows = allRows.filter((r) => !isRowEmpty(r));
-  // 비어있지 않은 지출 행이 자동 분류 중이면 대기.
-  const isCategorizing = expense.some((r) => !isRowEmpty(r) && r.categorizing);
-  // 채워진 행이 하나 이상 있고, 그 행들이 전부 완성됐을 때만 진행.
-  const canProceed =
-    filledRows.length > 0 && filledRows.every(isRowComplete) && !isCategorizing;
-
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
-
-  // 지출·수입·저축을 한 요청으로 저장한다. 서버가 한 트랜잭션으로 처리하므로
-  // 하나라도 실패하면 아무것도 저장되지 않고, 고쳐서 다시 눌러도 중복되지 않는다.
-  const goNext = async () => {
-    if (!canProceed || submitting) return;
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      const expenseRows = expense.filter(
-        (r) => !isRowEmpty(r) && (!r.dbId || r.isEditing),
-      );
-      const unclassified = expenseRows.find((r) => !r.categoryId);
-      if (unclassified) {
-        throw new Error(`"${unclassified.name}" 카테고리를 분류하지 못했어요. 잠시 후 다시 시도해주세요.`);
-      }
-      const incomeRows = income.filter((r) => !r.dbId && !isRowEmpty(r));
-      const savingRows = savings.filter((r) => !r.dbId && !isRowEmpty(r));
-
-      if (expenseRows.length + incomeRows.length + savingRows.length > 0) {
-        await saveLedgerEntries({
-          expenses: expenseRows.map((r) => ({
-            id: r.isEditing ? r.dbId : null,
-            item: r.name.trim(),
-            amount: Number(r.amount),
-            categoryId: r.categoryId,
-            paymentMethod: r.paymentMethod,
-            spentAt: `${dateStr}T00:00:00`,
-            memo: r.memo ?? "", // 빈 글자 = 메모 없음(수정이면 지움)
-          })),
-          incomes: incomeRows.map((r) => ({
-            item: r.name.trim(),
-            amount: Number(r.amount),
-            source: r.categoryEnum || "OTHER",
-            paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
-            receivedAt: dateStr,
-          })),
-          savings: savingRows.map((r) => ({
-            item: r.name.trim(),
-            amount: Number(r.amount),
-            savingType: r.categoryEnum || "DEPOSIT",
-            savedAt: dateStr,
-          })),
-        });
-      }
-      // 성공 — draft 비움. 다음 mount 에서는 DB fetch 로 폼 채움 (정확한 dbId 포함).
-      clearDraft();
-      // 소비 분석은 더 이상 작성 흐름의 단계가 아니다. 입력 후 바로 확인으로.
-      // (분석은 /wallet 의 ledger-ai-card 에서 오후 8시~자정 이벤트로 진행)
-      navigate(`/wallet/new/confirm?date=${dateStr}`);
-    } catch (e) {
-      setSubmitError(e.message || "저장 중 오류가 발생했어요");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="ledger">
-      <header className="ledger-entry-header">
-        <button
-          type="button"
-          className="ledger-logo-btn"
-          onClick={() => navigate("/home")}
-          aria-label="VORI 홈으로"
-        >
-          VORI
-        </button>
-      </header>
-
-      <main className="ledger-entry-main">
-        <StepIndicator current={1} includeAnalysis={false} />
-
-        <div className="ledger-title-block">
-          <h1 className="ledger-title">
-            {formatToday(parseIsoDate(dateStr))}
-          </h1>
-          <p className="ledger-subtitle">
-            {isEditMode
-              ? "지출 내역을 수정해주세요. 내역을 바꾸면 카테고리도 다시 분류해요."
-              : past
-              ? "이전 날짜의 지출과 수입을 입력해주세요."
-              : "오늘의 지출과 수입을 입력해주세요."}
-          </p>
-        </div>
-
-        {/* 영수증·결제 캡처 OCR. 줄여서 보내도 인식에 6~13초 걸려서 진행 표시가 필수다 —
-            아무 표시 없이 기다리게 하면 멈춘 것처럼 보인다. 종이 영수증이 없는 결제가 많아
-            카드 승인 문자·결제 완료·이체 완료 캡처도 받는다(중간발표 상호평가). */}
-        {!isEditMode && <section className="ledger-receipt">
-          <input
-            ref={receiptInput}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={onReceiptPick}
-          />
-          {/* .ledger-upload 는 예전 업로드 버튼 스타일이 CSS 에 그대로 남아 있던 것을 다시 쓴다. */}
-          <button
-            type="button"
-            className="ledger-upload"
-            onClick={() => receiptInput.current?.click()}
-            disabled={receiptBusy}
-          >
-            {receiptBusy ? "사진 읽는 중…" : "📷 영수증·결제 캡처로 채우기"}
-          </button>
-          {receiptNotice && (
-            <p className={`ledger-receipt-notice ledger-receipt-notice--${receiptNotice.kind}`}>
-              {receiptNotice.text}
-            </p>
-          )}
-        </section>}
-
-        {income.length > 0 && (
-          <section className="ledger-section">
-            <div className="ledger-section-title">수입</div>
-            {income.map((row, idx) => (
-              <EntryRow
-                key={row.id}
-                num={idx + 1}
-                row={row}
-                type="income"
-                onChange={(patch) => updateRow(setIncome, row.id, patch)}
-                onDelete={() => removeRow(setIncome, row.id)}
-                onComplete={() => focusNextEmptyCard("income", row.id)}
-              />
-            ))}
-          </section>
-        )}
-
-        {expense.length > 0 && (
-          <section className="ledger-section">
-            <div className="ledger-section-title">지출</div>
-            {expense.map((row, idx) => (
-              <EntryRow
-                key={row.id}
-                num={idx + 1}
-                row={row}
-                type="expense"
-                expenseCatOptions={expenseCatOptions}
-                onChange={(patch) => updateRow(setExpense, row.id, patch)}
-                onDelete={() => deleteExpenseRow(row)}
-                onComplete={() => focusNextEmptyCard("expense", row.id)}
-              />
-            ))}
-          </section>
-        )}
-
-        {savings.length > 0 && (
-          <section className="ledger-section">
-            <div className="ledger-section-title">저축</div>
-            {savings.map((row, idx) => (
-              <EntryRow
-                key={row.id}
-                num={idx + 1}
-                row={row}
-                type="savings"
-                onChange={(patch) => updateRow(setSavings, row.id, patch)}
-                onDelete={() => removeRow(setSavings, row.id)}
-                onComplete={() => focusNextEmptyCard("savings", row.id)}
-              />
-            ))}
-          </section>
-        )}
-
-        {!isEditMode && <div className="ledger-add-row">
-          <button
-            type="button"
-            className="ledger-entry-add-btn"
-            onClick={() => addRow(setIncome)}
-          >
-            + 수입 추가하기
-          </button>
-          <button
-            type="button"
-            className="ledger-entry-add-btn"
-            onClick={() => addRow(setExpense)}
-          >
-            + 지출 추가하기
-          </button>
-          <button
-            type="button"
-            className="ledger-entry-add-btn"
-            onClick={() => addRow(setSavings)}
-          >
-            + 저축 추가하기
-          </button>
-        </div>}
-
-        <div className="ledger-actions">
-          {!canProceed && (
-            <p className="ledger-hint">
-              {isCategorizing
-                ? "지출 카테고리를 자동 분류하는 중이에요…"
-                : "모든 항목의 내역과 금액을 입력해주세요"}
-            </p>
-          )}
-          {submitError && <p className="ledger-hint">{submitError}</p>}
-          <div className="ledger-actions-row">
-            <button
-              type="button"
-              className="ledger-back"
-              onClick={() => navigate("/wallet")}
-              disabled={submitting}
-            >
-              돌아가기
-            </button>
-            <button
-              type="button"
-              className="ledger-next"
-              onClick={goNext}
-              disabled={!canProceed || submitting}
-            >
-              {submitting ? "저장 중…" : isEditMode ? "수정 완료" : "다음 단계"}
-            </button>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
+const TYPES = [
+  { id: "expense", label: "지출" },
+  { id: "income", label: "수입" },
+  { id: "savings", label: "저축" },
+];
 
 // 지출 메모 최대 길이 — 서버(expenses.memo VARCHAR(200))와 같다.
 const MEMO_MAX = 200;
@@ -578,65 +50,208 @@ const ASK_TEXT = {
   },
 };
 
-function EntryRow({
-  num,
-  row,
-  type,
-  expenseCatOptions = [],
-  onChange,
-  onDelete,
-  onComplete,
-}) {
-  const amountInputRef = useRef(null);
-  // 이미 DB 에 저장된 행 — 수정/삭제 API 가 없어서 여기서 고쳐도 반영되지 않는다.
-  // 수정 가능한 척하지 않도록 읽기 전용으로 잠그고 "저장됨" 표시.
-  const saved = Boolean(row.dbId);
-  const locked = saved && !row.isEditing;
+const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
+function dateChipLabel(iso) {
+  const d = parseIsoDate(iso);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAY[d.getDay()]})`;
+}
 
-  // 이름이 바뀌면 자동 분류로 카테고리/출처를 "제안"한다.
-  // 단, 사용자가 드롭다운에서 직접 고른 경우(*Touched)엔 그 선택을 덮지 않는다.
+const won = (n) => `${Number(n || 0).toLocaleString("ko-KR")}원`;
+const labelOf = (list, value) => list.find((o) => o.value === value)?.label;
+
+function WalletEntryPage({ user }) {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const todayStr = toIsoDate();
+  const requestedDate = params.get("date");
+  const requestedDateIsValid =
+    requestedDate &&
+    /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
+    toIsoDate(parseIsoDate(requestedDate)) === requestedDate;
+  // 쿼리를 직접 수정해도 미래 날짜에는 가계부를 작성할 수 없다.
+  const dateStr = requestedDateIsValid && requestedDate <= todayStr ? requestedDate : todayStr;
+  const isEditMode = params.get("edit") === "true";
+
+  // 사용자 설정의 기본 결제수단 — 없으면 CREDIT
+  const defaultPayment = loadUserSettings().defaultPaymentMethod || "CREDIT";
+
+  // 설정 > 카드·계좌에 등록한 결제수단. 지출은 결제 수단 칩 앞에(예적금 제외), 수입은 받은 곳 칩으로
+  // (신용카드 제외 — 체크카드는 연결 통장으로 받는 것). 못 불러와도 칩 없이 그대로 적을 수 있으니 조용히 넘어간다.
+  const [allInstruments, setAllInstruments] = useState([]);
+  const instruments = allInstruments.filter((i) => i.group !== "SAVINGS");
+  const incomeAccounts = allInstruments.filter((i) => i.kind !== "CREDIT");
+  const savingsAccounts = allInstruments.filter((i) => i.kind === "SAVINGS"); // 저축의 모은 곳
   useEffect(() => {
-    if (locked) return;
-    const name = (row.name || "").trim();
-    if (!name) {
-      onChange({
-        categoryId: null,
-        categoryEnum: null,
-        categorizing: false,
-        categoryTouched: false,
-        sourceTouched: false,
-        askType: null,
-        candidates: [],
-      });
-      return;
+    let alive = true;
+    listInstruments()
+      .then((list) => {
+        if (alive) setAllInstruments(list);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const emptyForm = useCallback(
+    (keep = {}) => ({
+      name: "",
+      amount: "",
+      categoryId: null, // 지출 — 소분류 id
+      categoryTouched: false, // 지출 — 직접 골랐으면 자동 분류로 덮지 않는다
+      categoryEnum: null, // 수입 출처 / 저축 유형
+      sourceTouched: false,
+      paymentMethod: defaultPayment,
+      paymentInstrumentId: null, // 설정 > 카드·계좌에서 등록한 카드를 골랐으면 그 id
+      memo: "",
+      memoOpen: false,
+      dbId: null, // 저장된 지출을 고치는 중이면 그 id
+      askType: null,
+      candidates: [],
+      categorizing: false,
+      ...keep,
+    }),
+    [defaultPayment],
+  );
+
+  // 쓰다 만 한 건은 sessionStorage 에 둔다 — 다른 화면에 갔다 와도 남게.
+  // 키에 사용자 id 를 넣는다. 날짜만 쓰면 같은 브라우저에서 계정을 바꿨을 때 앞 사람의 입력이 떠오른다.
+  // 저장된 지출을 고치는 중(dbId)이면 보관하지 않는다 — 서버 값이 기준이다.
+  const storageKey = `ledger-entry-${user?.id ?? "anon"}-${dateStr}`;
+  const readDraft = () => {
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+      return parsed?.form && !parsed.form.dbId ? parsed : null;
+    } catch {
+      return null;
     }
+  };
+  const [type, setType] = useState(() => (isEditMode ? "expense" : readDraft()?.type || "expense"));
+  const [form, setForm] = useState(() =>
+    isEditMode ? emptyForm() : { ...emptyForm(), ...(readDraft()?.form || {}), categorizing: false },
+  );
+  const patch = (p) => setForm((f) => ({ ...f, ...p }));
+  const [notice, setNotice] = useState(null); // { kind: info|ok|warn|err, text } — 영수증·저장 안내
+  const [submitError, setSubmitError] = useState(null);
+
+  useEffect(() => {
+    try {
+      const hasContent = form.name.trim() || form.amount;
+      if (!form.dbId && hasContent) {
+        sessionStorage.setItem(storageKey, JSON.stringify({ type, form }));
+      } else if (!form.dbId) {
+        sessionStorage.removeItem(storageKey);
+      }
+    } catch {}
+  }, [form, type, storageKey]);
+  const clearDraft = () => {
+    try {
+      sessionStorage.removeItem(storageKey);
+    } catch {}
+  };
+
+  // ── 카테고리 트리 (지출) ─────────────────────────────────
+  const [tree, setTree] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    listCategoryTree()
+      .then((t) => alive && setTree(Array.isArray(t) ? t : []))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const leafById = useMemo(() => {
+    const map = new Map();
+    tree.forEach((p) => (p.children || []).forEach((leaf) => map.set(leaf.id, { name: leaf.name, parent: p.name })));
+    return map;
+  }, [tree]);
+
+  // ── 그날 기록 ────────────────────────────────────────────
+  // null = 불러오는 중. 저장·삭제 뒤 다시 읽는다.
+  const [day, setDay] = useState(null);
+  const [dayError, setDayError] = useState(false);
+  const loadDay = useCallback(async () => {
+    try {
+      const [exps, incs, savs] = await Promise.all([
+        listExpensesByDate(dateStr),
+        listIncomesByDate(dateStr),
+        listSavingsByDate(dateStr),
+      ]);
+      const next = { expenses: exps || [], incomes: incs || [], savings: savs || [] };
+      setDay(next);
+      setDayError(false);
+      return next;
+    } catch {
+      setDay({ expenses: [], incomes: [], savings: [] });
+      setDayError(true);
+      return null;
+    }
+  }, [dateStr]);
+
+  // 저장된 지출을 폼으로 불러와 고친다.
+  const editExpense = useCallback(
+    (e) => {
+      setType("expense");
+      setForm(
+        emptyForm({
+          dbId: e.id,
+          name: e.item || "",
+          amount: String(e.amount ?? ""),
+          categoryId: e.categoryId ?? null,
+          categoryTouched: true, // 저장된 카테고리 — 자동 분류로 덮지 않음
+          paymentMethod: e.paymentMethod || defaultPayment,
+          paymentInstrumentId: e.paymentInstrumentId ?? null,
+          memo: e.memo ?? "", // 다시 보낼 때 그대로 돌려줘야 지워지지 않는다
+          memoOpen: Boolean(e.memo),
+        }),
+      );
+      setNotice(null);
+      setSubmitError(null);
+    },
+    [emptyForm, defaultPayment],
+  );
+
+  useEffect(() => {
+    let alive = true;
+    setDay(null);
+    loadDay().then((d) => {
+      // 지출 수정으로 들어왔으면 그날 첫 지출을 바로 연다
+      if (alive && isEditMode && d?.expenses?.length) editExpense(d.expenses[0]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [loadDay, isEditMode, editExpense]);
+
+  // ── 내역 → 자동 분류 ─────────────────────────────────────
+  // 지출: 백엔드 분류(내 기록·규칙·Gemini). 400ms 쉬었다 묻는다. 직접 고른 카테고리는 덮지 않는다.
+  // 수입·저축: 로컬 키워드 룰로 출처/유형 제안 (직접 고르기 전까지).
+  useEffect(() => {
+    const name = form.name.trim();
     if (type !== "expense") {
-      // income/savings — 로컬 키워드 룰로 출처/유형 제안 (미선택 시에만)
-      if (row.sourceTouched) return;
-      onChange({ categoryEnum: categorize(name, type), categorizing: false });
-      return;
+      setForm((f) => (f.sourceTouched || !name ? f : { ...f, categoryEnum: categorize(name, type) }));
+      return undefined;
     }
-    // expense — 사용자가 직접 고른 경우 자동 분류로 덮지 않음
-    if (row.categoryTouched) {
-      onChange({ categorizing: false });
-      return;
+    if (!name) {
+      setForm((f) => (f.categoryTouched ? f : { ...f, categoryId: null, categorizing: false, askType: null, candidates: [] }));
+      return undefined;
     }
-    // 백엔드 분류(내 기록·규칙·Gemini). debounce 400ms. 진행 중엔 categorizing=true.
-    // 이름만으로 애매하면 askType·candidates 가 같이 와서 칩으로 묻는다(기본값은 이미 골라져 있다).
-    onChange({ categorizing: true });
+    if (form.categoryTouched) return undefined;
+    patch({ categorizing: true });
     let cancelled = false;
     const handle = setTimeout(async () => {
       const r = await categorizeRemote(name);
       if (cancelled) return;
-      onChange(
-        r == null
-          ? { autoCategory: true, categoryId: null, categorizing: false, askType: null, candidates: [] }
+      // 기다리는 사이 직접 골랐으면 그 선택을 덮지 않는다
+      setForm((f) =>
+        f.categoryTouched
+          ? { ...f, categorizing: false, askType: null, candidates: [] }
           : {
-              autoCategory: true,
-              categoryId: r.leafId,
+              ...f,
               categorizing: false,
-              askType: r.askType ?? null,
-              candidates: r.candidates ?? [],
+              categoryId: r?.leafId ?? null,
+              askType: r?.askType ?? null,
+              candidates: r?.candidates ?? [],
             },
       );
     }, 400);
@@ -645,290 +260,819 @@ function EntryRow({
       clearTimeout(handle);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [row.name, type]);
+  }, [form.name, type]);
 
-  // 이름만으로 애매할 때 내역 아래에 칩으로 묻는다. 분류를 다시 하는 동안엔 예전 칩을 숨긴다.
-  const ask = ASK_TEXT[row.askType];
-  const showAsk =
-    type === "expense" && !locked && !row.categorizing && Boolean(ask) &&
-    (row.candidates?.length ?? 0) > 1;
-  const otherSelected =
-    row.categoryId != null && !(row.candidates ?? []).some((c) => c.leafId === row.categoryId);
-  const categoryOpenRef = useRef(null);
+  const changeType = (next) => {
+    if (next === type || form.dbId) return;
+    setType(next);
+    // 내역·금액은 그대로, 분류만 새 종류에 맞게 다시
+    setForm((f) => emptyForm({ name: f.name, amount: f.amount, paymentMethod: f.paymentMethod, memo: f.memo, memoOpen: f.memoOpen }));
+  };
 
-  // 메모 — 평소엔 「+ 메모」만, 누르거나 이미 메모가 있으면 칸을 연다. 사용자만 보는 기록(분류·AI 에 안 씀).
-  const showMemo = Boolean(row.memoOpen) || Boolean((row.memo ?? "").trim());
-  const memoInputRef = useRef(null);
-  const focusMemoNext = useRef(false); // 「+ 메모」를 눌러 열었을 때만 커서를 옮긴다(임시저장 복원 때는 안 옮김)
+  // ── 영수증 OCR ──────────────────────────────────────────
+  // 인식 결과를 바로 저장하지 않고 폼을 채워만 준다. 흐린 영수증은 일부만 읽히므로 확인 단계를 남긴다.
+  const receiptInput = useRef(null);
+  const [receiptBusy, setReceiptBusy] = useState(false);
+
+  const onReceiptPick = async (e) => {
+    const file = e.target.files?.[0];
+    // 같은 파일을 다시 골라도 change 가 발생하도록 값을 비운다.
+    e.target.value = "";
+    if (!file) return;
+
+    setReceiptBusy(true);
+    setNotice({ kind: "info", text: "사진을 읽는 중이에요. 10~15초쯤 걸려요." });
+    try {
+      // 업로드 전에 긴 변 2048px 로 줄인다 — prepareReceiptImage 참조.
+      const photo = await prepareReceiptImage(file);
+      // 서버 상한을 넘으면 413 이 오는데 message 가 실리지 않는다. 축소한 뒤에 미리 거른다.
+      if (photo.size > MAX_RECEIPT_BYTES) {
+        const mb = (photo.size / 1024 / 1024).toFixed(1);
+        setNotice({ kind: "err", text: `사진이 너무 커요 (${mb}MB). 10MB 이하로 올려주세요.` });
+        return;
+      }
+      const r = await uploadReceipt(photo);
+
+      // 영수증이 아니거나 판독 불가여도 200 이 온다 — 값이 비었는지로 판단한다.
+      if (r.amount == null && !r.item) {
+        const source = r.extracted?.sourceType;
+        const text =
+          r.errorMessage ||
+          (source === "MULTIPLE"
+            ? "결제가 여러 건 보여요. 한 건만 보이게 잘라서 다시 올려주세요."
+            : source === "NOT_PAYMENT"
+              ? "결제 내역이 보이지 않아요. 취소·환불·입금 내역은 지출로 채우지 않아요."
+              : "사진을 읽지 못했어요. 더 밝은 곳에서 다시 찍거나 캡처를 다시 올려주세요.");
+        setNotice({ kind: "err", text });
+        return;
+      }
+
+      setType("expense");
+      setForm(
+        emptyForm({
+          name: r.item || r.extracted?.storeName || "",
+          amount: r.amount != null ? String(r.amount) : "",
+          // 프롬프트가 결제수단을 우리 enum 으로 뽑으므로 그대로 쓴다. UNKNOWN·미인식이면 기본값 유지.
+          paymentMethod: PAYMENT_METHODS.some((p) => p.value === r.extracted?.paymentMethod)
+            ? r.extracted.paymentMethod
+            : defaultPayment,
+        }),
+      );
+      // 사진 속 날짜가 지금 날짜와 다르면 알려만 준다.
+      const other = r.date && r.date !== dateStr;
+      setNotice({
+        kind: other ? "warn" : "ok",
+        text: other
+          ? `사진 속 날짜는 ${r.date} 예요. 지금은 ${dateStr} 을 작성 중이라 금액만 채웠어요.`
+          : "사진을 읽었어요. 금액과 내역을 확인해주세요.",
+      });
+    } catch (err) {
+      setNotice({ kind: "err", text: err.message });
+    } finally {
+      setReceiptBusy(false);
+    }
+  };
+
+  // ── 카테고리 선택 창 ─────────────────────────────────────
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // 그날 기록 창
+  const [dayOpen, setDayOpen] = useState(false);
+
+  // ── 메모 ────────────────────────────────────────────────
+  const memoRef = useRef(null);
+  const focusMemoNext = useRef(false);
+  const showMemo = form.memoOpen || Boolean(form.memo.trim());
   useEffect(() => {
     if (showMemo && focusMemoNext.current) {
       focusMemoNext.current = false;
-      memoInputRef.current?.focus();
+      memoRef.current?.focus();
     }
   }, [showMemo]);
 
-  // 카테고리/출처 선택 컨트롤 (눌러서 수정 가능한 드롭다운).
-  const categoryControl =
-    type === "expense" ? (
-      <Dropdown
-        value={row.categoryId ?? null}
-        options={expenseCatOptions}
-        onChange={(v) => onChange({ categoryId: v, categoryTouched: true })}
-        placeholder={row.categorizing ? "분류 중…" : "카테고리"}
-        align="right"
-        disabled={locked}
-        openRef={categoryOpenRef}
-      />
-    ) : (
-      <Dropdown
-        value={row.categoryEnum ?? null}
-        options={CATEGORIES_BY_TYPE[type]}
-        onChange={(v) => onChange({ categoryEnum: v, sourceTouched: true })}
-        placeholder={type === "income" ? "수입 출처" : "저축 유형"}
-        align="right"
-        disabled={locked}
-      />
-    );
+  // ── 저장 ────────────────────────────────────────────────
+  const amountRef = useRef(null);
+  const nameRef = useRef(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const amountNum = Number(form.amount || 0);
+  const missing = !form.amount || amountNum <= 0
+    ? "금액을 입력해 주세요"
+    : !form.name.trim()
+      ? "내역을 입력해 주세요"
+      : type === "expense" && form.categorizing
+        ? "카테고리를 분류하는 중이에요…"
+        : type === "expense" && !form.categoryId
+          ? "카테고리를 골라 주세요"
+          : null;
+  const canSave = !missing && !submitting;
+
+  const save = async (andMore) => {
+    if (!canSave) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const item = form.name.trim();
+      await saveLedgerEntries({
+        expenses:
+          type === "expense"
+            ? [{
+                id: form.dbId ?? null,
+                item,
+                amount: amountNum,
+                categoryId: form.categoryId,
+                paymentMethod: form.paymentMethod,
+                paymentInstrumentId: form.paymentInstrumentId ?? null,
+                spentAt: `${dateStr}T00:00:00`,
+                memo: form.memo ?? "", // 빈 글자 = 메모 없음(수정이면 지움)
+              }]
+            : [],
+        incomes:
+          type === "income"
+            ? [{
+                item,
+                amount: amountNum,
+                source: form.categoryEnum || "OTHER",
+                paymentInstrumentId: form.paymentInstrumentId ?? null, // 받은 곳(계좌·현금)
+                paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
+                receivedAt: dateStr,
+              }]
+            : [],
+        savings:
+          type === "savings"
+            ? [{
+                item,
+                amount: amountNum,
+                savingType: form.categoryEnum || "DEPOSIT",
+                savedAt: dateStr,
+                // 모은 곳은 예적금에서만 (자동 분류가 투자로 바꿔 놓았으면 보내지 않는다)
+                paymentInstrumentId: (form.categoryEnum || "DEPOSIT") === "DEPOSIT" ? form.paymentInstrumentId ?? null : null,
+              }]
+            : [],
+      });
+      clearDraft();
+      if (!andMore) {
+        navigate(`/wallet?date=${dateStr}`);
+        return;
+      }
+      // 하나 더 — 종류·결제수단은 그대로 두고 비운 뒤 금액부터 다시
+      setForm(emptyForm({ paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId }));
+      setNotice({ kind: "ok", text: `'${item}' ${won(amountNum)}을 저장했어요. 다음 것을 적어 주세요.` });
+      loadDay();
+      amountRef.current?.focus();
+    } catch (e) {
+      setSubmitError(e.message || "저장 중 오류가 발생했어요");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const removeEditing = async () => {
+    if (!form.dbId) return;
+    if (!window.confirm(`'${form.name || "이 지출"}'을 삭제할까요?`)) return;
+    try {
+      await deleteExpense(form.dbId);
+      setForm(emptyForm({ paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId }));
+      setNotice({ kind: "ok", text: "삭제했어요." });
+      loadDay();
+    } catch (error) {
+      setSubmitError(error.message || "지출을 삭제하지 못했어요.");
+    }
+  };
+
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/home");
+  };
+
+  // ── 표시용 ──────────────────────────────────────────────
+  const selectedLeaf = form.categoryId != null ? leafById.get(form.categoryId) : null;
+  const ask = ASK_TEXT[form.askType];
+  const showAsk = type === "expense" && !form.categorizing && Boolean(ask) && (form.candidates?.length ?? 0) > 1;
+  const otherSelected =
+    form.categoryId != null && !(form.candidates ?? []).some((c) => c.leafId === form.categoryId);
+
+  const dayRows = useMemo(() => {
+    if (!day) return [];
+    return [
+      ...day.expenses.map((e) => {
+        const leaf = leafById.get(e.categoryId);
+        return {
+          key: `e-${e.id}`,
+          raw: e,
+          kind: "expense",
+          name: e.item,
+          sub: leaf ? leaf.name : "지출",
+          icon: categoryIcon(leaf ? `${leaf.parent} ${leaf.name}` : ""),
+          amount: -e.amount,
+        };
+      }),
+      ...day.incomes.map((i) => ({
+        key: `i-${i.id}`,
+        kind: "income",
+        name: i.item,
+        sub: `수입 · ${labelOf(CATEGORIES_BY_TYPE.income, i.source) || "기타"}`,
+        icon: "wallet",
+        amount: i.amount,
+      })),
+      ...day.savings.map((s) => ({
+        key: `s-${s.id}`,
+        kind: "savings",
+        name: s.item,
+        sub: `저축 · ${labelOf(CATEGORIES_BY_TYPE.savings, s.savingType) || "예금"}`,
+        icon: "piggy",
+        amount: s.amount,
+      })),
+    ];
+  }, [day, leafById]);
+  const dayExpenseTotal = (day?.expenses || []).reduce((s, e) => s + Number(e.amount || 0), 0);
+
+  const editing = Boolean(form.dbId);
+  const saveLabel = submitting ? "저장 중…" : editing ? "수정 완료" : "저장";
 
   return (
-    <div
-      className="ledger-entry-row"
-      data-entry-type={type}
-      data-row-id={row.id}
-    >
-      <div className="ledger-row-head">
-        <span className="ledger-row-num">{String(num).padStart(2, "0")}</span>
-        {/* 결제수단은 지출만. 수입은 "어디서 받았나"(출처), 저축은 유형만 고른다. */}
-        {type === "expense" && (
-          <Dropdown
-            value={row.paymentMethod}
-            options={PAYMENT_METHODS}
-            onChange={(v) => onChange({ paymentMethod: v })}
-            placeholder="결제수단"
-            disabled={locked}
-          />
-        )}
-        <span className="ledger-row-spacer" />
-        {saved && (
-          <span className="ledger-chip ledger-chip-readonly ledger-chip-saved">
-            {row.isEditing ? "수정 중" : "저장됨"}
-          </span>
-        )}
-        {categoryControl}
-        {(type === "expense" || !saved) && (
-          <button
-            type="button"
-            className="ledger-row-del"
-            aria-label="삭제"
-            onClick={onDelete}
-          >
-            ×
-          </button>
-        )}
-      </div>
-      <div className="ledger-row-field">
-        <span className="ledger-row-label">내역</span>
-        <input
-          type="text"
-          className="ledger-row-input"
-          data-entry-field="name"
-          value={row.name}
-          onChange={(e) => onChange({
-            name: e.target.value,
-            ...(type === "expense" ? { categoryTouched: false } : {}),
-          })}
-          disabled={locked}
-          enterKeyHint="next"
-          onKeyDown={(e) => {
-            if (e.key !== "Enter" || e.nativeEvent?.isComposing) return;
-            e.preventDefault();
-            amountInputRef.current?.focus();
-          }}
-          placeholder={
-            type === "income"
-              ? "예: 6월 월급, 엄마 용돈"
-              : "예: GS25 삼각김밥, 학식, 지하철"
-          }
-        />
-      </div>
-      {showAsk && (
-        <div className="ledger-ask" role="group" aria-label={ask.question}>
-          <span className="ledger-ask-question">{ask.question}</span>
-          {row.candidates.map((c) => {
-            const selected = row.categoryId === c.leafId;
-            return (
-              <button
-                key={c.leafId}
-                type="button"
-                className={`ledger-chip${selected ? " ledger-chip-selected" : ""}`}
-                aria-pressed={selected}
-                onClick={() => onChange({ categoryId: c.leafId, categoryTouched: true })}
-              >
-                {c.label}
-              </button>
-            );
-          })}
-          {/* 칩에 없는 카테고리는 오른쪽 위 전체 목록에서 — 거기서 고르면 이 칩이 선택돼 보인다 */}
-          {ask.other && (
-            <button
-              type="button"
-              className={`ledger-chip${otherSelected ? " ledger-chip-selected" : ""}`}
-              aria-pressed={otherSelected}
-              onClick={() => categoryOpenRef.current?.()}
-            >
-              그 외
-            </button>
-          )}
-          {ask.hint && <p className="ledger-ask-hint">{ask.hint}</p>}
-        </div>
-      )}
-      <div className="ledger-row-field">
-        <span className="ledger-row-label">금액</span>
-        <div className="ledger-row-input-wrap">
+    <div className="wr">
+      <header className="wr-top">
+        <button type="button" className="wr-icon-btn" aria-label="뒤로" onClick={goBack}>
+          <Icon name="chevronLeft" size={22} />
+        </button>
+        <h1 className="wr-top-title">{editing ? "지출 수정" : `${TYPES.find((t) => t.id === type).label} 기록`}</h1>
+        {/* 그날 기록 — 눌러서 창으로 본다. 건수가 있으면 숫자를 붙인다 */}
+        <button
+          type="button"
+          className="wr-day-open"
+          onClick={() => setDayOpen(true)}
+          aria-haspopup="dialog"
+          aria-label={`기록 내역 ${dayRows.length}건 보기`}
+        >
+          <Icon name="ledger" size={15} />
+          <span className="wr-day-open-text">기록 내역</span>
+          {dayRows.length > 0 && <span className="wr-day-open-count">{dayRows.length}</span>}
+        </button>
+        {/* 날짜 칩 — 누르면 달력이 열린다. 미래는 고를 수 없다 */}
+        <label className="wr-date">
+          <Icon name="calendar" size={14} />
+          {dateChipLabel(dateStr)}
           <input
-            ref={amountInputRef}
-            type="text"
-            inputMode="numeric"
-            className="ledger-row-input"
-            data-entry-field="amount"
-            value={row.amount ? Number(row.amount).toLocaleString("ko-KR") : ""}
-            onChange={(e) =>
-              onChange({ amount: e.target.value.replace(/[^\d]/g, "") })
-            }
-            disabled={locked}
-            enterKeyHint="next"
-            onKeyDown={(e) => {
-              if (e.key !== "Enter" || e.nativeEvent?.isComposing) return;
-              e.preventDefault();
-              onComplete?.();
-            }}
+            type="date"
+            value={dateStr}
+            max={todayStr}
+            aria-label="기록할 날짜"
+            onChange={(e) => e.target.value && navigate(`/wallet/new?date=${e.target.value}`, { replace: true })}
           />
-          <span className="ledger-row-unit">원</span>
-        </div>
-      </div>
-      {type === "expense" &&
-        (showMemo ? (
-          <div className="ledger-row-field">
-            <span className="ledger-row-label">메모</span>
+        </label>
+      </header>
+
+      <div className="wr-body">
+        <main className="wr-card wr-form">
+          {/* 지출 · 수입 · 저축 */}
+          <div className="wr-seg" role="tablist" aria-label="기록 종류">
+            {TYPES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={type === t.id}
+                className={type === t.id ? "is-active" : ""}
+                disabled={editing && t.id !== type}
+                onClick={() => changeType(t.id)}
+              >
+                {type === t.id && <Icon name="check" size={14} strokeWidth={2.4} />}
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {editing && (
+            <div className="wr-editing">
+              <span>저장된 지출을 고치는 중이에요</span>
+              <button type="button" onClick={() => setForm(emptyForm({ paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId }))}>
+                새로 쓰기
+              </button>
+            </div>
+          )}
+
+          {/* 금액 — 이 화면의 핵심 숫자 */}
+          <label className="wr-amount">
+            <span className="wr-sr">금액</span>
             <input
-              ref={memoInputRef}
+              ref={amountRef}
               type="text"
-              className="ledger-row-input"
-              data-entry-field="memo"
-              value={row.memo ?? ""}
-              onChange={(e) => onChange({ memo: e.target.value })}
-              // 빈 채로 벗어나면 다시 「+ 메모」로 접는다
-              onBlur={() => {
-                if (!(row.memo ?? "").trim()) onChange({ memoOpen: false });
+              inputMode="numeric"
+              autoFocus={!isEditMode}
+              placeholder="0"
+              value={form.amount ? Number(form.amount).toLocaleString("ko-KR") : ""}
+              onChange={(e) => patch({ amount: e.target.value.replace(/[^\d]/g, "").slice(0, 12) })}
+              enterKeyHint="next"
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" || e.nativeEvent?.isComposing) return;
+                e.preventDefault();
+                nameRef.current?.focus();
               }}
-              disabled={locked}
-              maxLength={MEMO_MAX}
+              style={{ "--len": Math.max(1, (form.amount ? Number(form.amount).toLocaleString("ko-KR") : "0").length) }}
+            />
+            <span className="wr-amount-unit">원</span>
+          </label>
+
+          {/* 영수증·결제 캡처 OCR — 인식에 6~13초 걸려 진행 표시가 필수다.
+              종이 영수증이 없는 결제가 많아 카드 승인 문자·결제 완료 캡처도 받는다. */}
+          {type === "expense" && !editing && (
+            <>
+              <input ref={receiptInput} type="file" accept="image/*" hidden onChange={onReceiptPick} />
+              <button
+                type="button"
+                className="wr-receipt"
+                onClick={() => receiptInput.current?.click()}
+                disabled={receiptBusy}
+              >
+                <Icon name="camera" size={17} />
+                {receiptBusy ? "사진 읽는 중…" : "영수증·결제 캡처로 채우기"}
+              </button>
+            </>
+          )}
+          {notice && (
+            <p className={`wr-notice wr-notice--${notice.kind}`} role="status">
+              {notice.text}
+            </p>
+          )}
+
+          {/* 내역 */}
+          <div className="wr-field">
+            <label className="wr-label" htmlFor="wr-name">
+              내역
+            </label>
+            <input
+              id="wr-name"
+              ref={nameRef}
+              className="wr-input"
+              type="text"
+              value={form.name}
+              onChange={(e) =>
+                patch({ name: e.target.value, ...(type === "expense" ? { categoryTouched: false } : { sourceTouched: false }) })
+              }
               enterKeyHint="done"
               onKeyDown={(e) => {
                 if (e.key !== "Enter" || e.nativeEvent?.isComposing) return;
                 e.preventDefault();
-                onComplete?.();
+                e.currentTarget.blur();
               }}
-              placeholder="예: 학교 앞에서 동기들이랑"
+              placeholder={
+                type === "income" ? "예: 10월 월급, 엄마 용돈" : type === "savings" ? "예: 청년적금" : "예: GS25 삼각김밥, 학식, 지하철"
+              }
             />
+            {showAsk && (
+              <div className="wr-ask" role="group" aria-label={ask.question}>
+                <span className="wr-ask-q">{ask.question}</span>
+                <div className="wr-chips">
+                  {form.candidates.map((c) => {
+                    const selected = form.categoryId === c.leafId;
+                    return (
+                      <button
+                        key={c.leafId}
+                        type="button"
+                        className={`wr-chip ${selected ? "is-on" : ""}`}
+                        aria-pressed={selected}
+                        onClick={() => patch({ categoryId: c.leafId, categoryTouched: true })}
+                      >
+                        {selected && <Icon name="check" size={13} strokeWidth={2.4} />}
+                        {c.label}
+                      </button>
+                    );
+                  })}
+                  {ask.other && (
+                    <button
+                      type="button"
+                      className={`wr-chip ${otherSelected ? "is-on" : ""}`}
+                      aria-pressed={otherSelected}
+                      onClick={() => setSheetOpen(true)}
+                    >
+                      그 외
+                    </button>
+                  )}
+                </div>
+                {ask.hint && <p className="wr-ask-hint">{ask.hint}</p>}
+              </div>
+            )}
           </div>
-        ) : (
-          !locked && (
-            <button
-              type="button"
-              className="ledger-chip ledger-chip-placeholder ledger-memo-add"
-              onClick={() => {
-                focusMemoNext.current = true;
-                onChange({ memoOpen: true });
-              }}
-            >
-              + 메모
+
+          {/* 카테고리 (지출) / 출처 (수입) / 유형 (저축) */}
+          {type === "expense" ? (
+            <div className="wr-field">
+              <span className="wr-label">카테고리</span>
+              <button type="button" className="wr-cat" onClick={() => setSheetOpen(true)} aria-haspopup="dialog">
+                {form.categorizing ? (
+                  <span className="wr-cat-wait">분류 중…</span>
+                ) : selectedLeaf ? (
+                  <>
+                    <span className="wr-chip is-on wr-chip--static">{selectedLeaf.name}</span>
+                    <span className="wr-cat-meta">{form.categoryTouched ? selectedLeaf.parent : "자동 분류"}</span>
+                  </>
+                ) : (
+                  <span className="wr-cat-wait">{form.name.trim() ? "분류하지 못했어요 — 골라 주세요" : "내역을 쓰면 자동으로 골라요"}</span>
+                )}
+                <span className="wr-cat-change">
+                  바꾸기 <Icon name="chevronRight" size={14} />
+                </span>
+              </button>
+            </div>
+          ) : (
+            <div className="wr-field">
+              <span className="wr-label">{type === "income" ? "어디서 받았나요" : "저축 유형"}</span>
+              <div className="wr-chips" role="radiogroup">
+                {CATEGORIES_BY_TYPE[type].map((o) => {
+                  const on = form.categoryEnum === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      className={`wr-chip ${on ? "is-on" : ""}`}
+                      onClick={() =>
+                        patch({
+                          categoryEnum: o.value,
+                          sourceTouched: true,
+                          // 투자는 모은 곳을 고르지 않는다 — 예적금에서 골라 둔 통장을 비운다
+                          ...(type === "savings" && o.value === "INVEST" ? { paymentInstrumentId: null } : {}),
+                        })
+                      }
+                    >
+                      {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 받은 곳 (수입만) — 등록한 입출금·예적금·현금. 고르지 않아도 된다 */}
+          {type === "income" && (
+            <div className="wr-field">
+              <div className="wr-label-row">
+                <span className="wr-label">받은 곳</span>
+                <button type="button" className="wr-label-link" onClick={() => navigate("/settings/payment")}>
+                  카드·계좌 관리 <Icon name="chevronRight" size={13} />
+                </button>
+              </div>
+              {incomeAccounts.length === 0 ? (
+                <p className="wr-hint">통장·체크카드·현금을 등록하면 어디로 받았는지 고를 수 있어요.</p>
+              ) : (
+                <div className="wr-chips" role="radiogroup" aria-label="받은 곳">
+                  {[{ id: null, name: "고르지 않음" }, ...incomeAccounts].map((acc) => {
+                    const on = (form.paymentInstrumentId ?? null) === acc.id;
+                    return (
+                      <button
+                        key={acc.id ?? "none"}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        className={`wr-chip ${acc.id ? "wr-chip--mine" : ""} ${on ? "is-on" : ""}`}
+                        onClick={() => patch({ paymentInstrumentId: acc.id })}
+                      >
+                        {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                        {acc.id && (
+                          <span className="wr-chip-dot" style={{ background: issuerOf(acc.issuer).color }} aria-hidden />
+                        )}
+                        {acc.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 모은 곳 (저축 · 예적금만) — 등록한 저축 통장. 투자는 계좌를 고르지 않는다 */}
+          {type === "savings" && form.categoryEnum !== "INVEST" && (
+            <div className="wr-field">
+              <div className="wr-label-row">
+                <span className="wr-label">모은 곳</span>
+                <button type="button" className="wr-label-link" onClick={() => navigate("/settings/payment")}>
+                  카드·계좌 관리 <Icon name="chevronRight" size={13} />
+                </button>
+              </div>
+              {savingsAccounts.length === 0 ? (
+                <p className="wr-hint">저축 통장을 등록하면 어디에 모았는지 고를 수 있어요.</p>
+              ) : (
+                <div className="wr-chips" role="radiogroup" aria-label="모은 곳">
+                  {[{ id: null, name: "고르지 않음" }, ...savingsAccounts].map((acc) => {
+                    const on = (form.paymentInstrumentId ?? null) === acc.id;
+                    return (
+                      <button
+                        key={acc.id ?? "none"}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        className={`wr-chip ${acc.id ? "wr-chip--mine" : ""} ${on ? "is-on" : ""}`}
+                        onClick={() => patch({ paymentInstrumentId: acc.id })}
+                      >
+                        {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                        {acc.id && (
+                          <span className="wr-chip-dot" style={{ background: issuerOf(acc.issuer).color }} aria-hidden />
+                        )}
+                        {acc.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 결제 수단 (지출만) */}
+          {type === "expense" && (
+            <div className="wr-field">
+              <div className="wr-label-row">
+                <span className="wr-label">결제 수단</span>
+                <button type="button" className="wr-label-link" onClick={() => navigate("/settings/payment")}>
+                  카드·계좌 관리 <Icon name="chevronRight" size={13} />
+                </button>
+              </div>
+              <div className="wr-chips" role="radiogroup" aria-label="결제 수단">
+                {/* 내 카드·계좌 — 고르면 종류(paymentMethod)도 그 카드에 맞춘다 */}
+                {instruments.map((inst) => {
+                  const on = form.paymentInstrumentId === inst.id;
+                  return (
+                    <button
+                      key={`inst-${inst.id}`}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      className={`wr-chip wr-chip--mine ${on ? "is-on" : ""}`}
+                      onClick={() =>
+                        patch({ paymentInstrumentId: inst.id, paymentMethod: INSTRUMENT_KINDS[inst.kind].paymentMethod })
+                      }
+                    >
+                      {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                      {/* 카드사·은행 색 점 — 같은 이름이라도 어느 회사 카드인지 한눈에 */}
+                      <span className="wr-chip-dot" style={{ background: issuerOf(inst.issuer).color }} aria-hidden />
+                      {inst.name}
+                    </button>
+                  );
+                })}
+                {instruments.length > 0 && <span className="wr-chip-divider" aria-hidden />}
+                {PAYMENT_METHODS.map((p) => {
+                  // 등록한 카드를 고른 동안은 종류 칩을 켜지 않는다. 보관해서 목록에 없는 카드면 종류로 보여 준다.
+                  const pickedMine = instruments.some((i) => i.id === form.paymentInstrumentId);
+                  const on = !pickedMine && form.paymentMethod === p.value;
+                  return (
+                    <button
+                      key={p.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      className={`wr-chip ${on ? "is-on" : ""}`}
+                      onClick={() => patch({ paymentMethod: p.value, paymentInstrumentId: null })}
+                    >
+                      {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 메모 (지출만) — 평소엔 「+ 메모 추가」만. 사용자만 보는 기록(분류·AI 에 안 씀) */}
+          {type === "expense" &&
+            (showMemo ? (
+              <div className="wr-field">
+                <label className="wr-label" htmlFor="wr-memo">
+                  메모
+                </label>
+                <input
+                  id="wr-memo"
+                  ref={memoRef}
+                  className="wr-input"
+                  type="text"
+                  value={form.memo}
+                  maxLength={MEMO_MAX}
+                  onChange={(e) => patch({ memo: e.target.value })}
+                  onBlur={() => !form.memo.trim() && patch({ memoOpen: false })}
+                  placeholder="예: 학교 앞에서 동기들이랑"
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="wr-memo-add"
+                onClick={() => {
+                  focusMemoNext.current = true;
+                  patch({ memoOpen: true });
+                }}
+              >
+                <Icon name="plus" size={15} /> 메모 추가
+              </button>
+            ))}
+
+          {editing && (
+            <button type="button" className="wr-delete" onClick={removeEditing}>
+              <Icon name="trash" size={15} /> 이 지출 삭제
             </button>
-          )
-        ))}
+          )}
+
+          {/* 저장 — 폰에서는 화면 아래에 붙고, PC 에서는 카드 아래에 놓인다 */}
+          <div className="wr-actions">
+            {(missing || submitError) && (
+              <p className={`wr-hint ${submitError ? "is-error" : ""}`} role={submitError ? "alert" : undefined}>
+                {submitError || missing}
+              </p>
+            )}
+            <div className="wr-actions-row">
+              {!editing && (
+                <button type="button" className="wr-btn wr-btn--ghost" onClick={() => save(true)} disabled={!canSave}>
+                  저장하고 하나 더
+                </button>
+              )}
+              <button type="button" className="wr-btn wr-btn--dark" onClick={() => save(false)} disabled={!canSave}>
+                {saveLabel}
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {sheetOpen && (
+        <CategorySheet
+          tree={tree}
+          value={form.categoryId}
+          currentLabel={selectedLeaf?.name}
+          onClose={() => setSheetOpen(false)}
+          onPick={(id) => {
+            patch({ categoryId: id, categoryTouched: true, askType: null, candidates: [] });
+            setSheetOpen(false);
+          }}
+        />
+      )}
+
+      {dayOpen && (
+        <DayRecordsSheet
+          title={`${dateChipLabel(dateStr)} 기록`}
+          rows={dayRows}
+          loading={day === null}
+          error={dayError}
+          expenseTotal={dayExpenseTotal}
+          editingId={form.dbId}
+          onClose={() => setDayOpen(false)}
+          onEdit={(raw) => {
+            editExpense(raw);
+            setDayOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// 클릭 chip + 펼침 메뉴 (결제수단용).
-// openRef 를 주면 바깥(예: 내역 아래 「그 외」 칩)에서 openRef.current() 로 목록을 열 수 있다.
-function Dropdown({ value, options, onChange, placeholder, align = "left", disabled = false, openRef }) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
+// 창 틀 — 폰은 아래에서 올라오는 시트, PC 는 가운데 창. Esc·바깥 누르기·X 로 닫는다.
+// 열려 있는 동안 뒤 화면은 스크롤되지 않는다.
+function Sheet({ title, onClose, children, footer }) {
+  const panelRef = useRef(null);
+  const titleId = useRef(`wr-sheet-${Math.random().toString(36).slice(2, 8)}`).current;
 
   useEffect(() => {
-    if (!openRef) return undefined;
-    openRef.current = () => setOpen(true);
+    const onKey = (e) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    panelRef.current?.focus();
     return () => {
-      openRef.current = null;
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
     };
-  }, [openRef]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDocMouseDown = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
-    };
-    const onEsc = (e) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDocMouseDown);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onDocMouseDown);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [open]);
-
-  const selected = options.find((o) => o.value === value);
-  const label = selected?.label || placeholder;
+  }, [onClose]);
 
   return (
-    <div className="ledger-dropdown" ref={wrapRef}>
-      <button
-        type="button"
-        className={`ledger-chip ${selected ? "ledger-chip-selected" : ""}`}
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        disabled={disabled}
-      >
-        <span className="ledger-chip-text">{label}</span>
-        {!disabled && (
-          <span className="ledger-chip-caret" aria-hidden>
-            ▾
-          </span>
-        )}
-      </button>
-      {open && (
-        <ul
-          className={`ledger-dropdown-menu ledger-dropdown-menu-${align}`}
-          role="listbox"
-        >
-          {options.length === 0 && (
-            <li className="ledger-dropdown-empty">불러오는 중…</li>
-          )}
-          {options.map((o) => (
-            <li key={o.value}>
-              <button
-                type="button"
-                className={`ledger-dropdown-option ${
-                  o.value === value ? "ledger-dropdown-option-selected" : ""
-                }`}
-                onClick={() => {
-                  onChange(o.value);
-                  setOpen(false);
-                }}
-                role="option"
-                aria-selected={o.value === value}
-              >
-                {o.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="wr-sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="wr-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} ref={panelRef}>
+        <span className="wr-sheet-grip" aria-hidden />
+        <div className="wr-sheet-head">
+          <h2 id={titleId}>{title}</h2>
+          <button type="button" className="wr-icon-btn" aria-label="닫기" onClick={onClose}>
+            <Icon name="close" size={20} />
+          </button>
+        </div>
+        {children}
+        {footer && <div className="wr-sheet-foot">{footer}</div>}
+      </div>
     </div>
+  );
+}
+
+// 카테고리 선택 — 칩을 눌러 고르고 「선택 완료」로 확정한다. 닫기만 하면 바꾸지 않는다.
+function CategorySheet({ tree, value, currentLabel, onClose, onPick }) {
+  const [picked, setPicked] = useState(value);
+  return (
+    <Sheet
+      title="카테고리 선택"
+      onClose={onClose}
+      footer={
+        <button
+          type="button"
+          className="wr-btn wr-btn--dark wr-btn--block"
+          disabled={picked == null}
+          onClick={() => onPick(picked)}
+        >
+          선택 완료
+        </button>
+      }
+    >
+      <p className="wr-sheet-current">
+        <span>
+          현재 분류: <strong>{currentLabel || "없음"}</strong>
+        </span>
+        <span>변경할 카테고리를 터치하세요</span>
+      </p>
+      <div className="wr-sheet-body">
+        {tree.length === 0 && <p className="wr-day-empty">불러오는 중…</p>}
+        {tree.map((group) => (
+          <section key={group.id} className="wr-sheet-group" aria-label={group.name}>
+            <h3>{group.name}</h3>
+            <div className="wr-chips">
+              {(group.children || []).map((leaf) => {
+                const on = picked === leaf.id;
+                return (
+                  <button
+                    key={leaf.id}
+                    type="button"
+                    className={`wr-chip ${on ? "is-on" : ""}`}
+                    aria-pressed={on}
+                    onClick={() => setPicked(leaf.id)}
+                    onDoubleClick={() => onPick(leaf.id)}
+                  >
+                    {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                    {leaf.name}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+    </Sheet>
+  );
+}
+
+// 그날 기록 — 저장한 것을 확인하고, 지출은 눌러서 폼으로 불러와 고친다.
+// 수입·저축은 서버에 수정 기능이 없어 보기만 한다.
+function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingId, onClose, onEdit }) {
+  return (
+    <Sheet title={title} onClose={onClose}>
+      <p className="wr-sheet-current">
+        <span>
+          <strong>{rows.length}건</strong>
+          {expenseTotal > 0 && <> · 지출 {won(expenseTotal)}</>}
+        </span>
+        <span>지출을 누르면 고칠 수 있어요</span>
+      </p>
+      <div className="wr-sheet-body">
+        {loading ? (
+          <p className="wr-day-empty">불러오는 중…</p>
+        ) : error ? (
+          <p className="wr-day-empty">기록을 불러오지 못했어요.</p>
+        ) : rows.length === 0 ? (
+          <p className="wr-day-empty">아직 이 날 기록이 없어요.</p>
+        ) : (
+          <ul className="wr-day-list">
+            {rows.map((r) => {
+              const isEditingThis = r.kind === "expense" && editingId === r.raw.id;
+              const body = (
+                <>
+                  <span className="wr-day-icon">
+                    <Icon name={r.icon} size={17} />
+                  </span>
+                  <span className="wr-day-mid">
+                    <span className="wr-day-name">{r.name}</span>
+                    <span className="wr-day-sub">{isEditingThis ? "고치는 중" : r.sub}</span>
+                  </span>
+                  <span className={`wr-day-amt ${r.amount > 0 ? "is-plus" : ""}`}>
+                    {r.amount > 0 ? "+" : "-"}
+                    {won(Math.abs(r.amount))}
+                  </span>
+                </>
+              );
+              return (
+                <li key={r.key}>
+                  {r.kind === "expense" ? (
+                    <button
+                      type="button"
+                      className={`wr-day-row ${isEditingThis ? "is-current" : ""}`}
+                      onClick={() => onEdit(r.raw)}
+                      aria-label={`${r.name} 고치기`}
+                    >
+                      {body}
+                      <Icon name="pencil" size={15} className="wr-day-edit" />
+                    </button>
+                  ) : (
+                    <div className="wr-day-row">{body}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </Sheet>
   );
 }
 

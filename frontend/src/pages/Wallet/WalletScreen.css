@@ -1,0 +1,1161 @@
+/* ── 가계부 화면 (모바일 우선) ──────────────────────────────
+   배치: 제목·주/월 → 기간 이동 → 이번 달 총 지출(핵심 숫자) → 달력 → 선택한 날 → 지출 내역 → 카테고리.
+   카드·버튼·판정 칩·목록 줄은 홈과 같은 .hm-* (HomeScreen.css) 를 쓰고, 여기엔 가계부에만 있는 것만 둔다.
+   폭 375px 에서 옆으로 넘치지 않게: 표 대신 목록, 달력 칸은 minmax(0,1fr) + 짧은 금액(1.5만). */
+
+/* ── 틀: 폰 한 줄 / 넓으면 두 단 ──
+   두 단으로 나누는 기준은 창 폭이 아니라 본문 폭이다(@container). PC 는 왼쪽 메뉴·오른쪽 패널이
+   본문을 좁히므로, 창이 넓어도 본문이 좁으면 한 줄로 둔다. */
+.lw.hm {
+  max-width: none;
+  container-type: inline-size;
+  container-name: lw;
+}
+.lw-layout {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* 폰에서는 단 묶음을 풀어 카드가 기간 → 총 지출 → 달력 → 선택한 날 → 내역 → 카테고리 순으로 이어진다 */
+.lw-col {
+  display: contents;
+}
+
+/* ── 제목 + 주/월 ── */
+.lw-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 0;
+}
+.lw-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.lw-seg {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--hm-sunk);
+}
+.lw-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  cursor: pointer;
+}
+.lw-seg button.is-active {
+  background: var(--hm-sage-soft);
+  color: var(--hm-green-ink);
+  box-shadow: 0 1px 3px rgba(61, 56, 48, 0.08);
+}
+
+/* ── 기간 이동 ── */
+.lw-period {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+}
+.lw-period-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lw-period-label .vori-icon {
+  flex-shrink: 0;
+  color: var(--hm-sub);
+}
+.lw .hm-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: none;
+}
+
+/* ── 이번 달 총 지출 ── */
+.lw-hero-budget {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hm-sub);
+  white-space: nowrap;
+}
+.lw-hero-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.lw-hero-sub {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--hm-line);
+  font-size: 12px;
+  color: var(--hm-faint);
+  word-break: keep-all;
+}
+
+/* ── 달력 ── */
+.lw-cal {
+  padding: 14px 10px 12px;
+}
+.lw-cal-weekdays,
+.lw-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.lw-cal-weekdays {
+  margin-bottom: 4px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--hm-faint);
+}
+.lw-cal-weekdays .is-sun,
+.lw-cell.is-sun .lw-cell-day {
+  color: #c4574d;
+}
+.lw-cal-weekdays .is-sat,
+.lw-cell.is-sat .lw-cell-day {
+  color: #4f7fb5;
+}
+.lw-cal-grid {
+  row-gap: 2px;
+}
+
+.lw-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-height: 58px;
+  padding: 4px 0 3px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  font-family: inherit;
+  color: var(--hm-ink);
+  cursor: pointer;
+}
+.lw-cell:hover:not(:disabled) {
+  background: #faf7f1;
+}
+.lw-cell:disabled {
+  cursor: default;
+}
+.lw-cell:disabled .lw-cell-day {
+  color: #cfc8bc;
+}
+.lw-cell--empty,
+.lw-cell--other {
+  cursor: default;
+}
+.lw-cell--other .lw-cell-day {
+  color: #cfc8bc;
+}
+
+.lw-cell-day {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.lw-cell.is-today .lw-cell-day {
+  box-shadow: inset 0 0 0 1.5px var(--hm-ink);
+}
+.lw-cell.is-selected {
+  background: var(--hm-sunk);
+  box-shadow: inset 0 0 0 1.5px var(--hm-ink);
+}
+.lw-cell.is-selected .lw-cell-day {
+  background: var(--hm-ink);
+  color: #fffdf9;
+  box-shadow: none;
+}
+
+.lw-cell-amt {
+  max-width: 100%;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--hm-sub);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lw-cell-amt--in {
+  color: var(--hm-green-ink);
+}
+
+/* 판정 아이콘 — 모양(체크·빼기·느낌표)으로도 구분된다. 판정이 끝난 날은 바탕을 채운다 */
+.lw-cell-sig {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+.lw-cell-sig--green {
+  color: var(--hm-green);
+}
+.lw-cell-sig--amber {
+  color: var(--hm-amber);
+}
+.lw-cell-sig--red {
+  color: var(--hm-red);
+}
+.lw-cell-sig--green.is-final {
+  background: var(--hm-green-bg);
+  color: var(--hm-green-ink);
+}
+.lw-cell-sig--amber.is-final {
+  background: var(--hm-amber-bg);
+  color: var(--hm-amber-ink);
+}
+.lw-cell-sig--red.is-final {
+  background: var(--hm-red-bg);
+  color: var(--hm-red-ink);
+}
+
+.lw-cal-state {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--hm-faint);
+}
+.lw-cal-state--error {
+  color: var(--hm-red-ink);
+}
+
+.lw-legend {
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--hm-line);
+}
+.lw-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--hm-sub);
+}
+.lw-legend-item--green .vori-icon {
+  color: var(--hm-green);
+}
+.lw-legend-item--amber .vori-icon {
+  color: var(--hm-amber);
+}
+.lw-legend-item--red .vori-icon {
+  color: var(--hm-red);
+}
+
+/* ── 선택한 날 ── */
+.lw-day {
+  scroll-margin-top: 80px;
+}
+.lw-day .hm-card-title small {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--hm-sunk);
+  color: var(--hm-sub);
+}
+.lw-day-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lw-day-list > li {
+  border-radius: 14px;
+  background: #faf7f1;
+  overflow: hidden;
+}
+.lw-day-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 12px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lw-day-row .hm-tx-icon {
+  background: #fffdf9;
+}
+.lw-day-caret {
+  flex-shrink: 0;
+  color: var(--hm-faint);
+  transition: transform 0.15s ease;
+}
+.lw-day-list > li.is-open .lw-day-caret {
+  transform: rotate(180deg);
+}
+.lw-amt-in {
+  color: var(--hm-green-ink);
+}
+
+.lw-detail {
+  padding: 2px 14px 14px;
+  font-size: 13px;
+}
+.lw-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--hm-line);
+}
+.lw-detail-grid dt {
+  font-size: 11px;
+  color: var(--hm-faint);
+}
+.lw-detail-grid dd {
+  margin: 2px 0 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.lw-detail-note {
+  margin: 10px 0 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+.lw-detail-note span {
+  display: block;
+  font-size: 11px;
+  color: var(--hm-faint);
+}
+.lw-detail-ai {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--hm-sub);
+}
+
+.lw-reward {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--hm-line);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--hm-sub);
+  word-break: keep-all;
+}
+.lw-reward p {
+  margin: 4px 0 0;
+}
+.lw-reward-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--hm-ink);
+  font-size: 13px;
+}
+.lw-reward-head .vori-icon {
+  color: var(--hm-sage);
+}
+.lw-reward-error {
+  color: var(--hm-red-ink);
+}
+.lw-reward-values {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.lw-reward-values li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--hm-sunk);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lw-reward-values strong {
+  color: var(--hm-ink);
+  font-variant-numeric: tabular-nums;
+}
+.lw-reward-coin {
+  background: #fbefd6 !important;
+  color: var(--hm-amber-ink);
+}
+.lw-reward-stat::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--stat-color);
+}
+
+.lw-day-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.lw-day-actions.is-single {
+  grid-template-columns: 1fr;
+}
+.lw-btn-soft {
+  background: var(--hm-sunk);
+  color: var(--hm-ink);
+}
+.lw-btn-soft:hover {
+  filter: brightness(0.97);
+}
+
+.lw-admin-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--hm-sub);
+}
+.lw-admin-date input {
+  padding: 6px 8px;
+  border: 1px solid var(--hm-line);
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--hm-ink);
+}
+.lw-footnote {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--hm-faint);
+}
+
+/* ── 지출 내역 ── */
+.lw-total {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.lw-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 카테고리별 지출 ── */
+.lw-cats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lw-cats li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 36px auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.lw-cat-label {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lw-cat-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--hm-sunk);
+  overflow: hidden;
+}
+.lw-cat-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--cat-color);
+}
+.lw-cat-pct {
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.lw-cat-amt {
+  text-align: right;
+  color: var(--hm-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 아주 좁은 폰 — 달력 칸 높이·글자만 줄인다 */
+@media (max-width: 360px) {
+  .lw-cal {
+    padding: 12px 6px 10px;
+  }
+  .lw-cell {
+    min-height: 52px;
+  }
+  .lw-cell-day {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+  .lw-cell-amt {
+    font-size: 9px;
+  }
+  .lw-cats li {
+    grid-template-columns: 56px minmax(0, 1fr) 32px;
+  }
+  .lw-cat-amt {
+    display: none;
+  }
+}
+
+/* 넓은 본문(PC) — 두 단. 기본 규칙보다 뒤에 둬야 덮어쓴다 */
+@container lw (min-width: 860px) {
+  .lw-layout {
+    max-width: 1120px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+    align-items: start;
+    gap: 16px 20px;
+  }
+  .lw-head {
+    grid-column: 1 / -1;
+  }
+  .lw-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  /* 넓은 달력 — 칸을 키워 금액이 덜 잘리게 */
+  .lw-cal {
+    padding: 18px 16px 14px;
+  }
+  .lw-cell {
+    min-height: 76px;
+    gap: 3px;
+    padding-top: 6px;
+  }
+  .lw-cell-day {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+  .lw-cell-amt {
+    font-size: 12px;
+  }
+  .lw-cal-weekdays {
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+}
+
+/* ── 가계부 톤 — 배치는 그대로, 홈·상점과 같은 크림 + 세이지 ──
+   카드·주 버튼·핵심 숫자 카드는 HomeScreen.css 의 「홈·가계부 톤」이 맡고, 여기선 가계부에만 있는 것만. */
+
+/* 주/월 — 둥근 알약, 고른 쪽은 흰 바탕 + 초록 글씨 */
+.lw .lw-seg {
+  background: #efe8db;
+}
+.lw .lw-seg button.is-active {
+  background: var(--hm-surface);
+  color: var(--hm-green-ink);
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(61, 56, 48, 0.1);
+}
+
+/* 기간 이동 화살표 */
+.lw-period .hm-icon-btn {
+  color: var(--hm-sage-dark);
+}
+.lw-period .hm-icon-btn:hover:not(:disabled) {
+  background: var(--hm-sage-soft);
+  color: var(--hm-green-ink);
+}
+.lw-period-label .vori-icon {
+  color: var(--hm-sage);
+}
+
+/* 달력 — 고른 날은 세이지, 오늘은 초록 테두리 */
+.lw .lw-cell {
+  transition: background 0.12s ease;
+}
+.lw .lw-cell:hover:not(:disabled) {
+  background: #f7f2e9;
+}
+.lw .lw-cell.is-today .lw-cell-day {
+  box-shadow: inset 0 0 0 1.5px var(--hm-sage);
+  color: var(--hm-green-ink);
+}
+.lw .lw-cell.is-selected {
+  background: var(--hm-sage-soft);
+  box-shadow: inset 0 0 0 1.5px #c9ddb8;
+}
+.lw .lw-cell.is-selected .lw-cell-day {
+  background: var(--hm-sage);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(111, 154, 92, 0.35);
+}
+.lw .lw-cell.is-selected .lw-cell-amt {
+  color: var(--hm-green-ink);
+}
+
+/* 선택한 날 — 내역 줄은 둥근 크림 칸 */
+.lw .lw-day-list > li {
+  border-radius: 16px;
+  background: #f9f5ed;
+  transition: box-shadow 0.15s ease;
+}
+.lw .lw-day-list > li.is-open {
+  box-shadow: inset 0 0 0 1.5px #c9ddb8;
+}
+.lw .lw-day-row .hm-tx-icon {
+  background: var(--hm-sage-soft);
+  color: var(--hm-sage-dark);
+}
+.lw .lw-day .hm-card-title small {
+  background: var(--hm-sage-soft);
+  color: var(--hm-green-ink);
+}
+
+/* 판정 보상 — 금빛이 도는 상자 */
+.lw .lw-reward {
+  border-color: #f3e3b8;
+  background:
+    radial-gradient(circle at 0% 0%, #fbf1d7 0%, rgba(255, 253, 249, 0) 60%),
+    var(--hm-surface);
+}
+.lw .lw-reward-head .vori-icon {
+  color: var(--hm-gold-ink);
+}
+.lw .lw-reward-values li {
+  background: #f7f2e9;
+}
+
+/* 지출 수정 — 초록 테두리 알약 (판정 받기는 채운 세이지) */
+.lw .lw-btn-soft {
+  border: 1.5px solid var(--hm-sage);
+  border-radius: 999px;
+  background: var(--hm-surface);
+  color: var(--hm-sage-dark);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.lw .lw-btn-soft:hover {
+  filter: none;
+  background: var(--hm-sage);
+  color: #fff;
+}
+
+/* 내역 합계 · 카테고리 막대 */
+.lw .lw-total {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--hm-sage-soft);
+  color: var(--hm-green-ink);
+}
+.lw .lw-cat-track {
+  height: 10px;
+  background: #efe8db;
+}
+.lw .lw-pager .hm-icon-btn:hover:not(:disabled) {
+  background: var(--hm-sage-soft);
+  color: var(--hm-green-ink);
+}
+
+/* ── [날짜 | 목록] 탭 — 제목 옆. 주/월 보기는 오른쪽 그대로 ── */
+.lw-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.lw-tabs {
+  display: inline-flex;
+  gap: 2px;
+}
+.lw-tabs button {
+  position: relative;
+  padding: 6px 8px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--hm-faint);
+  cursor: pointer;
+}
+.lw-tabs button.is-active {
+  color: var(--hm-ink, inherit);
+}
+.lw-tabs button.is-active::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  left: 8px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--hm-green-ink);
+}
+.lw-tabs button:focus-visible {
+  outline: 2px solid var(--hm-green-ink);
+  outline-offset: 1px;
+  border-radius: 6px;
+}
+
+/* ── 목록 탭 — 기간 이동 + 날짜별 수입·지출 ── */
+.lw-listview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.lw-list-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  font-variant-numeric: tabular-nums;
+}
+.lw-list-group + .lw-list-group {
+  margin-top: 14px;
+}
+.lw-list-group-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 2px 8px;
+  border-bottom: 1px solid var(--hm-line, rgba(61, 56, 48, 0.1));
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  font-variant-numeric: tabular-nums;
+}
+.lw-list-group-head small {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--hm-green-ink);
+}
+.lw-list-group-sums {
+  display: inline-flex;
+  gap: 10px;
+}
+.lw-list-pay {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+}
+.lw-list-pay::before {
+  content: "·";
+  margin-right: 2px;
+}
+.lw-list-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+@container lw (min-width: 860px) {
+  .lw-listview {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ── 목록 탭 툴바 — [필터 ⌄] ··· 검색 ── */
+.lw-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.lw-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px 6px 14px;
+  border: 1px solid var(--hm-line);
+  border-radius: 999px;
+  background: var(--hm-surface);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  cursor: pointer;
+}
+.lw-filter-btn.is-active {
+  border-color: var(--hm-sage);
+  background: var(--hm-sage-soft);
+  color: var(--hm-green-ink);
+}
+.lw-filter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hm-green);
+}
+.lw-search-btn {
+  width: 36px;
+  height: 36px;
+  color: var(--hm-sub);
+}
+.lw-filter-btn:focus-visible,
+.lw-search-btn:focus-visible {
+  outline: 2px solid var(--hm-green-ink);
+  outline-offset: 2px;
+}
+
+/* ── 시트 — 넓으면 가운데 다이얼로그, 좁으면 아래 시트 ── */
+.lw-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(45, 51, 40, 0.45);
+}
+.lw-sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(440px, 100%);
+  max-height: min(640px, calc(100vh - 40px));
+  box-sizing: border-box;
+  border: 1px solid var(--hm-line);
+  border-radius: 20px;
+  background: var(--hm-surface);
+  color: var(--hm-ink);
+  box-shadow: 0 18px 48px rgba(45, 51, 40, 0.2);
+}
+.lw-sheet:focus {
+  outline: none;
+}
+.lw-sheet--search {
+  width: min(560px, 100%);
+  height: min(640px, calc(100vh - 40px));
+}
+.lw-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 16px 6px 20px;
+}
+.lw-sheet-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+.lw-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 20px 16px;
+}
+.lw-sheet-foot {
+  padding: 4px 20px 20px;
+}
+.lw-sheet-actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+}
+
+/* 필터 시트 */
+.lw-filter-label {
+  margin: 12px 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--hm-faint);
+}
+.lw-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lw-filter-chips--cats {
+  padding: 0 0 10px 30px;
+}
+.lw-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 12px;
+  border: 1px solid var(--hm-line);
+  border-radius: 999px;
+  background: var(--hm-surface);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--hm-sub);
+  cursor: pointer;
+}
+.lw-filter-chip.is-on {
+  border-color: var(--hm-sage);
+  background: var(--hm-sage-soft);
+  color: var(--hm-green-ink);
+  font-weight: 700;
+}
+.lw-filter-box {
+  padding: 4px 14px;
+  border-radius: 14px;
+  background: var(--hm-sunk);
+}
+.lw-filter-check-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+.lw-filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lw-filter-check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--hm-green);
+}
+.lw-filter-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--hm-ink);
+  cursor: pointer;
+}
+.lw-filter-more:disabled {
+  color: var(--hm-faint);
+  cursor: default;
+}
+
+/* 검색 시트 */
+.lw-search-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 14px 6px;
+}
+.lw-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--hm-line);
+  border-radius: 12px;
+  background: var(--hm-sunk);
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--hm-ink);
+}
+.lw-search-input:focus {
+  outline: 2px solid var(--hm-sage);
+  outline-offset: 0;
+}
+.lw-search-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 64px 12px;
+  text-align: center;
+}
+.lw-search-intro-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--hm-sunk);
+  color: var(--hm-sub);
+}
+.lw-search-intro-title {
+  max-width: 280px;
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+.lw-search-intro-eg {
+  margin: 0;
+  font-size: 13px;
+  color: var(--hm-faint);
+}
+
+@media (max-width: 640px) {
+  .lw-sheet-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .lw-sheet {
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 20px 20px 0 0;
+    border-bottom: 0;
+  }
+  .lw-sheet--search {
+    height: 90vh;
+  }
+}
+
+/* ── 목록 내역 상세 — 넓으면 목록 오른쪽 패널, 좁으면(폰) 아래 시트 ── */
+.lw-listview.has-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: start;
+  gap: 12px 16px;
+  max-width: 1120px;
+}
+.lw-listview.has-detail > .lw-period {
+  grid-column: 1 / -1;
+}
+.lw-listview.has-detail > .lw-list-card {
+  grid-column: 1;
+}
+.lw-detail-panel {
+  grid-column: 2;
+  grid-row: 2;
+  position: sticky;
+  top: 12px;
+  animation: lw-panel-in 0.18s ease-out;
+}
+.lw-detail-panel.is-closing {
+  animation: lw-panel-out 0.16s ease-in forwards;
+}
+.lw-detail-panel-head {
+  margin-bottom: 10px;
+}
+@keyframes lw-panel-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes lw-panel-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(12px); }
+}
+/* 고른 줄 */
+.lw-list-card .hm-tx.is-selected {
+  background: var(--hm-sage-soft);
+}
+/* 상세 본문 — 하루 카드 펼친 항목과 같은 바탕 */
+.lw-tx-detail {
+  border-radius: 14px;
+  background: #faf7f1;
+  overflow: hidden;
+}
+.lw-tx-detail-head {
+  cursor: default;
+}
+.lw-list-pay--plain {
+  margin-left: 0;
+}
+.lw-list-pay--plain::before {
+  content: none;
+}
+.lw-tx-detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.lw-tx-detail-actions.is-single {
+  grid-template-columns: 1fr;
+}
+/* 시트 손잡이 — 아래 시트일 때만 */
+.lw-sheet-grip {
+  display: none;
+}
+@media (max-width: 640px) {
+  .lw-sheet-grip {
+    display: block;
+    align-self: center;
+    width: 40px;
+    height: 4px;
+    margin-top: 8px;
+    border-radius: 999px;
+    background: #ddd5c8;
+  }
+  .lw-sheet {
+    animation: lw-sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+@keyframes lw-sheet-up {
+  from { transform: translateY(24px); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lw-detail-panel,
+  .lw-detail-panel.is-closing,
+  .lw-sheet {
+    animation: none;
+  }
+}

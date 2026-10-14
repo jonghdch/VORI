@@ -1,5 +1,5 @@
 /* 구매 내역 팝업 — AppShell(.home) 안에서 뜨므로 --home-* 토큰을 그대로 쓴다.
-   여는 버튼(.shop-history-btn)의 자리·모양은 ShopPage.css 가 정한다. */
+   여는 버튼(.sp-history-btn)의 자리·모양은 Shop/ShopScreen.css 가 정한다. */
 /* ── 다이얼로그 ── */
 .purchase-backdrop {
   position: fixed;

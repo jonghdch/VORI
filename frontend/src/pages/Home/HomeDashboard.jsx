@@ -2,42 +2,52 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import AppRightSidebar from "../../components/AppRightSidebar";
-import RecordCalendar, { dateKey } from "../../components/RecordCalendar";
+import Icon from "../../components/Icon";
 import { getHomeSummary } from "../../api/home";
 import { getMonthlyLedger } from "../../api/ledger";
 import { getActivePet } from "../../api/pet";
-import { PET_CHANGED_EVENT } from "../../api/user";
+import { getMe, PET_CHANGED_EVENT } from "../../api/user";
 import { getUnreadMonthlyReport } from "../../api/monthlyReports";
-import { listAchievements } from "../../api/achievements";
-import { PetArt, petDisplayName, levelProgressPct } from "../../components/petVisual";
-import { AI_ACTIVE_FROM_HOUR } from "../../config";
+import { getSpendingPlan } from "../../api/spendingPlan";
+import { getTodayJudgment } from "../../api/dailyJudgment";
+import { petVisual, petDisplayName, levelProgressPct } from "../../components/petVisual";
+import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
 import { NO_RECORD_LINE, SPENDING_LINES, monthlyReportLine, petTmiLines } from "../../components/petLines";
+import { SIGNAL_STATUS } from "../../signalLabels";
+import SignalChip, { SIGNAL_META, categoryIcon, signalForUsage } from "../../components/SignalChip";
+// HomeDashboard.css 는 가계부·리포트 화면도 .home-tx-* 등을 가져다 쓰므로 그대로 두고,
+// 새 홈 배치는 HomeScreen.css 의 .hm-* 로만 그린다.
 import "./HomeDashboard.css";
+import "./HomeScreen.css";
 
-// 스탯 4종 표시 메타 — 값은 키우는 펫 본인의 스탯(PetResponse.stat*). 펫 화면과 같은 값이다.
-// 홈 요약(summary.stats)은 지출에 쌓인 변동만 합산해서, 출석 아이템처럼 펫에만 반영되는
-// 변화가 빠진다. 그래서 이 카드에는 쓰지 않는다.
+// 스탯 4종 — 값은 키우는 펫 본인의 스탯(PetResponse.stat*). 펫 화면과 같은 값이다.
+// 홈 요약(summary.stats)은 지출에 쌓인 변동만 합산해 출석 아이템 같은 변화가 빠지므로 쓰지 않는다.
+// group 은 그 스탯을 키우는 지출 그룹(판정 화면 STAT_LABELS 와 같은 이름).
 const STAT_META = [
-  { key: "statEnergy", label: "에너지", color: "var(--home-bar-green)" },
-  { key: "statCharm", label: "매력", color: "var(--home-bar-red)" },
-  { key: "statIq", label: "지능", color: "var(--home-bar-orange)" },
-  { key: "statEndurance", label: "지구력", color: "var(--home-bar-blue)" },
+  { key: "statEnergy", label: "에너지", group: "식비", color: "#7fb069" },
+  { key: "statCharm", label: "매력", group: "쇼핑·뷰티", color: "#e07a7a" },
+  { key: "statIq", label: "지능", group: "문화·여가", color: "#6b9bd1" },
+  { key: "statEndurance", label: "지구력", group: "생활·고정비", color: "#c9913f" },
 ];
 
-const won = (n) => `${(n ?? 0).toLocaleString("ko-KR")}원`;
+const num = (n) => Math.round(n ?? 0).toLocaleString("ko-KR");
+const won = (n) => `${num(n)}원`;
+const pad2 = (n) => String(n).padStart(2, "0");
+/** 20 → "오후 8시", 0 → "자정" — 판정이 열리는 시각 안내용 */
+const hourLabel = (h) =>
+  h === 0 ? "자정" : h < 12 ? `오전 ${h}시` : h === 12 ? "낮 12시" : `오후 ${h - 12}시`;
 
 // 월간 리포트 버튼을 띄우는 기간 — 매달 마지막 날 12시(월간 정산 시각)부터 7일.
 const REPORT_WINDOW_DAYS = 7;
 
 /** 지금이 리포트 기간이면 그 리포트의 달("YYYY-MM"), 아니면 null. 기간은 다음 달 초까지 걸친다. */
 function reportWindowMonth(now = new Date()) {
-  // 이번 달과 지난달 마지막 날 12시를 차례로 본다
   for (const offset of [0, -1]) {
     const start = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0, 12);
     const end = new Date(start);
     end.setDate(end.getDate() + REPORT_WINDOW_DAYS);
     if (now >= start && now < end) {
-      return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}`;
+      return `${start.getFullYear()}-${pad2(start.getMonth() + 1)}`;
     }
   }
   return null;
@@ -45,31 +55,28 @@ function reportWindowMonth(now = new Date()) {
 
 function HomeDashboard({ user, onNavigate, onLogout }) {
   const navigate = useNavigate();
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+  const yearMonth = todayIso.slice(0, 7);
 
+  // ── 데이터 ─────────────────────────────────────────────
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     let alive = true;
     getHomeSummary()
-      .then((res) => {
-        if (alive) setSummary(res);
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
+      .then((res) => alive && setSummary(res))
+      .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
   }, []);
 
-  // 키우는 펫(이름·외형·스탯) + 안 본 월간 리포트(펫 말풍선). 둘 다 실패해도 홈은 떠야 하므로 조용히 fallback.
+  // 키우는 펫 + 안 본 월간 리포트(펫 말풍선). 실패해도 홈은 떠야 하므로 조용히 넘어간다.
   const [activePet, setActivePet] = useState(null);
   // 조회가 끝나기 전에는 "펫 없음" 안내를 띄우지 않는다 — 잠깐 떴다 사라지는 깜빡임 방지
   const [petLoaded, setPetLoaded] = useState(false);
   const [unreadReport, setUnreadReport] = useState(null);
-  const [titles, setTitles] = useState([]);
-  const [titlesLoading, setTitlesLoading] = useState(true);
   useEffect(() => {
     let alive = true;
     const loadPet = () =>
@@ -77,7 +84,6 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
         .then((p) => {
           if (!alive) return;
           setActivePet(p);
-          // 조회에 성공했을 때만 "불러옴" — 실패를 펫 없음으로 보고 상점 안내를 띄우지 않게
           setPetLoaded(true);
         })
         .catch(() => {});
@@ -86,424 +92,451 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
     getUnreadMonthlyReport()
       .then((r) => alive && setUnreadReport(r))
       .catch(() => {});
-    listAchievements()
-      .then((data) => {
-        if (alive) setTitles(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (alive) setTitles([]);
-      })
-      .finally(() => {
-        if (alive) setTitlesLoading(false);
-      });
     return () => {
       alive = false;
       window.removeEventListener(PET_CHANGED_EVENT, loadPet);
     };
   }, []);
 
-  // 기록 캘린더 — 이번 달 가계부에서 기록이 있는 날짜(일) 집합. null = 로딩 중.
-  const [recordedDays, setRecordedDays] = useState(null);
-  const [calendarSignals, setCalendarSignals] = useState(new Map());
-
+  // 이번 달 가계부 — 오늘 지출 목록(최근 N건이 아니라 오늘 전부)을 여기서 고른다. null = 로딩 중.
+  const [ledgerRows, setLedgerRows] = useState(null);
   useEffect(() => {
     let alive = true;
-    const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    getMonthlyLedger(ym)
-      .then((rows) => {
-        if (alive) {
-          setRecordedDays(
-            new Set(
-              rows.map((r) => {
-                const [y, m, d] = r.date.split("-").map(Number);
-                return dateKey(y, m, d);
-              }),
-            ),
-          );
-          setCalendarSignals(buildSignalMap(rows));
-        }
-      })
-      .catch(() => {
-        if (alive) {
-          setRecordedDays(new Set());
-          setCalendarSignals(new Map());
-        }
-      });
+    getMonthlyLedger(yearMonth)
+      .then((rows) => alive && setLedgerRows(Array.isArray(rows) ? rows : []))
+      .catch(() => alive && setLedgerRows([]));
+    return () => {
+      alive = false;
+    };
+  }, [yearMonth]);
+
+  // 이번 달 스탯 그룹별 예산(합계 = 이번 달 쓸 수 있는 돈). undefined = 로딩 중, null = 실패.
+  const [plan, setPlan] = useState(undefined);
+  useEffect(() => {
+    let alive = true;
+    getSpendingPlan(yearMonth)
+      .then((p) => alive && setPlan(p ?? null))
+      .catch(() => alive && setPlan(null));
+    return () => {
+      alive = false;
+    };
+  }, [yearMonth]);
+
+  // 오늘 판정 행(없으면 null) — 판정 카드 상태와, 판정 뒤에는 서버가 계산한 오늘 쓸 수 있는 돈에 쓴다.
+  const [judgment, setJudgment] = useState(undefined);
+  useEffect(() => {
+    let alive = true;
+    getTodayJudgment()
+      .then((j) => alive && setJudgment(j ?? null))
+      .catch(() => alive && setJudgment(null));
     return () => {
       alive = false;
     };
   }, []);
 
-  const today = new Date();
-  const reportMonth = reportWindowMonth(today);
-  const dateStr = new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "long",
-  }).format(today);
+  // 판정이 열렸는지 — 관리자는 언제나, 일반 계정은 AI_ACTIVE_FROM_HOUR 부터. 1분마다 다시 본다.
+  const [me, setMe] = useState(null);
+  const [judgeOpen, setJudgeOpen] = useState(() => canUseAiJudge(user));
+  useEffect(() => {
+    let alive = true;
+    getMe()
+      .then((m) => alive && setMe(m))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    const check = () => setJudgeOpen(canUseAiJudge(me ?? user));
+    check();
+    const timer = setInterval(check, 60_000);
+    return () => clearInterval(timer);
+  }, [me, user]);
 
-  // 펫이 없으면(배웅 직후 등) 0 으로 그린다.
-  const stats = activePet;
-  const spending = summary?.spending;
-  const recent = summary?.recentExpenses ?? [];
-  // 칭호는 펫이 얻는다 — 키우는 펫이 장착한 칭호. 장착하지 않았으면 "칭호 없음".
+  // ── 오늘 남은 돈 ───────────────────────────────────────
+  const todaySpent = summary?.spending?.today ?? 0;
+  const monthSpent = summary?.spending?.thisMonth ?? 0;
+  const monthBudget = Object.values(plan?.budgets || {}).reduce((s, v) => s + Number(v || 0), 0);
+
+  // 오늘 쓸 수 있는 돈.
+  //  - 오늘 판정을 받았으면 서버가 그룹별로 계산한 값(availableToday 합)을 그대로 쓴다.
+  //  - 판정 전에는 서버 값이 없어서 "이번 달 남은 예산 ÷ 오늘 포함 남은 날"로 어림한다.
+  //    서버 봉투는 전날 남긴 돈의 절반만 넘겨 오므로 판정 뒤 숫자와 조금 다를 수 있다 → 화면에 "예상"으로 표시.
+  const allowanceInfo = useMemo(() => {
+    const groups = judgment?.groupJudgments ? Object.values(judgment.groupJudgments) : [];
+    if (groups.length > 0) {
+      return {
+        value: groups.reduce((s, g) => s + Number(g?.availableToday || 0), 0),
+        estimated: false,
+      };
+    }
+    if (monthBudget <= 0) return null;
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const daysLeft = lastDay - today.getDate() + 1;
+    const spentBeforeToday = Math.max(monthSpent - todaySpent, 0);
+    return {
+      value: Math.max(Math.floor((monthBudget - spentBeforeToday) / daysLeft), 0),
+      estimated: true,
+    };
+    // today 는 렌더마다 새 객체라 의존성에서 뺀다 — 날짜 값은 todayIso 로 본다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [judgment, monthBudget, monthSpent, todaySpent, todayIso]);
+
+  const allowance = allowanceInfo?.value ?? 0;
+  const remaining = allowance - todaySpent;
+  const usagePct = allowance > 0 ? Math.round((todaySpent / allowance) * 100) : todaySpent > 0 ? 100 : 0;
+  const todaySignal = signalForUsage(todaySpent, allowance);
+  // 판정 전(또는 사유를 기다리는 1차 판정)의 칩은 예상이다 — 실제 판정은 전날 남긴 돈까지 넣어 계산해 결과가 바뀔 수 있다.
+  const todaySignalFinal = Boolean(judgment) && judgment.status !== "PENDING";
+  const todaySignalText = `${SIGNAL_META[todaySignal].text}${todaySignalFinal ? "" : " 예상"}`;
+  const heroLoading = loading || plan === undefined || judgment === undefined;
+
+  // ── 오늘 지출 목록 ────────────────────────────────────
+  const todayRows = useMemo(
+    () => (ledgerRows ?? []).filter((r) => r.type === "EXPENSE" && r.date === todayIso),
+    [ledgerRows, todayIso],
+  );
+
+  // ── 펫 ─────────────────────────────────────────────
   const equippedTitle = activePet?.equippedTitle ?? null;
-  const achievementPreview = (
-    titles.some((title) => title.acquired)
-      ? titles.filter((title) => title.acquired)
-      : titles
-  ).slice(0, 4);
-
-  // 레벨·경험치 게이지 — 서버(PetLevel)가 계산한 값. 게이지는 지금 레벨 안에서 다음 레벨까지의 진행률.
   const petLevel = activePet?.level ?? 1;
   const petExp = levelProgressPct(activePet);
-  // 스탯 막대 기준값 — 가장 큰 스탯(최소 100). 스탯이 100을 넘어도 막대끼리 비교가 된다.
-  const statScale = Math.max(100, ...STAT_META.map((m) => stats?.[m.key] ?? 0));
+  const petImage = activePet ? petVisual(activePet.appearanceKey, activePet.stage).image : null;
+  const statScale = Math.max(100, ...STAT_META.map((m) => activePet?.[m.key] ?? 0));
 
   // 말풍선 ③ 에 쓸 무작위 값 — 화면을 열 때 한 번만 정해 다시 그려져도 대사가 바뀌지 않게
   const [bubbleSeed] = useState(() => Math.random());
   const bubble = useMemo(() => {
     if (loading) return { text: "오늘 소비를 살펴보고 있어요…" };
-    if ((spending?.today ?? 0) <= 0) return { text: NO_RECORD_LINE };
+    if (todaySpent <= 0) return { text: NO_RECORD_LINE };
     if (unreadReport) {
       const month = Number(unreadReport.yearMonth.slice(5));
       return { text: monthlyReportLine(month), link: `/report?month=${unreadReport.yearMonth}` };
     }
     const lines = [
-      ...SPENDING_LINES.map((l) => l.replace("{today}", won(spending.today))),
+      ...SPENDING_LINES.map((l) => l.replace("{today}", won(todaySpent))),
       ...petTmiLines(activePet),
     ];
     return { text: lines[Math.floor(bubbleSeed * lines.length)] };
-  }, [loading, spending, unreadReport, activePet, bubbleSeed]);
+  }, [loading, todaySpent, unreadReport, activePet, bubbleSeed]);
+
+  const reportMonth = reportWindowMonth(today);
+  const [statHelpOpen, setStatHelpOpen] = useState(false);
+
+  const dateLabel = new Intl.DateTimeFormat("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  }).format(today);
+
+  // ── 판정 카드 상태 ─────────────────────────────────────
+  const judgeCard = (() => {
+    if (judgment?.status === "FINALIZED") {
+      return {
+        signal: judgment.signal,
+        desc: judgment.rewarded ? "오늘 보상을 받았어요." : "보상은 오늘 자정에 들어와요.",
+        action: "결과 보기",
+        to: "/wallet/analysis",
+      };
+    }
+    if (judgment?.status === "PENDING") {
+      return {
+        signal: judgment.signal,
+        signalLabel: `1차 ${SIGNAL_STATUS[judgment.signal] ?? ""}`,
+        desc: "확인이 필요한 지출이 답을 기다리고 있어요.",
+        action: "이어서 하기",
+        to: "/wallet/analysis",
+      };
+    }
+    if (!judgeOpen) {
+      return {
+        desc: `${hourLabel(AI_ACTIVE_FROM_HOUR)}부터 오늘 지출을 판정받을 수 있어요.`,
+        action: `${hourLabel(AI_ACTIVE_FROM_HOUR)}부터`,
+        disabled: true,
+      };
+    }
+    return {
+      desc: "오늘 지출을 판정받고 코인을 모아요.",
+      action: "판정 받기",
+      to: "/wallet/analysis",
+    };
+  })();
 
   return (
-    <AppShell
-      activeTop="home"
-      activeSide="home"
-      onNavigate={onNavigate}
-      onLogout={onLogout}
-    >
-      <main className="home-main">
-        <div className="home-row home-row-pet">
-          {/* 성장 단계·상태·AI 멘트는 데이터 소스가 없어 정적 문구였음 — 허위 노출 대신
-              실지출 기반 말풍선만 유지. 펫 상태 API 가 생기면 단계/상태 표시 복원. */}
-          <section className="home-card home-card-pet">
-            <div className="home-pet-top">
-              <p className="home-date">{dateStr}</p>
-              <button
-                type="button"
-                className="home-pet-room-link"
-                onClick={() => navigate("/myroom")}
-              >
-                마이룸 가기 →
-              </button>
-            </div>
-            {/* 말풍선 — ① 오늘 기록 없음 ② 안 본 월간 리포트 ③ 소비 이야기·펫 TMI (petLines.js) */}
-            {bubble.link ? (
-              <button
-                type="button"
-                className="home-pet-bubble home-pet-bubble--link"
-                onClick={() => navigate(bubble.link)}
-              >
-                {bubble.text}
-              </button>
-            ) : (
-              <div className="home-pet-bubble">{bubble.text}</div>
-            )}
-            <div className="home-pet-body">
-              {petLoaded && !activePet ? (
-                /* 키우는 펫이 없을 때(배웅 직후·알 개봉 전) — 마이룸과 같은 안내 */
-                <div className="home-pet-empty">
-                  <strong>아직 키우는 펫이 없어요</strong>
-                  <p>상점에서 새 친구를 데려올 수 있어요.</p>
-                  <button
-                    type="button"
-                    className="home-btn home-btn-primary"
-                    onClick={() => navigate("/shop")}
+    <AppShell activeTop="home" activeSide="home" onNavigate={onNavigate} onLogout={onLogout}>
+      <main className="home-main hm hm-home">
+        {/* 폰: 한 줄(오늘 남은 돈 → 펫·판정 → 스탯 → 오늘 지출). PC 본문이 넓으면 두 단:
+            왼쪽 = 돈(오늘 남은 돈 · 오늘 지출), 오른쪽 = 펫(펫·판정 · 리포트 · 스탯). 폰 순서는 CSS order 로 맞춘다. */}
+        <div className="hm-layout">
+          <div className="hm-col hm-col--main">
+            {/* ① 오늘 남은 돈 — 이 화면의 핵심 숫자 */}
+            <section className="hm-card hm-hero" aria-labelledby="hm-hero-label">
+              <div className="hm-hero-top">
+                <p className="hm-hero-label" id="hm-hero-label">
+                  {dateLabel} · {allowanceInfo && remaining < 0 ? "오늘 넘은 돈" : "오늘 남은 돈"}
+                </p>
+                {!heroLoading && allowanceInfo && (
+                  <span className="hm-hero-signal">
+                    {!todaySignalFinal && <span className="hm-hero-est-tag">예상 결과</span>}
+                    <SignalChip signal={todaySignal} />
+                  </span>
+                )}
+              </div>
+
+              {heroLoading ? (
+                <p className="hm-hero-value hm-skeleton" aria-busy="true">
+                  <span className="hm-sr">불러오는 중</span>
+                </p>
+              ) : allowanceInfo ? (
+                <>
+                  <p className={`hm-hero-value ${remaining < 0 ? "is-over" : ""}`}>
+                    {num(Math.abs(remaining))}
+                    <span className="hm-hero-unit">원</span>
+                  </p>
+                  <div
+                    className={`hm-meter hm-meter--${SIGNAL_META[todaySignal].tone}`}
+                    role="progressbar"
+                    aria-label="오늘 쓸 수 있는 돈 사용률"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.min(usagePct, 100)}
+                    aria-valuetext={`${usagePct}% 사용, ${todaySignalText}`}
                   >
-                    상점 가기
+                    <span style={{ width: `${Math.min(usagePct, 100)}%` }} />
+                  </div>
+                  <p className="hm-hero-foot">
+                    <span>
+                      오늘 쓸 수 있는 {won(allowance)}
+                      {allowanceInfo.estimated && <em className="hm-hero-est">(예상)</em>} 중{" "}
+                      <strong>{won(todaySpent)}</strong> 썼어요
+                    </span>
+                    <span className="hm-hero-pct">{usagePct}%</span>
+                  </p>
+                </>
+              ) : (
+                // 예산을 계산할 수입 정보가 없을 때 — 오늘 쓴 돈을 크게 보여 주고 설정으로 안내
+                <>
+                  <p className="hm-hero-value">
+                    {num(todaySpent)}
+                    <span className="hm-hero-unit">원</span>
+                  </p>
+                  <p className="hm-hero-foot">
+                    <span>오늘 쓴 돈이에요. 월수입을 입력하면 오늘 남은 돈을 알려 드려요.</span>
+                  </p>
+                  <button type="button" className="hm-text-link" onClick={() => navigate("/settings/profile")}>
+                    월수입 입력하기 <Icon name="chevronRight" size={14} />
                   </button>
+                </>
+              )}
+            </section>
+
+            {/* ④ 오늘 지출 — 한 건씩 */}
+            <section className="hm-card hm-today" aria-labelledby="hm-today-title">
+              <div className="hm-card-head">
+                <h2 className="hm-card-title" id="hm-today-title">
+                  오늘 지출 {ledgerRows && <small>{todayRows.length}건</small>}
+                </h2>
+                <button type="button" className="hm-text-link" onClick={() => navigate("/wallet")}>
+                  전체 보기 <Icon name="chevronRight" size={14} />
+                </button>
+              </div>
+              {ledgerRows === null ? (
+                <p className="hm-empty">불러오는 중…</p>
+              ) : todayRows.length === 0 ? (
+                <div className="hm-empty">
+                  <p>오늘은 아직 기록한 지출이 없어요.</p>
                 </div>
               ) : (
-              <>
-              <div className="home-pet-center">
-                {/* 원형 경험치 게이지 — 270° 아치(아래 90° 열림)가 보리를 감싼다.
-                    프론트 임시 규칙: 스탯 4종 합 100당 1레벨, 나머지가 경험치.
-                    백엔드 exp 필드가 생기면 이 계산을 API 값으로 교체. */}
-                <div className="home-pet-gauge">
-                  {/* 그림 역할은 링에만 — 게이지 전체를 img 로 두면 안쪽 칭호 버튼이 보조기기에서 사라진다 */}
-                  <svg
-                    className="home-pet-gauge-ring"
-                    viewBox="0 0 120 120"
-                    role="img"
-                    aria-label={
-                    activePet?.levelExpNeeded
-                      ? `Lv. ${petLevel}, 다음 레벨까지 ${activePet.levelExp}/${activePet.levelExpNeeded}`
-                      : `Lv. ${petLevel} (만렙)`
-                  }
-                  >
-                    {/* 채움 색 — 화면 왼쪽(시작) 연한 세이지 → 오른쪽 짙은 세이지. 랜딩 톤과 맞춤.
-                        원이 135° 회전돼 있어 좌표도 회전 전 기준(대각선)으로 잡았다. */}
-                    <defs>
-                      <linearGradient
-                        id="home-pet-gauge-gradient"
-                        gradientUnits="userSpaceOnUse"
-                        x1="102" y1="102" x2="18" y2="18"
+                <ul className="hm-tx-list">
+                  {todayRows.map((row) => (
+                    <li key={`${row.type}-${row.id}`}>
+                      <button
+                        type="button"
+                        className="hm-tx"
+                        onClick={() => navigate(`/wallet?date=${todayIso}`)}
                       >
-                        <stop offset="0%" stopColor="#c8dfaa" />
-                        <stop offset="100%" stopColor="#7c9e6b" />
-                      </linearGradient>
-                    </defs>
-                    <circle
-                      className="home-pet-gauge-track"
-                      cx="60" cy="60" r="52"
-                      transform="rotate(135 60 60)"
-                      strokeDasharray="245.04 326.73"
-                    />
-                    <circle
-                      className="home-pet-gauge-fill"
-                      cx="60" cy="60" r="52"
-                      transform="rotate(135 60 60)"
-                      strokeDasharray={`${(245.04 * petExp) / 100} 326.73`}
-                    />
-                  </svg>
-                  {/* 펫을 불러오기 전에는 그림을 비워 둔다 — 기본 강아지가 잠깐 보였다 바뀌지 않게 */}
-                  <div className="home-pet-art" aria-hidden>
-                    {activePet && (
-                      <PetArt
-                        appearanceKey={activePet.appearanceKey}
-                        stage={activePet.stage}
-                        name=""
-                        className="home-pet-image"
-                        emojiClassName="home-pet-emoji"
-                      />
-                    )}
+                        <span className="hm-tx-icon">
+                          <Icon name={categoryIcon(row.category)} size={18} />
+                        </span>
+                        <span className="hm-tx-mid">
+                          <span className="hm-tx-name">{row.item || "지출"}</span>
+                          <span className="hm-tx-cat">{row.category || "미분류"}</span>
+                        </span>
+                        <span className="hm-tx-right">
+                          <span className="hm-tx-amount">-{won(row.amount)}</span>
+                          {row.signal && <SignalChip signal={row.signal} />}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+
+          <div className="hm-col hm-col--side">
+            {/* ② 펫 · 오늘 판정 — 나란히 두 칸 */}
+            <div className="hm-duo">
+              <section className="hm-card hm-pet" aria-label="키우는 펫">
+                {petLoaded && !activePet ? (
+                  <div className="hm-pet-empty">
+                    <span className="hm-pet-empty-icon">
+                      <Icon name="paw" size={28} />
+                    </span>
+                    <strong>아직 키우는 펫이 없어요</strong>
+                    <button type="button" className="hm-btn hm-btn--dark hm-btn--sm" onClick={() => navigate("/shop")}>
+                      상점 가기
+                    </button>
                   </div>
-                  <div className="home-pet-gauge-foot">
-                    {/* 다음 레벨까지 경험치(현재 / 필요) 캡슐. 만렙이면 MAX */}
-                    {activePet && (
-                      <span className="home-pet-exp">
-                        <span className="home-pet-exp-label">EXP</span>
-                        {activePet.levelExpNeeded
-                          ? `${activePet.levelExp} / ${activePet.levelExpNeeded}`
-                          : "MAX"}
+                ) : (
+                  <>
+                    {bubble.link ? (
+                      <button type="button" className="hm-bubble hm-bubble--link" onClick={() => navigate(bubble.link)}>
+                        {bubble.text}
+                      </button>
+                    ) : (
+                      <p className="hm-bubble">{bubble.text}</p>
+                    )}
+                    <button
+                      type="button"
+                      className="hm-pet-art"
+                      onClick={() => navigate("/myroom")}
+                      aria-label={`${activePet ? petDisplayName(activePet) : "펫"} — 마이룸 가기`}
+                    >
+                      {/* 펫을 불러오기 전에는 비워 둔다 — 기본 강아지가 잠깐 보였다 바뀌지 않게 */}
+                      {activePet &&
+                        (petImage ? (
+                          <img src={petImage} alt="" className="hm-pet-img" />
+                        ) : (
+                          <Icon name="paw" size={48} className="hm-pet-fallback" />
+                        ))}
+                    </button>
+                    <div className="hm-pet-name">
+                      <strong>{activePet ? petDisplayName(activePet) : " "}</strong>
+                      <span className="hm-pet-lv">Lv.{petLevel}</span>
+                      <button
+                        type="button"
+                        className="hm-pet-title"
+                        onClick={() => navigate("/dex?tab=titles")}
+                        aria-label={`장착 칭호 ${equippedTitle?.name ?? "없음"} — 칭호 도감 열기`}
+                      >
+                        {equippedTitle?.name ?? "칭호 없음"}
+                      </button>
+                    </div>
+                    <div className="hm-pet-exp">
+                      <span className="hm-pet-exp-label">성장도</span>
+                      <span
+                        className="hm-pet-exp-track"
+                        role="progressbar"
+                        aria-label="다음 레벨까지"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={petExp}
+                      >
+                        <span style={{ width: `${petExp}%` }} />
                       </span>
-                    )}
-                  </div>
-                </div>
-                <div className="home-pet-name-line">
+                      <span className="hm-pet-exp-value">
+                        {activePet?.levelExpNeeded ? `${activePet.levelExp}/${activePet.levelExpNeeded}` : "MAX"}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </section>
+
+              <section className="hm-card hm-judge" aria-labelledby="hm-judge-title">
+                <span className="hm-judge-icon">
+                  <Icon name="clock" size={20} />
+                </span>
+                <h2 className="hm-judge-title" id="hm-judge-title">
+                  오늘 판정
+                </h2>
+                {judgeCard.signal && (
+                  <SignalChip signal={judgeCard.signal} size="lg" label={judgeCard.signalLabel} />
+                )}
+                <p className="hm-judge-desc">{judgeCard.desc}</p>
+                <button
+                  type="button"
+                  className="hm-btn hm-btn--dark hm-btn--block"
+                  disabled={judgeCard.disabled}
+                  onClick={() => judgeCard.to && navigate(judgeCard.to)}
+                >
+                  {judgeCard.action}
+                  {!judgeCard.disabled && <Icon name="chevronRight" size={16} strokeWidth={2.2} />}
+                </button>
+              </section>
+            </div>
+
+            {/* 월말 정산 뒤 일주일 — 그 달 리포트로 가는 띠 */}
+            {reportMonth && (
+              <button
+                type="button"
+                className="hm-card hm-banner"
+                onClick={() => navigate(`/report?month=${reportMonth}`)}
+              >
+                <Icon name="report" size={18} />
+                <span>{Number(reportMonth.slice(5))}월 소비 리포트가 나왔어요</span>
+                <Icon name="chevronRight" size={16} className="hm-banner-arrow" />
+              </button>
+            )}
+
+            {/* ③ 반려 스탯 분석 */}
+            {activePet && (
+              <section className="hm-card hm-stats" aria-labelledby="hm-stats-title">
+                <div className="hm-card-head">
+                  <h2 className="hm-card-title" id="hm-stats-title">
+                    반려 스탯 분석 <small>지출 습관 반영</small>
+                  </h2>
                   <button
                     type="button"
-                    className="home-pet-title-badge"
-                    onClick={() => navigate("/dex?tab=titles")}
-                    aria-label={`장착 칭호 ${equippedTitle?.name ?? "없음"} — 칭호 도감 열기`}
+                    className="hm-icon-btn"
+                    aria-label="스탯 설명"
+                    aria-expanded={statHelpOpen}
+                    onClick={() => setStatHelpOpen((v) => !v)}
                   >
-                    {equippedTitle?.name ?? "칭호 없음"}
+                    <Icon name="info" size={18} />
                   </button>
-                  <h2 className="home-pet-name">{activePet ? petDisplayName(activePet) : "보리"}</h2>
-                  <span className="home-pet-level-label">Lv. {petLevel}</span>
                 </div>
-              </div>
-              {/* 스탯 — 이름 / 막대 / 수치를 가로로 나란히. 카드 없이 배경 위에.
-                  막대 길이는 네 스탯 중 가장 큰 값(최소 100) 기준 상대 비율. */}
-              <section className="home-pet-stats" aria-label="펫 스탯">
-                <ul className="home-stat-list">
+                {statHelpOpen && (
+                  <p className="hm-help">
+                    지출 그룹마다 하루 예산보다 아낀 1,000원마다 그 스탯이 1씩 자라요. 아래 글자가 그 스탯을 키우는 지출 그룹이에요.
+                  </p>
+                )}
+                <ul className="hm-stat-grid">
                   {STAT_META.map((m) => {
-                    const value = stats?.[m.key] ?? 0;
+                    const value = activePet?.[m.key] ?? 0;
                     return (
-                      <li
-                        key={m.key}
-                        className="home-stat-row"
-                        style={{ "--stat-color": m.color }}
-                      >
-                        <span className="home-stat-label">{m.label}</span>
-                        <div className="home-stat-track" aria-hidden>
-                          <div
-                            className="home-stat-fill"
-                            style={{ width: `${(Math.max(value, 0) / statScale) * 100}%` }}
-                          />
-                        </div>
-                        <span className="home-stat-value">{value.toLocaleString("ko-KR")}</span>
+                      <li key={m.key} className="hm-stat" style={{ "--stat-color": m.color }}>
+                        <span className="hm-stat-label">{m.label}</span>
+                        <strong className="hm-stat-value">{num(value)}</strong>
+                        <span className="hm-stat-track" aria-hidden>
+                          <span style={{ width: `${(Math.max(value, 0) / statScale) * 100}%` }} />
+                        </span>
+                        <span className="hm-stat-group">{m.group}</span>
                       </li>
                     );
                   })}
                 </ul>
               </section>
-              </>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* 지출 요약 카드 — 펫 카드와 같은 베이지 바탕에 카드마다 파스텔 포인트색(살구·하늘·세이지) */}
-        <div className="home-row home-row-kpi">
-          <article className="home-card home-kpi home-kpi--today">
-            <div className="home-kpi-head">
-              <h3 className="home-kpi-title">오늘 지출</h3>
-            </div>
-            <p className="home-kpi-value">{won(spending?.today)}</p>
-          </article>
-          <article className="home-card home-kpi home-kpi--month">
-            <div className="home-kpi-head">
-              <h3 className="home-kpi-title">이번 달 총 지출</h3>
-            </div>
-            <p className="home-kpi-value">{won(spending?.thisMonth)}</p>
-          </article>
-          <article className="home-card home-kpi home-kpi--week">
-            <div className="home-kpi-head">
-              <h3 className="home-kpi-title">이번 주 지출</h3>
-            </div>
-            <p className="home-kpi-value">{won(spending?.thisWeek)}</p>
-          </article>
-        </div>
-
-        {/* 하단 카드 — 위 지출 요약 카드와 같은 베이지 바탕 + 파스텔 포인트(살구·하늘·세이지) */}
-        <div className="home-row home-row-bottom">
-          <section className="home-card home-card-list home-sec--list">
-            <div className="home-list-head">
-              <h2 className="home-card-title home-card-title--sm home-sec-title">
-                <span className="home-sec-icon" aria-hidden>🧾</span>
-                최근 지출 내역
-              </h2>
-              <p className="home-list-date">최근 {recent.length}건</p>
-            </div>
-            <ul className="home-tx-list">
-              {loading ? (
-                <li className="home-tx-row">불러오는 중…</li>
-              ) : recent.length === 0 ? (
-                <li className="home-tx-row">아직 지출 기록이 없어요.</li>
-              ) : (
-                recent.map((row) => (
-                  <li key={row.id} className="home-tx-row">
-                    <span className={`home-tx-icon home-tx-icon--${(row.signalFinal || "GRAY").toLowerCase()}`}>
-                      <span className={`home-tx-dot home-tx-dot--${(row.signalFinal || "GRAY").toLowerCase()}`} />
-                    </span>
-                    <div className="home-tx-mid">
-                      <span className="home-tx-name">{row.item}</span>
-                      <span className="home-tx-cat">{row.categoryName}</span>
-                    </div>
-                    <span className="home-tx-amount">{won(row.amount)}</span>
-                  </li>
-                ))
-              )}
-            </ul>
-            <div className="home-card-actions">
-              <button
-                type="button"
-                className="home-link-btn"
-                onClick={() => navigate("/wallet")}
-              >
-                ▶ 상세 내역 확인하기
-              </button>
-              <button
-                type="button"
-                className="home-btn home-btn-dark"
-                onClick={() => navigate("/wallet/new")}
-              >
-                + 지출 추가하기
-              </button>
-            </div>
-          </section>
-
-          <section className="home-card home-card-achieve home-sec--achieve">
-            <h2 className="home-card-title home-card-title--sm home-sec-title">
-              <span className="home-sec-icon" aria-hidden>🏆</span>
-              최근 업적
-            </h2>
-            <ul className="home-ach-list">
-              {achievementPreview.length === 0 ? (
-                <li className="home-ach-row">
-                  {titlesLoading ? "칭호 정보를 불러오는 중..." : "아직 표시할 업적이 없어요."}
-                </li>
-              ) : (
-                achievementPreview.map((title) => (
-                  <li key={title.code} className="home-ach-row">
-                    <div className="home-ach-mid">
-                      <span className="home-ach-title">{title.name}</span>
-                      {/* 진행 중인 업적은 진행률 막대를 같이 보여준다 */}
-                      {!title.acquired && (
-                        <span className="home-ach-progress" aria-hidden>
-                          <span style={{ width: `${Math.min(Math.max(title.progressPct ?? 0, 0), 100)}%` }} />
-                        </span>
-                      )}
-                    </div>
-                    <span
-                      className={`home-badge ${title.acquired ? "home-badge--done" : "home-badge--prog"}`}
-                    >
-                      {title.acquired ? "✓ 완료" : `${title.progressPct}%`}
-                    </span>
-                  </li>
-                ))
-              )}
-            </ul>
-            <button
-              type="button"
-              className="home-btn home-btn-primary home-btn-block"
-              onClick={() => navigate("/dex?tab=achievements")}
-            >
-              ▶ 더 많은 업적 확인하기
-            </button>
-          </section>
-
-          <section className="home-card home-card-chart home-sec--calendar">
-            <h2 className="home-card-title home-card-title--sm home-sec-title">
-              <span className="home-sec-icon" aria-hidden>📅</span>
-              {today.getMonth() + 1}월 기록 캘린더
-            </h2>
-            <div className="home-cal">
-              <RecordCalendar
-                year={today.getFullYear()}
-                month={today.getMonth() + 1}
-                recordedKeys={recordedDays}
-                signalByKey={calendarSignals}
-              />
-            </div>
-            {/* 월말 정산 뒤 일주일은 그 달 리포트로, 그 외에는 가계부로 */}
-            {reportMonth ? (
-              <button
-                type="button"
-                className="home-btn home-btn-primary home-btn-block"
-                onClick={() => navigate(`/report?month=${reportMonth}`)}
-              >
-                ▶ 리포트 확인하기
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="home-btn home-btn-primary home-btn-block"
-                onClick={() => navigate("/wallet")}
-              >
-                ▶ 가계부 이동하기
-              </button>
             )}
-          </section>
+          </div>
+
+          <p className="hm-footnote">
+            {user?.role === "ADMIN"
+              ? "관리자는 언제든지 소비 판정을 확인할 수 있어요"
+              : `매일 ${hourLabel(AI_ACTIVE_FROM_HOUR)}에 보리가 소비 검사를 시작해요`}
+          </p>
         </div>
 
-        <p className="home-footnote">
-          {user?.role === "ADMIN"
-            ? "관리자는 언제든지 소비 판정을 확인할 수 있어요"
-            : `매일 ${AI_ACTIVE_FROM_HOUR}시에 보리가 소비 검사를 시작해요`}
-        </p>
+        {/* 기록 버튼 — 한 건씩 바로 적는다 */}
+        <button type="button" className="hm-fab" onClick={() => navigate("/wallet/new")}>
+          <Icon name="plus" size={18} strokeWidth={2.4} />
+          기록
+        </button>
       </main>
 
       <AppRightSidebar />
     </AppShell>
   );
-}
-
-function buildSignalMap(rows) {
-  const rank = { GREEN: 1, GRAY: 2, RED: 3 };
-  const result = new Map();
-  rows.forEach((row) => {
-    if (row.type !== "EXPENSE" || !row.signal) return;
-    const [y, m, d] = row.date.split("-").map(Number);
-    const key = dateKey(y, m, d);
-    const current = result.get(key);
-    if (!current || rank[row.signal] > rank[current]) result.set(key, row.signal);
-  });
-  return result;
 }
 
 export default HomeDashboard;

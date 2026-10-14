@@ -5,6 +5,7 @@ import NotificationBell from "./NotificationBell";
 import { getMe } from "../api/user";
 import { listAchievements } from "../api/achievements";
 import AchievementSlots from "./AchievementSlots";
+import Icon from "./Icon";
 import { openAttendance } from "./AttendanceModal";
 import "./AccountMenu.css";
 
@@ -70,6 +71,17 @@ function AccountMenu({ onLogout }) {
     <div className="account-menu" ref={rootRef}>
       <AccountSummary onClick={() => setOpen((v) => !v)} />
       <NotificationBell />
+      {/* 폰 헤더의 내 정보 버튼 — 닉네임 글자를 숨긴 자리(AccountMenu.css). 데스크톱에서는 숨는다 */}
+      <button
+        type="button"
+        className="account-menu-avatar-btn"
+        aria-label="내 정보 열기"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Icon name="user" size={18} strokeWidth={2} />
+      </button>
 
       {open && (
         <div className="account-menu-popover" role="dialog" aria-label="내 정보">
@@ -100,6 +112,28 @@ function AccountMenu({ onLogout }) {
             </div>
           </dl>
 
+          {/* 폰에서는 왼쪽 메뉴(드로어)가 없으니 그 안에 있던 화면을 여기서 연다 */}
+          <ul className="account-menu-links">
+            <li>
+              <button type="button" onClick={() => go("/report")}>
+                <Icon name="report" size={18} />
+                소비 리포트
+              </button>
+            </li>
+            <li>
+              <button type="button" onClick={() => go("/dex")}>
+                <Icon name="book" size={18} />
+                도감
+              </button>
+            </li>
+            <li>
+              <button type="button" onClick={() => go("/settings")}>
+                <Icon name="settings" size={18} />
+                환경설정
+              </button>
+            </li>
+          </ul>
+
           <div className="account-menu-actions">
             <button type="button" className="home-btn home-btn-primary" onClick={() => go("/settings/profile")}>
               프로필 수정
@@ -117,7 +151,8 @@ function AccountMenu({ onLogout }) {
                 openAttendance(); // 출석 팝업을 다시 띄운다 (AttendanceGate)
               }}
             >
-              🐾 출석 확인
+              <Icon name="paw" className="account-menu-btn-icon" />
+              출석 확인
             </button>
             <button
               type="button"
