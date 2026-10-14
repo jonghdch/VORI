@@ -549,7 +549,7 @@ UNIQUE(pet_id, pet_title_id)
 |---|---|---|---|---|
 | 결제수단 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | |
 | 사용자 식별자 | `user_id` | FK, IDX | `BIGINT NOT NULL` | → `users(id)` `ON DELETE CASCADE` |
-| 종류 | `kind` |  | `ENUM('DEBIT','CREDIT','CHECKING','SAVINGS','CASH') NOT NULL` | 체크/신용/입출금 계좌/예적금/현금. 지출의 `payment_method` 로는 DEBIT·CREDIT·TRANSFER(입출금)·CASH 에 대응, 예적금은 결제수단으로 못 고른다 |
+| 종류 | `kind` |  | `ENUM('DEBIT','CREDIT','CHECKING','SAVINGS','CASH') NOT NULL` | 체크/신용/입출금 계좌/저축 통장(예금·적금·청약·파킹통장)/현금. 지출의 `payment_method` 로는 DEBIT·CREDIT·TRANSFER(입출금)·CASH 에 대응, 예적금은 결제수단으로 못 고른다 |
 | 카드사·은행 | `issuer` |  | `VARCHAR(20) NOT NULL` | 코드(`TOSSBANK`, `KB` …). 이름·색은 프론트 `constants/issuers.js` |
 | 이름 | `name` |  | `VARCHAR(40) NOT NULL` | 사용자가 붙인 이름 (예: K-패스) |
 | 등록 시 잔액 | `opening_balance` |  | `INT UNSIGNED NOT NULL DEFAULT 0` | 계좌·예적금·현금만. 카드는 0. 이후 입출금은 아직 반영하지 않는다 |
@@ -1017,3 +1017,17 @@ V2 때 보류한 "계좌·지갑명"을 별도 테이블로 정규화했다. 사
 - `POST /api/incomes`·`POST /api/ledger/entries` 의 수입 행에 `paymentInstrumentId`, 수입 조회와 `GET /api/ledger` 응답에 같은 필드.
 
 마이그레이션: `V54__income_payment_instrument.sql`.
+
+### 15. 저축의 모은 곳 — `savings.payment_instrument_id` 추가 (V55)
+
+저축도 어느 저축 통장에 모았는지 고른다. 투자는 계좌가 복잡해져(증권 계좌 종류가 따로 필요) 이번 범위에서 뺐다.
+
+| 변경 | 대상 | 비고 |
+|---|---|---|
+| 추가 | `savings.payment_instrument_id BIGINT NULL` | FK `ON DELETE SET NULL`. 투자·고르지 않은 저축·V55 이전 저축은 NULL |
+
+- 고를 수 있는 것: 본인의, 삭제(보관)하지 않은 저축 통장(`kind = SAVINGS`)만. 다른 종류·삭제한 것은 400, 남의 것은 404.
+- 예적금(`saving_type = DEPOSIT`)에서만 고른다. 투자인데 보내면 400.
+- 화면 라벨 "예적금" 종류는 "저축 통장"으로 바꿔 부른다 (DB 값 SAVINGS 그대로).
+
+마이그레이션: `V55__saving_payment_instrument.sql`.
