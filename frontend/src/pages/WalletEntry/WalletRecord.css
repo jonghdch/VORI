@@ -327,6 +327,14 @@
 }
 .wr-label-link:hover { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .wr-label-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.wr-chip-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 3px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
 .wr-chip-divider {
   align-self: stretch;
   width: 1px;

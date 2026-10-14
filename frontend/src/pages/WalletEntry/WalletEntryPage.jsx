@@ -21,7 +21,7 @@ import {
 } from "../../api/ledger";
 import { loadUserSettings } from "../Settings/SettingsPage";
 import { listInstruments } from "../../api/paymentInstruments";
-import { INSTRUMENT_KINDS } from "../../constants/issuers";
+import { INSTRUMENT_KINDS, issuerOf } from "../../constants/issuers";
 import "./WalletRecord.css";
 
 // 지출 기록 — 한 건씩 적는다. 날짜는 다른 화면에서 ?date= 로 정해 들어오고, 머리의 날짜 칩으로 바꿀 수 있다.
@@ -712,6 +712,8 @@ function WalletEntryPage({ user }) {
                       }
                     >
                       {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                      {/* 카드사·은행 색 점 — 같은 이름이라도 어느 회사 카드인지 한눈에 */}
+                      <span className="wr-chip-dot" style={{ background: issuerOf(inst.issuer).color }} aria-hidden />
                       {inst.name}
                     </button>
                   );
