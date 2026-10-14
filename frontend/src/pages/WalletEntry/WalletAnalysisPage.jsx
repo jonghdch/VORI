@@ -298,7 +298,7 @@ function WalletAnalysisPage({ user }) {
               <p>
                 {waitingForQuestion
                   ? "평소보다 큰 지출이 있어서 물어볼 말을 고르는 중이에요. 조금만 더 기다려 주세요."
-                  : "AI가 예외적인 지출을 살펴보고 있어요. 잠시만 기다려주세요."}
+                  : "지출을 스탯별 예산과 비교하고 있어요. 잠시만 기다려 주세요."}
               </p>
               <div
                 className="ja-progress"
