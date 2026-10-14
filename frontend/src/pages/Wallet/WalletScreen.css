@@ -612,7 +612,7 @@
 
 /* 주/월 — 둥근 알약, 고른 쪽은 흰 바탕 + 초록 글씨 */
 .lw .lw-seg {
-  background: #efe8db;
+  background: #eceae6;
 }
 .lw .lw-seg button.is-active {
   background: var(--hm-surface);

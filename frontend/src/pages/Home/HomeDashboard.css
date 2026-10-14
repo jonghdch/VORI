@@ -474,12 +474,12 @@
   --kpi-accent: #e8a05a;
 }
 .home-row-kpi .home-kpi--month {
-  --kpi-tint: rgba(220, 238, 244, 0.95);
-  --kpi-accent: #7cb9c8;
-}
-.home-row-kpi .home-kpi--week {
   --kpi-tint: rgba(212, 232, 194, 0.8);
   --kpi-accent: #7c9e6b;
+}
+.home-row-kpi .home-kpi--week {
+  --kpi-tint: rgba(220, 238, 244, 0.95);
+  --kpi-accent: #7cb9c8;
 }
 
 .home-kpi-head {
@@ -801,12 +801,12 @@
   --sec-icon-bg: #fdf0da;
 }
 .home-row-bottom .home-sec--achieve {
-  --sec-tint: rgba(220, 238, 244, 0.95);
-  --sec-icon-bg: #e4f2f7;
-}
-.home-row-bottom .home-sec--calendar {
   --sec-tint: rgba(212, 232, 194, 0.8);
   --sec-icon-bg: #eaf3de;
+}
+.home-row-bottom .home-sec--calendar {
+  --sec-tint: rgba(220, 238, 244, 0.95);
+  --sec-icon-bg: #e4f2f7;
 }
 
 /* 카드 제목 + 파스텔 아이콘 */
@@ -976,4 +976,11 @@
 }
 .home-row-bottom .home-sec--list .home-card-actions .home-btn {
   width: 100%;
+}
+
+/* 홈 하단 「오늘 남은 돈」 카드(TodayAllowanceCard) — 예전 홈 카드들과 어울리게 숫자를 줄인다.
+   .hm-hero-value 기본(최대 44px)·넓은 화면(52px) 규칙보다 우선한다. */
+.home-allowance .hm-hero-value {
+  margin: 4px 0 12px;
+  font-size: 38px;
 }
