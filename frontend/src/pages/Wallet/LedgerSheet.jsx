@@ -7,7 +7,8 @@ import Icon from "../../components/Icon";
 const FOCUSABLE =
   'button:not(:disabled), input:not(:disabled), select:not(:disabled), [href], [tabindex]:not([tabindex="-1"])';
 
-function LedgerSheet({ title, onClose, children, footer, header, initialFocusRef, className = "" }) {
+// showClose={false}: × 없이 바깥(어두운 배경)을 누르거나 Esc 로만 닫는다 — 처음 포커스는 시트 자체로.
+function LedgerSheet({ title, onClose, children, footer, header, initialFocusRef, className = "", showClose = true }) {
   const titleId = useId();
   const dialogRef = useRef(null);
   const closeRef = useRef(null);
@@ -16,7 +17,7 @@ function LedgerSheet({ title, onClose, children, footer, header, initialFocusRef
     const previousFocus = document.activeElement;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    (initialFocusRef?.current || closeRef.current)?.focus();
+    (initialFocusRef?.current || closeRef.current || dialogRef.current)?.focus();
     const onEscape = (e) => {
       if (e.key === "Escape") onClose();
     };
@@ -60,12 +61,15 @@ function LedgerSheet({ title, onClose, children, footer, header, initialFocusRef
         tabIndex={-1}
         onKeyDown={onKeyDown}
       >
+        <span className="lw-sheet-grip" aria-hidden />
         {header ?? (
           <header className="lw-sheet-head">
             <h2 id={titleId} className="lw-sheet-title">{title}</h2>
-            <button ref={closeRef} type="button" className="hm-icon-btn" aria-label="닫기" onClick={onClose}>
-              <Icon name="close" size={18} />
-            </button>
+            {showClose && (
+              <button ref={closeRef} type="button" className="hm-icon-btn" aria-label="닫기" onClick={onClose}>
+                <Icon name="close" size={18} />
+              </button>
+            )}
           </header>
         )}
         <div className="lw-sheet-body">{children}</div>

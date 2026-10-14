@@ -1066,3 +1066,96 @@
     height: 90vh;
   }
 }
+
+/* ── 목록 내역 상세 — 넓으면 목록 오른쪽 패널, 좁으면(폰) 아래 시트 ── */
+.lw-listview.has-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: start;
+  gap: 12px 16px;
+  max-width: 1120px;
+}
+.lw-listview.has-detail > .lw-period {
+  grid-column: 1 / -1;
+}
+.lw-listview.has-detail > .lw-list-card {
+  grid-column: 1;
+}
+.lw-detail-panel {
+  grid-column: 2;
+  grid-row: 2;
+  position: sticky;
+  top: 12px;
+  animation: lw-panel-in 0.18s ease-out;
+}
+.lw-detail-panel.is-closing {
+  animation: lw-panel-out 0.16s ease-in forwards;
+}
+.lw-detail-panel-head {
+  margin-bottom: 10px;
+}
+@keyframes lw-panel-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes lw-panel-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(12px); }
+}
+/* 고른 줄 */
+.lw-list-card .hm-tx.is-selected {
+  background: var(--hm-sage-soft);
+}
+/* 상세 본문 — 하루 카드 펼친 항목과 같은 바탕 */
+.lw-tx-detail {
+  border-radius: 14px;
+  background: #faf7f1;
+  overflow: hidden;
+}
+.lw-tx-detail-head {
+  cursor: default;
+}
+.lw-list-pay--plain {
+  margin-left: 0;
+}
+.lw-list-pay--plain::before {
+  content: none;
+}
+.lw-tx-detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.lw-tx-detail-actions.is-single {
+  grid-template-columns: 1fr;
+}
+/* 시트 손잡이 — 아래 시트일 때만 */
+.lw-sheet-grip {
+  display: none;
+}
+@media (max-width: 640px) {
+  .lw-sheet-grip {
+    display: block;
+    align-self: center;
+    width: 40px;
+    height: 4px;
+    margin-top: 8px;
+    border-radius: 999px;
+    background: #ddd5c8;
+  }
+  .lw-sheet {
+    animation: lw-sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+@keyframes lw-sheet-up {
+  from { transform: translateY(24px); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lw-detail-panel,
+  .lw-detail-panel.is-closing,
+  .lw-sheet {
+    animation: none;
+  }
+}

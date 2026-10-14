@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
 import Icon from "../../components/Icon";
+import useMediaQuery from "../../components/useMediaQuery";
 import SignalChip, { SIGNAL_META, categoryIcon, signalForUsage } from "../../components/SignalChip";
 import { getMonthlyLedger } from "../../api/ledger";
 import { getMonthlyJudgments } from "../../api/dailyJudgment";
@@ -16,6 +17,8 @@ import { issuerOf } from "../../constants/issuers";
 import { CATEGORIES_BY_TYPE, getCategoryLabel } from "../WalletEntry/utils";
 import LedgerFilterSheet, { EMPTY_LIST_FILTER, isListFilterActive } from "./LedgerFilterSheet";
 import LedgerSearchSheet, { SearchGlyph } from "./LedgerSearchSheet";
+import LedgerSheet from "./LedgerSheet";
+import ListTxDetail from "./ListTxDetail";
 // .home-main(본문 틀)은 HomeDashboard.css, 카드·버튼·판정 칩은 홈과 같은 HomeScreen.css(.hm-*)를 쓴다.
 // 가계부에만 있는 달력·하루 카드·내역은 WalletScreen.css(.lw-*).
 import "../Home/HomeDashboard.css";
@@ -588,6 +591,7 @@ function WalletPage({ user, onLogout }) {
   const listCount = listGroups.reduce((sum, g) => sum + g.rows.length, 0);
   // 목록에서 고르면 날짜 탭으로 넘어가 그날 카드에서 그 내역을 펼친다 (하루 카드가 그려진 뒤 스크롤).
   const openInDateView = (row) => {
+    setDetail(null);
     setListView(false);
     setSelectedDay(row.day);
     setSelectedId(row.id);
@@ -609,12 +613,96 @@ function WalletPage({ user, onLogout }) {
     setViewMonth(m);
   };
 
+  // ── 목록에서 고른 내역의 상세 — 목록 칸이 넓으면 오른쪽 패널, 좁으면(폰) 아래 시트 ──
+  // 판단은 창 폭이 아니라 본문(main) 폭으로 한다. PC 는 양옆 메뉴가 본문을 좁혀서, 창이 넓어도 본문이 좁을 수 있다.
+  // (목록 칸 자체는 평소 720px 로 묶여 있어 그 폭으론 판단할 수 없다.)
+  // 740px = 목록(최소 ~360px) + 패널(360px) + 사이 간격이 나란히 들어가는 본문 폭.
+  const listViewRef = useRef(null);
+  const [listWide, setListWide] = useState(false);
+  useEffect(() => {
+    const main = listViewRef.current?.closest("main");
+    if (!main || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(([entry]) => setListWide(entry.contentRect.width >= 740));
+    ro.observe(main);
+    return () => ro.disconnect();
+  }, [listView]);
+  // detail = { row, closing } — closing 이면 패널이 접히는 중(짧은 애니메이션 뒤 내린다).
+  const [detail, setDetail] = useState(null);
+  const detailOpenerRef = useRef(null);
+  const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  // returnFocus: 키보드(Esc)로 닫을 때만 고른 줄로 포커스를 돌린다 — 바깥을 눌러 닫으면 누른 곳에 그대로 둔다.
+  const closeDetail = useCallback(
+    (returnFocus = false) => {
+      const opener = detailOpenerRef.current;
+      if (reduceMotion) setDetail(null);
+      else {
+        setDetail((d) => (d ? { ...d, closing: true } : d));
+        setTimeout(() => setDetail((d) => (d?.closing ? null : d)), 160);
+      }
+      if (returnFocus && opener instanceof HTMLElement) requestAnimationFrame(() => opener.focus());
+    },
+    [reduceMotion],
+  );
+  const detailPanelRef = useRef(null);
+  const pickListRow = (row, e) => {
+    if (detail && !detail.closing && detail.row.id === row.id) {
+      closeDetail(false);
+      return;
+    }
+    detailOpenerRef.current = e?.currentTarget ?? null;
+    setDetail({ row, closing: false });
+  };
+  // 달·주를 옮기면 그 기간에 없는 내역이니 닫는다
+  useEffect(() => {
+    setDetail(null);
+  }, [viewYear, viewMonth, viewMode]);
+  // 패널(넓은 화면)은 닫기 버튼이 없다 — 패널 바깥을 누르거나 Esc 로 닫는다.
+  // 목록 줄(.hm-tx)을 누른 건 줄 자신의 클릭이 처리한다(다른 줄 = 내용 바꾸기, 같은 줄 = 접기) — 여기선 무시.
+  // 시트는 LedgerSheet 가 바깥 누르기·Esc·포커스를 맡는다. 필터·검색 시트가 떠 있으면 그쪽이 먼저.
+  useEffect(() => {
+    if (!detail || detail.closing || !listWide || sheet) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") closeDetail(true);
+    };
+    const onPointer = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (detailPanelRef.current?.contains(t)) return;
+      if (t.closest(".lw-list-card .hm-tx")) return;
+      closeDetail(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("touchstart", onPointer, { passive: true });
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("touchstart", onPointer);
+    };
+  }, [detail, listWide, sheet, closeDetail]);
+  const renderDetail = (row) => (
+    <ListTxDetail
+      row={row}
+      iconName={iconFor(row)}
+      categoryLabel={rowCategoryLabel(row)}
+      instrument={instrumentOf(row)}
+      onOpenDate={() => openInDateView(row)}
+      onEdit={() => navigate(`/wallet/new?date=${row.dateIso}&edit=true`)}
+    />
+  );
+
   // 목록·검색이 같이 쓰는 행 — 아이콘 · 이름 / 카테고리 · 카드(색 점) · 금액 · 판정 칩
-  const renderListRow = (row, onPick) => {
+  const renderListRow = (row, onPick, selectable = false) => {
     const inst = instrumentOf(row);
+    const selected = selectable && detail && !detail.closing && detail.row.id === row.id;
     return (
       <li key={row.id}>
-        <button type="button" className="hm-tx" onClick={() => onPick(row)}>
+        <button
+          type="button"
+          className={`hm-tx ${selected ? "is-selected" : ""}`}
+          aria-pressed={selectable ? Boolean(selected) : undefined}
+          onClick={(e) => onPick(row, e)}
+        >
           <span className="hm-tx-icon">
             <Icon name={iconFor(row)} size={18} />
           </span>
@@ -749,7 +837,12 @@ function WalletPage({ user, onLogout }) {
           </div>
 
           {listView ? (
-            <div className="lw-listview" role="tabpanel" aria-label="내역 목록">
+            <div
+              ref={listViewRef}
+              className={`lw-listview ${listWide && detail ? "has-detail" : ""}`}
+              role="tabpanel"
+              aria-label="내역 목록"
+            >
               {periodNav}
               <section className="hm-card lw-list-card" aria-label="수입·지출 내역">
                 <div className="lw-list-toolbar">
@@ -811,13 +904,37 @@ function WalletPage({ user, onLogout }) {
                           </span>
                         </div>
                         <ul className="hm-tx-list">
-                          {g.rows.map((row) => renderListRow(row, openInDateView))}
+                          {g.rows.map((row) => renderListRow(row, pickListRow, true))}
                         </ul>
                       </div>
                     );
                   })
                 )}
               </section>
+              {/* 넓은 화면 — 목록 오른쪽 패널(같은 줄을 다시 누르거나, 패널 바깥을 누르거나, Esc 로 접힌다) */}
+              {listWide && detail && (
+                <aside
+                  ref={detailPanelRef}
+                  className={`hm-card lw-detail-panel ${detail.closing ? "is-closing" : ""}`}
+                  aria-label="내역 상세"
+                >
+                  <div className="lw-detail-panel-head">
+                    <h2 className="hm-card-title">상세 내역</h2>
+                  </div>
+                  {renderDetail(detail.row)}
+                </aside>
+              )}
+              {/* 좁은 화면(폰) — 아래에서 올라오는 시트 */}
+              {!listWide && detail && !detail.closing && (
+                <LedgerSheet
+                  title="상세 내역"
+                  onClose={() => closeDetail(false)}
+                  showClose={false}
+                  className="lw-sheet--detail"
+                >
+                  {renderDetail(detail.row)}
+                </LedgerSheet>
+              )}
               {sheet === "filter" && (
                 <LedgerFilterSheet
                   value={listFilter}
