@@ -68,8 +68,8 @@ public class PaymentInstrumentService {
     }
 
     /**
-     * 수입을 받을 곳으로 쓸 수 있는지 확인한다 — 본인 것 · 삭제(보관) 안 됨 · 입출금/예적금/현금.
-     * 카드로는 수입을 받지 않는다.
+     * 수입을 받을 곳으로 쓸 수 있는지 확인한다 — 본인 것 · 삭제(보관) 안 됨 · 신용카드가 아님.
+     * 체크카드는 연결된 통장으로 받는 것이라 고를 수 있다. 신용카드로는 수입을 받지 않는다.
      */
     @Transactional(readOnly = true)
     public PaymentInstrument requireIncomeAccount(Long userId, Long id) {
@@ -77,8 +77,8 @@ public class PaymentInstrumentService {
         if (instrument.getArchivedAt() != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제한 카드·계좌예요. 다른 곳을 골라 주세요.");
         }
-        if (instrument.getKind() == InstrumentKind.DEBIT || instrument.getKind() == InstrumentKind.CREDIT) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "수입은 계좌·예적금·현금으로만 받을 수 있어요.");
+        if (instrument.getKind() == InstrumentKind.CREDIT) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "신용카드로는 수입을 받을 수 없어요.");
         }
         return instrument;
     }

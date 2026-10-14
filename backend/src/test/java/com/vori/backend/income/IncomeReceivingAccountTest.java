@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/** 수입의 받은 곳 — 본인의 입출금·예적금·현금만, 삭제한 것은 안 됨. */
+/** 수입의 받은 곳 — 본인의 입출금·체크카드·예적금·현금 (신용카드 X), 삭제한 것은 안 됨. */
 class IncomeReceivingAccountTest {
     private static final long USER_ID = 1L;
 
@@ -48,6 +48,17 @@ class IncomeReceivingAccountTest {
     }
 
     @Test
+    void debitCardMeansItsLinkedAccount() {
+        stub(1L, USER_ID, InstrumentKind.DEBIT, false);
+        when(incomes.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        IncomeResponse res = service.createIncome(USER_ID, req(1L));
+
+        assertEquals(1L, res.paymentInstrumentId());
+        assertEquals(PaymentMethod.TRANSFER, res.paymentMethod(), "체크카드 연결 통장으로 받은 것");
+    }
+
+    @Test
     void noAccountStaysAsBefore() {
         when(incomes.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -64,7 +75,7 @@ class IncomeReceivingAccountTest {
         stub(9L, 99L, InstrumentKind.CHECKING, false);
 
         assertEquals(400, assertThrows(ResponseStatusException.class, () -> service.createIncome(USER_ID, req(4L)))
-                .getStatusCode().value(), "카드로는 수입을 받지 않는다");
+                .getStatusCode().value(), "신용카드로는 수입을 받지 않는다");
         assertEquals(400, assertThrows(ResponseStatusException.class, () -> service.createIncome(USER_ID, req(5L)))
                 .getStatusCode().value(), "삭제한 현금 지갑");
         assertEquals(404, assertThrows(ResponseStatusException.class, () -> service.createIncome(USER_ID, req(9L)))

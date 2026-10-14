@@ -197,7 +197,7 @@ CONSTRAINT fk_expenses_payment_instrument
 | 수입 일자 | `received_at` | IDX | `DATE NOT NULL` | 수입 날짜 (시각은 받지 않음) |
 | 수입 금액 | `amount` |  | `INT UNSIGNED NOT NULL` | 수입액 |
 | 수금 수단 | `payment_method` |  | `ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY') NULL` | expenses 와 같은 ENUM 공유. 미입력은 NULL |
-| 받은 곳 | `payment_instrument_id` | FK | `BIGINT NULL` | → `payment_instruments(id)` `ON DELETE SET NULL`. 내 입출금·예적금·현금만 (카드 X). 고르면 `payment_method` 가 비었을 때 그 종류로 채운다 (V54) |
+| 받은 곳 | `payment_instrument_id` | FK | `BIGINT NULL` | → `payment_instruments(id)` `ON DELETE SET NULL`. 내 입출금·체크카드·예적금·현금 (신용카드 X). 고르면 `payment_method` 가 비었을 때 채운다 (V54) |
 | 출처 | `source` |  | `ENUM('ALLOWANCE','PART_TIME','SCHOLARSHIP','SIDE_JOB','GIFT','INTEREST','OTHER') NOT NULL` | 수입 출처 (대학생 맥락) |
 | 반복 수입 | `is_recurring` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | 월급·정기 알바 등 |
 | 메모 | `note` |  | `VARCHAR(200) NULL` | 선택 메모 (expenses 의 memo 와 같은 역할, 컬럼명은 기존 유지) |
@@ -1012,8 +1012,8 @@ V2 때 보류한 "계좌·지갑명"을 별도 테이블로 정규화했다. 사
 |---|---|---|
 | 추가 | `incomes.payment_instrument_id BIGINT NULL` | FK `ON DELETE SET NULL`. 고르지 않은 수입과 V54 이전 수입은 NULL |
 
-- 고를 수 있는 것: 본인의, 삭제(보관)하지 않은 입출금 계좌·예적금·현금. 카드는 400, 남의 것은 404.
-- `payment_method` 를 안 보냈으면 받은 곳 종류로 채운다 (입출금 → TRANSFER, 현금 → CASH, 예적금은 NULL).
+- 고를 수 있는 것: 본인의, 삭제(보관)하지 않은 입출금 계좌·체크카드·예적금·현금. 체크카드는 연결 통장으로 받은 것으로 본다. 신용카드는 400, 남의 것은 404.
+- `payment_method` 를 안 보냈으면 받은 곳 종류로 채운다 (입출금·체크카드 → TRANSFER, 현금 → CASH, 예적금은 NULL).
 - `POST /api/incomes`·`POST /api/ledger/entries` 의 수입 행에 `paymentInstrumentId`, 수입 조회와 `GET /api/ledger` 응답에 같은 필드.
 
 마이그레이션: `V54__income_payment_instrument.sql`.

@@ -76,10 +76,10 @@ function WalletEntryPage({ user }) {
   const defaultPayment = loadUserSettings().defaultPaymentMethod || "CREDIT";
 
   // 설정 > 카드·계좌에 등록한 결제수단. 지출은 결제 수단 칩 앞에(예적금 제외), 수입은 받은 곳 칩으로
-  // (입출금·예적금·현금만 — 카드로는 수입을 받지 않는다). 못 불러와도 칩 없이 그대로 적을 수 있으니 조용히 넘어간다.
+  // (신용카드 제외 — 체크카드는 연결 통장으로 받는 것). 못 불러와도 칩 없이 그대로 적을 수 있으니 조용히 넘어간다.
   const [allInstruments, setAllInstruments] = useState([]);
   const instruments = allInstruments.filter((i) => i.group !== "SAVINGS");
-  const incomeAccounts = allInstruments.filter((i) => i.group !== "CARD");
+  const incomeAccounts = allInstruments.filter((i) => i.kind !== "CREDIT");
   useEffect(() => {
     let alive = true;
     listInstruments()
@@ -700,7 +700,7 @@ function WalletEntryPage({ user }) {
                 </button>
               </div>
               {incomeAccounts.length === 0 ? (
-                <p className="wr-hint">입출금 계좌나 현금을 등록하면 어디로 받았는지 고를 수 있어요.</p>
+                <p className="wr-hint">통장·체크카드·현금을 등록하면 어디로 받았는지 고를 수 있어요.</p>
               ) : (
                 <div className="wr-chips" role="radiogroup" aria-label="받은 곳">
                   {[{ id: null, name: "고르지 않음" }, ...incomeAccounts].map((acc) => {
