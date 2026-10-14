@@ -28,10 +28,19 @@ public record IncomeCreateRequest(
         LocalDate receivedAt,
         PaymentMethod paymentMethod,
 
-        Boolean isRecurring
+        Boolean isRecurring,
+
+        // 받은 곳 — 내 입출금 계좌·예적금·현금 id. 카드는 고를 수 없다.
+        Long paymentInstrumentId
 ) {
     public IncomeCreateRequest {
         if (receivedAt == null) receivedAt = LocalDate.now();
         if (isRecurring == null) isRecurring = false;
+    }
+
+    /** 받은 곳을 고르지 않은 수입 — 받은 곳 기능 전의 호출 모양 그대로. */
+    public IncomeCreateRequest(IncomeSource source, Integer amount, String item, LocalDate receivedAt,
+                               PaymentMethod paymentMethod, Boolean isRecurring) {
+        this(source, amount, item, receivedAt, paymentMethod, isRecurring, null);
     }
 }

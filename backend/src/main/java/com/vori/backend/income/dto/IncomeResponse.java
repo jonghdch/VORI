@@ -14,7 +14,8 @@ public record IncomeResponse(
         String item,
         IncomeSource source,
         PaymentMethod paymentMethod,
-        Boolean isRecurring
+        Boolean isRecurring,
+        Long paymentInstrumentId
 ) {
     public static IncomeResponse from(Income i) {
         return new IncomeResponse(
@@ -24,7 +25,8 @@ public record IncomeResponse(
                 i.getNote(),
                 i.getSource(),
                 i.getPaymentMethod(),
-                i.getIsRecurring()
+                i.getIsRecurring(),
+                i.getPaymentInstrumentId()
         );
     }
 }

@@ -75,14 +75,16 @@ function WalletEntryPage({ user }) {
   // 사용자 설정의 기본 결제수단 — 없으면 CREDIT
   const defaultPayment = loadUserSettings().defaultPaymentMethod || "CREDIT";
 
-  // 설정 > 카드·계좌에 등록한 결제수단 — 결제 수단 칩 앞에 붙는다. 예적금은 결제에 안 쓰여 뺀다.
-  // 못 불러와도 종류 칩 5개로 그대로 적을 수 있으니 조용히 넘어간다.
-  const [instruments, setInstruments] = useState([]);
+  // 설정 > 카드·계좌에 등록한 결제수단. 지출은 결제 수단 칩 앞에(예적금 제외), 수입은 받은 곳 칩으로
+  // (입출금·예적금·현금만 — 카드로는 수입을 받지 않는다). 못 불러와도 칩 없이 그대로 적을 수 있으니 조용히 넘어간다.
+  const [allInstruments, setAllInstruments] = useState([]);
+  const instruments = allInstruments.filter((i) => i.group !== "SAVINGS");
+  const incomeAccounts = allInstruments.filter((i) => i.group !== "CARD");
   useEffect(() => {
     let alive = true;
     listInstruments()
       .then((list) => {
-        if (alive) setInstruments(list.filter((i) => i.group !== "SAVINGS"));
+        if (alive) setAllInstruments(list);
       })
       .catch(() => {});
     return () => {
@@ -263,7 +265,7 @@ function WalletEntryPage({ user }) {
     if (next === type || form.dbId) return;
     setType(next);
     // 내역·금액은 그대로, 분류만 새 종류에 맞게 다시
-    setForm((f) => emptyForm({ name: f.name, amount: f.amount, paymentMethod: f.paymentMethod, paymentInstrumentId: f.paymentInstrumentId, memo: f.memo, memoOpen: f.memoOpen }));
+    setForm((f) => emptyForm({ name: f.name, amount: f.amount, paymentMethod: f.paymentMethod, memo: f.memo, memoOpen: f.memoOpen }));
   };
 
   // ── 영수증 OCR ──────────────────────────────────────────
@@ -389,6 +391,7 @@ function WalletEntryPage({ user }) {
                 item,
                 amount: amountNum,
                 source: form.categoryEnum || "OTHER",
+                paymentInstrumentId: form.paymentInstrumentId ?? null, // 받은 곳(계좌·현금)
                 paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
                 receivedAt: dateStr,
               }]
@@ -684,6 +687,43 @@ function WalletEntryPage({ user }) {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* 받은 곳 (수입만) — 등록한 입출금·예적금·현금. 고르지 않아도 된다 */}
+          {type === "income" && (
+            <div className="wr-field">
+              <div className="wr-label-row">
+                <span className="wr-label">받은 곳</span>
+                <button type="button" className="wr-label-link" onClick={() => navigate("/settings/payment")}>
+                  카드·계좌 관리 <Icon name="chevronRight" size={13} />
+                </button>
+              </div>
+              {incomeAccounts.length === 0 ? (
+                <p className="wr-hint">입출금 계좌나 현금을 등록하면 어디로 받았는지 고를 수 있어요.</p>
+              ) : (
+                <div className="wr-chips" role="radiogroup" aria-label="받은 곳">
+                  {[{ id: null, name: "고르지 않음" }, ...incomeAccounts].map((acc) => {
+                    const on = (form.paymentInstrumentId ?? null) === acc.id;
+                    return (
+                      <button
+                        key={acc.id ?? "none"}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        className={`wr-chip ${acc.id ? "wr-chip--mine" : ""} ${on ? "is-on" : ""}`}
+                        onClick={() => patch({ paymentInstrumentId: acc.id })}
+                      >
+                        {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                        {acc.id && (
+                          <span className="wr-chip-dot" style={{ background: issuerOf(acc.issuer).color }} aria-hidden />
+                        )}
+                        {acc.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

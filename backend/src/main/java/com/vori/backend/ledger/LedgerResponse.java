@@ -13,7 +13,7 @@ import java.time.LocalDate;
  * paymentMethod 는 PaymentMethod enum 이름(CASH/DEBIT/CREDIT/TRANSFER/MOBILE_PAY), 미입력 시 null.
  * aiJudged: 예외적 지출로 AI 질문(판정)을 거쳤는지. true 인 지출에만 "AI 판정" 배지 노출. (수입은 항상 false)
  * reason: AI 질문에 사용자가 답한 소비 사유(answerText). 질문이 없거나 미답변이면 null.
- * paymentInstrumentId: 지출을 낸 내 카드·계좌(payment_instruments.id). 고르지 않았거나 수입이면 null.
+ * paymentInstrumentId: 지출을 낸 카드·계좌, 수입을 받은 계좌·현금(payment_instruments.id). 고르지 않았으면 null.
  */
 public record LedgerResponse(
         Long id,
@@ -58,6 +58,6 @@ public record LedgerResponse(
                 null,
                 false,
                 null,
-                null);
+                i.getPaymentInstrumentId());
     }
 }
