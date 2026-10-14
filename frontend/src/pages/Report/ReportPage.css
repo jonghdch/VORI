@@ -331,3 +331,110 @@
 .report-title-text {
   line-height: 1.3;
 }
+
+/* ── 지난달(지난주) 비교 한 줄 — 스냅샷 KPI 아래 ── */
+.report-compare {
+  margin: 4px 0 14px;
+  font-size: 13px;
+  color: var(--home-muted);
+}
+.report-compare--up::before { content: "▲ "; color: #c9605a; }
+.report-compare--down::before { content: "▼ "; color: #5b8db3; }
+
+/* ── 결제수단별 지출 · 판정 ── */
+.report-pay-card { margin-bottom: 20px; }
+.report-pay-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.report-pay-manage {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--home-muted);
+  cursor: pointer;
+}
+.report-pay-manage:hover { color: var(--home-text); }
+.report-pay-manage:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.report-pay-insight {
+  margin: 6px 0 12px;
+  font-size: 13px;
+  color: var(--home-text);
+}
+.report-pay-insight strong { font-weight: 800; }
+.report-pay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.report-pay-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 200px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+.report-pay-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.report-pay-name-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--home-text);
+}
+.report-pay-name-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-pay-name-text small { font-size: 11px; font-weight: 400; color: var(--home-muted); }
+.report-pay-kind-dot {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px dashed #c9c2b3;
+}
+.report-pay-track {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: #efebe2;
+  overflow: hidden;
+}
+.report-pay-fill {
+  display: flex;
+  height: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.report-pay-seg { height: 100%; }
+.report-pay-seg--none { background: #d8d2c6; }
+.report-pay-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--home-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.report-pay-amount small { font-size: 11px; font-weight: 400; color: var(--home-muted); }
+.report-pay-red { font-weight: 700; color: #b85c55; }
+.report-pay-legend { margin-top: 14px; }
+
+@media (max-width: 620px) {
+  .report-pay-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 6px;
+  }
+  .report-pay-track { grid-column: 1 / -1; grid-row: 2; }
+}
