@@ -59,8 +59,9 @@ public class LedgerService {
         Map<Long, String> categoryNames = new HashMap<>();
         categoryRepository.findAll().forEach(c -> categoryNames.put(c.getId(), c.getName()));
 
+        // 끝은 다음 달 1일 0시(포함 안 함) — 23:59:59 로 끊으면 그 1초 안의 지출이 빠진다
         List<Expense> expenses = expenseRepository.findByUserIdAndSpentAtBetween(
-                userId, ym.atDay(1).atStartOfDay(), ym.atEndOfMonth().atTime(23, 59, 59));
+                userId, ym.atDay(1).atStartOfDay(), ym.plusMonths(1).atDay(1).atStartOfDay());
 
         // 이 달 지출 중 AI 질문(판정)을 거친 것 = 예외적 지출.
         // aiJudged 배지 + 답변된 소비 사유(answerText)를 함께 내려준다.
