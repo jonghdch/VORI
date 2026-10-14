@@ -83,6 +83,19 @@ public class PaymentInstrumentService {
         return instrument;
     }
 
+    /** 저축을 모을 곳으로 쓸 수 있는지 — 본인 것 · 삭제(보관) 안 됨 · 저축 통장(SAVINGS). */
+    @Transactional(readOnly = true)
+    public PaymentInstrument requireSavingsAccount(Long userId, Long id) {
+        PaymentInstrument instrument = requireOwned(userId, id);
+        if (instrument.getArchivedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제한 카드·계좌예요. 다른 곳을 골라 주세요.");
+        }
+        if (instrument.getKind() != InstrumentKind.SAVINGS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "저축은 저축 통장에만 모을 수 있어요.");
+        }
+        return instrument;
+    }
+
     /**
      * 본인 카드·계좌인지 확인하고 돌려준다. 보관한 것도 돌려준다 — 예전 지출을 고칠 때 그 연결을 지키려고.
      * 남의 것이면 있는지조차 알리지 않으려고 404.

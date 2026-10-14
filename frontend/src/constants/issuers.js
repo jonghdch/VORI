@@ -27,6 +27,6 @@ export const INSTRUMENT_KINDS = {
   DEBIT: { label: "체크카드", group: "CARD", paymentMethod: "DEBIT" },
   CREDIT: { label: "신용카드", group: "CARD", paymentMethod: "CREDIT" },
   CHECKING: { label: "입출금 계좌", group: "ACCOUNT", paymentMethod: "TRANSFER" },
-  SAVINGS: { label: "예적금", group: "SAVINGS", paymentMethod: null },
+  SAVINGS: { label: "저축 통장", group: "SAVINGS", paymentMethod: null }, // 예금·적금·청약·파킹통장 등
   CASH: { label: "현금", group: "ACCOUNT", paymentMethod: "CASH" },
 };

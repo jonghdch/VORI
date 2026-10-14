@@ -80,6 +80,7 @@ function WalletEntryPage({ user }) {
   const [allInstruments, setAllInstruments] = useState([]);
   const instruments = allInstruments.filter((i) => i.group !== "SAVINGS");
   const incomeAccounts = allInstruments.filter((i) => i.kind !== "CREDIT");
+  const savingsAccounts = allInstruments.filter((i) => i.kind === "SAVINGS"); // 저축의 모은 곳
   useEffect(() => {
     let alive = true;
     listInstruments()
@@ -398,7 +399,14 @@ function WalletEntryPage({ user }) {
             : [],
         savings:
           type === "savings"
-            ? [{ item, amount: amountNum, savingType: form.categoryEnum || "DEPOSIT", savedAt: dateStr }]
+            ? [{
+                item,
+                amount: amountNum,
+                savingType: form.categoryEnum || "DEPOSIT",
+                savedAt: dateStr,
+                // 모은 곳은 예적금에서만 (자동 분류가 투자로 바꿔 놓았으면 보내지 않는다)
+                paymentInstrumentId: (form.categoryEnum || "DEPOSIT") === "DEPOSIT" ? form.paymentInstrumentId ?? null : null,
+              }]
             : [],
       });
       clearDraft();
@@ -679,7 +687,14 @@ function WalletEntryPage({ user }) {
                       role="radio"
                       aria-checked={on}
                       className={`wr-chip ${on ? "is-on" : ""}`}
-                      onClick={() => patch({ categoryEnum: o.value, sourceTouched: true })}
+                      onClick={() =>
+                        patch({
+                          categoryEnum: o.value,
+                          sourceTouched: true,
+                          // 투자는 모은 곳을 고르지 않는다 — 예적금에서 골라 둔 통장을 비운다
+                          ...(type === "savings" && o.value === "INVEST" ? { paymentInstrumentId: null } : {}),
+                        })
+                      }
                     >
                       {on && <Icon name="check" size={13} strokeWidth={2.4} />}
                       {o.label}
@@ -704,6 +719,43 @@ function WalletEntryPage({ user }) {
               ) : (
                 <div className="wr-chips" role="radiogroup" aria-label="받은 곳">
                   {[{ id: null, name: "고르지 않음" }, ...incomeAccounts].map((acc) => {
+                    const on = (form.paymentInstrumentId ?? null) === acc.id;
+                    return (
+                      <button
+                        key={acc.id ?? "none"}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        className={`wr-chip ${acc.id ? "wr-chip--mine" : ""} ${on ? "is-on" : ""}`}
+                        onClick={() => patch({ paymentInstrumentId: acc.id })}
+                      >
+                        {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                        {acc.id && (
+                          <span className="wr-chip-dot" style={{ background: issuerOf(acc.issuer).color }} aria-hidden />
+                        )}
+                        {acc.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 모은 곳 (저축 · 예적금만) — 등록한 저축 통장. 투자는 계좌를 고르지 않는다 */}
+          {type === "savings" && form.categoryEnum !== "INVEST" && (
+            <div className="wr-field">
+              <div className="wr-label-row">
+                <span className="wr-label">모은 곳</span>
+                <button type="button" className="wr-label-link" onClick={() => navigate("/settings/payment")}>
+                  카드·계좌 관리 <Icon name="chevronRight" size={13} />
+                </button>
+              </div>
+              {savingsAccounts.length === 0 ? (
+                <p className="wr-hint">저축 통장을 등록하면 어디에 모았는지 고를 수 있어요.</p>
+              ) : (
+                <div className="wr-chips" role="radiogroup" aria-label="모은 곳">
+                  {[{ id: null, name: "고르지 않음" }, ...savingsAccounts].map((acc) => {
                     const on = (form.paymentInstrumentId ?? null) === acc.id;
                     return (
                       <button

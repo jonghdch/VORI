@@ -135,7 +135,7 @@ function PaymentSettingsPanel() {
                 className="settings-input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={isCash ? "현금" : `예: ${kind === "SAVINGS" ? "청년도약계좌" : "K-패스"}`}
+                placeholder={isCash ? "현금" : `예: ${kind === "SAVINGS" ? "토스 파킹통장, 청약" : kind === "CHECKING" ? "생활통장" : "K-패스"}`}
                 maxLength={40}
               />
             </label>

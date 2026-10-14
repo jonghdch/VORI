@@ -11,7 +11,8 @@ public record SavingResponse(
         Integer amount,
         String item,
         SavingType savingType,
-        String note
+        String note,
+        Long paymentInstrumentId
 ) {
     public static SavingResponse from(Saving s) {
         return new SavingResponse(
@@ -20,7 +21,8 @@ public record SavingResponse(
                 s.getAmount(),
                 s.getItem(),
                 s.getSavingType(),
-                s.getNote()
+                s.getNote(),
+                s.getPaymentInstrumentId()
         );
     }
 }

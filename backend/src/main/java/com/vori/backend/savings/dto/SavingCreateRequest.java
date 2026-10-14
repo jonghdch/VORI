@@ -23,9 +23,17 @@ public record SavingCreateRequest(
         LocalDate savedAt,
 
         @Size(max = 200, message = "메모는 최대 200자까지 입력 가능합니다.")
-        String note
+        String note,
+
+        // 모은 곳 — 내 저축 통장 id. 예적금(DEPOSIT) 유형에서만 고를 수 있다.
+        Long paymentInstrumentId
 ) {
     public SavingCreateRequest {
         if (savedAt == null) savedAt = LocalDate.now();
+    }
+
+    /** 모은 곳을 고르지 않은 저축 — 모은 곳 기능 전의 호출 모양 그대로. */
+    public SavingCreateRequest(SavingType savingType, Integer amount, String item, LocalDate savedAt, String note) {
+        this(savingType, amount, item, savedAt, note, null);
     }
 }
