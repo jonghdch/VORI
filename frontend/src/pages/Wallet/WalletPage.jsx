@@ -13,7 +13,7 @@ import CoinIcon from "../../components/CoinIcon";
 import { SIGNAL_STATUS } from "../../signalLabels";
 import { listInstruments } from "../../api/paymentInstruments";
 import { issuerOf } from "../../constants/issuers";
-import { getCategoryLabel } from "../WalletEntry/utils";
+import { CATEGORIES_BY_TYPE, getCategoryLabel } from "../WalletEntry/utils";
 import LedgerFilterSheet, { EMPTY_LIST_FILTER, isListFilterActive } from "./LedgerFilterSheet";
 import LedgerSearchSheet, { SearchGlyph } from "./LedgerSearchSheet";
 // .home-main(본문 틀)은 HomeDashboard.css, 카드·버튼·판정 칩은 홈과 같은 HomeScreen.css(.hm-*)를 쓴다.
@@ -566,7 +566,8 @@ function WalletPage({ user, onLogout }) {
     const passes = (r) =>
       f.types[r.type] &&
       (f.instrumentId == null || r.paymentInstrumentId === f.instrumentId) &&
-      (r.type !== "EXPENSE" || f.categories == null || f.categories.includes(r.cat));
+      (r.type !== "EXPENSE" || f.categories == null || f.categories.includes(r.cat)) &&
+      (r.type !== "INCOME" || f.incomeSources == null || f.incomeSources.includes(r.cat));
     const sorted = rows
       .filter((r) => (!inRange || inRange.has(r.day)) && passes(r))
       .sort((a, b) => b.day - a.day);
@@ -822,6 +823,7 @@ function WalletPage({ user, onLogout }) {
                   value={listFilter}
                   instruments={instruments}
                   categoryOptions={categoryOptions}
+                  incomeOptions={CATEGORIES_BY_TYPE.income}
                   onApply={(next) => {
                     setListFilter(next);
                     setSheet(null);

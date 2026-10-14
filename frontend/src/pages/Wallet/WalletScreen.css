@@ -998,9 +998,6 @@
   color: var(--hm-faint);
   cursor: default;
 }
-.lw-filter-more--static {
-  cursor: default;
-}
 
 /* 검색 시트 */
 .lw-search-head {
