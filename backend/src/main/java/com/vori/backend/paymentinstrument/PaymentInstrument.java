@@ -63,6 +63,13 @@ public class PaymentInstrument {
         insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
+    /** 이름·카드사·잔액 수정. 종류는 바꾸지 않는다(지난 지출의 결제수단과 어긋나므로). */
+    public void updateDetails(String issuer, String name, Integer openingBalance) {
+        this.issuer = issuer;
+        this.name = name;
+        this.openingBalance = openingBalance;
+    }
+
     public void archive(LocalDateTime at) {
         if (archivedAt == null) archivedAt = at;
     }

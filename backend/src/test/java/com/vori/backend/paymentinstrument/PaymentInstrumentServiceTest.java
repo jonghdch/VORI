@@ -4,6 +4,7 @@ import com.vori.backend.common.PaymentMethod;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.paymentinstrument.dto.PaymentInstrumentCreateRequest;
 import com.vori.backend.paymentinstrument.dto.PaymentInstrumentResponse;
+import com.vori.backend.paymentinstrument.dto.PaymentInstrumentUpdateRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -63,6 +64,40 @@ class PaymentInstrumentServiceTest {
         ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> service.archive(USER_ID, 9L));
         assertEquals(404, error.getStatusCode().value(), "남의 카드는 있는지조차 알리지 않는다");
         assertNull(theirs.getArchivedAt());
+    }
+
+    @Test
+    void updateRenamesButKeepsKindAndCardBalanceAtZero() {
+        PaymentInstrument card = PaymentInstrument.builder().id(4L).userId(USER_ID).kind(InstrumentKind.CREDIT)
+                .issuer("KBANK").name("K-패스").build();
+        when(repository.findById(4L)).thenReturn(Optional.of(card));
+
+        PaymentInstrumentResponse res = service.update(USER_ID, 4L,
+                new PaymentInstrumentUpdateRequest("SHINHAN", "  신한 Deep Dream ", 30000));
+
+        assertEquals("신한 Deep Dream", res.name());
+        assertEquals("SHINHAN", res.issuer());
+        assertEquals(InstrumentKind.CREDIT, res.kind(), "종류는 그대로");
+        assertEquals(0, res.openingBalance(), "카드는 잔액을 보내도 0");
+    }
+
+    @Test
+    void cannotUpdateArchivedOrSomeoneElses() {
+        PaymentInstrument archived = PaymentInstrument.builder().id(4L).userId(USER_ID).kind(InstrumentKind.CHECKING)
+                .issuer("KB").name("옛 통장").build();
+        archived.archive(LocalDateTime.of(2026, 10, 1, 9, 0));
+        PaymentInstrument theirs = PaymentInstrument.builder().id(9L).userId(99L).kind(InstrumentKind.DEBIT)
+                .issuer("KB").name("남의 카드").build();
+        when(repository.findById(4L)).thenReturn(Optional.of(archived));
+        when(repository.findById(9L)).thenReturn(Optional.of(theirs));
+        PaymentInstrumentUpdateRequest req = new PaymentInstrumentUpdateRequest("KB", "새 이름", 0);
+
+        assertEquals(400, assertThrows(ResponseStatusException.class, () -> service.update(USER_ID, 4L, req))
+                .getStatusCode().value());
+        assertEquals(404, assertThrows(ResponseStatusException.class, () -> service.update(USER_ID, 9L, req))
+                .getStatusCode().value());
+        assertEquals("옛 통장", archived.getName());
+        assertEquals("남의 카드", theirs.getName());
     }
 
     @Test

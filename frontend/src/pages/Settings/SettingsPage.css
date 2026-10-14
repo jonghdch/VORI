@@ -264,4 +264,14 @@
 .pay-item-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
 .pay-item-text strong { color:var(--home-text); font-size:14px; }
 .pay-item-text span { color:var(--home-muted); font-size:12px; }
-.pay-item-archive { margin-left:auto; border:0; background:transparent; color:#a35d5d; cursor:pointer; font:inherit; font-size:13px; }
+.pay-item-edit { margin-left:auto; border:0; background:transparent; color:var(--home-muted); cursor:pointer; font:inherit; font-size:13px; }
+.pay-item-edit:hover { color:var(--home-text); }
+.pay-item-archive { border:0; background:transparent; color:#a35d5d; cursor:pointer; font:inherit; font-size:13px; }
+.pay-item--editing { flex-direction:column; align-items:stretch; gap:6px; }
+.pay-edit { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.pay-edit-fields { display:flex; flex:1; gap:8px; flex-wrap:wrap; min-width:0; }
+.pay-edit-fields .settings-input { flex:1; min-width:140px; }
+.pay-edit-fields .pay-edit-balance { flex:0 1 140px; min-width:100px; }
+.pay-edit-actions { display:flex; align-items:center; gap:6px; }
+.pay-item-cancel { border:0; background:transparent; color:var(--home-muted); cursor:pointer; font:inherit; font-size:13px; }
+.pay-edit-note { margin:0 0 0 40px; font-size:11px; color:var(--home-muted); }

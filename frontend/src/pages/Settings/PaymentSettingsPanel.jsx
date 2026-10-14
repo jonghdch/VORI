@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { archiveInstrument, createInstrument, listInstruments } from "../../api/paymentInstruments";
+import { archiveInstrument, createInstrument, listInstruments, updateInstrument } from "../../api/paymentInstruments";
 import IssuerBadge from "../../components/IssuerBadge";
 import { INSTRUMENT_KINDS, ISSUERS, issuerOf } from "../../constants/issuers";
 
@@ -11,6 +11,8 @@ function PaymentSettingsPanel() {
   const [items, setItems] = useState(null); // null = 불러오는 중
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  // 고치는 중인 행 — { id, issuer, name, openingBalance }. null = 고치는 행 없음.
+  const [editing, setEditing] = useState(null);
   const [kind, setKind] = useState("DEBIT");
   const [issuer, setIssuer] = useState(ISSUERS[0].code);
   const [name, setName] = useState("");
@@ -48,6 +50,34 @@ function PaymentSettingsPanel() {
       await reload();
     } catch (err) {
       setError(err.message || "등록하지 못했어요.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEdit = (item) => {
+    setError("");
+    setEditing({ id: item.id, issuer: item.issuer, name: item.name, openingBalance: String(item.openingBalance ?? 0) });
+  };
+  const handleUpdate = async (e, item) => {
+    e.preventDefault();
+    if (saving) return;
+    if (!editing.name.trim()) {
+      setError("이름을 입력해주세요.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await updateInstrument(item.id, {
+        issuer: item.kind === "CASH" ? item.issuer : editing.issuer,
+        name: editing.name.trim(),
+        openingBalance: item.group === "CARD" ? 0 : Number(editing.openingBalance) || 0,
+      });
+      setEditing(null);
+      await reload();
+    } catch (err) {
+      setError(err.message || "수정하지 못했어요.");
     } finally {
       setSaving(false);
     }
@@ -138,7 +168,55 @@ function PaymentSettingsPanel() {
           <p className="settings-row-desc">아직 등록한 카드·계좌가 없어요.</p>
         ) : (
           <ul className="pay-list">
-            {items.map((item) => (
+            {items.map((item) =>
+              editing?.id === item.id ? (
+                <li key={item.id} className="pay-item pay-item--editing">
+                  <form className="pay-edit" onSubmit={(e) => handleUpdate(e, item)}>
+                    <IssuerBadge issuer={item.kind === "CASH" ? item.issuer : editing.issuer} />
+                    <div className="pay-edit-fields">
+                      {item.kind !== "CASH" && (
+                        <select
+                          className="settings-select"
+                          aria-label={item.group === "CARD" ? "카드사" : "은행"}
+                          value={editing.issuer}
+                          onChange={(e) => setEditing((d) => ({ ...d, issuer: e.target.value }))}
+                        >
+                          {ISSUERS.map((i) => (
+                            <option key={i.code} value={i.code}>{i.name}</option>
+                          ))}
+                        </select>
+                      )}
+                      <input
+                        className="settings-input"
+                        aria-label="이름"
+                        value={editing.name}
+                        maxLength={40}
+                        autoFocus
+                        onChange={(e) => setEditing((d) => ({ ...d, name: e.target.value }))}
+                      />
+                      {item.group !== "CARD" && (
+                        <input
+                          className="settings-input pay-edit-balance"
+                          aria-label="잔액"
+                          type="number"
+                          min="0"
+                          value={editing.openingBalance}
+                          onChange={(e) => setEditing((d) => ({ ...d, openingBalance: e.target.value }))}
+                        />
+                      )}
+                    </div>
+                    <div className="pay-edit-actions">
+                      <button type="submit" className="settings-save-btn" disabled={saving}>
+                        {saving ? "저장 중…" : "저장"}
+                      </button>
+                      <button type="button" className="pay-item-cancel" onClick={() => setEditing(null)}>
+                        취소
+                      </button>
+                    </div>
+                  </form>
+                  <p className="pay-edit-note">종류({INSTRUMENT_KINDS[item.kind]?.label})는 바꿀 수 없어요. 바꾸려면 새로 등록해 주세요.</p>
+                </li>
+              ) : (
               <li key={item.id} className="pay-item">
                 <IssuerBadge issuer={item.issuer} />
                 <div className="pay-item-text">
@@ -148,11 +226,15 @@ function PaymentSettingsPanel() {
                     {item.group !== "CARD" && ` · 잔액 ${item.openingBalance.toLocaleString("ko-KR")}원`}
                   </span>
                 </div>
+                <button type="button" className="pay-item-edit" onClick={() => startEdit(item)}>
+                  수정
+                </button>
                 <button type="button" className="pay-item-archive" onClick={() => handleArchive(item)}>
                   삭제
                 </button>
               </li>
-            ))}
+              ),
+            )}
           </ul>
         )}
       </section>

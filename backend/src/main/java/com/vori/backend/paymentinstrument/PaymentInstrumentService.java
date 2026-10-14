@@ -2,6 +2,7 @@ package com.vori.backend.paymentinstrument;
 
 import com.vori.backend.paymentinstrument.dto.PaymentInstrumentCreateRequest;
 import com.vori.backend.paymentinstrument.dto.PaymentInstrumentResponse;
+import com.vori.backend.paymentinstrument.dto.PaymentInstrumentUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,15 +34,31 @@ public class PaymentInstrumentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "카드·계좌는 " + MAX_ACTIVE + "개까지 등록할 수 있어요.");
         }
-        boolean hasBalance = req.kind() != InstrumentKind.DEBIT && req.kind() != InstrumentKind.CREDIT;
         PaymentInstrument saved = repository.save(PaymentInstrument.builder()
                 .userId(userId)
                 .kind(req.kind())
                 .issuer(req.issuer())
                 .name(req.name().trim())
-                .openingBalance(hasBalance && req.openingBalance() != null ? req.openingBalance() : 0)
+                .openingBalance(balanceFor(req.kind(), req.openingBalance()))
                 .build());
         return PaymentInstrumentResponse.from(saved);
+    }
+
+    /** 이름·카드사·잔액 수정. 삭제(보관)한 것은 목록에 없으니 고칠 수 없다. */
+    @Transactional
+    public PaymentInstrumentResponse update(Long userId, Long id, PaymentInstrumentUpdateRequest req) {
+        PaymentInstrument instrument = requireOwned(userId, id);
+        if (instrument.getArchivedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제한 카드·계좌는 고칠 수 없어요.");
+        }
+        instrument.updateDetails(req.issuer(), req.name().trim(), balanceFor(instrument.getKind(), req.openingBalance()));
+        return PaymentInstrumentResponse.from(instrument);
+    }
+
+    /** 카드는 잔액이 없다 — 보내도 0. 계좌·예적금·현금은 비우면 0. */
+    private static int balanceFor(InstrumentKind kind, Integer openingBalance) {
+        boolean hasBalance = kind != InstrumentKind.DEBIT && kind != InstrumentKind.CREDIT;
+        return hasBalance && openingBalance != null ? openingBalance : 0;
     }
 
     /** 삭제 = 보관. 이미 이 카드로 적은 지출은 연결을 그대로 둔다. */

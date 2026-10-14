@@ -3,12 +3,14 @@ package com.vori.backend.paymentinstrument;
 import com.vori.backend.auth.UserPrincipal;
 import com.vori.backend.paymentinstrument.dto.PaymentInstrumentCreateRequest;
 import com.vori.backend.paymentinstrument.dto.PaymentInstrumentResponse;
+import com.vori.backend.paymentinstrument.dto.PaymentInstrumentUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -36,6 +38,15 @@ public class PaymentInstrumentController {
             @Valid @RequestBody PaymentInstrumentCreateRequest req
     ) {
         return service.create(principal.getId(), req);
+    }
+
+    @PatchMapping("/{id}")
+    public PaymentInstrumentResponse update(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody PaymentInstrumentUpdateRequest req
+    ) {
+        return service.update(principal.getId(), id, req);
     }
 
     @DeleteMapping("/{id}")
