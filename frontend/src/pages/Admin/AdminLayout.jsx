@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ADMIN_NAV } from "./adminNav";
+import VoriWordmark from "../../components/VoriWordmark";
 import "./AdminLayout.css";
 
 // 기본 관리 그룹 링크 앞 라인 아이콘 (route → SVG).
@@ -66,7 +67,9 @@ function AdminLayout() {
           onClick={() => navigate("/admin")}
           aria-label="VORI ADMIN 홈으로"
         >
-          <span className="admin-logo-vori">VORI</span>
+          <span className="admin-logo-vori">
+            <VoriWordmark />
+          </span>
           <span className="admin-logo-admin">ADMIN</span>
         </button>
         <button

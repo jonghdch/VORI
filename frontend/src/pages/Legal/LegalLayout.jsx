@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import VoriWordmark from "../../components/VoriWordmark";
 import "./LegalPages.css";
 
 /**
@@ -16,7 +17,7 @@ export default function LegalLayout({ title, effectiveDate, children }) {
           onClick={() => navigate("/")}
           aria-label="VORI 홈으로"
         >
-          VORI
+          <VoriWordmark />
         </button>
         <button
           type="button"

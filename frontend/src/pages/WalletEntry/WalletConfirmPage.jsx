@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import StepIndicator from "./StepIndicator";
+import VoriWordmark from "../../components/VoriWordmark";
 import {
   formatToday,
   parseIsoDate,
@@ -155,7 +156,7 @@ function WalletConfirmPage({ user }) {
           onClick={() => navigate("/home")}
           aria-label="VORI 홈으로"
         >
-          VORI
+          <VoriWordmark />
         </button>
       </header>
 

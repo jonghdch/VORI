@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 import { login } from "../../api/auth";
 import GoogleSignInButton from "../../components/GoogleSignInButton";
+import VoriWordmark from "../../components/VoriWordmark";
 import { getOnboardingStatus } from "../../api/onboarding";
 
 // 로그인 페이지.
@@ -79,7 +80,7 @@ function LoginPage({ onLogin }) {
           onClick={() => navigate("/")}
           aria-label="VORI 홈으로"
         >
-          VORI
+          <VoriWordmark />
         </button>
       </header>
 

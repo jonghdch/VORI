@@ -3,11 +3,15 @@
  * 색은 currentColor 라 부모의 글자색을 따른다(상단 바는 앱 글자색 #3d3830).
  * 상단 바처럼 20px 안팎에서 쓰므로 분화구를 하나만 남긴 작은 판이다 — 큰 판의 작은 분화구 두 개는
  * 이 크기에서 점으로 뭉개진다. 원본: VORI_리디자인_캡처/logo_symbol/vori-wordmark-small.svg
+ * 크기는 기본으로 부모 글자 크기의 0.8 배(예전 글자 로고 「VORI」의 대문자 높이쯤) — 로그인·가입·약관처럼
+ * 글자 로고를 쓰던 자리에 그대로 넣으면 비슷한 크기가 된다. 높이를 CSS 로 정하면 그쪽이 이긴다(height 는 속성이라).
  */
 function VoriWordmark({ className = "", title }) {
   return (
     <svg
       className={className}
+      height="0.8em"
+      style={{ display: "block" }}
       viewBox="2 0 2643 751"
       xmlns="http://www.w3.org/2000/svg"
       role={title ? "img" : undefined}

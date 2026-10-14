@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import UserAvatarMenu from "./UserAvatarMenu";
+import VoriWordmark from "./VoriWordmark";
 
 // 공통 상단 헤더.
 //
@@ -34,7 +35,7 @@ function SiteHeader({
             onClick={() => navigate("/")}
             aria-label="VORI 메인으로"
           >
-            VORI
+            <VoriWordmark />
           </button>
           <button
             type="button"
