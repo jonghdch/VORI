@@ -11,6 +11,9 @@ import { getSpendingPlan } from "../../api/spendingPlan";
 import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
 import CoinIcon from "../../components/CoinIcon";
 import { SIGNAL_STATUS } from "../../signalLabels";
+import { listInstruments } from "../../api/paymentInstruments";
+import { issuerOf } from "../../constants/issuers";
+import { getCategoryLabel } from "../WalletEntry/utils";
 // .home-main(본문 틀)은 HomeDashboard.css, 카드·버튼·판정 칩은 홈과 같은 HomeScreen.css(.hm-*)를 쓴다.
 // 가계부에만 있는 달력·하루 카드·내역은 WalletScreen.css(.lw-*).
 import "../Home/HomeDashboard.css";
@@ -105,6 +108,7 @@ function toRow(item) {
     aiJudged: Boolean(item.aiJudged),
     aiStatus: item.aiJudged && item.signal ? SIGNAL_STATUS[item.signal] : null,
     payment: item.paymentMethod ? PAYMENT_LABEL[item.paymentMethod] : null,
+    paymentInstrumentId: item.paymentInstrumentId ?? null,
     memo: item.memo || "",
     // AI 질문에 답한 소비 사유 — 답변한 예외 지출에만 존재.
     reason: item.reason || "",
@@ -160,7 +164,15 @@ function CalendarCell({ day, weekday, rows, signal, judged, isToday, isSelected,
 
 function WalletPage({ user, onLogout }) {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  // [날짜 | 목록] — 날짜: 달력·하루 카드(기본), 목록: 기간의 수입·지출 내역만. ?view=list 로 새로고침·뒤로가기에도 유지.
+  const listView = params.get("view") === "list";
+  const setListView = (on) => {
+    const next = new URLSearchParams(params);
+    if (on) next.set("view", "list");
+    else next.delete("view");
+    setParams(next);
+  };
   const selectedDateParam = params.get("date");
 
   // 보고 있는 달 (1-based month). 처음엔 실제 이번 달부터.
@@ -324,6 +336,14 @@ function WalletPage({ user, onLogout }) {
     });
     return map;
   }, [rows, judgmentsByDate]);
+
+  // 등록한 카드·계좌 — 목록 행에 결제수단 대신 카드 이름·색 점을 붙인다. 못 불러와도 결제수단 종류로 보인다.
+  const [instruments, setInstruments] = useState([]);
+  useEffect(() => {
+    listInstruments().then(setInstruments).catch(() => {});
+  }, []);
+  const instrumentOf = (row) =>
+    row.paymentInstrumentId != null ? instruments.find((i) => i.id === row.paymentInstrumentId) ?? null : null;
 
   const expenseRows = rows.filter((r) => r.type === "EXPENSE");
   const monthExpenseTotal = expenseRows.reduce((sum, r) => sum + r.amountNum, 0);
@@ -493,6 +513,40 @@ function WalletPage({ user, onLogout }) {
     return `${first.getMonth() + 1}월 ${first.getDate()}일 ~ ${last.getMonth() + 1}월 ${last.getDate()}일`;
   }, [viewMode, viewYear, viewMonth, weekDates]);
 
+  // ── 목록 탭 — 보고 있는 기간(월 / 주)의 수입·지출, 최신 날짜가 위로, 날짜별로 묶는다 ──
+  const listGroups = useMemo(() => {
+    const inRange =
+      viewMode === "week"
+        ? new Set(
+            weekDates
+              .filter((d) => d.getFullYear() === viewYear && d.getMonth() + 1 === viewMonth)
+              .map((d) => d.getDate()),
+          )
+        : null;
+    const sorted = rows.filter((r) => !inRange || inRange.has(r.day)).sort((a, b) => b.day - a.day);
+    const groups = [];
+    sorted.forEach((r) => {
+      const last = groups[groups.length - 1];
+      if (last && last.day === r.day) last.rows.push(r);
+      else groups.push({ day: r.day, rows: [r] });
+    });
+    return groups.map((g) => ({
+      ...g,
+      income: g.rows.filter((r) => r.type === "INCOME").reduce((sum, r) => sum + r.amountNum, 0),
+      expense: g.rows.filter((r) => r.type === "EXPENSE").reduce((sum, r) => sum + r.amountNum, 0),
+    }));
+  }, [rows, viewMode, weekDates, viewYear, viewMonth]);
+  const listIncome = listGroups.reduce((sum, g) => sum + g.income, 0);
+  const listExpense = listGroups.reduce((sum, g) => sum + g.expense, 0);
+  const listCount = listGroups.reduce((sum, g) => sum + g.rows.length, 0);
+  // 목록에서 고르면 날짜 탭으로 넘어가 그날 카드에서 그 내역을 펼친다 (하루 카드가 그려진 뒤 스크롤).
+  const openInDateView = (row) => {
+    setListView(false);
+    setSelectedDay(row.day);
+    setSelectedId(row.id);
+    requestAnimationFrame(() => dayCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
+
   const nextDisabled =
     viewMode === "month"
       ? viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1
@@ -520,6 +574,33 @@ function WalletPage({ user, onLogout }) {
         ? "1차 판정으로 확정 중"
         : "사유 답변 대기";
 
+  // 기간 이동 — 날짜·목록 탭이 같이 쓴다
+  const periodNav = (
+    <nav className="hm-card lw-period" aria-label={viewMode === "week" ? "주 선택" : "달 선택"}>
+      <button
+        type="button"
+        className="hm-icon-btn"
+        aria-label={viewMode === "week" ? "이전 주" : "이전 달"}
+        onClick={() => (viewMode === "week" ? changeWeek(-1) : changeMonth(-1))}
+      >
+        <Icon name="chevronLeft" size={18} />
+      </button>
+      <span className="lw-period-label">
+        <Icon name="calendar" size={16} />
+        {dateDisplayLabel}
+      </span>
+      <button
+        type="button"
+        className="hm-icon-btn"
+        aria-label={viewMode === "week" ? "다음 주" : "다음 달"}
+        onClick={() => (viewMode === "week" ? changeWeek(1) : changeMonth(1))}
+        disabled={nextDisabled}
+      >
+        <Icon name="chevronRight" size={18} />
+      </button>
+    </nav>
+  );
+
   return (
     <AppShell
       activeTop="wallet"
@@ -531,7 +612,26 @@ function WalletPage({ user, onLogout }) {
         <div className="lw-layout">
           {/* 제목 + 주/월 보기 */}
           <div className="lw-head">
-            <h1 className="lw-title">가계부</h1>
+            <div className="lw-head-left">
+              <h1 className="lw-title">가계부</h1>
+              <div className="lw-tabs" role="tablist" aria-label="가계부 보기">
+                {[
+                  [false, "날짜"],
+                  [true, "목록"],
+                ].map(([isList, label]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    role="tab"
+                    aria-selected={listView === isList}
+                    className={listView === isList ? "is-active" : ""}
+                    onClick={() => setListView(isList)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="lw-seg" role="group" aria-label="보기 방식">
               {[
                 ["week", "주"],
@@ -551,32 +651,96 @@ function WalletPage({ user, onLogout }) {
             </div>
           </div>
 
+          {listView ? (
+            <div className="lw-listview" role="tabpanel" aria-label="내역 목록">
+              {periodNav}
+              <section className="hm-card lw-list-card" aria-label="수입·지출 내역">
+                <p className="lw-list-summary">
+                  <span>{listCount}건</span>
+                  <span className="lw-amt-in">수입 +{formatWon(listIncome)}</span>
+                  <span>지출 -{formatWon(listExpense)}</span>
+                </p>
+                {loading ? (
+                  <p className="lw-cal-state">불러오는 중…</p>
+                ) : error ? (
+                  <p className="lw-cal-state lw-cal-state--error">{error}</p>
+                ) : listGroups.length === 0 ? (
+                  <div className="hm-empty">
+                    <p>{viewMode === "week" ? "이 주에는 내역이 없어요." : "이 달에는 내역이 없어요."}</p>
+                  </div>
+                ) : (
+                  listGroups.map((g) => {
+                    const iso = toIsoDate(viewYear, viewMonth, g.day);
+                    const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "long" }).format(
+                      new Date(viewYear, viewMonth - 1, g.day),
+                    );
+                    return (
+                      <div key={g.day} className="lw-list-group">
+                        <div className="lw-list-group-head">
+                          <span>
+                            {g.day}일 {weekday}
+                            {iso === todayIso && <small>오늘</small>}
+                          </span>
+                          <span className="lw-list-group-sums">
+                            {g.income > 0 && <span className="lw-amt-in">+{formatWon(g.income)}</span>}
+                            {g.expense > 0 && <span>-{formatWon(g.expense)}</span>}
+                          </span>
+                        </div>
+                        <ul className="hm-tx-list">
+                          {g.rows.map((row) => {
+                            const inst = instrumentOf(row);
+                            return (
+                              <li key={row.id}>
+                                <button type="button" className="hm-tx" onClick={() => openInDateView(row)}>
+                                  <span className="hm-tx-icon">
+                                    <Icon name={iconFor(row)} size={18} />
+                                  </span>
+                                  <span className="hm-tx-mid">
+                                    <span className="hm-tx-name">{row.name}</span>
+                                    <span className="hm-tx-cat">
+                                      {/* 수입은 출처 enum(ALLOWANCE 등)이 오므로 입력 화면과 같은 한글 라벨로 */}
+                                      {row.type === "INCOME"
+                                        ? getCategoryLabel(row.cat, "income") || "수입"
+                                        : row.cat !== "—"
+                                          ? row.cat
+                                          : "미분류"}
+                                      {(inst || row.payment) && (
+                                        <span className="lw-list-pay">
+                                          {inst && (
+                                            <span
+                                              className="lw-list-dot"
+                                              style={{ background: issuerOf(inst.issuer).color }}
+                                              aria-hidden
+                                            />
+                                          )}
+                                          {inst ? inst.name : row.payment}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </span>
+                                  <span className="hm-tx-right">
+                                    <span className={`hm-tx-amount ${row.type === "INCOME" ? "lw-amt-in" : ""}`}>
+                                      {row.type === "INCOME" ? "+" : "-"}
+                                      {row.amount}
+                                    </span>
+                                    {row.aiStatus && <SignalChip signal={row.signal} />}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })
+                )}
+              </section>
+            </div>
+          ) : (
+          <>
           {/* 왼쪽 단(PC) — 기간 이동 · 총 지출 · 달력. 폰에서는 단이 풀려 한 줄로 이어진다 */}
           <div className="lw-col lw-col--main">
-            {/* 기간 이동 */}
-            <nav className="hm-card lw-period" aria-label={viewMode === "week" ? "주 선택" : "달 선택"}>
-              <button
-                type="button"
-                className="hm-icon-btn"
-                aria-label={viewMode === "week" ? "이전 주" : "이전 달"}
-                onClick={() => (viewMode === "week" ? changeWeek(-1) : changeMonth(-1))}
-              >
-                <Icon name="chevronLeft" size={18} />
-              </button>
-              <span className="lw-period-label">
-                <Icon name="calendar" size={16} />
-                {dateDisplayLabel}
-              </span>
-              <button
-                type="button"
-                className="hm-icon-btn"
-                aria-label={viewMode === "week" ? "다음 주" : "다음 달"}
-                onClick={() => (viewMode === "week" ? changeWeek(1) : changeMonth(1))}
-                disabled={nextDisabled}
-              >
-                <Icon name="chevronRight" size={18} />
-              </button>
-            </nav>
+            {periodNav}
 
             {/* ① 이번 달 총 지출 — 이 화면의 핵심 숫자 */}
             <section className="hm-card hm-hero" aria-labelledby="lw-hero-label">
@@ -974,6 +1138,8 @@ function WalletPage({ user, onLogout }) {
               )}
             </section>
           </div>
+          </>
+          )}
         </div>
       </main>
 

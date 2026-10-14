@@ -718,3 +718,108 @@
   background: var(--hm-sage-soft);
   color: var(--hm-green-ink);
 }
+
+/* ── [날짜 | 목록] 탭 — 제목 옆. 주/월 보기는 오른쪽 그대로 ── */
+.lw-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.lw-tabs {
+  display: inline-flex;
+  gap: 2px;
+}
+.lw-tabs button {
+  position: relative;
+  padding: 6px 8px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--hm-faint);
+  cursor: pointer;
+}
+.lw-tabs button.is-active {
+  color: var(--hm-ink, inherit);
+}
+.lw-tabs button.is-active::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  left: 8px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--hm-green-ink);
+}
+.lw-tabs button:focus-visible {
+  outline: 2px solid var(--hm-green-ink);
+  outline-offset: 1px;
+  border-radius: 6px;
+}
+
+/* ── 목록 탭 — 기간 이동 + 날짜별 수입·지출 ── */
+.lw-listview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.lw-list-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  font-variant-numeric: tabular-nums;
+}
+.lw-list-group + .lw-list-group {
+  margin-top: 14px;
+}
+.lw-list-group-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 2px 8px;
+  border-bottom: 1px solid var(--hm-line, rgba(61, 56, 48, 0.1));
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  font-variant-numeric: tabular-nums;
+}
+.lw-list-group-head small {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--hm-green-ink);
+}
+.lw-list-group-sums {
+  display: inline-flex;
+  gap: 10px;
+}
+.lw-list-pay {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+}
+.lw-list-pay::before {
+  content: "·";
+  margin-right: 2px;
+}
+.lw-list-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+@container lw (min-width: 860px) {
+  .lw-listview {
+    grid-column: 1 / -1;
+  }
+}
