@@ -345,6 +345,39 @@ class LedgerSaveEntriesTest {
     }
 
     @Test
+    void archivedInstrumentCannotBeAttachedToANewExpense() {
+        instrument(4L, USER_ID, InstrumentKind.CREDIT).archive(LocalDateTime.of(2026, 10, 10, 9, 0));
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                        new ExpenseEntry(null, 3L, 1500, "버스", SPENT_AT, PaymentMethod.CREDIT, null, 4L)), null, null)));
+
+        assertEquals(400, error.getStatusCode().value());
+        verifyNoInteractions(expenseService);
+    }
+
+    @Test
+    void editingMayKeepTheArchivedCardItAlreadyHadButNotSwitchToOne() {
+        Expense e = saved(USER_ID);
+        e.updatePaymentInstrument(4L); // 체크카드였던 저녁이 예전에 4번 카드에 붙어 있었다
+        instrument(4L, USER_ID, InstrumentKind.DEBIT).archive(LocalDateTime.of(2026, 10, 10, 9, 0));
+        instrument(6L, USER_ID, InstrumentKind.DEBIT).archive(LocalDateTime.of(2026, 10, 10, 9, 0));
+
+        // 메모만 고치면서 원래 카드(보관됨)를 그대로 보내면 통과
+        service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                new ExpenseEntry(7L, 3L, 12000, "저녁", SPENT_AT, PaymentMethod.DEBIT, "새 메모", 4L)), null, null));
+        assertEquals(4L, e.getPaymentInstrumentId());
+        assertEquals("새 메모", e.getMemo());
+
+        // 다른 보관 카드로 바꾸는 건 거절, 원래 연결은 그대로
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.saveEntries(USER_ID, new LedgerSaveRequest(List.of(
+                        new ExpenseEntry(7L, 3L, 12000, "저녁", SPENT_AT, PaymentMethod.DEBIT, null, 6L)), null, null)));
+        assertEquals(400, error.getStatusCode().value());
+        assertEquals(4L, e.getPaymentInstrumentId());
+    }
+
+    @Test
     void memoLongerThan200IsRejected() {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         String max = "가".repeat(200);

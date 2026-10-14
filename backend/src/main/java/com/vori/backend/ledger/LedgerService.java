@@ -127,12 +127,25 @@ public class LedgerService {
     private LedgerSaveRequest.ExpenseEntry withInstrumentMethod(Long userId, LedgerSaveRequest.ExpenseEntry e) {
         if (e.paymentInstrumentId() == null) return e;
         PaymentInstrument instrument = paymentInstrumentService.requireOwned(userId, e.paymentInstrumentId());
+        // 삭제(보관)한 카드는 새로 붙일 수 없다. 예전 지출을 고칠 때 원래 붙어 있던 그 카드는 그대로 둘 수 있다
+        // — 지난 기록의 연결을 지키려고 보관으로 지운 것이라서.
+        if (instrument.getArchivedAt() != null && !alreadyLinked(e.id(), instrument.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "삭제한 카드·계좌예요. 다른 결제수단을 골라 주세요.");
+        }
         PaymentMethod method = instrument.getKind().paymentMethod();
         if (method == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "예적금은 결제수단으로 고를 수 없어요.");
         }
         return new LedgerSaveRequest.ExpenseEntry(e.id(), e.categoryId(), e.amount(), e.item(), e.spentAt(),
                 method, e.memo(), e.paymentInstrumentId());
+    }
+
+    /** 고치는 지출(expenseId)에 이 카드가 이미 붙어 있는지. 새 지출(id 없음)이면 false. */
+    private boolean alreadyLinked(Long expenseId, Long instrumentId) {
+        if (expenseId == null) return false;
+        return expenseRepository.findById(expenseId)
+                .map(current -> instrumentId.equals(current.getPaymentInstrumentId()))
+                .orElse(false);
     }
 
     private ExpenseResponse createExpense(Long userId, LedgerSaveRequest.ExpenseEntry e) {
