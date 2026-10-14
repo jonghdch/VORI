@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AppRightSidebar from "../../components/AppRightSidebar";
 import AppShell from "../../components/AppShell";
@@ -14,6 +14,8 @@ import { SIGNAL_STATUS } from "../../signalLabels";
 import { listInstruments } from "../../api/paymentInstruments";
 import { issuerOf } from "../../constants/issuers";
 import { getCategoryLabel } from "../WalletEntry/utils";
+import LedgerFilterSheet, { EMPTY_LIST_FILTER, isListFilterActive } from "./LedgerFilterSheet";
+import LedgerSearchSheet, { SearchGlyph } from "./LedgerSearchSheet";
 // .home-main(본문 틀)은 HomeDashboard.css, 카드·버튼·판정 칩은 홈과 같은 HomeScreen.css(.hm-*)를 쓴다.
 // 가계부에만 있는 달력·하루 카드·내역은 WalletScreen.css(.lw-*).
 import "../Home/HomeDashboard.css";
@@ -56,6 +58,12 @@ const PAYMENT_LABEL = {
 function iconFor(row) {
   if (row.type === "INCOME") return "wallet";
   return categoryIcon(row.cat);
+}
+
+// 목록·검색 행의 카테고리 글자 — 수입은 출처 enum(ALLOWANCE 등)이 오므로 입력 화면과 같은 한글 라벨로
+function rowCategoryLabel(row) {
+  if (row.type === "INCOME") return getCategoryLabel(row.cat, "income") || "수입";
+  return row.cat !== "—" ? row.cat : "미분류";
 }
 
 function pad2(n) {
@@ -202,6 +210,8 @@ function WalletPage({ user, onLogout }) {
 
   // 달 경계를 넘는 주 이동 시 fetch 후 선택할 날짜를 임시 보관
   const pendingDayRef = useRef(null);
+  // 검색에서 다른 달 내역을 고르면, 그 달을 불러온 뒤 펼칠 행 id
+  const pendingOpenRef = useRef(null);
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -248,6 +258,12 @@ function WalletPage({ user, onLogout }) {
       .then((data) => {
         if (!alive) return;
         setRows(Array.isArray(data) ? data.map(toRow) : []);
+        const openId = pendingOpenRef.current;
+        pendingOpenRef.current = null;
+        if (openId) {
+          setSelectedId(openId);
+          requestAnimationFrame(() => dayCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+        }
       })
       .catch((e) => {
         if (!alive) return;
@@ -513,6 +529,29 @@ function WalletPage({ user, onLogout }) {
     return `${first.getMonth() + 1}월 ${first.getDate()}일 ~ ${last.getMonth() + 1}월 ${last.getDate()}일`;
   }, [viewMode, viewYear, viewMonth, weekDates]);
 
+  // ── 목록 탭 필터·검색 ──
+  // 필터는 이 화면에서만(주소에 안 남김). 기간은 [주|월] 이 맡는다.
+  const [listFilter, setListFilter] = useState(EMPTY_LIST_FILTER);
+  const [sheet, setSheet] = useState(null); // "filter" | "search" | null
+  const closeSheet = useCallback(() => setSheet(null), []);
+  const listFilterActive = isListFilterActive(listFilter);
+  // 필터 시트의 지출 카테고리 — 자주 쓰는 기본값 + 이 달에 실제로 쓰인 카테고리
+  const categoryOptions = useMemo(() => {
+    const set = new Set(["식비", "카페", "교통", "쇼핑", "문화", "생활", "의료", "교육", "고정비"]);
+    rows.forEach((r) => {
+      if (r.type === "EXPENSE" && r.cat && r.cat !== "—") set.add(r.cat);
+    });
+    return [...set];
+  }, [rows]);
+  // 검색 시트가 최근 몇 달을 불러올 때 — 검색어가 카테고리 한글 이름에도 걸리게 catLabel 을 붙인다
+  const loadSearchMonth = useCallback(
+    (ym) =>
+      getMonthlyLedger(ym).then((data) =>
+        (Array.isArray(data) ? data : []).map(toRow).map((r) => ({ ...r, catLabel: rowCategoryLabel(r) })),
+      ),
+    [],
+  );
+
   // ── 목록 탭 — 보고 있는 기간(월 / 주)의 수입·지출, 최신 날짜가 위로, 날짜별로 묶는다 ──
   const listGroups = useMemo(() => {
     const inRange =
@@ -523,7 +562,14 @@ function WalletPage({ user, onLogout }) {
               .map((d) => d.getDate()),
           )
         : null;
-    const sorted = rows.filter((r) => !inRange || inRange.has(r.day)).sort((a, b) => b.day - a.day);
+    const f = listFilter;
+    const passes = (r) =>
+      f.types[r.type] &&
+      (f.instrumentId == null || r.paymentInstrumentId === f.instrumentId) &&
+      (r.type !== "EXPENSE" || f.categories == null || f.categories.includes(r.cat));
+    const sorted = rows
+      .filter((r) => (!inRange || inRange.has(r.day)) && passes(r))
+      .sort((a, b) => b.day - a.day);
     const groups = [];
     sorted.forEach((r) => {
       const last = groups[groups.length - 1];
@@ -535,7 +581,7 @@ function WalletPage({ user, onLogout }) {
       income: g.rows.filter((r) => r.type === "INCOME").reduce((sum, r) => sum + r.amountNum, 0),
       expense: g.rows.filter((r) => r.type === "EXPENSE").reduce((sum, r) => sum + r.amountNum, 0),
     }));
-  }, [rows, viewMode, weekDates, viewYear, viewMonth]);
+  }, [rows, viewMode, weekDates, viewYear, viewMonth, listFilter]);
   const listIncome = listGroups.reduce((sum, g) => sum + g.income, 0);
   const listExpense = listGroups.reduce((sum, g) => sum + g.expense, 0);
   const listCount = listGroups.reduce((sum, g) => sum + g.rows.length, 0);
@@ -545,6 +591,56 @@ function WalletPage({ user, onLogout }) {
     setSelectedDay(row.day);
     setSelectedId(row.id);
     requestAnimationFrame(() => dayCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
+
+  // 검색 결과 고르기 — 지금 보는 달이면 바로, 다른 달이면 그 달로 옮겨 불러온 뒤 그날 카드에서 펼친다.
+  const openSearchResult = (row) => {
+    setSheet(null);
+    const [y, m] = row.dateIso.split("-").map(Number);
+    if (y === viewYear && m === viewMonth) {
+      openInDateView(row);
+      return;
+    }
+    setListView(false);
+    pendingDayRef.current = row.day;
+    pendingOpenRef.current = row.id;
+    setViewYear(y);
+    setViewMonth(m);
+  };
+
+  // 목록·검색이 같이 쓰는 행 — 아이콘 · 이름 / 카테고리 · 카드(색 점) · 금액 · 판정 칩
+  const renderListRow = (row, onPick) => {
+    const inst = instrumentOf(row);
+    return (
+      <li key={row.id}>
+        <button type="button" className="hm-tx" onClick={() => onPick(row)}>
+          <span className="hm-tx-icon">
+            <Icon name={iconFor(row)} size={18} />
+          </span>
+          <span className="hm-tx-mid">
+            <span className="hm-tx-name">{row.name}</span>
+            <span className="hm-tx-cat">
+              {rowCategoryLabel(row)}
+              {(inst || row.payment) && (
+                <span className="lw-list-pay">
+                  {inst && (
+                    <span className="lw-list-dot" style={{ background: issuerOf(inst.issuer).color }} aria-hidden />
+                  )}
+                  {inst ? inst.name : row.payment}
+                </span>
+              )}
+            </span>
+          </span>
+          <span className="hm-tx-right">
+            <span className={`hm-tx-amount ${row.type === "INCOME" ? "lw-amt-in" : ""}`}>
+              {row.type === "INCOME" ? "+" : "-"}
+              {row.amount}
+            </span>
+            {row.aiStatus && <SignalChip signal={row.signal} />}
+          </span>
+        </button>
+      </li>
+    );
   };
 
   const nextDisabled =
@@ -655,6 +751,27 @@ function WalletPage({ user, onLogout }) {
             <div className="lw-listview" role="tabpanel" aria-label="내역 목록">
               {periodNav}
               <section className="hm-card lw-list-card" aria-label="수입·지출 내역">
+                <div className="lw-list-toolbar">
+                  <button
+                    type="button"
+                    className={`lw-filter-btn ${listFilterActive ? "is-active" : ""}`}
+                    aria-haspopup="dialog"
+                    onClick={() => setSheet("filter")}
+                  >
+                    필터
+                    {listFilterActive && <span className="lw-filter-dot" aria-label="필터 적용 중" />}
+                    <Icon name="chevronDown" size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="hm-icon-btn lw-search-btn"
+                    aria-label="내역 검색"
+                    aria-haspopup="dialog"
+                    onClick={() => setSheet("search")}
+                  >
+                    <SearchGlyph size={20} />
+                  </button>
+                </div>
                 <p className="lw-list-summary">
                   <span>{listCount}건</span>
                   <span className="lw-amt-in">수입 +{formatWon(listIncome)}</span>
@@ -666,7 +783,13 @@ function WalletPage({ user, onLogout }) {
                   <p className="lw-cal-state lw-cal-state--error">{error}</p>
                 ) : listGroups.length === 0 ? (
                   <div className="hm-empty">
-                    <p>{viewMode === "week" ? "이 주에는 내역이 없어요." : "이 달에는 내역이 없어요."}</p>
+                    <p>
+                      {listFilterActive
+                        ? "필터에 맞는 내역이 없어요."
+                        : viewMode === "week"
+                          ? "이 주에는 내역이 없어요."
+                          : "이 달에는 내역이 없어요."}
+                    </p>
                   </div>
                 ) : (
                   listGroups.map((g) => {
@@ -687,54 +810,33 @@ function WalletPage({ user, onLogout }) {
                           </span>
                         </div>
                         <ul className="hm-tx-list">
-                          {g.rows.map((row) => {
-                            const inst = instrumentOf(row);
-                            return (
-                              <li key={row.id}>
-                                <button type="button" className="hm-tx" onClick={() => openInDateView(row)}>
-                                  <span className="hm-tx-icon">
-                                    <Icon name={iconFor(row)} size={18} />
-                                  </span>
-                                  <span className="hm-tx-mid">
-                                    <span className="hm-tx-name">{row.name}</span>
-                                    <span className="hm-tx-cat">
-                                      {/* 수입은 출처 enum(ALLOWANCE 등)이 오므로 입력 화면과 같은 한글 라벨로 */}
-                                      {row.type === "INCOME"
-                                        ? getCategoryLabel(row.cat, "income") || "수입"
-                                        : row.cat !== "—"
-                                          ? row.cat
-                                          : "미분류"}
-                                      {(inst || row.payment) && (
-                                        <span className="lw-list-pay">
-                                          {inst && (
-                                            <span
-                                              className="lw-list-dot"
-                                              style={{ background: issuerOf(inst.issuer).color }}
-                                              aria-hidden
-                                            />
-                                          )}
-                                          {inst ? inst.name : row.payment}
-                                        </span>
-                                      )}
-                                    </span>
-                                  </span>
-                                  <span className="hm-tx-right">
-                                    <span className={`hm-tx-amount ${row.type === "INCOME" ? "lw-amt-in" : ""}`}>
-                                      {row.type === "INCOME" ? "+" : "-"}
-                                      {row.amount}
-                                    </span>
-                                    {row.aiStatus && <SignalChip signal={row.signal} />}
-                                  </span>
-                                </button>
-                              </li>
-                            );
-                          })}
+                          {g.rows.map((row) => renderListRow(row, openInDateView))}
                         </ul>
                       </div>
                     );
                   })
                 )}
               </section>
+              {sheet === "filter" && (
+                <LedgerFilterSheet
+                  value={listFilter}
+                  instruments={instruments}
+                  categoryOptions={categoryOptions}
+                  onApply={(next) => {
+                    setListFilter(next);
+                    setSheet(null);
+                  }}
+                  onClose={closeSheet}
+                />
+              )}
+              {sheet === "search" && (
+                <LedgerSearchSheet
+                  loadMonth={loadSearchMonth}
+                  today={today}
+                  renderRow={(row) => renderListRow(row, openSearchResult)}
+                  onClose={closeSheet}
+                />
+              )}
             </div>
           ) : (
           <>
