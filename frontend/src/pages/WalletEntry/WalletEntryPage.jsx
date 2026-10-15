@@ -26,7 +26,8 @@ import "./WalletRecord.css";
 
 // 지출 기록 — 한 건씩 적는다. 날짜는 다른 화면에서 ?date= 로 정해 들어오고, 머리의 날짜 칩으로 바꿀 수 있다.
 // 폰: 한 줄 + 아래 고정 버튼. PC: 가운데 입력 카드 한 장. 그날 기록은 머리의 「기록 내역」 버튼으로 여는 창에서 본다.
-// 지출 수정(?edit=true)으로 들어오면 그날 첫 지출을 불러와 고치고, 목록에서 다른 지출을 눌러 바꿔 고친다.
+// 지출 수정(?edit=<지출 id>)으로 들어오면 그 지출을, ?edit=true 면 그날 첫 지출을 불러와 고친다.
+// 목록에서 다른 지출을 눌러 바꿔 고칠 수 있다.
 
 const TYPES = [
   { id: "expense", label: "지출" },
@@ -70,7 +71,9 @@ function WalletEntryPage({ user }) {
     toIsoDate(parseIsoDate(requestedDate)) === requestedDate;
   // 쿼리를 직접 수정해도 미래 날짜에는 가계부를 작성할 수 없다.
   const dateStr = requestedDateIsValid && requestedDate <= todayStr ? requestedDate : todayStr;
-  const isEditMode = params.get("edit") === "true";
+  const editParam = params.get("edit");
+  const editTargetId = /^\d+$/.test(editParam || "") ? Number(editParam) : null;
+  const isEditMode = editParam === "true" || editTargetId != null;
 
   // 사용자 설정의 기본 결제수단 — 없으면 CREDIT
   const defaultPayment = loadUserSettings().defaultPaymentMethod || "CREDIT";
@@ -78,6 +81,7 @@ function WalletEntryPage({ user }) {
   // 설정 > 카드·계좌에 등록한 결제수단. 지출은 결제 수단 칩 앞에(예적금 제외), 수입은 받은 곳 칩으로
   // (신용카드 제외 — 체크카드는 연결 통장으로 받는 것). 못 불러와도 칩 없이 그대로 적을 수 있으니 조용히 넘어간다.
   const [allInstruments, setAllInstruments] = useState([]);
+  const [instrumentsLoaded, setInstrumentsLoaded] = useState(false);
   const instruments = allInstruments.filter((i) => i.group !== "SAVINGS");
   const incomeAccounts = allInstruments.filter((i) => i.kind !== "CREDIT");
   const savingsAccounts = allInstruments.filter((i) => i.kind === "SAVINGS"); // 저축의 모은 곳
@@ -85,7 +89,9 @@ function WalletEntryPage({ user }) {
     let alive = true;
     listInstruments()
       .then((list) => {
-        if (alive) setAllInstruments(list);
+        if (!alive) return;
+        setAllInstruments(list);
+        setInstrumentsLoaded(true);
       })
       .catch(() => {});
     return () => {
@@ -215,13 +221,15 @@ function WalletEntryPage({ user }) {
     let alive = true;
     setDay(null);
     loadDay().then((d) => {
-      // 지출 수정으로 들어왔으면 그날 첫 지출을 바로 연다
-      if (alive && isEditMode && d?.expenses?.length) editExpense(d.expenses[0]);
+      // 지출 수정으로 들어왔으면 고른 지출(없으면 그날 첫 지출)을 바로 연다
+      if (alive && isEditMode && d?.expenses?.length) {
+        editExpense(d.expenses.find((e) => e.id === editTargetId) ?? d.expenses[0]);
+      }
     });
     return () => {
       alive = false;
     };
-  }, [loadDay, isEditMode, editExpense]);
+  }, [loadDay, isEditMode, editTargetId, editExpense]);
 
   // ── 내역 → 자동 분류 ─────────────────────────────────────
   // 지출: 백엔드 분류(내 기록·규칙·Gemini). 400ms 쉬었다 묻는다. 직접 고른 카테고리는 덮지 않는다.
@@ -372,6 +380,14 @@ function WalletEntryPage({ user }) {
     setSubmitError(null);
     try {
       const item = form.name.trim();
+      // 삭제한 카드·계좌는 목록(칩)에 없다. 「새로 쓰기」·삭제 뒤·임시저장에서 그 id 가 남아 있으면 보내지 않는다
+      // — 서버가 새 기록에는 거절해서, 사용자가 고르지도 않은 카드 때문에 저장이 막힌다.
+      // 저장된 지출을 고칠 때(dbId)는 원래 붙어 있던 카드를 그대로 보낸다(서버가 허용). 목록을 못 불러왔으면 거르지 않는다.
+      const instrumentFor = (list) => {
+        const id = form.paymentInstrumentId ?? null;
+        if (id == null || !instrumentsLoaded || form.dbId || list.some((i) => i.id === id)) return id;
+        return null;
+      };
       await saveLedgerEntries({
         expenses:
           type === "expense"
@@ -381,7 +397,7 @@ function WalletEntryPage({ user }) {
                 amount: amountNum,
                 categoryId: form.categoryId,
                 paymentMethod: form.paymentMethod,
-                paymentInstrumentId: form.paymentInstrumentId ?? null,
+                paymentInstrumentId: instrumentFor(instruments),
                 spentAt: `${dateStr}T00:00:00`,
                 memo: form.memo ?? "", // 빈 글자 = 메모 없음(수정이면 지움)
               }]
@@ -392,7 +408,7 @@ function WalletEntryPage({ user }) {
                 item,
                 amount: amountNum,
                 source: form.categoryEnum || "OTHER",
-                paymentInstrumentId: form.paymentInstrumentId ?? null, // 받은 곳(계좌·현금)
+                paymentInstrumentId: instrumentFor(incomeAccounts), // 받은 곳(계좌·현금)
                 paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
                 receivedAt: dateStr,
               }]
@@ -405,7 +421,7 @@ function WalletEntryPage({ user }) {
                 savingType: form.categoryEnum || "DEPOSIT",
                 savedAt: dateStr,
                 // 모은 곳은 예적금에서만 (자동 분류가 투자로 바꿔 놓았으면 보내지 않는다)
-                paymentInstrumentId: (form.categoryEnum || "DEPOSIT") === "DEPOSIT" ? form.paymentInstrumentId ?? null : null,
+                paymentInstrumentId: (form.categoryEnum || "DEPOSIT") === "DEPOSIT" ? instrumentFor(savingsAccounts) : null,
               }]
             : [],
       });

@@ -689,7 +689,7 @@ function WalletPage({ user, onLogout }) {
       categoryLabel={rowCategoryLabel(row)}
       instrument={instrumentOf(row)}
       onOpenDate={() => openInDateView(row)}
-      onEdit={() => navigate(`/wallet/new?date=${row.dateIso}&edit=true`)}
+      onEdit={() => navigate(`/wallet/new?date=${row.dateIso}&edit=${row.dbId}`)}
     />
   );
 
