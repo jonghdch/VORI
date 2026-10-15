@@ -10,7 +10,7 @@ import { PET_NAME_GATE_EVENT, getPetNameGateState } from "./PetNameGate";
 /**
  * 출석 팝업을 언제 띄울지 정한다. AppShell 이 모든 화면에 둔다.
  *
- * - 자동: 하루 한 번, 아직 출석하지 않았을 때. 닫으면 그날은 다시 안 뜬다(localStorage).
+ * - 자동: 하루 한 번, 아직 출석하지 않았을 때. 닫으면 그날은 다시 안 뜬다(localStorage, 로그인·로그아웃 때 지움).
  * - 수동: 계정 메뉴의 "출석 확인" 이 OPEN_ATTENDANCE_EVENT 를 쏘면 언제든 다시 연다.
  *
  * 펫 이름 짓기 팝업(PetNameGate)이 먼저다. 이름 지을 펫이 있는지 확인이 끝날 때까지 기다리고,

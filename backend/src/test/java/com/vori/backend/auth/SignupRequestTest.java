@@ -43,6 +43,20 @@ class SignupRequestTest {
                 new SignupRequest("a@vori.com", "password", "닉네임", "홍길동", true, true, false)));
     }
 
+    /** 약관 칸을 빼고(null) 보내도 막힌다 — @AssertTrue 만으로는 null 이 통과해 동의 없이 가입됐다. */
+    @Test
+    void missingConsentIsRejected() {
+        assertEquals(Set.of("이용약관 동의가 필요합니다"), messages(
+                new SignupRequest("a@vori.com", "pw123!!!", "닉네임", "홍길동", null, true, false)));
+        assertEquals(Set.of("개인정보 수집·이용 동의가 필요합니다"), messages(
+                new SignupRequest("a@vori.com", "pw123!!!", "닉네임", "홍길동", true, null, false)));
+        assertEquals(Set.of("이용약관 동의가 필요합니다"), messages(
+                new SignupRequest("a@vori.com", "pw123!!!", "닉네임", "홍길동", false, true, false)));
+        // 마케팅 동의는 선택이라 비워도 된다
+        assertTrue(validator.validate(
+                new SignupRequest("a@vori.com", "pw123!!!", "닉네임", "홍길동", true, true, null)).isEmpty());
+    }
+
     private Set<String> messages(SignupRequest req) {
         return validator.validate(req).stream()
                 .map(ConstraintViolation::getMessage)

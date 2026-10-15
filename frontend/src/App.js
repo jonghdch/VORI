@@ -22,6 +22,7 @@ import HomeDashboard from "./pages/Home/HomeDashboard";
 import { me, logout } from "./api/auth";
 import { SESSION_EXPIRED_EVENT } from "./api/http";
 import { getOnboardingStatus } from "./api/onboarding";
+import { clearShownToday } from "./components/AttendanceModal";
 import { ADMIN_NAV } from "./pages/Admin/adminNav";
 
 // Story 페이지는 three.js + GLTFLoader 를 포함해서 무거움 (~100+ KB).
@@ -226,7 +227,9 @@ function App() {
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, expire);
   }, []);
 
+  // 출석 팝업의 「오늘 보여 줌」 표시는 기기에 남으므로 계정이 바뀌는 때 지운다 (AttendanceModal 참고).
   const handleLogin = (u) => {
+    clearShownToday();
     setAuthFailed(false);
     setUser(u);
   };
@@ -235,6 +238,7 @@ function App() {
     try {
       await logout();
     } finally {
+      clearShownToday();
       setUser(null);
     }
   };

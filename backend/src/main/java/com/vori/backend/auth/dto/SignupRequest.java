@@ -3,6 +3,7 @@ package com.vori.backend.auth.dto;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -32,9 +33,13 @@ public record SignupRequest(
     @Size(min = 2, max = 30, message = "이름은 2~30자로 입력해 주세요")
     String name,
 
+    // @AssertTrue 는 null 을 통과시킨다 — 칸을 빼고 보내면 동의 없이 가입되고 동의 시각(termsAgreedAt)까지
+    // 남는다(UserService.signup). @NotNull 을 같이 달아 빠진 것도 막는다. 가입 화면은 늘 true/false 를 보낸다.
+    @NotNull(message = "이용약관 동의가 필요합니다")
     @AssertTrue(message = "이용약관 동의가 필요합니다")
     Boolean termsAgreed,
 
+    @NotNull(message = "개인정보 수집·이용 동의가 필요합니다")
     @AssertTrue(message = "개인정보 수집·이용 동의가 필요합니다")
     Boolean privacyAgreed,
 
