@@ -42,6 +42,10 @@ public class Income {
         columnDefinition = "ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY')")
     private PaymentMethod paymentMethod;
 
+    // 받은 곳 — 설정 > 카드·계좌에서 등록한 입출금·예적금·현금(payment_instruments.id). 고르지 않았으면 NULL.
+    @Column(name = "payment_instrument_id")
+    private Long paymentInstrumentId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false,
         columnDefinition = "ENUM('ALLOWANCE','PART_TIME','SCHOLARSHIP','SIDE_JOB','GIFT','INTEREST','OTHER')")

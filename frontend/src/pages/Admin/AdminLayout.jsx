@@ -99,9 +99,13 @@ function AdminLayout() {
                     <NavLink
                       to={item.to}
                       className={({ isActive }) =>
-                        isActive
-                          ? "admin-nav-link admin-nav-link--active"
-                          : "admin-nav-link"
+                        [
+                          "admin-nav-link",
+                          isActive && "admin-nav-link--active",
+                          item.soon && "admin-nav-link--soon",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")
                       }
                     >
                       {idx === 0 && NAV_ICONS[item.to] && (
@@ -110,6 +114,9 @@ function AdminLayout() {
                         </span>
                       )}
                       {item.label}
+                      {item.soon && (
+                        <span className="admin-nav-soon">준비 중</span>
+                      )}
                     </NavLink>
                   </li>
                 ))}

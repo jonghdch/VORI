@@ -306,6 +306,41 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+/* 결제 수단 — 라벨 옆 「카드·계좌 관리」, 내 카드 칩과 종류 칩 사이 구분선 */
+.wr-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wr-label-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--wr-faint);
+  cursor: pointer;
+}
+.wr-label-link:hover { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.wr-label-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.wr-chip-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 3px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+.wr-chip-divider {
+  align-self: stretch;
+  width: 1px;
+  margin: 4px 2px;
+  background: var(--wr-line);
+}
 .wr-chip {
   display: inline-flex;
   align-items: center;

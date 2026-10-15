@@ -39,6 +39,9 @@ public record LedgerSaveRequest(
     /**
      * 지출 한 행. 검증 문구는 단건 등록(ExpenseCreateRequest)과 같다.
      * memo: 사용자만 보는 기록(판정·분류·AI 에 안 씀). 수정 때 null 이면 그대로 두고, 빈 글자면 지운다.
+     * paymentInstrumentId: 내 카드·계좌에서 골랐으면 그 id. 있으면 paymentMethod 는 그 카드 종류로 서버가 맞춘다.
+     *   memo 와 달리 수정 때 null 이면 카드 연결을 <b>지운다</b> — 화면은 행마다 지금 고른 값을 늘 보내고,
+     *   "카드 없이 결제수단만" 으로 바꾸는 것도 null 로 표현하기 때문이다. 호출자는 이 값을 빠뜨리지 말 것.
      */
     public record ExpenseEntry(
             Long id,
@@ -58,6 +61,14 @@ public record LedgerSaveRequest(
             PaymentMethod paymentMethod,
 
             @Size(max = 200, message = "메모는 최대 200자까지 입력 가능합니다.")
-            String memo
-    ) {}
+            String memo,
+
+            Long paymentInstrumentId
+    ) {
+        /** 카드·계좌를 고르지 않은 행 — 카드 기능 전의 호출 모양 그대로. */
+        public ExpenseEntry(Long id, Long categoryId, Integer amount, String item, LocalDateTime spentAt,
+                            PaymentMethod paymentMethod, String memo) {
+            this(id, categoryId, amount, item, spentAt, paymentMethod, memo, null);
+        }
+    }
 }

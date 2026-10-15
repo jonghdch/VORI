@@ -151,6 +151,7 @@ UNIQUE(parent_id, name)
 | 시각 입력 여부 | `time_provided` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | TRUE = 사용자가 시각까지 입력, FALSE = 날짜만 |
 | 지출 금액 | `amount` |  | `INT UNSIGNED NOT NULL` | 실제 지출액 |
 | 결제 수단 | `payment_method` |  | `ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY') NULL` | 현금/체크/신용/이체/모바일페이. 미입력은 NULL |
+| 내 카드·계좌 | `payment_instrument_id` | FK | `BIGINT NULL` | → `payment_instruments(id)` `ON DELETE SET NULL`. 등록한 카드·계좌를 골랐을 때만 값. 있으면 `payment_method` 는 그 카드 종류로 맞춘다 (V53) |
 | 품목 | `item` |  | `VARCHAR(100) NOT NULL` | 지출 항목 |
 | 메모 | `memo` |  | `VARCHAR(200) NULL` | 사용자 자발적 메모. 입력해두면 AI 사유 질문 안 함 |
 | 반복 결제 | `is_recurring` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | 통신비·구독 등 자동 결제. TRUE 면 신호등 산정 시 RED 자동 제외 |
@@ -178,7 +179,9 @@ FK:
 CONSTRAINT fk_expenses_user
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 CONSTRAINT fk_expenses_category
-  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT,
+CONSTRAINT fk_expenses_payment_instrument
+  FOREIGN KEY (payment_instrument_id) REFERENCES payment_instruments(id) ON DELETE SET NULL
 ```
 
 (상세 사유는 변경 이력 #3 `expenses` 변경 — 카테고리 컬럼 교체 / #8 `expenses` 컬럼 정리 / #12 일반 가계부 표준 필드 보강 참조)
@@ -194,6 +197,7 @@ CONSTRAINT fk_expenses_category
 | 수입 일자 | `received_at` | IDX | `DATE NOT NULL` | 수입 날짜 (시각은 받지 않음) |
 | 수입 금액 | `amount` |  | `INT UNSIGNED NOT NULL` | 수입액 |
 | 수금 수단 | `payment_method` |  | `ENUM('CASH','DEBIT','CREDIT','TRANSFER','MOBILE_PAY') NULL` | expenses 와 같은 ENUM 공유. 미입력은 NULL |
+| 받은 곳 | `payment_instrument_id` | FK | `BIGINT NULL` | → `payment_instruments(id)` `ON DELETE SET NULL`. 내 입출금·체크카드·예적금·현금 (신용카드 X). 고르면 `payment_method` 가 비었을 때 채운다 (V54) |
 | 출처 | `source` |  | `ENUM('ALLOWANCE','PART_TIME','SCHOLARSHIP','SIDE_JOB','GIFT','INTEREST','OTHER') NOT NULL` | 수입 출처 (대학생 맥락) |
 | 반복 수입 | `is_recurring` |  | `BOOLEAN NOT NULL DEFAULT FALSE` | 월급·정기 알바 등 |
 | 메모 | `note` |  | `VARCHAR(200) NULL` | 선택 메모 (expenses 의 memo 와 같은 역할, 컬럼명은 기존 유지) |
@@ -534,6 +538,45 @@ UNIQUE(pet_id, pet_title_id)
 ```
 
 한 번 딴 칭호는 회수하지 않는다. 배웅한 펫의 칭호는 그대로 기록으로 남는다.
+
+---
+
+### 23. 내 카드·계좌 `payment_instruments` (V53)
+
+환경설정 > 카드·계좌에서 사용자가 직접 등록한다. 자동 연동이 아니라 "이 카드를 쓴다"는 꼬리표라 거래·잔액을 가져오지 않고, 카드 번호 같은 민감 정보는 받지 않는다.
+
+| 논리명 | 물리명 | 키 | 타입 | 설명 |
+|---|---|---|---|---|
+| 결제수단 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | |
+| 사용자 식별자 | `user_id` | FK, IDX | `BIGINT NOT NULL` | → `users(id)` `ON DELETE CASCADE` |
+| 종류 | `kind` |  | `ENUM('DEBIT','CREDIT','CHECKING','SAVINGS','CASH') NOT NULL` | 체크/신용/입출금 계좌/저축 통장(예금·적금·청약·파킹통장)/현금. 지출의 `payment_method` 로는 DEBIT·CREDIT·TRANSFER(입출금)·CASH 에 대응, 예적금은 결제수단으로 못 고른다 |
+| 카드사·은행 | `issuer` |  | `VARCHAR(20) NOT NULL` | 코드(`TOSSBANK`, `KB` …). 이름·색은 프론트 `constants/issuers.js` |
+| 이름 | `name` |  | `VARCHAR(40) NOT NULL` | 사용자가 붙인 이름 (예: K-패스) |
+| 등록 시 잔액 | `opening_balance` |  | `INT UNSIGNED NOT NULL DEFAULT 0` | 계좌·예적금·현금만. 카드는 0. 이후 입출금은 아직 반영하지 않는다 |
+| 보관 일시 | `archived_at` | IDX | `DATETIME NULL` | 삭제 = 보관. 목록에서만 빠지고 이 카드로 적은 지출의 연결은 남는다 |
+| 등록 일시 | `created_at` |  | `DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP` | |
+| 수정 일시 | `updated_at` |  | `DATETIME NULL ON UPDATE CURRENT_TIMESTAMP` | |
+
+인덱스: `idx_payment_instruments_user (user_id, archived_at)`. 한 사람당 보관 안 한 카드·계좌는 30개까지 (서비스에서 제한).
+
+### 24. 저축 `savings` (V3, V55)
+
+예금·투자 기록. 단순 단방향 기록이라 수익률·시세는 추적하지 않는다. 수입·지출과 별개 흐름이고 AI 분석 없음.
+
+| 논리명 | 물리명 | 키 | 타입 | 설명 |
+|---|---|---|---|---|
+| 저축 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | |
+| 사용자 식별자 | `user_id` | FK, IDX | `BIGINT NOT NULL` | → `users(id)` `ON DELETE CASCADE` |
+| 저축일 | `saved_at` | IDX | `DATE NOT NULL` | `idx_savings_user_date (user_id, saved_at)` |
+| 금액 | `amount` |  | `INT UNSIGNED NOT NULL` | |
+| 항목 | `item` |  | `VARCHAR(100) NOT NULL` | 예: 청년도약계좌 |
+| 유형 | `saving_type` |  | `ENUM('DEPOSIT','INVEST') NOT NULL` | 예적금 / 투자 |
+| 모은 곳 | `payment_instrument_id` | FK | `BIGINT NULL` | → `payment_instruments(id)` `ON DELETE SET NULL` (V55). 예적금일 때만, 저축 통장(SAVINGS)만 고를 수 있다. 투자·고르지 않은 저축·V55 이전 저축은 NULL |
+| 메모 | `note` |  | `VARCHAR(200) NULL` | |
+| 등록 일시 | `created_at` |  | `DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP` | |
+| 수정 일시 | `updated_at` |  | `DATETIME NULL ON UPDATE CURRENT_TIMESTAMP` | |
+
+> `payment_instrument_id` 의 `ON DELETE SET NULL` 은 카드·계좌 행이 실제로 지워질 때(사용자 탈퇴로 CASCADE)만 일어난다. 화면의 "삭제"는 보관(`archived_at`)이라 연결이 남는다. `expenses`·`incomes` 의 같은 컬럼도 마찬가지.
 
 ---
 
@@ -964,3 +1007,48 @@ VORI 의 AI 사유 질문은 **이례적인 지출에만** 적용. 그 외 입�
 마이그레이션: `V2__add_payment_memo_recurring.sql`.
 
 V1 으로 만든 행은 `payment_method=NULL`, `memo=NULL`, `is_recurring=FALSE`, `updated_at=NULL` 로 자동 채워짐 (DEFAULT 또는 NULL).
+
+### 13. 내 카드·계좌 — `payment_instruments` 신설, `expenses.payment_instrument_id` 추가 (V53)
+
+V2 때 보류한 "계좌·지갑명"을 별도 테이블로 정규화했다. 사용자가 쓰는 카드·계좌를 등록해 두고, 지출을 적을 때 그중 하나를 고른다.
+
+| 변경 | 대상 | 비고 |
+|---|---|---|
+| 신설 | `payment_instruments` | 위 23번 표 참조 |
+| 추가 | `expenses.payment_instrument_id BIGINT NULL` | FK `ON DELETE SET NULL`. 고르지 않은 지출과 V53 이전 지출은 NULL |
+
+- API: `GET/POST /api/payment-instruments`, `PATCH /api/payment-instruments/{id}` (카드사·이름·잔액 수정, 종류는 못 바꿈), `DELETE /api/payment-instruments/{id}` (보관). `POST /api/ledger/entries` 의 지출 행에 `paymentInstrumentId` 를 받고, `GET /api/ledger`·`GET /api/expenses` 응답에 같은 필드가 붙는다.
+- 카드를 고르면 서버가 `payment_method` 를 그 카드 종류로 맞춘다. 남의 카드는 404, 예적금은 400.
+- 지출의 결제수단 종류가 바뀌면 `payment_instrument_id` 를 비운다 (다른 카드라는 뜻).
+- 삭제(보관)한 카드는 새 지출에 붙일 수 없다(400). 단, 원래 그 카드가 붙어 있던 지출을 고칠 때는 연결을 그대로 둘 수 있다 — 다른 보관 카드로 바꾸는 건 400.
+- 지출 수정 때 `paymentInstrumentId` 가 null 이면 연결을 지운다(memo 의 "null 이면 그대로"와 다름). 화면은 행마다 지금 고른 값을 늘 보낸다.
+
+마이그레이션: `V53__payment_instruments.sql`.
+
+### 14. 수입의 받은 곳 — `incomes.payment_instrument_id` 추가 (V54)
+
+지출에 카드를 붙인 것(13번)처럼, 수입도 어느 계좌·현금으로 받았는지 고른다.
+
+| 변경 | 대상 | 비고 |
+|---|---|---|
+| 추가 | `incomes.payment_instrument_id BIGINT NULL` | FK `ON DELETE SET NULL`. 고르지 않은 수입과 V54 이전 수입은 NULL |
+
+- 고를 수 있는 것: 본인의, 삭제(보관)하지 않은 입출금 계좌·체크카드·예적금·현금. 체크카드는 연결 통장으로 받은 것으로 본다. 신용카드는 400, 남의 것은 404.
+- 받은 곳을 고르면 `payment_method` 를 그 종류로 맞춘다 (현금 → CASH, 입출금·체크카드·예적금 → TRANSFER). 화면이 다른 값을 보내도 받은 곳이 이긴다 — 지출과 같은 규칙.
+- `POST /api/incomes`·`POST /api/ledger/entries` 의 수입 행에 `paymentInstrumentId`, 수입 조회와 `GET /api/ledger` 응답에 같은 필드.
+
+마이그레이션: `V54__income_payment_instrument.sql`.
+
+### 15. 저축의 모은 곳 — `savings.payment_instrument_id` 추가 (V55)
+
+저축도 어느 저축 통장에 모았는지 고른다. 투자는 계좌가 복잡해져(증권 계좌 종류가 따로 필요) 이번 범위에서 뺐다.
+
+| 변경 | 대상 | 비고 |
+|---|---|---|
+| 추가 | `savings.payment_instrument_id BIGINT NULL` | FK `ON DELETE SET NULL`. 투자·고르지 않은 저축·V55 이전 저축은 NULL |
+
+- 고를 수 있는 것: 본인의, 삭제(보관)하지 않은 저축 통장(`kind = SAVINGS`)만. 다른 종류·삭제한 것은 400, 남의 것은 404.
+- 예적금(`saving_type = DEPOSIT`)에서만 고른다. 투자인데 보내면 400.
+- 화면 라벨 "예적금" 종류는 "저축 통장"으로 바꿔 부른다 (DB 값 SAVINGS 그대로).
+
+마이그레이션: `V55__saving_payment_instrument.sql`.

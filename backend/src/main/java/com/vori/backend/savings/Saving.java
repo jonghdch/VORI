@@ -42,6 +42,10 @@ public class Saving {
         columnDefinition = "ENUM('DEPOSIT','INVEST')")
     private SavingType savingType;
 
+    // 모은 곳 — 설정 > 카드·계좌에서 등록한 저축 통장(payment_instruments.id). 투자이거나 고르지 않았으면 NULL.
+    @Column(name = "payment_instrument_id")
+    private Long paymentInstrumentId;
+
     @Column(length = 200)
     private String note;
 

@@ -28,10 +28,20 @@ public record IncomeCreateRequest(
         LocalDate receivedAt,
         PaymentMethod paymentMethod,
 
-        Boolean isRecurring
+        Boolean isRecurring,
+
+        // 받은 곳 — 내 입출금 계좌·체크카드(연결 통장)·예적금·현금 id. 신용카드는 고를 수 없다.
+        // 고르면 paymentMethod 는 그 계좌에 맞춰 서버가 정한다(현금 → CASH, 그 밖 → TRANSFER).
+        Long paymentInstrumentId
 ) {
     public IncomeCreateRequest {
         if (receivedAt == null) receivedAt = LocalDate.now();
         if (isRecurring == null) isRecurring = false;
+    }
+
+    /** 받은 곳을 고르지 않은 수입 — 받은 곳 기능 전의 호출 모양 그대로. */
+    public IncomeCreateRequest(IncomeSource source, Integer amount, String item, LocalDate receivedAt,
+                               PaymentMethod paymentMethod, Boolean isRecurring) {
+        this(source, amount, item, receivedAt, paymentMethod, isRecurring, null);
     }
 }
