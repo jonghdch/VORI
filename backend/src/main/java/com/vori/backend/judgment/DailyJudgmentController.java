@@ -52,6 +52,15 @@ public class DailyJudgmentController {
         return dailyJudgmentService.getByMonth(principal.getId(), YearMonth.parse(month));
     }
 
+    /** 예외 지출 사유 입력을 마쳤거나 건너뛰었을 때 — 그날 판정을 확정하고 보상을 지급한다 (docs/judgment-flow.md ③). */
+    @PostMapping("/finalize")
+    public DailyJudgmentResponse finalizeDate(@AuthenticationPrincipal UserPrincipal principal,
+            @org.springframework.web.bind.annotation.RequestParam
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate date) {
+        return dailyJudgmentService.finalizeDate(principal.getId(), principal.getRole(), date);
+    }
+
     @PostMapping("/today")
     public DailyJudgmentResponse judgeToday(@AuthenticationPrincipal UserPrincipal principal) {
         return dailyJudgmentService.judgeToday(principal.getId(), principal.getRole());

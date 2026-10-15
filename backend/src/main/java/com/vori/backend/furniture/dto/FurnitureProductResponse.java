@@ -6,7 +6,7 @@ import com.vori.backend.theme.ThemeMaster;
 import java.math.BigDecimal;
 
 /**
- * 상점 가구 상품. releaseBonusPct 를 함께 내려 "분양가 +3%" 같은 안내를 화면에서 그릴 수 있게 한다.
+ * 상점 가구 상품. releaseBonusPct 를 함께 내려 "배웅 선물 +3%" 같은 안내를 화면에서 그릴 수 있게 한다.
  *
  * 잠긴 가구도 숨기지 않고 locked=true 로 내려준다 — 해금 조건이 보여야 목표가 된다
  * (미획득 칭호를 진행률과 함께 내려주는 것과 같은 기조). 구매 시도는 서버가 403 으로 막는다.

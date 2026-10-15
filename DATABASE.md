@@ -8,7 +8,7 @@
 |---|---|
 | DBMS | MySQL 8.x |
 | ORM | Spring Data JPA (Hibernate) |
-| 마이그레이션 | Flyway (예정) |
+| 마이그레이션 | Flyway (적용 중, `backend/src/main/resources/db/migration/`) |
 | DB 이름 | `vori` |
 | 시드 데이터 | Spring `CommandLineRunner` 로 Java 에서 작성 |
 

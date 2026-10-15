@@ -1,6 +1,7 @@
 package com.vori.backend.expense;
 
 import com.vori.backend.common.StatType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -94,4 +95,21 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     List<Long> findUserIdsWithExpenseInRange(
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end);
+
+    /**
+     * 본인이 같은 이름(띄어쓰기·대소문자 무시)으로 저장한 지출의 카테고리 — 가장 최근에 저장한 것부터.
+     * 자동 분류가 사용자가 전에 고른 카테고리를 먼저 쓰게 한다(CategorizeService). 한 건이면 PageRequest.of(0, 1).
+     * itemKey 는 CategorizeService.itemKey 로 만든 값(소문자, 띄어쓰기 없음).
+     * updated_at 으로 정렬하지 않는다 — AI 답변으로 signal_final 만 바뀌어도 갱신돼서, 예전 지출의 카테고리가 다시 앞에 온다.
+     */
+    @Query("""
+        SELECT e.categoryId
+        FROM Expense e
+        WHERE e.userId = :userId AND LOWER(REPLACE(e.item, ' ', '')) = :itemKey
+        ORDER BY e.id DESC
+        """)
+    List<Long> findRecentCategoryIdsByItemKey(
+        @Param("userId") Long userId,
+        @Param("itemKey") String itemKey,
+        Pageable pageable);
 }

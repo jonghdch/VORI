@@ -24,7 +24,7 @@ import java.util.Set;
 /**
  * 마이룸 가구 상점·보유·배치.
  *
- * 배치한 가구의 release_bonus_pct 합이 펫 분양가에 가산된다(PetService.calculateReleaseValue).
+ * 배치한 가구의 release_bonus_pct 합이 펫 배웅 선물에 가산된다(PetService.calculateReleaseValue).
  * 인벤토리에 쌓아둔 가구는 계산에서 빠진다 — 꾸며야 이득이라는 게 보상 설계 의도.
  *
  * 같은 테마 가구를 required_count 이상 **배치**하면 세트 보너스가 추가된다. 테마 해금은

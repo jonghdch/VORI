@@ -10,9 +10,13 @@ group = 'com.vori'
 version = '0.0.1-SNAPSHOT'
 description = 'Vori 백엔드'
 
-// OneDrive가 프로젝트 안의 build/ 산출물을 온라인 전용 파일로 바꾸면 Gradle이 스냅샷을 읽지 못한다.
-// 소스와 분리한 로컬 임시 폴더를 사용해 동기화 상태와 관계없이 빌드한다.
-layout.buildDirectory.set(file("${System.getProperty('java.io.tmpdir')}/vori-gradle-build"))
+// OneDrive 같은 동기화 폴더가 build/ 산출물을 온라인 전용 파일로 바꾸면 Gradle 이 스냅샷을 읽지 못한다.
+// 그런 PC 에서만 환경변수 VORI_BUILD_DIR 로 빌드 폴더를 동기화 밖으로 옮긴다(예: %TEMP%\\vori-gradle-build).
+// 기본으로 켜 두지 않는다 — 한 PC 의 여러 작업 폴더(worktree)·개발 서버가 같은 폴더를 공유해 서로 덮어쓴다.
+def customBuildDir = System.getenv('VORI_BUILD_DIR')
+if (customBuildDir) {
+	layout.buildDirectory.set(file(customBuildDir))
+}
 
 java {
 	toolchain {
@@ -48,6 +52,10 @@ tasks.named('test') {
 	// 이게 없으면 BackendApplicationTests(컨텍스트 로드)가 .env 를 못 읽어
 	// "Access denied ... (using password: NO)" 로 실패한다.
 	workingDir = projectDir.parentFile
+
+	// Gradle 기본 테스트 힙(512MB)으로는 스프링 컨텍스트가 여러 개 캐시될 때
+	// 가끔 OutOfMemoryError 로 테스트 JVM 이 죽는다(로컬 MySQL 8.4 에서 2번 중 1번 재현).
+	maxHeapSize = '1g'
 }
 
 // .env 는 repo 루트에 있고 application.properties 의 spring.config.import 가

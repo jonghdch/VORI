@@ -95,18 +95,34 @@ export const TIER_LABEL = {
   C: "C등급",
 };
 
-// 진화 임계값 — 백엔드 Pet.minStatTotalFor 와 동일(200/300). 다음 단계까지 남은 양 표시용.
-export const STAGE_THRESHOLD = { INFANT: 0, JUVENILE: 200, ADULT: 300 };
+// 레벨·진화 — 백엔드 PetLevel 과 같은 값. 레벨과 레벨 안 진행도는 서버가 PetResponse 로 계산해 준다
+// (level·levelExp·levelExpNeeded·maxLevel). 여기 숫자는 안내 문구·다음 진화 표시에만 쓴다.
+export const STAGE_LEVEL = { INFANT: 1, JUVENILE: 5, ADULT: 15 };
+export const MAX_LEVEL = 30;
 
-/** 다음 단계와 그 임계값. 성체면 null. */
-export function nextStage(stage) {
-  if (stage === "INFANT") return { stage: "JUVENILE", threshold: STAGE_THRESHOLD.JUVENILE };
-  if (stage === "JUVENILE") return { stage: "ADULT", threshold: STAGE_THRESHOLD.ADULT };
+/** 다음 진화(또는 배웅)와 그 레벨. 30레벨이면 null. */
+export function nextMilestone(level) {
+  if (level < STAGE_LEVEL.JUVENILE) return { label: `${STAGE_LABEL.JUVENILE} 진화`, level: STAGE_LEVEL.JUVENILE };
+  if (level < STAGE_LEVEL.ADULT) return { label: `${STAGE_LABEL.ADULT} 진화`, level: STAGE_LEVEL.ADULT };
+  if (level < MAX_LEVEL) return { label: "배웅", level: MAX_LEVEL };
   return null;
+}
+
+/** 지금 레벨 안에서의 진행률(0~100). 만렙이면 100. */
+export function levelProgressPct(pet) {
+  if (!pet || !pet.levelExpNeeded) return pet ? 100 : 0;
+  return Math.min(100, Math.round((pet.levelExp / pet.levelExpNeeded) * 100));
 }
 
 /** 화면에 부를 펫 이름 — 사용자가 지어 준 이름, 아직 없으면 종족 이름. */
 export const petDisplayName = (pet) => pet?.name || pet?.speciesName || "펫";
+
+/** 이름 뒤 조사 — 받침이 있으면 withFinal("과"), 없으면 withoutFinal("와"). 한글이 아니면 둘을 함께 쓴다. */
+export function withJosa(word, withFinal, withoutFinal) {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  if (code < 0 || code > 11171) return `${word}${withoutFinal}(${withFinal})`;
+  return `${word}${code % 28 === 0 ? withoutFinal : withFinal}`;
+}
 
 /**
  * @param {string} appearanceKey

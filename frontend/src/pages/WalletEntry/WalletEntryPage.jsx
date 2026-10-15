@@ -15,6 +15,8 @@ import { MAX_RECEIPT_BYTES, prepareReceiptImage, uploadReceipt } from "../../api
 import {
   saveLedgerEntries,
   deleteExpense,
+  deleteIncome,
+  deleteSaving,
   listCategoryTree,
   listExpensesByDate,
   listIncomesByDate,
@@ -81,6 +83,7 @@ function WalletEntryPage({ user }) {
     paymentMethod: defaultPayment,
     name: "",
     amount: "",
+    memo: "",
   });
 
   // 초기엔 빈 행을 강제하지 않음 (행 0개로 시작). 사용자가 "+ 추가"로 직접 넣음.
@@ -141,8 +144,8 @@ function WalletEntryPage({ user }) {
       try {
         const [exps, incs, savs] = await Promise.all([
           listExpensesByDate(dateStr),
-          isEditMode ? Promise.resolve([]) : listIncomesByDate(dateStr),
-          isEditMode ? Promise.resolve([]) : listSavingsByDate(dateStr),
+          listIncomesByDate(dateStr),
+          listSavingsByDate(dateStr),
         ]);
         if (cancelled) return;
         const next = (e) => nextId.current++;
@@ -155,6 +158,8 @@ function WalletEntryPage({ user }) {
             amount: String(e.amount),
             categoryId: e.categoryId,
             categoryTouched: true, // 저장된 카테고리 — 자동분류로 덮지 않음
+            memo: e.memo ?? "", // 다시 보낼 때 그대로 돌려줘야 지워지지 않는다
+            memoOpen: Boolean(e.memo), // 메모를 다 지우는 동안 칸이 접히지 않게
             // 같은 날짜를 다시 열면 저장된 지출도 바로 고칠 수 있게 한다.
             // 수정 링크의 쿼리가 사라져도 읽기 전용 행으로 잠기지 않는다.
             isEditing: true,
@@ -168,6 +173,7 @@ function WalletEntryPage({ user }) {
             amount: String(i.amount),
             categoryEnum: i.source,
             sourceTouched: true,
+            isEditing: true,
           })), ...(fresh?.income || [])],
         );
         setSavings(
@@ -178,6 +184,7 @@ function WalletEntryPage({ user }) {
             amount: String(s.amount),
             categoryEnum: s.savingType,
             sourceTouched: true,
+            isEditing: true,
           })), ...(fresh?.savings || [])],
         );
       } catch {
@@ -206,6 +213,19 @@ function WalletEntryPage({ user }) {
       }
     }
     removeRow(setExpense, row.id);
+  };
+
+  const deleteStoredRow = async (row, setter, removeApi, label) => {
+    if (row.dbId) {
+      if (!window.confirm(`'${row.name || label}'을 삭제할까요?`)) return;
+      try {
+        await removeApi(row.dbId);
+      } catch (error) {
+        setSubmitError(error.message || `${label}을 삭제하지 못했어요.`);
+        return;
+      }
+    }
+    removeRow(setter, row.id);
   };
 
   // 현재 카드의 금액 입력이 끝나면 이미 만들어져 있는 다음 빈 카드로만 이동한다.
@@ -306,8 +326,22 @@ function WalletEntryPage({ user }) {
       setReceiptBusy(false);
     }
   };
+  // autoCategory: 자동 분류 응답에서 온 패치. 응답을 기다리는 사이 사용자가 직접 골랐으면
+  // (categoryTouched) 그 선택을 덮지 않고, 다시 묻는 칩도 띄우지 않는다(이전 이름의 칩도 비운다).
+  // 최신 행 상태를 여기서 봐야 늦게 온 응답도 걸러진다.
   const updateRow = (setter, id, patch) =>
-    setter((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setter((rows) =>
+      rows.map((r) => {
+        if (r.id !== id) return r;
+        const { autoCategory, ...rest } = patch;
+        if (autoCategory && r.categoryTouched) {
+          delete rest.categoryId;
+          rest.askType = null;
+          rest.candidates = [];
+        }
+        return { ...r, ...rest };
+      }),
+    );
 
   // 빈 행(내역·금액 둘 다 비어있음)은 제출 시 무시한다 → 강제 삭제 불필요.
   const isRowEmpty = (r) =>
@@ -339,8 +373,8 @@ function WalletEntryPage({ user }) {
       if (unclassified) {
         throw new Error(`"${unclassified.name}" 카테고리를 분류하지 못했어요. 잠시 후 다시 시도해주세요.`);
       }
-      const incomeRows = income.filter((r) => !r.dbId && !isRowEmpty(r));
-      const savingRows = savings.filter((r) => !r.dbId && !isRowEmpty(r));
+      const incomeRows = income.filter((r) => !isRowEmpty(r) && (!r.dbId || r.isEditing));
+      const savingRows = savings.filter((r) => !isRowEmpty(r) && (!r.dbId || r.isEditing));
 
       if (expenseRows.length + incomeRows.length + savingRows.length > 0) {
         await saveLedgerEntries({
@@ -351,8 +385,10 @@ function WalletEntryPage({ user }) {
             categoryId: r.categoryId,
             paymentMethod: r.paymentMethod,
             spentAt: `${dateStr}T00:00:00`,
+            memo: r.memo ?? "", // 빈 글자 = 메모 없음(수정이면 지움)
           })),
           incomes: incomeRows.map((r) => ({
+            id: r.isEditing ? r.dbId : null,
             item: r.name.trim(),
             amount: Number(r.amount),
             source: r.categoryEnum || "OTHER",
@@ -360,6 +396,7 @@ function WalletEntryPage({ user }) {
             receivedAt: dateStr,
           })),
           savings: savingRows.map((r) => ({
+            id: r.isEditing ? r.dbId : null,
             item: r.name.trim(),
             amount: Number(r.amount),
             savingType: r.categoryEnum || "DEPOSIT",
@@ -445,7 +482,7 @@ function WalletEntryPage({ user }) {
                 row={row}
                 type="income"
                 onChange={(patch) => updateRow(setIncome, row.id, patch)}
-                onDelete={() => removeRow(setIncome, row.id)}
+                onDelete={() => deleteStoredRow(row, setIncome, deleteIncome, "수입")}
                 onComplete={() => focusNextEmptyCard("income", row.id)}
               />
             ))}
@@ -480,14 +517,14 @@ function WalletEntryPage({ user }) {
                 row={row}
                 type="savings"
                 onChange={(patch) => updateRow(setSavings, row.id, patch)}
-                onDelete={() => removeRow(setSavings, row.id)}
+                onDelete={() => deleteStoredRow(row, setSavings, deleteSaving, "저축")}
                 onComplete={() => focusNextEmptyCard("savings", row.id)}
               />
             ))}
           </section>
         )}
 
-        {!isEditMode && <div className="ledger-add-row">
+        <div className="ledger-add-row">
           <button
             type="button"
             className="ledger-entry-add-btn"
@@ -509,7 +546,7 @@ function WalletEntryPage({ user }) {
           >
             + 저축 추가하기
           </button>
-        </div>}
+        </div>
 
         <div className="ledger-actions">
           {!canProceed && (
@@ -544,6 +581,22 @@ function WalletEntryPage({ user }) {
   );
 }
 
+// 지출 메모 최대 길이 — 서버(expenses.memo VARCHAR(200))와 같다.
+const MEMO_MAX = 200;
+
+// 자동 분류가 애매하다고 돌려준 경우(askType)의 질문 문구. 판정 문구처럼 중립으로 둔다.
+const ASK_TEXT = {
+  WHAT: {
+    question: "무엇을 샀나요?",
+    hint: "산 것을 같이 쓰면 바로 분류돼요 (예: 편의점 컵라면)",
+    other: true, // 칩에 없는 카테고리를 고를 「그 외」
+  },
+  // 매장·포장 / 배달 — 포장한 사람도 고를 게 있게 묻는다
+  DINE_OR_DELIVERY: {
+    question: "어떻게 먹었나요?",
+  },
+};
+
 function EntryRow({
   num,
   row,
@@ -571,6 +624,8 @@ function EntryRow({
         categorizing: false,
         categoryTouched: false,
         sourceTouched: false,
+        askType: null,
+        candidates: [],
       });
       return;
     }
@@ -585,7 +640,8 @@ function EntryRow({
       onChange({ categorizing: false });
       return;
     }
-    // 백엔드 분류(Gemini). debounce 400ms. 진행 중엔 categorizing=true.
+    // 백엔드 분류(내 기록·규칙·Gemini). debounce 400ms. 진행 중엔 categorizing=true.
+    // 이름만으로 애매하면 askType·candidates 가 같이 와서 칩으로 묻는다(기본값은 이미 골라져 있다).
     onChange({ categorizing: true });
     let cancelled = false;
     const handle = setTimeout(async () => {
@@ -593,8 +649,14 @@ function EntryRow({
       if (cancelled) return;
       onChange(
         r == null
-          ? { categoryId: null, categorizing: false }
-          : { categoryId: r.leafId, categorizing: false },
+          ? { autoCategory: true, categoryId: null, categorizing: false, askType: null, candidates: [] }
+          : {
+              autoCategory: true,
+              categoryId: r.leafId,
+              categorizing: false,
+              askType: r.askType ?? null,
+              candidates: r.candidates ?? [],
+            },
       );
     }, 400);
     return () => {
@@ -603,6 +665,26 @@ function EntryRow({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row.name, type]);
+
+  // 이름만으로 애매할 때 내역 아래에 칩으로 묻는다. 분류를 다시 하는 동안엔 예전 칩을 숨긴다.
+  const ask = ASK_TEXT[row.askType];
+  const showAsk =
+    type === "expense" && !locked && !row.categorizing && Boolean(ask) &&
+    (row.candidates?.length ?? 0) > 1;
+  const otherSelected =
+    row.categoryId != null && !(row.candidates ?? []).some((c) => c.leafId === row.categoryId);
+  const categoryOpenRef = useRef(null);
+
+  // 메모 — 평소엔 「+ 메모」만, 누르거나 이미 메모가 있으면 칸을 연다. 사용자만 보는 기록(분류·AI 에 안 씀).
+  const showMemo = Boolean(row.memoOpen) || Boolean((row.memo ?? "").trim());
+  const memoInputRef = useRef(null);
+  const focusMemoNext = useRef(false); // 「+ 메모」를 눌러 열었을 때만 커서를 옮긴다(임시저장 복원 때는 안 옮김)
+  useEffect(() => {
+    if (showMemo && focusMemoNext.current) {
+      focusMemoNext.current = false;
+      memoInputRef.current?.focus();
+    }
+  }, [showMemo]);
 
   // 카테고리/출처 선택 컨트롤 (눌러서 수정 가능한 드롭다운).
   const categoryControl =
@@ -614,6 +696,7 @@ function EntryRow({
         placeholder={row.categorizing ? "분류 중…" : "카테고리"}
         align="right"
         disabled={locked}
+        openRef={categoryOpenRef}
       />
     ) : (
       <Dropdown
@@ -651,16 +734,14 @@ function EntryRow({
           </span>
         )}
         {categoryControl}
-        {(type === "expense" || !saved) && (
-          <button
-            type="button"
-            className="ledger-row-del"
-            aria-label="삭제"
-            onClick={onDelete}
-          >
-            ×
-          </button>
-        )}
+        <button
+          type="button"
+          className="ledger-row-del"
+          aria-label="삭제"
+          onClick={onDelete}
+        >
+          ×
+        </button>
       </div>
       <div className="ledger-row-field">
         <span className="ledger-row-label">내역</span>
@@ -683,10 +764,41 @@ function EntryRow({
           placeholder={
             type === "income"
               ? "예: 6월 월급, 엄마 용돈"
-              : "예: 스타벅스, GS25, 지하철"
+              : "예: GS25 삼각김밥, 학식, 지하철"
           }
         />
       </div>
+      {showAsk && (
+        <div className="ledger-ask" role="group" aria-label={ask.question}>
+          <span className="ledger-ask-question">{ask.question}</span>
+          {row.candidates.map((c) => {
+            const selected = row.categoryId === c.leafId;
+            return (
+              <button
+                key={c.leafId}
+                type="button"
+                className={`ledger-chip${selected ? " ledger-chip-selected" : ""}`}
+                aria-pressed={selected}
+                onClick={() => onChange({ categoryId: c.leafId, categoryTouched: true })}
+              >
+                {c.label}
+              </button>
+            );
+          })}
+          {/* 칩에 없는 카테고리는 오른쪽 위 전체 목록에서 — 거기서 고르면 이 칩이 선택돼 보인다 */}
+          {ask.other && (
+            <button
+              type="button"
+              className={`ledger-chip${otherSelected ? " ledger-chip-selected" : ""}`}
+              aria-pressed={otherSelected}
+              onClick={() => categoryOpenRef.current?.()}
+            >
+              그 외
+            </button>
+          )}
+          {ask.hint && <p className="ledger-ask-hint">{ask.hint}</p>}
+        </div>
+      )}
       <div className="ledger-row-field">
         <span className="ledger-row-label">금액</span>
         <div className="ledger-row-input-wrap">
@@ -711,14 +823,63 @@ function EntryRow({
           <span className="ledger-row-unit">원</span>
         </div>
       </div>
+      {type === "expense" &&
+        (showMemo ? (
+          <div className="ledger-row-field">
+            <span className="ledger-row-label">메모</span>
+            <input
+              ref={memoInputRef}
+              type="text"
+              className="ledger-row-input"
+              data-entry-field="memo"
+              value={row.memo ?? ""}
+              onChange={(e) => onChange({ memo: e.target.value })}
+              // 빈 채로 벗어나면 다시 「+ 메모」로 접는다
+              onBlur={() => {
+                if (!(row.memo ?? "").trim()) onChange({ memoOpen: false });
+              }}
+              disabled={locked}
+              maxLength={MEMO_MAX}
+              enterKeyHint="done"
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" || e.nativeEvent?.isComposing) return;
+                e.preventDefault();
+                onComplete?.();
+              }}
+              placeholder="예: 학교 앞에서 동기들이랑"
+            />
+          </div>
+        ) : (
+          !locked && (
+            <button
+              type="button"
+              className="ledger-chip ledger-chip-placeholder ledger-memo-add"
+              onClick={() => {
+                focusMemoNext.current = true;
+                onChange({ memoOpen: true });
+              }}
+            >
+              + 메모
+            </button>
+          )
+        ))}
     </div>
   );
 }
 
 // 클릭 chip + 펼침 메뉴 (결제수단용).
-function Dropdown({ value, options, onChange, placeholder, align = "left", disabled = false }) {
+// openRef 를 주면 바깥(예: 내역 아래 「그 외」 칩)에서 openRef.current() 로 목록을 열 수 있다.
+function Dropdown({ value, options, onChange, placeholder, align = "left", disabled = false, openRef }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!openRef) return undefined;
+    openRef.current = () => setOpen(true);
+    return () => {
+      openRef.current = null;
+    };
+  }, [openRef]);
 
   useEffect(() => {
     if (!open) return;

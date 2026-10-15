@@ -65,4 +65,14 @@ public class Income {
         columnDefinition = "DATETIME NULL ON UPDATE CURRENT_TIMESTAMP",
         insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+
+    public void update(LocalDate receivedAt, Integer amount, String note, IncomeSource source,
+                       PaymentMethod paymentMethod, Boolean isRecurring) {
+        this.receivedAt = receivedAt;
+        this.amount = amount;
+        this.note = note;
+        this.source = source;
+        this.paymentMethod = paymentMethod;
+        this.isRecurring = Boolean.TRUE.equals(isRecurring);
+    }
 }

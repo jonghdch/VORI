@@ -37,7 +37,8 @@ async function handle(res) {
   return text ? JSON.parse(text) : null;
 }
 
-async function request(path, { method = "GET", body } = {}) {
+// notify: 끝난 뒤 vori:account-updated 를 보낼지. 기본은 GET 이 아닌 요청(서버 상태를 바꿈).
+async function request(path, { method = "GET", body, notify = method !== "GET" } = {}) {
   const result = await handle(
     await fetch(`${API_BASE}${path}`, {
       method,
@@ -46,7 +47,7 @@ async function request(path, { method = "GET", body } = {}) {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
   );
-  if (method !== "GET") window.dispatchEvent(new Event("vori:account-updated"));
+  if (notify) window.dispatchEvent(new Event("vori:account-updated"));
   return result;
 }
 
@@ -56,6 +57,9 @@ export const put = (path, body) => request(path, { method: "PUT", body });
 // PATCH 는 본문 없이 부르는 경우가 있다(가구 회수). body 를 넘기지 않으면 Content-Type 도 안 붙는다.
 export const patch = (path, body) => request(path, { method: "PATCH", body });
 export const del = (path) => request(path, { method: "DELETE" });
+// 본문이 필요해 POST 로 보내지만 서버 상태는 바꾸지 않는 조회(카테고리 분류 등).
+// 계정 요약·알림 개수를 다시 읽게 하는 이벤트를 보내지 않는다.
+export const query = (path, body) => request(path, { method: "POST", body, notify: false });
 
 /**
  * multipart/form-data 파일 업로드 (영수증 OCR).

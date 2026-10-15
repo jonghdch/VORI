@@ -124,6 +124,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 칭호 과제 카드(PetTitlePanel) — 설명 아래 진행 줄 */
+.ach-title-main .ach-progress-row {
+  margin-top: 10px;
+}
+
 .ach-progress-track {
   height: 10px;
   border-radius: 8px;
@@ -268,4 +273,49 @@
   .ach-summary {
     grid-template-columns: 1fr;
   }
+}
+
+/* 업적 장착하기 / 장착 해제 */
+.ach-equip-hint {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--home-muted);
+}
+.ach-equip-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--home-card-border);
+  border-radius: 10px;
+  background: var(--home-card-surface);
+  color: var(--home-text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ach-equip-btn:hover:not(:disabled) {
+  border-color: var(--home-green);
+  color: var(--home-green-dark);
+}
+.ach-equip-btn.is-on {
+  border-color: var(--home-green);
+  background: var(--home-green-soft);
+  color: var(--home-green-dark);
+}
+.ach-equip-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* 업적 탭 위쪽의 업적 칸 3개 — 내 정보 상자와 같은 칸, 패널 가로를 꽉 채운다 */
+.ach-equip-slots {
+  gap: 12px;
+  margin: 10px 0 24px;
+}
+.ach-equip-slots .account-menu-slot {
+  height: 76px;
+}
+.ach-equip-slots .account-menu-slot-name {
+  font-size: 13px;
 }

@@ -8,6 +8,7 @@
 |------|------|
 | 백엔드 | Java 17 + Spring Boot 3.x |
 | 프론트엔드 | React.js (JavaScript) + HTML5 + CSS3 |
+| 프론트 런타임 | Node.js 22 LTS (npm 10) — `frontend/.nvmrc` 가 기준, CI 도 같은 파일을 읽는다 |
 | DBMS | MySQL + MySQL Workbench |
 | AI | Google Gemini API (REST/JSON) |
 | IDE | IntelliJ IDEA · VS Code |
@@ -58,6 +59,15 @@ mysql -u root -e "CREATE DATABASE vori;"
 repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"는 사람이 1회, 그 다음은 백엔드가 자동.**
 
 ### 1회 수동 준비 (이게 안 되면 백엔드가 부팅 중 죽음 → 로그인 포함 전부 실패)
+0. **Node.js 22 설치** — 버전 기준은 `frontend/.nvmrc`(22). 먼저 `node -v` 로 확인하고 `v22.x.x` 면 건너뛴다
+   - **Windows (팀 기본)** — 둘 중 하나
+     - Node 를 하나만 쓸 때: [nodejs.org 다운로드](https://nodejs.org/en/download) 에서 버전을 **v22** 로 골라 설치 파일(.msi)로 설치.
+       첫 화면 버튼은 최신 LTS(24)라서 그대로 받으면 22 가 아니다
+     - 여러 버전을 오갈 때: [nvm-windows](https://github.com/coreybutler/nvm-windows) 설치 후 PowerShell 에서 `nvm install 22` → `nvm use 22`.
+       nvm-windows 는 `.nvmrc` 를 읽지 않으므로 버전 `22` 를 직접 적는다. `nvm use` 는 관리자 권한 터미널이 필요할 수 있다
+   - macOS: `cd frontend && nvm install && nvm use` (nvm 이 `.nvmrc` 를 읽는다)
+   - 설치 뒤 **새 터미널**에서 `node -v` 가 `v22.x.x` 인지 확인
+   - 다른 버전(특히 npm 11 이 붙은 Node 24 이상)으로 라이브러리를 추가하면 lock 파일이 CI(Node 22)와 어긋나 `npm ci` 가 실패할 수 있다
 1. **MySQL 설치 + 실행**
    - macOS: `brew install mysql && brew services start mysql`
    - Windows: MySQL Installer 설치 후 MySQL 서비스 시작
@@ -66,7 +76,8 @@ repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"
    - `DB_USERNAME` / `DB_PASSWORD` = 본인 MySQL 계정 (Windows root 는 보통 비밀번호 있음 → 반드시 명시)
    - `GEMINI_API_KEY` = 본인 키
 4. **백엔드 실행** — `cd backend && ./gradlew bootRun` (IDE 직접 실행 시엔 Working directory 를 repo 루트로)
-5. **프론트엔드**: `cd frontend && npm install && npm start`
+5. **프론트엔드**: `cd frontend && npm ci && npm start`
+   - `npm ci` 는 `package-lock.json` 그대로 설치하고 lock 을 바꾸지 않는다. 라이브러리를 **추가할 때만** `npm install <이름>` 후 lock 까지 커밋
 
 ### 백엔드가 자동으로 하는 것 (위 준비가 끝났으면)
 - MySQL 커넥션 풀 생성·연결
@@ -243,6 +254,8 @@ navigate("/login");
 
 ## 관련 문서
 
+문서의 현재성·용도별 구분은 [`docs/README.md`](docs/README.md)를 먼저 본다.
+
 | 문서 | 내용 |
 |---|---|
 | [`DATABASE.md`](DATABASE.md) | DB 셋업·Flyway·application.properties·트러블슈팅 |
@@ -252,3 +265,8 @@ navigate("/login");
 | [`docs/db-spec.md`](docs/db-spec.md) | 테이블 18종 명세 + 변경 이력 |
 | [`docs/signup-flow.md`](docs/signup-flow.md) | 회원가입 중 소비 프로필 5단계 수집·온보딩 연결 설계 |
 | [`docs/tutorial-flow.md`](docs/tutorial-flow.md) | 신규 사용자 온보딩·인앱 튜토리얼 사용자 흐름 설계 |
+| [`docs/roadmap.md`](docs/roadmap.md) | 설계 철학·향후 확장·우선순위 |
+| [`docs/market-research.md`](docs/market-research.md) | 시장·경쟁 분석과 구현 배경 |
+| [`docs/plan-vs-reality.md`](docs/plan-vs-reality.md) | 초기 기획과 실제 구현의 차이 |
+| [`docs/final-demo-plan.md`](docs/final-demo-plan.md) | 11월 시연 계획(최종발표·경진대회) |
+| [`docs/demo-plan.md`](docs/demo-plan.md) | 중간발표 시연 계획(기록용) |

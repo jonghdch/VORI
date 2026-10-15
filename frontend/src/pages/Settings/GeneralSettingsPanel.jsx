@@ -12,12 +12,6 @@ const PAYMENT_METHODS = [
   { value: "TRANSFER", label: "계좌이체" },
   { value: "MOBILE_PAY", label: "모바일페이" },
 ];
-const STAT_BUDGET_LABELS = {
-  ENERGY: "식비 · 에너지",
-  CHARM: "쇼핑·뷰티 · 매력",
-  IQ: "문화·여가 · 지능",
-  ENDURANCE: "생활·고정비 · 지구력",
-};
 
 export function loadUserSettings() {
   try {
@@ -104,14 +98,12 @@ function GeneralSettingsPanel() {
 
       <section className="settings-section">
         <div className="settings-row settings-fixed-head">
-          <div className="settings-row-label"><h3 className="settings-row-name">고정비</h3><div className="settings-row-desc">통신비·보험·월세처럼 매달 나가는 금액이에요. 새 고정비는 다음 달 자동 예산에 반영되고, 이번 달 예산과 이미 받은 판정은 바뀌지 않아요.</div></div>
+          <div className="settings-row-label"><h3 className="settings-row-name">고정비</h3><div className="settings-row-desc">통신비·보험·월세처럼 매달 나가는 금액이에요. 등록한 금액은 이번 달 월 예산에서 바로 차감되고, 생활 지출에 쓸 수 있는 예산이 다시 계산돼요.</div></div>
         </div>
-        {plan && <p className="settings-row-desc">현재 등록된 고정비 {Number(plan.fixedTotal || 0).toLocaleString("ko-KR")}원 · 미확인 고정비 보류금 {Number(plan.reserveAmount || 0).toLocaleString("ko-KR")}원</p>}
+        {plan && <p className="settings-row-desc">현재 등록된 고정비 {Number(plan.fixedTotal || 0).toLocaleString("ko-KR")}원이 월 예산에서 차감되어 있어요.</p>}
         {plan && <div className="settings-budget-plan">
-          <strong>{plan.yearMonth} 스탯별 월 예산</strong>
-          {Object.entries(STAT_BUDGET_LABELS).map(([statType, label]) => (
-            <span key={statType}>{label}<b>{Number(plan.budgets?.[statType] || 0).toLocaleString("ko-KR")}원</b></span>
-          ))}
+          <strong>{plan.yearMonth} 생활·고정비 · 지구력 사용 가능 예산</strong>
+          <span>고정비 차감 후 생활 예산<b>{Number(plan.budgets?.ENDURANCE || 0).toLocaleString("ko-KR")}원</b></span>
         </div>}
         <form className="settings-fixed-form" onSubmit={addFixed}>
           <input className="settings-input" value={fixedName} onChange={(e) => setFixedName(e.target.value)} placeholder="예: 휴대폰 통신비" maxLength="50" />

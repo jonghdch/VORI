@@ -8,13 +8,18 @@ import com.vori.backend.expense.dto.ExpenseCreateRequest;
 import com.vori.backend.expense.dto.ExpenseResponse;
 import com.vori.backend.expense.dto.ExpenseUpdateRequest;
 import com.vori.backend.income.IncomeRepository;
+import com.vori.backend.income.Income;
 import com.vori.backend.income.IncomeService;
+import com.vori.backend.income.dto.IncomeCreateRequest;
 import com.vori.backend.income.dto.IncomeResponse;
 import com.vori.backend.inquiry.AiInquiry;
 import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.ledger.dto.LedgerSaveRequest;
 import com.vori.backend.ledger.dto.LedgerSaveResponse;
 import com.vori.backend.savings.SavingService;
+import com.vori.backend.savings.Saving;
+import com.vori.backend.savings.SavingRepository;
+import com.vori.backend.savings.dto.SavingCreateRequest;
 import com.vori.backend.savings.dto.SavingResponse;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
@@ -39,6 +44,7 @@ public class LedgerService {
 
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
+    private final SavingRepository savingRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final AiInquiryRepository aiInquiryRepository;
@@ -106,17 +112,45 @@ public class LedgerService {
             expenses.add(e.id() == null ? createExpense(userId, e) : updateExpense(userId, e));
         }
         List<IncomeResponse> incomes = req.incomes().stream()
-                .map(i -> incomeService.createIncome(userId, i))
+                .map(i -> i.id() == null ? createIncome(userId, i) : updateIncome(userId, i))
                 .toList();
         List<SavingResponse> savings = req.savings().stream()
-                .map(s -> savingService.createSaving(userId, s))
+                .map(s -> s.id() == null ? createSaving(userId, s) : updateSaving(userId, s))
                 .toList();
         return new LedgerSaveResponse(expenses, incomes, savings);
     }
 
+    private IncomeResponse createIncome(Long userId, LedgerSaveRequest.IncomeEntry entry) {
+        return incomeService.createIncome(userId, new IncomeCreateRequest(entry.source(), entry.amount(), entry.item(),
+                entry.receivedAt(), entry.paymentMethod(), entry.isRecurring()));
+    }
+
+    private IncomeResponse updateIncome(Long userId, LedgerSaveRequest.IncomeEntry entry) {
+        Income income = incomeRepository.findById(entry.id())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "수입을 찾을 수 없습니다."));
+        if (!income.getUserId().equals(userId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 수입만 수정할 수 있습니다.");
+        income.update(entry.receivedAt() == null ? income.getReceivedAt() : entry.receivedAt(), entry.amount(),
+                entry.item().trim(), entry.source(), entry.paymentMethod(), entry.isRecurring());
+        return IncomeResponse.from(income);
+    }
+
+    private SavingResponse createSaving(Long userId, LedgerSaveRequest.SavingEntry entry) {
+        return savingService.createSaving(userId, new SavingCreateRequest(entry.savingType(), entry.amount(), entry.item(),
+                entry.savedAt(), entry.note()));
+    }
+
+    private SavingResponse updateSaving(Long userId, LedgerSaveRequest.SavingEntry entry) {
+        Saving saving = savingRepository.findById(entry.id())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "저축을 찾을 수 없습니다."));
+        if (!saving.getUserId().equals(userId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 저축만 수정할 수 있습니다.");
+        saving.update(entry.savedAt() == null ? saving.getSavedAt() : entry.savedAt(), entry.amount(),
+                entry.item().trim(), entry.savingType(), entry.note());
+        return SavingResponse.from(saving);
+    }
+
     private ExpenseResponse createExpense(Long userId, LedgerSaveRequest.ExpenseEntry e) {
         return expenseService.createExpense(userId, new ExpenseCreateRequest(
-                e.categoryId(), e.amount(), e.item(), e.spentAt(), null, e.paymentMethod(), null, null));
+                e.categoryId(), e.amount(), e.item(), e.spentAt(), null, e.paymentMethod(), normalizeMemo(e.memo()), null));
     }
 
     private ExpenseResponse updateExpense(Long userId, LedgerSaveRequest.ExpenseEntry e) {
@@ -124,8 +158,38 @@ public class LedgerService {
         if (e.paymentMethod() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "결제수단을 선택해주세요.");
         }
+        Expense current = expenseRepository.findById(e.id())
+                .orElseThrow(() -> new IllegalArgumentException("지출을 찾을 수 없습니다."));
+        if (!current.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 지출만 수정할 수 있습니다.");
+        }
+        // 메모는 보냈을 때만 바꾼다(null = 그대로, 빈 글자 = 지움). 판정에 안 쓰니 다시 계산할 것도 없다.
+        if (e.memo() != null) current.updateMemo(normalizeMemo(e.memo()));
+        // 내역·금액·카테고리가 그대로면 ExpenseService 를 부르지 않는다. 내역만 바뀐 경우는 ExpenseService.updateExpense 가
+        // 판정 없이 이름만 고친다(금액·카테고리가 바뀌어야 다시 판정하고 AI 질문·답변을 새로 만든다 — docs/judgment-flow.md D6).
+        // 결제수단은 판정 계산·AI 질문 문구에 쓰지 않아 여기서 그대로 바꾼다. 결제수단이 비어 있던 예전 지출은
+        // 화면이 기본값(신용카드)을 채워 보내는데, 그것도 다시 판정할 이유가 아니다.
+        if (sameJudgedFields(current, e)) {
+            if (current.getPaymentMethod() != e.paymentMethod()) current.updatePaymentMethod(e.paymentMethod());
+            return ExpenseResponse.from(current);
+        }
         return expenseService.updateExpense(userId, e.id(), new ExpenseUpdateRequest(
                 e.item(), e.amount(), e.categoryId(), e.paymentMethod()));
+    }
+
+    /** 다시 판정할 필요가 없는지 — 내역(AI 질문 문구에 들어감)·금액·카테고리가 저장된 값과 같다. */
+    private static boolean sameJudgedFields(Expense current, LedgerSaveRequest.ExpenseEntry e) {
+        // 다른 경로로 만든 지출은 내역 끝에 공백이 남아 있을 수 있어 양쪽 다 다듬어 비교한다
+        return current.getItem().trim().equals(e.item().trim())
+                && current.getAmount().equals(e.amount())
+                && current.getCategoryId().equals(e.categoryId());
+    }
+
+    /** 메모 앞뒤 공백을 지우고, 비면 null(메모 없음). */
+    static String normalizeMemo(String memo) {
+        if (memo == null) return null;
+        String trimmed = memo.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     /**
@@ -152,5 +216,21 @@ public class LedgerService {
         }
 
         expenseRepository.delete(e);
+    }
+
+    @Transactional
+    public void deleteIncome(Long userId, Long incomeId) {
+        Income income = incomeRepository.findById(incomeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "수입을 찾을 수 없습니다."));
+        if (!income.getUserId().equals(userId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 수입만 삭제할 수 있습니다.");
+        incomeRepository.delete(income);
+    }
+
+    @Transactional
+    public void deleteSaving(Long userId, Long savingId) {
+        Saving saving = savingRepository.findById(savingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "저축을 찾을 수 없습니다."));
+        if (!saving.getUserId().equals(userId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 저축만 삭제할 수 있습니다.");
+        savingRepository.delete(saving);
     }
 }

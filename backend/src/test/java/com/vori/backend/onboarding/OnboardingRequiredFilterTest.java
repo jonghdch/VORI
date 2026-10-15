@@ -46,7 +46,9 @@ class OnboardingRequiredFilterTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/api/expenses", "/api/users/me", "/api/daily-judgments/today", "/api/attendance", "/api/eggs/buy"})
+    @ValueSource(strings = {"/api/expenses", "/api/users/me", "/api/daily-judgments/today", "/api/attendance", "/api/eggs/buy",
+            // 설문은 회원가입 절차의 일부라, 가입을 마치기 전에는 탈퇴도 없다
+            "/api/users/me/withdrawal"})
     void 설문_전에는_다른_API_를_막는다(String path) throws Exception {
         loginAs(Role.USER);
         when(profiles.existsById(1L)).thenReturn(false);

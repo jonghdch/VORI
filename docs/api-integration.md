@@ -79,11 +79,11 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 
 | 코드 | 언제 | message 예시 | 화면에서 |
 |---|---|---|---|
-| 400 | 코인 부족 · 검증 실패 · 성체 아닌 펫 분양 | `코인이 부족합니다` | 토스트로 `message` 노출 |
+| 400 | 코인 부족 · 검증 실패 · 30레벨 미만 펫 배웅 | `코인이 부족합니다` | 토스트로 `message` 노출 |
 | 401 | 로그인하지 않음 · 세션 만료 | (본문 없음) | 로그인 화면으로 이동 |
 | 403 | 잠긴 테마 가구 구매 · 남의 데이터 접근 | `'절약 새싹' 칭호를 획득해야…` | 해금 조건 안내 |
 | 404 | 없는 id 로 조회·수정 | `칭호를 찾을 수 없습니다` | 목록 새로고침 |
-| 409 | 좌표 중복 · 펫 있는데 알 개봉 · 목표 중복 | `먼저 키우던 펫을 분양해주세요` | 안내 후 해당 동작 유도 |
+| 409 | 좌표 중복 · 펫 있는데 알 개봉 · 목표 중복 | `먼저 키우던 펫을 배웅해주세요` | 안내 후 해당 동작 유도 |
 | 413 | 업로드 용량 초과 | `이미지는 10MB 이하만…` | 파일 다시 선택 |
 | 500 | 서버 오류 | (message 없음) | 일반 문구 + 채린에게 공유 |
 
@@ -97,14 +97,14 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 
 ### 마이룸 — 펫 · 가구 · 테마
 
-세 API 가 한 화면에서 서로를 참조한다. 테마 현황이 분양가와 직결된다.
+세 API 가 한 화면에서 서로를 참조한다. 테마 현황이 배웅 선물과 직결된다.
 
 1. `GET /api/pets/active`
    키우는 펫. **펫이 없으면 본문 없이 200** 이므로 `null` 체크가 필요하다.
 2. `GET /api/furniture`
    `placed: true` 인 것만 방에 그리고, 나머지는 인벤토리 서랍에 둔다.
 3. `GET /api/themes`
-   `placedCount / requiredCount` 로 "코지 2/3 — 하나만 더!" 를 그린다. `active: true` 면 지금 분양가에 보너스가 실제로 얹히는 중이다.
+   `placedCount / requiredCount` 로 "코지 2/3 — 하나만 더!" 를 그린다. `active: true` 면 지금 배웅 선물에 보너스가 실제로 얹히는 중이다.
 4. `PATCH /api/furniture/{id}/place`
    배치 후 **3번을 다시 호출**해야 세트 발동 여부가 갱신된다. 좌표가 겹치면 409.
 
@@ -129,8 +129,8 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 2. `POST /api/ledger/entries`
    작성 화면의 지출·수입·저축을 **한 번에** 보낸다. 서버가 한 트랜잭션으로 저장하므로, 하나라도 실패하면
    아무것도 저장되지 않는다([가계부](#가계부) 엔드포인트 참조). 한 건만 넣을 때는 `POST /api/expenses` 를 써도 된다.
-3. `GET /api/titles`
-   지출 등록 직후 칭호가 새로 붙었을 수 있다. `acquired` 가 바뀐 항목을 축하 연출에 쓴다.
+3. `GET /api/achievements`
+   지출 등록 직후 업적이 새로 붙었을 수 있다. `acquired` 가 바뀐 항목을 축하 연출에 쓴다.
 
 ### 영수증 스캔
 
@@ -181,8 +181,8 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 ```json
 // GET /api/furniture/products — 잠긴 상품 한 건
 {
-  "code": "DESKTOP_PC", "name": "컴퓨터", "category": "COMPUTER",
-  "statTarget": "IQ", "releaseBonusPct": 4.00, "price": 12000,
+  "code": "DESK", "name": "책상", "category": "DESK",
+  "statTarget": "IQ", "releaseBonusPct": 2.00, "price": 500,
   "themeName": "스터디", "themeSetBonusPct": 15.00,
   "locked": true, "unlockTitleName": "기록의 시작"
 }
@@ -200,28 +200,29 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 
 벽지·바닥(`PLAIN_WALLPAPER`, `WOOD_FLOOR`)은 `themeName` 이 `null` 이다. 좌표 처리가 아직 정해지지 않아 일부러 테마에서 뺐다.
 
-### 칭호
+### 업적과 칭호
+
+업적은 유저가, 칭호는 펫이 얻는다(V41). 업적 서버 코드·테이블 이름은 옛 "칭호" 시절의 `titles` 를 그대로 쓴다.
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/api/titles` | 13개 전부 (획득 먼저, 미획득은 달성 근접 순) |
-| PUT | `/api/titles/active` | 장착 · 204 · `titleId` null 이면 해제 |
+| GET | `/api/achievements` | 업적 전부 (획득 먼저, 미획득은 달성 근접 순). 못 딴 히든은 설명 `"???"`, `current`·`threshold` 0, `progressPct` 만 |
+| PUT | `/api/achievements/equipped` | 업적 장착 · body `{ "ids": [...] }` (획득한 업적 id, 칸 순서대로, 최대 3개, 빈 배열이면 모두 해제) · 갱신된 목록 |
+| GET | `/api/pet-titles` | 키우는 펫의 칭호 과제와 진행도. 펫이 없으면 `petId` null + 과제 0% |
+| PUT | `/api/pets/{id}/equipped-title` | 칭호 장착 · body `{ "awardId": n }` (null 이면 해제) · 배웅한 펫이면 409 |
 
 ```json
 [
   { "id": 8, "code": "SAVER_SPROUT", "name": "절약 새싹", "description": "누적 절약 10만원",
-    "acquired": true, "active": false,
-    "current": 2160124, "threshold": 100000, "progressPct": 100,
-    "acquiredAt": "2026-09-08T10:54:41" },
-  { "id": null, "code": "RECORD_STEADY", "name": "꾸준한 기록가", "description": "지출 50건 기록",
-    "acquired": false, "active": false,
-    "current": 10, "threshold": 50, "progressPct": 20,
-    "acquiredAt": null }
+    "acquired": true, "current": 2160124, "threshold": 100000, "progressPct": 100,
+    "acquiredAt": "2026-09-08T10:54:41", "hidden": false, "equipOrder": 1 }
 ]
 ```
 
-**미획득 칭호도 진행률과 함께 내려온다.** 잠금 아이콘만 띄우지 말고 `current / threshold` 진행 바를 그릴 것. 그게 다음 목표가 된다.
-단, **히든 칭호(`hidden: true`)는 획득한 뒤에만 목록에 나온다** — 따기 전에는 이름도 조건도 내려오지 않는다. 지금은 「사랑둥이」(한 펫과 상호작용 100회) 하나다.
+펫 응답(`GET /api/pets`, `/api/pets/active`)에는 그 펫이 딴 칭호 `titles` 와 장착 칭호 `equippedTitle` 이 실린다.
+
+**미획득 업적·칭호도 진행률과 함께 내려온다.** 잠금 아이콘만 띄우지 말고 `current / threshold` 진행 바를 그릴 것. 그게 다음 목표가 된다.
+단, **못 딴 히든(`hidden: true`)은 조건을 가린 채 내려온다** — 이름은 보이지만 설명은 `"???"`, `current`·`threshold` 는 0, 칭호는 `metricType` 도 null 이다. `progressPct` 로 달성률만 그린다. 지금 히든은 업적 「비밀 발견」, 펫 칭호 「행운의 매력」이다.
 장착은 `{ "titleId": 8 }`, 해제는 `{ "titleId": null }`.
 
 ### 가계부
@@ -344,17 +345,17 @@ const res = await fetch('http://localhost:8080/api/receipts', {
 | GET | `/api/eggs/products` | 등급별 가격 · 확률 |
 | POST | `/api/eggs/buy?grade=BASIC` | 구매 (펫이 있어도 가능) |
 | POST | `/api/eggs/{id}/open` | 개봉 · **펫이 있으면 409** |
-| GET | `/api/pets/active` | 키우는 펫 (없으면 본문 없는 200) |
-| POST | `/api/pets/{id}/release` | 분양 · 성체 아니면 400 |
-| PUT | `/api/pets/{id}/name` | 펫 이름 짓기 · 요청 `{ name }`(1~10자, 앞뒤 공백 제외) · 응답 펫 · 규칙 위반 400 · 분양한 펫 409 |
+| GET | `/api/pets/active` | 키우는 펫 (없으면 본문 없는 200) · `exp`(스탯 합 × 10)·`level`·`levelExp`·`levelExpNeeded`·`maxLevel` 포함 |
+| POST | `/api/pets/{id}/release` | 배웅 · 30레벨 미만이면 400 |
+| PUT | `/api/pets/{id}/name` | 펫 이름 짓기 · 요청 `{ name }`(1~10자, 앞뒤 공백 제외) · 응답 펫 · 규칙 위반 400 · 배웅한 펫 409 |
 | POST | `/api/pets/active/interact` | 상호작용(쓰다듬기 등) 1회 · 1% 확률로 매력 +1 · 응답 `{ charmUp, pet, newTitles }` — `newTitles` 는 이번 상호작용으로 받은 칭호 `[{ name, hidden }]`(대개 빈 배열) · 펫 없으면 400 |
 
 ```json
-[ { "grade": "BASIC",     "name": "기본 알",   "price": 2500,
+[ { "grade": "BASIC",     "name": "기본 알",   "price": 250,
     "probabilities": { "S": 1,  "A": 5,  "B": 24, "C": 70 } },
-  { "grade": "PREMIUM",   "name": "고급 알",   "price": 6000,
+  { "grade": "PREMIUM",   "name": "고급 알",   "price": 600,
     "probabilities": { "S": 5,  "A": 20, "B": 45, "C": 30 } },
-  { "grade": "LEGENDARY", "name": "최고급 알", "price": 15000,
+  { "grade": "LEGENDARY", "name": "최고급 알", "price": 1500,
     "probabilities": { "S": 20, "A": 50, "B": 30, "C": 0 } } ]
 ```
 
@@ -367,7 +368,7 @@ const res = await fetch('http://localhost:8080/api/receipts', {
 ```
 
 `appearanceKey` 로 이미지를 고르고, `variant`(`NORMAL` / `IRO` / `ALIEN`)로 색을 바꾼다.
-`stage` 는 `INFANT` → `JUVENILE`(스탯합 200) → `ADULT`(300)이고 **되돌아가지 않는다.** 분양은 `ADULT` 에서만 가능하다.
+`stage` 는 `INFANT` → `JUVENILE`(스탯합 200) → `ADULT`(300)이고 **되돌아가지 않는다.** 배웅은 `ADULT` 에서만 가능하다.
 
 ---
 
@@ -404,21 +405,21 @@ AI 가 이미지를 읽는 시간이라 크게 줄이기 어렵다. **진행 표
 
 시연할 때는 **목표를 먼저 만들고 그다음에 지출을 넣어야** 진행률이 오른다.
 
-### 4. 배치해야 분양가 보너스에 들어간다
+### 4. 배치해야 배웅 선물 보너스에 들어간다
 
 사두기만 하고 마이룸에 놓지 않은 가구(`placed: false`)는 개별 보너스도, 세트 계산도 전부 제외된다. "꾸며야 이득" 이 보상 설계 의도다.
 
-화면에서 **인벤토리와 배치를 시각적으로 구분**해주지 않으면 사용자는 왜 분양가가 안 오르는지 알 수 없다.
+화면에서 **인벤토리와 배치를 시각적으로 구분**해주지 않으면 사용자는 왜 배웅 선물이 안 오르는지 알 수 없다.
 
 ### 5. 펫이 있으면 알을 깔 수 없다 (409)
 
-한 번에 한 마리만 키우는 구조라, 펫을 보유한 채로 개봉하면 `"먼저 키우던 펫을 분양해주세요"` 가 돌아온다. **구매는 막지 않으므로** 알을 쟁여두는 건 가능하다.
+한 번에 한 마리만 키우는 구조라, 펫을 보유한 채로 개봉하면 `"먼저 키우던 펫을 배웅해주세요"` 가 돌아온다. **구매는 막지 않으므로** 알을 쟁여두는 건 가능하다.
 
 개봉 버튼 옆에 현재 펫이 있으면 안내를 미리 띄워주면 좋다.
 
 ### 6. `GET /api/pets/active` 는 펫이 없으면 본문 없이 200 이다
 
-404 가 아니라 **빈 200** 이다. `res.json()` 이 그대로 터지므로 위 래퍼처럼 `.catch(() => null)` 로 받아 `null` 체크를 할 것. 펫을 분양한 직후가 이 상태다.
+404 가 아니라 **빈 200** 이다. `res.json()` 이 그대로 터지므로 위 래퍼처럼 `.catch(() => null)` 로 받아 `null` 체크를 할 것. 펫을 배웅한 직후가 이 상태다.
 
 ---
 
@@ -437,7 +438,7 @@ PR #56(#58 로 머지)부터 코인과 펫 스탯은 **지출 저장 때가 아�
 | GRAY | 250 | +6 |
 | RED | 100 | +2 |
 
-배치한 가구에 분양 보너스(%)가 있으면 해당 스탯에 그만큼 더 붙는다. 일반 계정은 **그날만, `vori.ai-judge.open-hour`(기본 20시) 이후에**
+배치한 가구에 배웅 보너스(%)가 있으면 해당 스탯에 그만큼 더 붙는다. 일반 계정은 **그날만, `vori.ai-judge.open-hour`(기본 20시) 이후에**
 판정할 수 있고, 관리자는 날짜와 시각 제한 없이 할 수 있다.
 
 예전처럼 지출 두 건으로 코인·스탯을 한 번에 만드는 방법은 더 이상 통하지 않는다. 시연 계정의 펫은 관리자 도구로 키운다.
@@ -445,12 +446,15 @@ PR #56(#58 로 머지)부터 코인과 펫 스탯은 **지출 저장 때가 아�
 ```
 1) 하루 판정 — 판정 대상은 로그인한 본인이다. 관리자 계정으로 시연하면 지난 날짜도 날짜마다 1회 판정할 수 있다
 POST /api/daily-judgments?date=2026-09-28
+   → 예외 지출(답 안 한 AI 질문)이 있으면 1차 판정(status=PENDING)만 하고 보상은 아직 없다 (docs/judgment-flow.md)
+POST /api/daily-judgments/finalize?date=2026-09-28
+   → 사유를 답했거나 건너뛸 때 최종 판정(status=FINALIZED). 보상은 그날 자정에 한 번 지급된다(관리자의 지난 날짜 판정은 바로)
 
 2) 어드민 치트 — 펫을 스탯 정확히 300 인 ADULT 로 (어드민 계정으로 호출)
 POST /api/admin/users/{userId}/pet/grow?stage=ADULT
 ```
 
-**시연 순서 주의.** 목표는 지출보다 먼저 만들어야 진행률이 오르고(함정 3), 가구는 배치까지 해야 분양가에 반영된다(함정 4). 알 개봉을 보여줄 거라면 그 전에 펫을 분양해둘 것(함정 5).
+**시연 순서 주의.** 목표는 지출보다 먼저 만들어야 진행률이 오르고(함정 3), 가구는 배치까지 해야 배웅 선물에 반영된다(함정 4). 알 개봉을 보여줄 거라면 그 전에 펫을 배웅해둘 것(함정 5).
 
 ---
 

@@ -75,6 +75,25 @@ class AccountStatusFilterTest {
     }
 
     @Test
+    void pendingDeletionSessionIsCutOff() throws Exception {
+        // 탈퇴한 기기 말고 다른 기기에 남은 세션도 끊어야 한다
+        loginAs(Role.USER);
+        User pending = user(Role.USER);
+        pending.requestDeletion(java.time.LocalDateTime.of(2026, 10, 8, 12, 0));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(pending));
+        MockHttpServletRequest req = request();
+        MockHttpSession session = (MockHttpSession) req.getSession();
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        filter.doFilter(req, res, chain);
+
+        assertEquals(401, res.getStatus());
+        assertTrue(res.getContentAsString().contains("탈퇴 대기 중인 계정"));
+        assertTrue(session.isInvalid());
+        verifyNoInteractions(chain);
+    }
+
+    @Test
     void deletedUserSessionIsCutOff() throws Exception {
         loginAs(Role.USER);
         when(userRepository.findById(1L)).thenReturn(Optional.empty());

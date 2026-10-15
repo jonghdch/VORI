@@ -54,4 +54,12 @@ public class Saving {
         columnDefinition = "DATETIME NULL ON UPDATE CURRENT_TIMESTAMP",
         insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+
+    public void update(LocalDate savedAt, Integer amount, String item, SavingType savingType, String note) {
+        this.savedAt = savedAt;
+        this.amount = amount;
+        this.item = item;
+        this.savingType = savingType;
+        this.note = note;
+    }
 }

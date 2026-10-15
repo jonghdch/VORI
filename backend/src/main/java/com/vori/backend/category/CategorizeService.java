@@ -1,24 +1,31 @@
 package com.vori.backend.category;
 
+import com.vori.backend.expense.ExpenseRepository;
 import com.vori.backend.gemini.GeminiClient;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
  * 사용자가 입력한 내역(name) 의 의도를 추론해 카테고리 leaf 를 결정.
  *
- * 동작:
- *  1. 시작 직후 비동기로 categories 테이블의 leaf 전체 embedding 을 미리 계산해 캐시
- *  2. 사용자 입력이 오면 input embedding 을 한 번만 받아 cached leaf 들과 cosine 비교
- *  3. 최고 점수 leaf 반환. threshold 미달이면 null (호출자가 "기타" 처리)
+ * 순서(처음 정해지는 것을 쓴다):
+ *  1. 내 기록 — 본인이 같은 이름으로 저장한 지출의 카테고리(가장 최근). 사용자가 고친 분류를 기억한다.
+ *  2. 상호·낱말 규칙(RULES)
+ *  3. 임베딩 — 시작 직후 비동기로 leaf 전체 embedding 을 캐시해 두고, 입력 embedding 과 cosine 비교
+ *  4. 모두 실패하면 categorizeOrFallback 이 "기타 생활"
  *
  * 비용: 시작 시 leaf 수 만큼 embedding 호출 (현재 36개), 이후엔 입력당 1회.
  * 모델: Gemini text-embedding-004 — 무료 tier (분당 1500, 일 무제한)
@@ -30,6 +37,7 @@ public class CategorizeService {
 
     private final CategoryRepository categoryRepository;
     private final GeminiClient geminiClient;
+    private final ExpenseRepository expenseRepository;
 
     // leaf id → 임베딩 벡터 (768차원)
     private final Map<Long, double[]> leafEmbeddings = new HashMap<>();
@@ -39,6 +47,16 @@ public class CategorizeService {
 
     // 점수 미달 시 null. 0.55 정도면 매칭. 튜닝 필요.
     private static final double MATCH_THRESHOLD = 0.55;
+
+    /**
+     * 실행 중 임베딩이 실패하면(장애·한도) 이만큼 임베딩을 건너뛴다. 부팅 때 캐시를 다 만든 뒤에 실패하면 예외가 그대로
+     * 나가 /categorize 가 500 이 되고 화면은 카테고리를 비워 뒀다 — 이제 「기타 생활」로 떨어진다. 건너뛰는 동안은
+     * 입력마다 재시도(최대 3회)·타임아웃을 기다리지 않는다.
+     */
+    static final Duration EMBED_PAUSE = Duration.ofMinutes(5);
+    private volatile Instant embedPausedUntil = Instant.MIN;
+    /** 지금 시각. 테스트가 바꾼다. */
+    private Clock clock = Clock.systemUTC();
 
     private record CachedLeaf(Long id, String name, Long parentId, String parentName) {}
 
@@ -135,35 +153,280 @@ public class CategorizeService {
     private static final String FALLBACK_LEAF_NAME = "기타 생활";
 
     /**
-     * 분류 시도 후 실패하면 폴백 leaf("기타 생활")로 떨어뜨린다.
+     * 내 기록 → 규칙 → 임베딩 순으로 분류하고, 모두 실패하면 폴백 leaf("기타 생활")로 떨어뜨린다.
      * → 자동 분류가 안 돼도(예: Gemini 미연결) 사용자가 입력을 이어갈 수 있게.
+     * userId 가 null 이면 내 기록은 보지 않는다.
      */
-    public Result categorizeOrFallback(String name) {
+    public Result categorizeOrFallback(Long userId, String name) {
         if (name == null || name.isBlank()) return null;
+        Result mine = fromHistory(userId, name);
+        if (mine != null) return mine;
         Result r = categorize(name);
         return r != null ? r : fallback();
     }
 
-    /** Gemini 없이 categories 테이블만으로 폴백 leaf 를 만든다. 없으면 null. */
-    private Result fallback() {
-        return categoryRepository.findFirstByName(FALLBACK_LEAF_NAME)
-                .filter(c -> c.getParentId() != null)
-                .map(c -> {
-                    String parentName = categoryRepository.findById(c.getParentId())
-                            .map(Category::getName)
-                            .orElse("");
-                    return new Result(c.getId(), c.getName(), c.getParentId(), parentName, 0.0);
-                })
+    /**
+     * 본인이 같은 이름으로 저장한 지출 중 가장 최근에 저장한 것의 카테고리(점수 1.0).
+     * 없거나 그 카테고리(또는 대분류)가 꺼졌으면 null — 꺼진 카테고리는 드롭다운에도 없다.
+     * 자동 분류가 틀려 사용자가 드롭다운에서 고쳐 저장하면 그 선택이 지출에 남는다 — 다음부터 그걸 먼저 쓴다.
+     * 다른 사용자의 기록은 보지 않는다(같은 「타코」라도 사람마다 외식·배달이 다르다).
+     */
+    Result fromHistory(Long userId, String name) {
+        if (userId == null) return null;
+        String key = itemKey(name);
+        if (key.isEmpty()) return null;
+        List<Long> ids = expenseRepository.findRecentCategoryIdsByItemKey(userId, key, PageRequest.of(0, 1));
+        if (ids.isEmpty()) return null;
+        return categoryRepository.findById(ids.get(0))
+                .filter(this::usableLeaf)
+                .map(c -> toResult(c, 1.0, Source.HISTORY))
                 .orElse(null);
     }
 
+    /** 드롭다운에 보이는 카테고리인지 — 소분류이고, 자기와 대분류가 모두 켜져 있다. */
+    private boolean usableLeaf(Category c) {
+        return c.getParentId() != null && Boolean.TRUE.equals(c.getIsActive())
+                && categoryRepository.findById(c.getParentId())
+                        .map(p -> Boolean.TRUE.equals(p.getIsActive()))
+                        .orElse(false);
+    }
+
+    /** 내 기록을 찾을 때 비교하는 이름 — 소문자, 띄어쓰기 없음(「문밸리 타코」=「문밸리타코」). */
+    static String itemKey(String name) {
+        return name == null ? "" : name.toLowerCase(Locale.ROOT).replace(" ", "");
+    }
+
+    // ───── 애매하면 묻기 ─────
+
+    /** 무엇을 물을지. 질문 문구는 화면이 정한다. */
+    public enum AskType {
+        WHAT,              // 판매처만 썼다 — 무엇을 샀나
+        DINE_OR_DELIVERY   // 매장에서 먹었나, 배달했나
+    }
+
+    /** 칩 하나 — label 은 화면에 보일 말, leafName 은 실제로 들어갈 카테고리. */
+    public record Candidate(Long leafId, String label, String leafName) {}
+
+    /** 분류 결과 + 물어볼지. askType 이 null 이면 묻지 않는다(candidates 는 빈 목록). */
+    public record Suggestion(Result result, AskType askType, List<Candidate> candidates) {}
+
+    private record Choice(String label, String leafName) {}
+
+    private record AskRule(AskType type, List<Choice> choices) {}
+
+    private static final String DELIVERY_LEAF = "배달";
+    /** 매장과 포장은 둘 다 외식으로 저장되니 한 칩으로 — 포장한 사람도 고를 게 있게(10/6 채린). */
+    private static final List<Choice> DINE_OR_DELIVERY = List.of(
+            new Choice("매장·포장", "외식"), new Choice("배달", DELIVERY_LEAF));
+
+    /** 칩 최대 개수. 화면이 끝에 「그 외」(전체 목록)를 하나 더 붙인다. */
+    static final int MAX_CHIPS = 4;
+
     /**
-     * 사용자 입력 → 가장 가까운 leaf 반환. ready=false 또는 threshold 미달이면 null.
+     * 이름만으로는 무엇을 샀는지 모르는 입력 — 이름 전체가 이것과 같을 때만(askKey 로 비교) 묻는다.
+     * 「GS25 물티슈」처럼 물건이 같이 적혀 있으면 묻지 않고 규칙·임베딩으로 정한다. 첫 칩이 기본값이다.
+     * 칩은 대학생이 그 판매처에서 자주 사는 순서로 MAX_CHIPS 개까지(Gemini·ChatGPT 검토 반영, 10/6).
+     */
+    private static final Map<String, AskRule> ASK_RULES = askRules();
+
+    private static Map<String, AskRule> askRules() {
+        Map<String, AskRule> m = new HashMap<>();
+        AskRule store = new AskRule(AskType.WHAT, List.of(new Choice("먹을 것", "편의점"),
+                new Choice("생활용품", "생필품·잡화"), new Choice("상비약", "의료·약국"), new Choice("교통카드 충전", "대중교통")));
+        for (String n : List.of("편의점", "GS25", "지에스25", "CU", "씨유", "세븐일레븐", "이마트24", "미니스톱")) m.put(askKey(n), store);
+        AskRule mart = new AskRule(AskType.WHAT, List.of(new Choice("장보기", "마트·식자재"),
+                new Choice("생활용품", "생필품·잡화"), new Choice("화장품", "화장품")));
+        for (String n : List.of("마트", "이마트", "홈플러스", "롯데마트", "코스트코", "트레이더스", "노브랜드")) m.put(askKey(n), mart);
+        m.put(askKey("다이소"), new AskRule(AskType.WHAT, List.of(new Choice("생활용품", "생필품·잡화"),
+                new Choice("문구", "학용품·문구"), new Choice("취미·만들기", "취미·레저"), new Choice("간식", "마트·식자재"))));
+        m.put(askKey("쿠팡"), new AskRule(AskType.WHAT, List.of(new Choice("생활용품", "생필품·잡화"),
+                new Choice("장보기", "마트·식자재"), new Choice("옷", "의류"), new Choice("책", "도서"))));
+        m.put(askKey("올리브영"), new AskRule(AskType.WHAT, List.of(new Choice("화장품", "화장품"),
+                new Choice("생활용품", "생필품·잡화"), new Choice("상비약", "의료·약국"), new Choice("향수", "향수"))));
+        AskRule dish = new AskRule(AskType.DINE_OR_DELIVERY, DINE_OR_DELIVERY);
+        for (String n : List.of("치킨", "피자", "타코", "떡볶이", "족발", "보쌈", "짜장면", "짬뽕", "마라탕", "햄버거")) m.put(askKey(n), dish);
+        return Map.copyOf(m);
+    }
+
+    /** 묻기 목록과 비교하는 이름 — 소문자, 띄어쓰기·기호 없음(「GS 25」「다이소.」도 같게). */
+    static String askKey(String name) {
+        return name == null ? "" : name.toLowerCase(Locale.ROOT).replaceAll("[\\s\\p{Punct}·ㆍ•]", "");
+    }
+
+    /**
+     * 화면용 분류 — 내 기록 → 규칙 → 임베딩으로 정한 결과에 「물어볼지」를 더한다.
+     * 기본값을 미리 골라 두므로 묻더라도 저장은 막지 않는다. Gemini 호출은 늘지 않는다.
+     *  (1) 판매처·음식 이름만 쓴 경우(ASK_RULES): 후보 칩을 준다. 내 기록이 있으면 그걸 기본값으로 두고,
+     *      후보에 없으면 칩을 하나 더 붙인다(기본값과 선택 표시가 어긋나지 않게).
+     *  (2) 임베딩이 배달로 정한 경우: deliveryCheck.
+     */
+    public Suggestion suggest(Long userId, String name) {
+        if (name == null || name.isBlank()) return null;
+        Result mine = fromHistory(userId, name);
+        AskRule rule = ASK_RULES.get(askKey(name));
+        if (rule != null) {
+            List<Candidate> cands = candidates(rule.choices());
+            if (mine != null && cands.stream().noneMatch(c -> c.leafId().equals(mine.leafId()))) {
+                cands.add(0, new Candidate(mine.leafId(), mine.leafName(), mine.leafName()));
+                if (cands.size() > MAX_CHIPS) cands = new ArrayList<>(cands.subList(0, MAX_CHIPS));
+            }
+            if (cands.size() >= 2) {
+                Result def = mine != null ? mine : leafResult(cands.get(0).leafName(), 1.0, Source.ASK);
+                if (def != null) return new Suggestion(def, rule.type(), List.copyOf(cands));
+            }
+        }
+        Result r = mine != null ? mine : categorize(name);
+        if (r == null) r = fallback();
+        return r == null ? null : deliveryCheck(r);
+    }
+
+    /**
+     * 임베딩이 배달로 정했으면 외식을 기본값으로 매장/배달을 묻는다.
+     * 진짜 배달은 대개 배민·쿠팡이츠·배달 같은 낱말이 있어 규칙(RULES)에서 이미 정해진다. 그런데도 임베딩이
+     * 배달로 보냈으면 가게 이름일 가능성이 크다(10/3 시연 「문밸리 타코」). 내 기록·규칙으로 정한 건 묻지 않는다.
+     */
+    Suggestion deliveryCheck(Result r) {
+        if (r.source() == Source.EMBEDDING && DELIVERY_LEAF.equals(r.leafName())) {
+            List<Candidate> cands = candidates(DINE_OR_DELIVERY);
+            if (cands.size() == 2) {
+                Result dineIn = leafResult(cands.get(0).leafName(), r.score(), Source.ASK);
+                if (dineIn != null) return new Suggestion(dineIn, AskType.DINE_OR_DELIVERY, List.copyOf(cands));
+            }
+        }
+        return new Suggestion(r, null, List.of());
+    }
+
+    /** 후보 칩 — 없거나 꺼진 카테고리(대분류가 꺼진 것 포함)는 뺀다. */
+    private List<Candidate> candidates(List<Choice> choices) {
+        List<Candidate> out = new ArrayList<>();
+        for (Choice ch : choices) {
+            categoryRepository.findFirstByName(ch.leafName())
+                    .filter(this::usableLeaf)
+                    .ifPresent(c -> out.add(new Candidate(c.getId(), ch.label(), c.getName())));
+        }
+        return out;
+    }
+
+    /** Gemini 없이 categories 테이블만으로 폴백 leaf 를 만든다. 없으면 null. */
+    private Result fallback() {
+        return leafResult(FALLBACK_LEAF_NAME, 0.0, Source.FALLBACK);
+    }
+
+    /** leaf 이름으로 결과를 만든다(DB 조회만, Gemini 없음). 없으면 null. */
+    private Result leafResult(String leafName, double score, Source source) {
+        return categoryRepository.findFirstByName(leafName)
+                .filter(c -> c.getParentId() != null)
+                .map(c -> toResult(c, score, source))
+                .orElse(null);
+    }
+
+    private Result toResult(Category leaf, double score, Source source) {
+        String parentName = categoryRepository.findById(leaf.getParentId())
+                .map(Category::getName)
+                .orElse("");
+        return new Result(leaf.getId(), leaf.getName(), leaf.getParentId(), parentName, score, source);
+    }
+
+    /**
+     * 상호·낱말 규칙 — 이름에 있으면 임베딩 없이 바로 그 leaf 로 정한다(점수 1.0).
+     *
+     * 임베딩은 짧은 이름에서 글자·소리가 비슷한 쪽으로 끌린다(「타코」→택시, 「김밥천국」→편의점, 2026-10-03 측정).
+     * 자주 나오고 뜻이 하나뿐인 상호·낱말은 규칙으로 먼저 정해 그 흔들림을 없앤다. Gemini 가 안 돼도 동작한다.
+     * 「편의점」「다이소」「쿠팡」「올리브영」「치킨」처럼 무엇을 샀는지 이름만으로 모르는 것은 넣지 않는다
+     * — 그런 건 사용자에게 물어야 한다. 「커피」처럼 다른 물건 이름 안에도 들어가는 일반 낱말도 넣지 않는다
+     * (커피머신이 카페로 확정되면 화면이 그대로 골라 버린다) — 상호와 장소·서비스 이름만 둔다.
+     *
+     * 위에서부터 처음 맞는 규칙을 쓴다. 그래서 더 구체적인 것을 먼저 둔다(물건 이름 → 판매처, 이마트24 → 이마트,
+     * 고속버스 → 버스, 동물병원 → 병원). 영문 4자 이하(CU·KT·PT 등)는 앞뒤가 영문·숫자가 아닐 때만 맞춘다(CUP 은 아님).
+     */
+    private static final String[][] RULES = {
+        // 물건 이름이 판매처보다 먼저 — 「홈플러스 세제」「GS25 물티슈」는 마트·편의점이 아니라 생필품이다(Codex 검토).
+        // 큰 마트·편의점은 식자재 말고도 여러 물건을 팔아, 판매처만으로는 무엇을 샀는지 모른다.
+        {"노트북", "생필품·잡화"}, {"충전기", "생필품·잡화"}, {"보조배터리", "생필품·잡화"}, {"휴지", "생필품·잡화"},
+        {"물티슈", "생필품·잡화"}, {"세제", "생필품·잡화"},
+        {"사료", "펫용품"}, {"형광펜", "학용품·문구"}, {"볼펜", "학용품·문구"},
+        // 편의점 (이마트24 가 이마트보다 먼저)
+        {"이마트24", "편의점"}, {"GS25", "편의점"}, {"지에스25", "편의점"}, {"CU", "편의점"}, {"씨유", "편의점"},
+        {"세븐일레븐", "편의점"}, {"미니스톱", "편의점"},
+        // 배달
+        {"배달의민족", "배달"}, {"배민", "배달"}, {"쿠팡이츠", "배달"}, {"요기요", "배달"}, {"땡겨요", "배달"}, {"배달", "배달"},
+        // 카페
+        {"스타벅스", "카페"}, {"메가커피", "카페"}, {"컴포즈", "카페"}, {"빽다방", "카페"}, {"이디야", "카페"},
+        {"투썸", "카페"}, {"할리스", "카페"}, {"커피빈", "카페"}, {"공차", "카페"},
+        // 「커피」「라떼」「아메리카노」는 넣지 않는다 — 커피머신·커피믹스·라떼 파우더 같은 물건 이름에도 들어간다
+        // 외식 — 프랜차이즈·학식
+        {"학식", "외식"}, {"김밥천국", "외식"}, {"맥도날드", "외식"}, {"버거킹", "외식"}, {"롯데리아", "외식"},
+        {"맘스터치", "외식"}, {"KFC", "외식"}, {"서브웨이", "외식"},
+        // 마트·식자재
+        {"이마트", "마트·식자재"}, {"홈플러스", "마트·식자재"}, {"롯데마트", "마트·식자재"}, {"코스트코", "마트·식자재"},
+        {"트레이더스", "마트·식자재"}, {"노브랜드", "마트·식자재"}, {"장보기", "마트·식자재"},
+        // 의류
+        {"무신사", "의류"}, {"유니클로", "의류"}, {"에이블리", "의류"}, {"지그재그", "의류"}, {"탑텐", "의류"}, {"스파오", "의류"},
+        // 헤어·미용실
+        {"미용실", "헤어·미용실"}, {"헤어샵", "헤어·미용실"},
+        // 문화
+        {"CGV", "영화"}, {"메가박스", "영화"}, {"롯데시네마", "영화"}, {"영화", "영화"},
+        {"뮤지컬", "공연·뮤지컬"}, {"콘서트", "공연·뮤지컬"}, {"연극", "공연·뮤지컬"},
+        {"교보문고", "도서"}, {"알라딘", "도서"}, {"예스24", "도서"}, {"영풍문고", "도서"}, {"전공책", "도서"},
+        // 여가
+        {"넷플릭스", "게임·구독"}, {"티빙", "게임·구독"}, {"왓챠", "게임·구독"}, {"디즈니플러스", "게임·구독"}, {"웨이브", "게임·구독"},
+        {"유튜브 프리미엄", "게임·구독"}, {"스포티파이", "게임·구독"}, {"멜론", "게임·구독"}, {"스팀", "게임·구독"}, {"닌텐도", "게임·구독"},
+        {"PC방", "게임·구독"},
+        {"노래방", "취미·레저"}, {"볼링", "취미·레저"}, {"방탈출", "취미·레저"},
+        {"에어비앤비", "여행·숙박"}, {"야놀자", "여행·숙박"}, {"여기어때", "여행·숙박"}, {"호텔", "여행·숙박"}, {"펜션", "여행·숙박"},
+        {"헬스장", "스포츠·헬스"}, {"필라테스", "스포츠·헬스"}, {"요가", "스포츠·헬스"}, {"클라이밍", "스포츠·헬스"}, {"PT", "스포츠·헬스"},
+        // 생활 (고속·시외버스가 버스보다, 카카오택시가 택시보다, 동물병원이 병원보다 먼저)
+        {"KTX", "장거리 교통"}, {"SRT", "장거리 교통"}, {"코레일", "장거리 교통"}, {"고속버스", "장거리 교통"}, {"시외버스", "장거리 교통"},
+        {"카카오택시", "택시"}, {"카카오T", "택시"}, {"택시", "택시"}, {"우버", "택시"},
+        {"교통카드", "대중교통"}, {"티머니", "대중교통"}, {"지하철", "대중교통"}, {"버스", "대중교통"},
+        {"동물병원", "펫용품"}, {"펫용품", "펫용품"},
+        {"약국", "의료·약국"}, {"치과", "의료·약국"}, {"한의원", "의료·약국"}, {"병원", "의료·약국"},
+        {"문구", "학용품·문구"},
+        // 「노트」는 넣지 않는다 — 갤럭시 노트 같은 기기 이름에도 들어간다
+        // 고정비
+        {"휴대폰 요금", "통신비"}, {"통신비", "통신비"}, {"인터넷 요금", "통신비"}, {"SKT", "통신비"}, {"KT", "통신비"}, {"LG U+", "통신비"},
+        {"전기요금", "공과금"}, {"전기세", "공과금"}, {"가스비", "공과금"}, {"가스요금", "공과금"}, {"수도요금", "공과금"}, {"수도세", "공과금"},
+        {"월세", "주거·관리비"}, {"관리비", "주거·관리비"}, {"전세", "주거·관리비"},
+    };
+
+    /** 규칙에 맞으면 그 leaf 이름, 아니면 null. */
+    static String ruleLeafName(String name) {
+        if (name == null) return null;
+        String text = name.trim();
+        String lower = text.toLowerCase(java.util.Locale.ROOT);
+        for (String[] rule : RULES) {
+            String key = rule[0];
+            if (key.matches("[A-Za-z0-9+ ]{1,4}")) {
+                // 짧은 영문은 낱말로만 — "CUP" 안의 CU, "PPT" 안의 PT 는 아니다
+                String pattern = "(?<![a-z0-9])" + java.util.regex.Pattern.quote(key.toLowerCase(java.util.Locale.ROOT)) + "(?![a-z0-9])";
+                if (java.util.regex.Pattern.compile(pattern).matcher(lower).find()) return rule[1];
+            } else if (lower.contains(key.toLowerCase(java.util.Locale.ROOT))) {
+                return rule[1];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 사용자 입력 → 규칙에 맞으면 그 leaf, 아니면 가장 가까운 leaf. 규칙에 없고 ready=false 거나 threshold 미달이면 null.
+     * 임베딩이 실패했거나 실패 뒤 쉬는 중이어도 null(EMBED_PAUSE).
      */
     public Result categorize(String name) {
-        if (!ready) return null;
         if (name == null || name.isBlank()) return null;
-        double[] queryVec = geminiClient.embed(name.trim());
+        String ruled = ruleLeafName(name);
+        if (ruled != null) {
+            Result r = leafResult(ruled, 1.0, Source.RULE);
+            if (r != null) return r;
+        }
+        if (!ready || clock.instant().isBefore(embedPausedUntil)) return null;
+        double[] queryVec;
+        try {
+            queryVec = geminiClient.embed(name.trim());
+        } catch (RuntimeException e) {
+            embedPausedUntil = clock.instant().plus(EMBED_PAUSE);
+            log.warn("임베딩 실패 — {}분 동안 임베딩 없이 분류한다(기본값 기타 생활)", EMBED_PAUSE.toMinutes(), e);
+            return null;
+        }
 
         Long bestId = null;
         double bestScore = -1.0;
@@ -176,7 +439,7 @@ public class CategorizeService {
         }
         if (bestId == null || bestScore < MATCH_THRESHOLD) return null;
         CachedLeaf m = leafMeta.get(bestId);
-        return new Result(m.id, m.name, m.parentId, m.parentName, bestScore);
+        return new Result(m.id, m.name, m.parentId, m.parentName, bestScore, Source.EMBEDDING);
     }
 
     private static double cosine(double[] a, double[] b) {
@@ -193,5 +456,8 @@ public class CategorizeService {
 
     public boolean isReady() { return ready; }
 
-    public record Result(Long leafId, String leafName, Long parentId, String parentName, double score) {}
+    /** 어디서 정했는지 — 측정 스크립트가 나눠 센다. ASK 는 묻기 규칙이 고른 기본값(사용자가 칩으로 바꿀 수 있다). */
+    public enum Source { HISTORY, RULE, EMBEDDING, ASK, FALLBACK }
+
+    public record Result(Long leafId, String leafName, Long parentId, String parentName, double score, Source source) {}
 }

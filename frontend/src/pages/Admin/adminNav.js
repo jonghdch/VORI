@@ -33,13 +33,14 @@ export const ADMIN_NAV = [
       { to: "/admin/category-stats", label: "지출 카테고리 통계" },
       { to: "/admin/rationality-rules", label: "합리성 판정 / AI 룰 설정" },
       { to: "/admin/ai-logs", label: "AI 대사 로그" },
+      { to: "/admin/ai-usage", label: "AI 사용량" },
       { to: "/admin/ocr-jobs", label: "영수증 OCR 모니터링" },
     ],
   },
   {
     label: "시스템 및 컨텐츠 운영",
     items: [
-      { to: "/admin/achievements", label: "업적 / 칭호 관리" },
+      { to: "/admin/achievements", label: "업적 관리" },
       { to: "/admin/notices", label: "공지사항 및 푸시 알림" },
       { to: "/admin/audit-log", label: "운영 감사 로그" },
     ],

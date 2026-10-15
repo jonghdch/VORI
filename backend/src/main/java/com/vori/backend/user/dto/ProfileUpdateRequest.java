@@ -1,9 +1,11 @@
 package com.vori.backend.user.dto;
 
+import com.vori.backend.common.StatType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.util.Set;
 
 /**
  * 환경설정에서 수정하는 본인 프로필. 이메일과 비밀번호는 별도 인증 흐름에서 관리한다.
@@ -26,12 +28,19 @@ public record ProfileUpdateRequest(
         String job,
 
         @Min(value = 0, message = "월 수입은 0 이상으로 입력해 주세요")
-        Integer monthlyIncome
+        Integer monthlyIncome,
+
+        @Min(value = 0, message = "월 예산은 0 이상으로 입력해 주세요")
+        @Max(value = 100_000_000, message = "월 예산이 너무 큽니다")
+        Integer monthlyBudget,
+
+        Set<StatType> budgetFocusStats
 ) {
     /** 공백을 먼저 잘라 둔다. 검사(@Size)와 저장이 같은 값을 봐야 "a " 가 2자로 통과한 뒤 1자로 저장되지 않는다. */
     public ProfileUpdateRequest {
         nickname = nickname == null ? null : nickname.trim();
         name = name == null ? null : name.trim();
         job = job == null || job.isBlank() ? null : job.trim();
+        budgetFocusStats = budgetFocusStats == null ? Set.of() : Set.copyOf(budgetFocusStats);
     }
 }

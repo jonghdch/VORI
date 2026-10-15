@@ -3,6 +3,7 @@ package com.vori.backend.report;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vori.backend.expense.Expense;
 import com.vori.backend.expense.ExpenseRepository;
+import com.vori.backend.gemini.AiSwitches;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.inquiry.AiInquiry;
 import com.vori.backend.inquiry.AiInquiryRepository;
@@ -14,6 +15,7 @@ import com.vori.backend.pet.PetGrowthLogRepository;
 import com.vori.backend.pet.PetRepository;
 import com.vori.backend.pet.PetSpecies;
 import com.vori.backend.pet.PetSpeciesRepository;
+import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,6 +56,8 @@ public class DailyReportService {
     private final GeminiClient geminiClient;
     private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
+    private final AiSwitches aiSwitches;
+    private final UserRepository userRepository;
 
     /**
      * 하루치 집계 결과 — AI 호출 전에 트랜잭션 밖으로 들고 나올 값들.
@@ -102,6 +106,8 @@ public class DailyReportService {
                 expenseRepository.findUserIdsWithExpenseInRange(
                         date.atStartOfDay(), date.plusDays(1).atStartOfDay()));
         ids.addAll(incomeRepository.findUserIdsWithIncomeOn(date));
+        // 탈퇴 대기 계정은 뺀다 — 볼 사람이 없는 리포트에 AI 코멘트 호출(무료 한도)을 쓰지 않게
+        ids.removeAll(userRepository.findIdsPendingDeletion());
         return List.copyOf(ids);
     }
 
@@ -153,15 +159,18 @@ public class DailyReportService {
     private void generateForUser(Long userId, LocalDate date) {
         DailySummary summary = aggregate(userId, date);
 
-        // AI 실패로 리포트 자체가 사라지면 안 된다 — 코멘트만 비우고 통계는 남긴다
+        // AI 실패로 리포트 자체가 사라지면 안 된다 — 코멘트만 비우고 통계는 남긴다.
+        // 관리자가 일일 코멘트를 꺼 두면(AiSwitches, 한도 아끼기) 부르지 않고 같은 모양(코멘트 없음)으로 저장한다.
         String comment = null;
-        try {
-            comment = geminiClient.generateDailyComment(new GeminiClient.DailyCommentInput(
-                    summary.petName(), summary.speciesName(),
-                    summary.expenseTotal(), summary.incomeTotal(), summary.savedAmount(),
-                    summary.statDeltaTotal(), summary.reasons()));
-        } catch (Exception e) {
-            log.warn("AI 코멘트 생성 실패 — 통계만 저장. userId={}, date={}", userId, date);
+        if (aiSwitches.dailyComment()) {
+            try {
+                comment = geminiClient.generateDailyComment(new GeminiClient.DailyCommentInput(
+                        summary.petName(), summary.speciesName(),
+                        summary.expenseTotal(), summary.incomeTotal(), summary.savedAmount(),
+                        summary.statDeltaTotal(), summary.reasons()));
+            } catch (Exception e) {
+                log.warn("AI 코멘트 생성 실패 — 통계만 저장. userId={}, date={}", userId, date);
+            }
         }
 
         save(userId, date, summary, comment);
@@ -238,7 +247,7 @@ public class DailyReportService {
     }
 
     /**
-     * 리포트 시점의 펫 상태를 JSON 으로 박제. 나중에 그 펫을 분양해도 리포트엔 그날의 모습이 남는다.
+     * 리포트 시점의 펫 상태를 JSON 으로 박제. 나중에 그 펫을 배웅해도 리포트엔 그날의 모습이 남는다.
      * 직렬화가 실패해도 리포트 생성을 막지는 않는다.
      */
     private String writeSnapshot(Pet pet, PetSpecies species) {
@@ -248,7 +257,7 @@ public class DailyReportService {
                     pet.getId(),
                     species == null ? null : species.getName(),
                     species == null ? null : species.getAppearanceKey(),
-                    pet.getStage().name(),
+                    pet.displayStage().name(),
                     pet.getStatEnergy(), pet.getStatCharm(),
                     pet.getStatIq(), pet.getStatEndurance(),
                     pet.statTotal()));

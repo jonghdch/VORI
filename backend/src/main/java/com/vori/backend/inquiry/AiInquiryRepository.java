@@ -51,6 +51,17 @@ public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
     /** 답변을 마친 AI 질문 수 — 소통 관련 칭호 조건. */
     long countByUserIdAndAnsweredAtIsNotNull(Long userId);
 
+    /**
+     * from 이후에 답한 질문 수 — 단, 질문이 달린 지출도 from 이후에 기록된 것만 센다. 펫 칭호(AI_ANSWERS)용.
+     * 옛 지출을 고치면 AI 질문이 새로 생기므로, 답변 시각만 보면 지출 수정으로 수치를 올릴 수 있다.
+     */
+    @Query("""
+        SELECT COUNT(a) FROM AiInquiry a, Expense e
+        WHERE e.id = a.expenseId AND a.userId = :userId
+          AND a.answeredAt IS NOT NULL AND a.answeredAt >= :from AND e.createdAt >= :from
+        """)
+    long countAnsweredForExpensesSince(@Param("userId") Long userId, @Param("from") LocalDateTime from);
+
     // 어드민 AI 대사 로그 — 최근 질문순 페이지네이션 (+ reason 필터)
     Page<AiInquiry> findByReasonCategory(ReasonCategory reasonCategory, Pageable pageable);
 

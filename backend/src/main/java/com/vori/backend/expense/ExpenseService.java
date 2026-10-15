@@ -10,11 +10,6 @@ import com.vori.backend.goal.GoalRepository;
 import com.vori.backend.goal.GoalStatus;
 import com.vori.backend.inquiry.AiInquiry;
 import com.vori.backend.inquiry.AiInquiryRepository;
-import com.vori.backend.pet.GrowthReason;
-import com.vori.backend.pet.Pet;
-import com.vori.backend.pet.PetGrowthLog;
-import com.vori.backend.pet.PetGrowthLogRepository;
-import com.vori.backend.pet.PetRepository;
 import com.vori.backend.stats.UserStatStats;
 import com.vori.backend.title.TitleCheckEvent;
 import com.vori.backend.stats.UserStatStatsRepository;
@@ -26,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -41,24 +35,17 @@ public class ExpenseService {
     private final UserStatStatsRepository userStatStatsRepository;
     private final UserRepository userRepository;
     private final GoalRepository goalRepository;
-    private final PetRepository petRepository;
-    private final PetGrowthLogRepository petGrowthLogRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final SignalConfigService signalConfigService;
+    private final ExpenseCalculationService calculationService;
     private final AiInquiryRepository aiInquiryRepository;
-    private final com.vori.backend.pet.PetStatRewardService statRewardService;
 
     /**
      * 판정에 필요한 최소 표본 수. 이보다 적으면 z 를 계산하지 않고 GREEN.
      * 온보딩 씨딩(BaselineSeeder)이 초기값을 넣을 때 표본 수를 이 값으로 두어 첫 지출부터 판정이 돌게 한다.
      */
-    public static final int N_MIN = 5;
-    // Z_GREEN / Z_RED 임계값은 signal_config 테이블(관리자 조정) 에서 읽는다. SignalConfigService 참조.
-    private static final BigDecimal STDDEV_MIN = new BigDecimal("0.01");
-    // expenses.z_score 는 DECIMAL(6,3) — 담을 수 있는 한계. clampZScore 참조.
-    private static final BigDecimal Z_SCORE_MAX = new BigDecimal("999.999");
-    private static final BigDecimal Z_SCORE_MIN = new BigDecimal("-999.999");
-    private static final double EMA_ALPHA = 0.2;
+    public static final int N_MIN = ExpenseCalculationService.N_MIN;
+    /** 하루 첫 지출 기록에 주는 코인. */
+    private static final int RECORD_REWARD_COINS = 100;
 
     /** 가계부 작성 화면 mount 시 그 날짜 기존 expense 들 불러오기. */
     @Transactional(readOnly = true)
@@ -91,41 +78,26 @@ public class ExpenseService {
                 .isRecurring(req.isRecurring())
                 .build());
 
-        // 새 기록을 남긴 즉시 주는 습관 보상. 수정·삭제에는 다시 지급하지 않는다.
-        userRepository.findById(userId).orElseThrow().addGameMoney(100);
+        // 기록 습관 보상 — 하루 첫 기록에만 준다. 지급일을 사용자에 남겨 삭제 후 재등록으로 다시 받지 못한다.
+        // 같은 날 동시 등록이 둘 다 받지 않게 사용자 행을 잠근다.
+        userRepository.findByIdForUpdate(userId).orElseThrow()
+                .grantDailyRecordReward(java.time.LocalDate.now(), RECORD_REWARD_COINS);
 
         UserStatStats stats = userStatStatsRepository
                 .findByUserIdAndStatType(userId, category.getStatType())
                 .orElseThrow(() -> new IllegalStateException("user_stat_stats 초기화가 누락되었습니다."));
 
-        BigDecimal zScore = null;
-        Signal signal;
-
-        if (stats.getSampleCount() < N_MIN || stats.getStddevEma().compareTo(STDDEV_MIN) < 0) {
-            signal = Signal.GREEN;
-        } else {
-            zScore = clampZScore(BigDecimal.valueOf(req.amount())
-                    .subtract(stats.getMeanEma())
-                    .divide(stats.getStddevEma(), 3, RoundingMode.HALF_UP));
-            double z = zScore.doubleValue();
-            SignalConfig cfg = signalConfigService.getConfig();
-            double zGreen = cfg.getZGreen().doubleValue();
-            double zRed = cfg.getZRed().doubleValue();
-            signal = z <= zGreen ? Signal.GREEN : (z <= zRed ? Signal.GRAY : Signal.RED);
-        }
-
-        // docs/domain.md §3 — 반복 결제(통신비·구독 등)는 사용자의 의식적 결정이 아님 → RED 자동 제외
-        if (Boolean.TRUE.equals(req.isRecurring()) && signal == Signal.RED) {
-            signal = Signal.GRAY;
-        }
-
-        int savedAmount = stats.getMeanEma().subtract(BigDecimal.valueOf(req.amount())).intValue();
+        ExpenseCalculationService.Result calculation = calculationService.calculate(
+                stats, req.amount(), Boolean.TRUE.equals(req.isRecurring()));
+        BigDecimal zScore = calculation.zScore();
+        Signal signal = calculation.signal();
+        int savedAmount = calculation.savedAmount();
         // 코인·스탯은 지출 금액이 아니라 하루 최종 판정에서만 지급한다.
         int statDelta = 0;
 
         expense.updateCalculations(zScore, signal, savedAmount, statDelta);
 
-        updateEma(stats, req.amount());
+        calculationService.updateEma(stats, req.amount());
 
         if (savedAmount > 0) {
             User user = userRepository.findById(userId).orElseThrow();
@@ -170,6 +142,7 @@ public class ExpenseService {
 
     /**
      * 본인 지출의 내역명·금액 수정 후 현재 통계 기준으로 판정과 절약액을 다시 계산한다.
+     * 금액·카테고리가 바뀌지 않았으면 내역·결제수단만 고치고 판정은 그대로 둔다.
      *
      * 파생 상태 처리는 삭제(LedgerService.deleteExpense)와 같은 규칙을 따른다.
      * - user.totalSaved — 이 지출이 더해 둔 절약액과 새 절약액의 차이만큼 맞춘다.
@@ -184,6 +157,15 @@ public class ExpenseService {
                     org.springframework.http.HttpStatus.FORBIDDEN, "본인 지출만 수정할 수 있습니다.");
         }
 
+        // 금액·카테고리가 그대로면 다시 판정하지 않는다(docs/judgment-flow.md D6). 신호는 이 둘로만 계산하므로
+        // 내역 이름·결제수단만 고친 수정에 판정을 다시 내면 얻는 것 없이 이 지출의 AI 질문·답변만 지워진다.
+        // AI 질문 문구에는 예전 이름이 남는다 — 그때 그 이름으로 물은 기록이다.
+        if (expense.getAmount().equals(req.amount()) && expense.getCategoryId().equals(req.categoryId())) {
+            expense.updateItem(req.item().trim());
+            if (req.paymentMethod() != null) expense.updatePaymentMethod(req.paymentMethod());
+            return ExpenseResponse.from(expense);
+        }
+
         Category category = categoryRepository.findById(req.categoryId())
                 .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + req.categoryId()));
         UserStatStats stats = userStatStatsRepository
@@ -192,23 +174,12 @@ public class ExpenseService {
 
         expense.updateDetails(req.item().trim(), req.amount(), req.categoryId(),
                 category.getStatType(), req.paymentMethod());
-        BigDecimal zScore = null;
-        Signal signal;
-        // 판정 규칙은 createExpense 와 같아야 한다 — 표본이 적으면 판정을 미룬다.
-        if (stats.getSampleCount() < N_MIN || stats.getStddevEma().compareTo(STDDEV_MIN) < 0) {
-            signal = Signal.GREEN;
-        } else {
-            zScore = clampZScore(BigDecimal.valueOf(req.amount())
-                    .subtract(stats.getMeanEma())
-                    .divide(stats.getStddevEma(), 3, RoundingMode.HALF_UP));
-            SignalConfig cfg = signalConfigService.getConfig();
-            signal = zScore.compareTo(cfg.getZGreen()) <= 0 ? Signal.GREEN
-                    : (zScore.compareTo(cfg.getZRed()) <= 0 ? Signal.GRAY : Signal.RED);
-        }
-        if (Boolean.TRUE.equals(expense.getIsRecurring()) && signal == Signal.RED) signal = Signal.GRAY;
-
+        ExpenseCalculationService.Result calculation = calculationService.calculate(
+                stats, req.amount(), Boolean.TRUE.equals(expense.getIsRecurring()));
+        BigDecimal zScore = calculation.zScore();
+        Signal signal = calculation.signal();
         int previousSaved = expense.getSavedAmount() == null ? 0 : expense.getSavedAmount();
-        int savedAmount = stats.getMeanEma().subtract(BigDecimal.valueOf(req.amount())).intValue();
+        int savedAmount = calculation.savedAmount();
         int statDelta = 0;
         expense.updateCalculations(zScore, signal, savedAmount, statDelta);
         // 등록 때 양수 절약액만 누적했으므로 비교도 양수 부분끼리 한다.
@@ -245,46 +216,6 @@ public class ExpenseService {
     }
 
     /**
-     * z_score 를 컬럼이 담을 수 있는 범위로 자른다.
-     *
-     * expenses.z_score 가 DECIMAL(6,3) 이라 ±999.999 를 넘으면 저장 시 Data truncation 이
-     * 나고 지출 등록 자체가 500 으로 실패한다. 평소 소비가 일정해 stddev 가 작은 사용자가
-     * 큰 지출을 한 번 하면 z 가 네 자리로 나오는데, 그게 바로 VORI 가 잡으라고 만든
-     * 상황이라 하필 거기서 앱이 죽는다.
-     *
-     * z 가 1000 을 넘으면 어차피 RED 이고, 1300 인지 1500 인지는 판정에도 화면에도
-     * 의미가 없으므로 잘라 담는다. 컬럼을 넓히는 방법도 있지만 stddev 가 더 작아지면
-     * 같은 문제가 다시 생기므로 근본 대책이 못 된다.
-     */
-    private static BigDecimal clampZScore(BigDecimal z) {
-        if (z.compareTo(Z_SCORE_MAX) > 0) return Z_SCORE_MAX;
-        if (z.compareTo(Z_SCORE_MIN) < 0) return Z_SCORE_MIN;
-        return z;
-    }
-
-    private void updateEma(UserStatStats stats, int amount) {
-        int newCount = stats.getSampleCount() + 1;
-
-        if (stats.getSampleCount() == 0) {
-            stats.updateEma(BigDecimal.valueOf(amount), BigDecimal.ZERO, newCount);
-            return;
-        }
-
-        double oldMean = stats.getMeanEma().doubleValue();
-        double oldVar = Math.pow(stats.getStddevEma().doubleValue(), 2);
-
-        double newMean = EMA_ALPHA * amount + (1 - EMA_ALPHA) * oldMean;
-        double deviation = amount - oldMean;
-        double newVar = EMA_ALPHA * deviation * deviation + (1 - EMA_ALPHA) * oldVar;
-
-        stats.updateEma(
-                BigDecimal.valueOf(newMean).setScale(2, RoundingMode.HALF_UP),
-                BigDecimal.valueOf(Math.sqrt(newVar)).setScale(2, RoundingMode.HALF_UP),
-                newCount
-        );
-    }
-
-    /**
      * 이번 지출의 절약액을 해당 월의 ACTIVE 목표에 누적한다.
      * category_id 가 NULL 인 목표는 그 달 전체가 대상이므로 카테고리와 무관하게 쌓인다.
      * 목표치를 넘으면 Goal 이 스스로 DONE 으로 전이하고, 그 뒤로는 조회 대상에서 빠진다.
@@ -299,25 +230,4 @@ public class ExpenseService {
         }
     }
 
-    private int updateActivePet(Long userId, com.vori.backend.common.StatType statType,
-                                 int statDelta, Long expenseId, int savedAmount) {
-        List<Pet> pets = petRepository.findByUserIdAndReleasedAtIsNull(userId);
-        if (pets.isEmpty()) return 0;
-
-        Pet pet = pets.get(0);
-        int applied = statRewardService.grant(pet, userId, statType, statDelta);
-        pet.evaluateStage(); // 스탯 합이 임계값을 넘었으면 INFANT→JUVENILE→ADULT 로 승급
-
-        petGrowthLogRepository.save(PetGrowthLog.builder()
-                .petId(pet.getId())
-                .userId(userId)
-                .expenseId(expenseId)
-                .statType(statType)
-                .delta(applied)
-                .savedAmount(savedAmount)
-                .reason(GrowthReason.EXPENSE_SAVING)
-                .createdAt(LocalDateTime.now())
-                .build());
-        return statDelta;
-    }
 }

@@ -1,5 +1,6 @@
 package com.vori.backend.admin;
 
+import com.vori.backend.admin.dto.AdminCoinResponse;
 import com.vori.backend.admin.dto.AdminTitleResponse;
 import com.vori.backend.admin.dto.AdminUserResponse;
 import com.vori.backend.admin.dto.AiLogResponse;
@@ -51,6 +52,7 @@ public class AdminController {
     private final SignalConfigService signalConfigService;
     private final AdminPetService adminPetService;
     private final AdminTitleService adminTitleService;
+    private final AdminCoinService adminCoinService;
 
     @GetMapping("/users")
     public ResponseEntity<PageResponse<AdminUserResponse>> listUsers(
@@ -97,35 +99,35 @@ public class AdminController {
 
     // ───── 칭호 관리 ─────
 
-    /** GET /api/admin/titles — 비활성 포함 전체, 정렬 순서대로. 보유자 수·해금 테마 포함. */
-    @GetMapping("/titles")
+    /** GET /api/admin/achievements — 비활성 포함 전체, 정렬 순서대로. 보유자 수·해금 테마 포함. */
+    @GetMapping("/achievements")
     public ResponseEntity<List<AdminTitleResponse>> listTitles() {
         return ResponseEntity.ok(adminTitleService.list());
     }
 
-    /** POST /api/admin/titles — 생성. code 중복이면 409. */
-    @PostMapping("/titles")
+    /** POST /api/admin/achievements — 생성. code 중복이면 409. */
+    @PostMapping("/achievements")
     @ResponseStatus(HttpStatus.CREATED)
     public AdminTitleResponse createTitle(@Valid @RequestBody TitleUpsertRequest req) {
         return adminTitleService.create(req);
     }
 
-    /** PUT /api/admin/titles/{id} — 수정. code 는 바꾸지 않는다. */
-    @PutMapping("/titles/{id}")
+    /** PUT /api/admin/achievements/{id} — 수정. code 는 바꾸지 않는다. */
+    @PutMapping("/achievements/{id}")
     public ResponseEntity<AdminTitleResponse> updateTitle(
             @PathVariable Long id, @Valid @RequestBody TitleUpsertRequest req) {
         return ResponseEntity.ok(adminTitleService.update(id, req));
     }
 
-    /** PATCH /api/admin/titles/{id}/enabled?value=false — 활성/비활성. 운영 중 내리는 기본 경로. */
-    @PatchMapping("/titles/{id}/enabled")
+    /** PATCH /api/admin/achievements/{id}/enabled?value=false — 활성/비활성. 운영 중 내리는 기본 경로. */
+    @PatchMapping("/achievements/{id}/enabled")
     public ResponseEntity<AdminTitleResponse> setTitleEnabled(
             @PathVariable Long id, @RequestParam("value") boolean value) {
         return ResponseEntity.ok(adminTitleService.setEnabled(id, value));
     }
 
-    /** DELETE /api/admin/titles/{id} — 보유자가 있거나 테마 해금 조건이면 409. */
-    @DeleteMapping("/titles/{id}")
+    /** DELETE /api/admin/achievements/{id} — 보유자가 있거나 테마 해금 조건이면 409. */
+    @DeleteMapping("/achievements/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteTitle(@PathVariable Long id) {
         adminTitleService.delete(id);
@@ -134,19 +136,36 @@ public class AdminController {
     // ───── 시연·QA 도구 ─────
 
     /**
-     * POST /api/admin/users/{userId}/pet/grow?stage=ADULT
-     * 대상 사용자의 활성 펫을 해당 단계까지 즉시 성장시킨다.
+     * POST /api/admin/users/{userId}/coins?amount=25000 — 지정한 사용자에게 코인을 지급한다.
+     * 시연·운영에 필요한 지급만 관리자 경로로 열어, 일일 보상과 상점 가격 규칙은 그대로 둔다.
+     */
+    @PostMapping("/users/{userId}/coins")
+    public ResponseEntity<AdminCoinResponse> grantUserCoins(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long userId,
+            @RequestParam int amount
+    ) {
+        return ResponseEntity.ok(adminCoinService.grant(principal.getId(), userId, amount));
+    }
+
+    /**
+     * POST /api/admin/users/{userId}/pet/grow?stage=ADULT  또는  ?level=30
+     * 대상 사용자의 활성 펫을 해당 단계(또는 레벨)까지 즉시 성장시킨다. level 이 있으면 level 우선.
+     * 배웅은 30레벨부터라 시연에서 배웅을 보이려면 level=30 을 쓴다.
      *
-     * 성체까지 정상적으로 키우려면 누적 30만원어치 절약이 필요해 발표 자리에서 분양을
+     * 성체까지 정상적으로 키우려면 누적 30만원어치 절약이 필요해 발표 자리에서 배웅을
      * 보여줄 수 없다. 진화 임계값을 낮추면 운영 규칙이 왜곡되므로 어드민 경로로만 연다.
      * 올린 스탯은 pet_growth_logs 에 reason=BONUS 로 기록된다.
      */
     @PostMapping("/users/{userId}/pet/grow")
     public ResponseEntity<PetResponse> growUserPet(
             @PathVariable Long userId,
-            @RequestParam(defaultValue = "ADULT") PetStage stage
+            @RequestParam(defaultValue = "ADULT") PetStage stage,
+            @RequestParam(required = false) Integer level
     ) {
-        return ResponseEntity.ok(adminPetService.growActivePet(userId, stage));
+        return ResponseEntity.ok(level != null
+                ? adminPetService.growActivePetToLevel(userId, level)
+                : adminPetService.growActivePet(userId, stage));
     }
 
     // ───── 관리자 본인 계정 도구 (/api/admin/me/**) ─────
@@ -167,6 +186,13 @@ public class AdminController {
         return adminPetService.setActivePetAppearance(principal.getId(), speciesId, variant);
     }
 
+    /** PUT /api/admin/me/pet/level?level=30 — 활성 펫 레벨 강제(1~30, 내려가기 포함). */
+    @PutMapping("/me/pet/level")
+    public PetResponse setMyPetLevel(@AuthenticationPrincipal UserPrincipal principal,
+                                     @RequestParam int level) {
+        return adminPetService.setActivePetLevel(principal.getId(), level);
+    }
+
     /** PUT /api/admin/me/pet/stage?stage=JUVENILE — 활성 펫 단계 강제(내려가기 포함). */
     @PutMapping("/me/pet/stage")
     public PetResponse setMyPetStage(@AuthenticationPrincipal UserPrincipal principal,
@@ -174,7 +200,7 @@ public class AdminController {
         return adminPetService.setActivePetStage(principal.getId(), stage);
     }
 
-    /** DELETE /api/admin/me/pet — 활성 펫 비우기(보상 0 분양). 알 개봉 흐름을 다시 보려고. */
+    /** DELETE /api/admin/me/pet — 활성 펫 비우기(보상 0 배웅). 알 개봉 흐름을 다시 보려고. */
     @DeleteMapping("/me/pet")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void clearMyPet(@AuthenticationPrincipal UserPrincipal principal) {

@@ -1,6 +1,7 @@
 package com.vori.backend.receipt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vori.backend.gemini.AiQuotaException;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.receipt.dto.ExtractedReceipt;
 import com.vori.backend.receipt.dto.ReceiptOcrResponse;
@@ -64,6 +65,11 @@ public class ReceiptService {
         String raw;
         try {
             raw = geminiClient.extractReceipt(image, mimeType);
+        } catch (AiQuotaException e) {
+            // 화면이 이 문구를 그대로 보여 준다 — 다시 올려도 안 되는 때라 직접 입력을 권한다
+            return fail(job.getId(), e.isDaily()
+                    ? "오늘 준비한 AI 사용량을 다 써서 사진을 읽지 못했어요. 직접 입력해 주세요."
+                    : "지금 요청이 몰렸어요. 1분 뒤 다시 올려 주세요.", e);
         } catch (Exception e) {
             return fail(job.getId(), "AI 인식 호출에 실패했습니다.", e);
         }

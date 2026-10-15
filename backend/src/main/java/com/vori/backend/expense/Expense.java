@@ -126,4 +126,19 @@ public class Expense {
         this.statType = statType;
         this.paymentMethod = paymentMethod;
     }
+
+    /** 내역 이름만 고친다. 신호는 금액·카테고리로만 계산하므로 다시 판정하지 않는다(docs/judgment-flow.md D6). */
+    public void updateItem(String item) {
+        this.item = item;
+    }
+
+    /** 메모만 고친다. 메모는 판정·분류·AI 에 쓰지 않으므로 다시 계산할 것이 없다. */
+    public void updateMemo(String memo) {
+        this.memo = memo;
+    }
+
+    /** 결제수단만 고친다. 판정 계산·AI 질문 문구에 쓰지 않으므로 다시 계산할 것이 없다. */
+    public void updatePaymentMethod(PaymentMethod paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
 }

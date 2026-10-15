@@ -7,8 +7,6 @@ import com.vori.backend.common.StatType;
 import com.vori.backend.expense.dto.ExpenseUpdateRequest;
 import com.vori.backend.goal.GoalRepository;
 import com.vori.backend.inquiry.AiInquiryRepository;
-import com.vori.backend.pet.PetGrowthLogRepository;
-import com.vori.backend.pet.PetRepository;
 import com.vori.backend.stats.UserStatStats;
 import com.vori.backend.stats.UserStatStatsRepository;
 import com.vori.backend.user.Role;
@@ -22,7 +20,10 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -43,13 +44,11 @@ class ExpenseServiceUpdateTest {
     private final UserStatStatsRepository stats = mock(UserStatStatsRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final GoalRepository goals = mock(GoalRepository.class);
-    private final PetRepository pets = mock(PetRepository.class);
-    private final PetGrowthLogRepository growthLogs = mock(PetGrowthLogRepository.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final SignalConfigService signalConfig = mock(SignalConfigService.class);
     private final AiInquiryRepository inquiries = mock(AiInquiryRepository.class);
     private final ExpenseService service = new ExpenseService(expenses, categories, stats, users,
-            goals, pets, growthLogs, events, signalConfig, inquiries);
+            goals, events, new ExpenseCalculationService(signalConfig), inquiries);
 
     @BeforeEach
     void setUp() {
@@ -113,6 +112,37 @@ class ExpenseServiceUpdateTest {
         service.updateExpense(USER_ID, EXPENSE_ID, request(5000));
 
         verifyNoInteractions(users);
+    }
+
+    @Test
+    void renamingOnlyKeepsTheJudgmentAndItsAiAnswer() {
+        // 신호는 금액·카테고리로만 계산한다. 이름만 고쳤는데 다시 판정하면 AI 답변(인정된 사유)이 지워졌다 (docs/judgment-flow.md D6)
+        Expense expense = savedExpense(5000, 5000);
+        expense.updateCalculations(null, Signal.RED, 5000, 0);
+        expense.updateSignalFinal(Signal.GREEN);
+
+        service.updateExpense(USER_ID, EXPENSE_ID,
+                new ExpenseUpdateRequest("저녁 회식", 5000, CATEGORY_ID, PaymentMethod.DEBIT));
+
+        assertEquals("저녁 회식", expense.getItem());
+        assertEquals(Signal.GREEN, expense.getSignalFinal(), "인정된 사유로 낮춘 신호가 그대로");
+        verify(inquiries, never()).findByExpenseId(EXPENSE_ID);
+        verify(inquiries, never()).delete(any());
+        verifyNoInteractions(users);
+    }
+
+    @Test
+    void changingTheCategoryJudgesAgain() {
+        long otherCategory = 4L;
+        when(categories.findById(otherCategory)).thenReturn(Optional.of(
+                Category.builder().id(otherCategory).name("카페").statType(StatType.ENERGY).build()));
+        savedExpense(5000, 5000);
+        userWithTotalSaved(5000);
+
+        service.updateExpense(USER_ID, EXPENSE_ID,
+                new ExpenseUpdateRequest("점심", 5000, otherCategory, PaymentMethod.DEBIT));
+
+        verify(inquiries).findByExpenseId(EXPENSE_ID);
     }
 
     private User userWithTotalSaved(int totalSaved) {

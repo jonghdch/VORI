@@ -2,6 +2,7 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../../components/AppShell";
 import ProfileSettingsPanel from "./ProfileSettingsPanel";
 import GeneralSettingsPanel from "./GeneralSettingsPanel";
+import AccountSettingsPanel from "./AccountSettingsPanel";
 import "./SettingsPage.css";
 
 // 가계부 입력(WalletEntryPage)이 기본 결제수단을 여기서 읽는다.
@@ -12,13 +13,16 @@ export { loadUserSettings } from "./GeneralSettingsPanel";
 const TABS = [
   { id: "profile", label: "프로필", desc: "내 정보를 수정하면 VORI 화면에 바로 반영됩니다." },
   { id: "general", label: "기본 설정", desc: "가계부 입력에 쓰이는 기본값을 정합니다." },
+  // 관리자 계정은 탈퇴할 수 없어 탭을 숨긴다(서버도 403)
+  { id: "account", label: "계정", desc: "회원 탈퇴를 신청할 수 있습니다.", hideForAdmin: true },
 ];
 
 function SettingsPage({ user, onLogout, onUserUpdate }) {
   const navigate = useNavigate();
   const { tab } = useParams();
-  const current = TABS.find((t) => t.id === tab);
-  if (!current) return <Navigate to={`/settings/${TABS[0].id}`} replace />;
+  const tabs = TABS.filter((t) => !(t.hideForAdmin && user?.role === "ADMIN"));
+  const current = tabs.find((t) => t.id === tab);
+  if (!current) return <Navigate to={`/settings/${tabs[0].id}`} replace />;
 
   return (
     <AppShell activeTop="" activeSide="settings" onLogout={onLogout}>
@@ -26,7 +30,7 @@ function SettingsPage({ user, onLogout, onUserUpdate }) {
         <h1 className="settings-title">환경설정</h1>
         <div className="settings-layout">
           <nav className="settings-nav" aria-label="환경설정 항목">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <button
                 key={t.id}
                 type="button"
@@ -47,6 +51,7 @@ function SettingsPage({ user, onLogout, onUserUpdate }) {
               <ProfileSettingsPanel user={user} onUserUpdate={onUserUpdate} />
             )}
             {current.id === "general" && <GeneralSettingsPanel />}
+            {current.id === "account" && <AccountSettingsPanel user={user} onLogout={onLogout} />}
           </section>
         </div>
       </main>

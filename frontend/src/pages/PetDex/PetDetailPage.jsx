@@ -15,7 +15,7 @@ const formatDate = (iso) => (iso ? iso.slice(0, 10).replaceAll("-", ". ") : "");
 
 /**
  * 펫 상세 — 도감 카드를 누르면 온다 (/dex/:appearanceKey).
- * 종족 한 마리의 단계별 모습과, 내가 이 종족을 키운 기록(키우는 중·분양한 펫)을 보여 준다.
+ * 종족 한 마리의 단계별 모습과, 내가 이 종족을 키운 기록(키우는 중·배웅한 펫)을 보여 준다.
  */
 function PetDetailPage({ onLogout }) {
   const { appearanceKey } = useParams();
@@ -77,7 +77,7 @@ function PetDetailPage({ onLogout }) {
   const shownIndex = owned ? Math.min(viewing ?? reached, reached) : -1;
 
   return (
-    <AppShell activeTop="raise" activeSide="dex" onLogout={onLogout}>
+    <AppShell activeTop="" activeSide="dex" onLogout={onLogout}>
       <main className="home-main dex-main">
         <Link to="/dex" className="dexd-back">
           ← 도감
@@ -111,7 +111,7 @@ function PetDetailPage({ onLogout }) {
               {raising
                 ? `지금 ${STAGE_ORDER.indexOf(raising) + 1}차 단계로 키우고 있어요.`
                 : doneCount > 0
-                  ? "3차까지 키워 분양한 친구예요."
+                  ? "3차까지 키워 배웅한 친구예요."
                   : isAdmin
                     ? "관리자 — 전 단계를 볼 수 있어요."
                     : "아직 키워보지 않은 친구예요. 상점에서 알을 데려오면 만날 수 있어요."}
@@ -178,16 +178,30 @@ function PetDetailPage({ onLogout }) {
                       {VARIANT_LABEL[p.variant] && <span className="dex-badge dex-badge--done">{VARIANT_LABEL[p.variant]}</span>}
                     </strong>
                     <small>
-                      {STAGE_LABEL[p.stage]} · 경험치 {p.statTotal} · {formatDate(p.hatchedAt)} 부화
+                      {STAGE_LABEL[p.stage]} · Lv. {p.level} · {formatDate(p.hatchedAt)} 부화
                     </small>
+                    {/* 이 펫이 얻은 칭호 — 배웅한 펫이면 배웅 순간의 기록. ★ = 장착한 칭호 */}
+                    {p.titles?.length > 0 && (
+                      <ul className="dexd-record-titles" aria-label={`${petDisplayName(p)}이(가) 얻은 칭호`}>
+                        {p.titles.map((t) => {
+                          const equipped = p.equippedTitle?.awardId === t.awardId;
+                          return (
+                            <li key={t.awardId} className={`dexd-record-title ${equipped ? "is-equipped" : ""}`}>
+                              {equipped && <span aria-label="장착한 칭호">★ </span>}
+                              {t.name}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </div>
                   <span className="dexd-record-state">
                     {p.releasedAt ? (
                       <>
-                        {formatDate(p.releasedAt)} 분양 · <CoinIcon /> {(p.releaseValue ?? 0).toLocaleString("ko-KR")}
+                        {formatDate(p.releasedAt)} 배웅 · <CoinIcon /> {(p.releaseValue ?? 0).toLocaleString("ko-KR")}
                       </>
                     ) : (
-                      <Link to="/raise" className="home-link-btn">
+                      <Link to="/myroom" className="home-link-btn">
                         마이룸에서 보기 →
                       </Link>
                     )}

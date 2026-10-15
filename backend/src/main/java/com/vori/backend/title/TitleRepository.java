@@ -12,7 +12,4 @@ public interface TitleRepository extends JpaRepository<Title, Long> {
     List<Title> findAllByOrderBySortOrderAscIdAsc();
 
     boolean existsByCode(String code);
-
-    /** 이 지표값이 정확히 목표치인 활성 칭호가 있는지 — 값이 1씩 오르는 지표의 "방금 닿았나" 판정용. */
-    boolean existsByEnabledTrueAndMetricTypeAndThreshold(TitleMetricType metricType, Long threshold);
 }

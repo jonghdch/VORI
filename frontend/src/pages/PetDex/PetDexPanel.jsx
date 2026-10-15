@@ -13,7 +13,7 @@ import "./PetDexPage.css";
 /**
  * 종족별 사용자 상태를 계산한다.
  *  - raising : 지금 키우는 펫(released_at 이 비어 있는 펫)의 단계. 없으면 null.
- *  - doneCount : 다 키워서 분양한 횟수(released_at 이 있는 펫 = 성체 분양 완료).
+ *  - doneCount : 다 키워서 배웅한 횟수(released_at 이 있는 펫 = 성체 배웅 완료).
  *  - reached : 지금까지 도달한 가장 높은 단계 인덱스(-1 = 아직 키워본 적 없음).
  */
 export function buildStatusByKey(pets) {
@@ -46,13 +46,12 @@ function PetDexPanel({ pets, isAdmin, error }) {
 
   return (
     <>
-      <div className="dex-filters" role="tablist" aria-label="등급 필터">
+      <div className="dex-filters" role="group" aria-label="등급 필터">
         {["ALL", ...DEX_TIERS].map((t) => (
           <button
             key={t}
             type="button"
-            role="tab"
-            aria-selected={tier === t}
+            aria-pressed={tier === t}
             className={`dex-filter ${tier === t ? "is-active" : ""}`}
             onClick={() => setTier(t)}
           >
@@ -164,7 +163,7 @@ function PetDexPanel({ pets, isAdmin, error }) {
                 {raising
                   ? `지금 ${STAGE_ORDER.indexOf(raising) + 1}차 단계예요`
                   : doneCount > 0
-                    ? "3차까지 키워 분양했어요"
+                    ? "3차까지 키워 배웅했어요"
                     : isAdmin
                       ? "관리자 — 전 단계 열람 가능"
                       : "아직 키워보지 않았어요"}

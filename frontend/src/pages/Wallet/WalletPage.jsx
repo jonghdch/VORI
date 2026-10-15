@@ -8,6 +8,7 @@ import { listInquiriesByDate } from "../../api/inquiries";
 import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
 import CoinIcon from "../../components/CoinIcon";
 import BudgetCard from "./BudgetCard";
+import { SIGNAL_LABELS, SIGNAL_STATUS } from "../../signalLabels";
 import "../Home/HomeDashboard.css";
 import "./WalletPage.css";
 
@@ -23,7 +24,8 @@ const CHART_COLORS = [
 ];
 
 // 합리성 시그널(백엔드 enum) → 한글 상태 + 배지 색상 클래스.
-const SIGNAL_STATUS = { GREEN: "합리적", GRAY: "중립", RED: "비합리적" };
+// 1차 판정만 끝나고 예외 지출 사유를 기다리는 날(PENDING)은 아직 그날 결과가 아니다 — 색·보상을 확정된 날처럼 보이지 않는다.
+const isFinalJudgment = (judgment) => Boolean(judgment) && judgment.status !== "PENDING";
 
 // 결제수단 enum(백엔드 PaymentMethod) → 한글 라벨.
 const PAYMENT_LABEL = {
@@ -110,6 +112,7 @@ function toRow(item) {
     day,
     name: item.item || (item.type === "INCOME" ? "수입" : "지출"),
     cat: item.category || "—",
+    statType: item.statType || null,
     amountNum: item.amount,
     amount: formatWon(item.amount),
     date: formatDateDisplay(item.date),
@@ -271,7 +274,7 @@ function WalletPage({ user, onLogout }) {
     });
     Object.values(judgmentsByDate).forEach((judgment) => {
       const day = Number(judgment.date?.split("-")[2]);
-      if (day && judgment.signal) map.set(day, judgment.signal);
+      if (day && judgment.signal && isFinalJudgment(judgment)) map.set(day, judgment.signal);
     });
     return map;
   }, [rows, judgmentsByDate]);
@@ -347,6 +350,12 @@ function WalletPage({ user, onLogout }) {
     today.getMonth() + 1,
     today.getDate(),
   );
+  // 일반 사용자는 오늘, 관리자는 시연용으로 선택한 날짜의 결과를 카드에서 바로 본다.
+  const aiJudgmentDate = user?.role === "ADMIN" ? demoDate : todayIso;
+  const aiJudgment = aiJudgmentDate ? judgmentsByDate[aiJudgmentDate] ?? null : null;
+  const aiJudgmentComplete = isFinalJudgment(aiJudgment);
+  const aiRewardStats = [["ENERGY", "에너지"], ["CHARM", "매력"], ["IQ", "지능"], ["ENDURANCE", "지구력"]]
+    .filter(([key]) => Number(aiJudgment?.statRewards?.[key] ?? 0) > 0);
   const selectedDateIsFuture = selectedDateIso && selectedDateIso > todayIso;
   const selectedJudgment = selectedDateIso ? judgmentsByDate[selectedDateIso] ?? null : null;
 
@@ -547,7 +556,7 @@ function WalletPage({ user, onLogout }) {
                   const isToday = day === todayDay;
                   const dayIso = toIsoDate(viewYear, viewMonth, day);
                   const isFuture = dayIso > todayIso;
-                  const isJudged = Boolean(judgmentsByDate[dayIso]);
+                  const isJudged = isFinalJudgment(judgmentsByDate[dayIso]);
                   return (
                     <button
                       key={day}
@@ -597,7 +606,7 @@ function WalletPage({ user, onLogout }) {
                   const isSelected = isCurrentMonth && selectedDay === day;
                   const dayIso = toIsoDate(d.getFullYear(), d.getMonth() + 1, day);
                   const isFuture = dayIso > todayIso;
-                  const isJudged = isCurrentMonth && Boolean(judgmentsByDate[dayIso]);
+                  const isJudged = isCurrentMonth && isFinalJudgment(judgmentsByDate[dayIso]);
 
                   if (!isCurrentMonth) {
                     return (
@@ -785,21 +794,31 @@ function WalletPage({ user, onLogout }) {
           <div className="ledger-day-reward-head">
             <div>
               <span>{selectedDateIso ? `${formatDateDisplay(selectedDateIso)} 판정 보상` : "선택한 날짜의 판정 보상"}</span>
-              <strong>{selectedJudgment ? `${SIGNAL_STATUS[selectedJudgment.signal] || "판정 완료"} 소비` : "아직 판정 전"}</strong>
+              <strong>{!selectedJudgment ? "아직 판정 전" : isFinalJudgment(selectedJudgment) ? (SIGNAL_LABELS[selectedJudgment.signal] || "판정 완료") : selectedDateIso < todayIso ? "1차 판정으로 확정 중" : "사유 답변 대기"}</strong>
             </div>
-            {selectedJudgment && <span className={`ledger-history-badge ${SIGNAL_BADGE[selectedJudgment.signal] || "ledger-history-badge--gray"}`}>판정 완료</span>}
+            {isFinalJudgment(selectedJudgment) && <span className={`ledger-history-badge ${SIGNAL_BADGE[selectedJudgment.signal] || "ledger-history-badge--gray"}`}>판정 완료</span>}
           </div>
           {judgmentLoading ? (
             <p className="ledger-day-reward-empty">보상 정보를 불러오는 중이에요.</p>
           ) : judgmentError ? (
             <p className="ledger-day-reward-empty ledger-day-reward-error">{judgmentError}</p>
+          ) : selectedJudgment && !isFinalJudgment(selectedJudgment) ? (
+            <p className="ledger-day-reward-empty">
+              {selectedDateIso < todayIso
+                ? "자정이 지나 1차 판정 내용으로 확정돼요. 잠시 뒤 다시 확인해 주세요."
+                : "예외 지출 사유를 답하거나 건너뛰면 최종 판정이 나요. 보상은 오늘 자정에 들어와요."}
+            </p>
           ) : selectedJudgment ? (
             <div className="ledger-day-reward-values">
-              <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span><CoinIcon className="ledger-day-reward-coin" /> 받은 코인</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
+              <div className="ledger-day-reward-value ledger-day-reward-value--coin"><span><CoinIcon className="ledger-day-reward-coin" /> {selectedJudgment.rewarded ? "받은 코인" : "자정에 받을 코인"}</span><strong>+{Number(selectedJudgment.coinReward || 0).toLocaleString("ko-KR")}</strong></div>
               {[["ENERGY", "⚡ 에너지"], ["CHARM", "✨ 매력"], ["IQ", "🧠 지능"], ["ENDURANCE", "🛡️ 지구력"]].filter(([key]) => Number(selectedJudgment.statRewards?.[key] ?? 0) > 0).map(([key, label]) => <div className="ledger-day-reward-value" key={key}><span>{label}</span><strong>+{selectedJudgment.statRewards[key]}</strong></div>)}
             </div>
           ) : (
-            <p className="ledger-day-reward-empty">이 날짜는 아직 소비 판정을 완료하지 않아 지급된 보상이 없어요.</p>
+            <p className="ledger-day-reward-empty">
+              {selectedDateIso && selectedDateIso >= todayIso
+                ? "판정하지 않아도 지출을 적은 날은 자정에 신호등 판정이 내려지고 보상이 들어와요."
+                : "이 날짜는 판정 기록이 없어 지급된 보상이 없어요."}
+            </p>
           )}
         </section>
 
@@ -930,7 +949,17 @@ function WalletPage({ user, onLogout }) {
           <section className="home-card ledger-ai-card ledger-sec--sky">
             <h2 className="home-card-title home-card-title--sm ledger-sec-title"><span className="ledger-sec-icon" aria-hidden>🐾</span>AI 소비 판정</h2>
             <div className="ledger-ai-box">
-              <p className="ledger-ai-text">보리가 오늘 소비를 분석해요</p>
+              {aiJudgmentComplete ? (
+                <div className="ledger-ai-result">
+                  <p>오늘 판정 결과</p>
+                  <strong className={`ledger-ai-result-signal ledger-history-badge ${SIGNAL_BADGE[aiJudgment.signal] || "ledger-history-badge--gray"}`}>{SIGNAL_LABELS[aiJudgment.signal] || "판정 완료"}</strong>
+                  <div className="ledger-ai-reward-list">
+                    <span className="ledger-ai-reward ledger-ai-reward--coin"><CoinIcon /> {aiJudgment.rewarded ? "획득 코인" : "지급 코인"}<b>+{Number(aiJudgment.coinReward || 0).toLocaleString("ko-KR")}</b></span>
+                    {aiRewardStats.map(([key, label]) => <span className="ledger-ai-reward" key={key}>{label}<b>+{aiJudgment.statRewards[key]}</b></span>)}
+                    {aiRewardStats.length === 0 && <span className="ledger-ai-reward ledger-ai-reward--empty">지급 스탯 없음</span>}
+                  </div>
+                </div>
+              ) : <p className="ledger-ai-text">보리가 오늘 소비를 분석해요</p>}
             </div>
             <div className="ledger-ai-actions">
               {user?.role === "ADMIN" && (
@@ -943,12 +972,14 @@ function WalletPage({ user, onLogout }) {
                     ? "ledger-ai-action-btn--active"
                     : "ledger-ai-action-btn--waiting"
                 }`}
-                disabled={!isAiActive || (user?.role === "ADMIN" && !demoDate)}
+                disabled={!isAiActive || (user?.role !== "ADMIN" && aiJudgmentComplete) || (user?.role === "ADMIN" && !demoDate)}
                 onClick={() => navigate(user?.role === "ADMIN" ? `/wallet/analysis?date=${demoDate}` : "/wallet/analysis")}
               >
-                {isAiActive
+                {aiJudgmentComplete && user?.role !== "ADMIN"
+                  ? "오늘 판정 완료"
+                  : isAiActive
                   ? user?.role === "ADMIN"
-                    ? "판정 시작하기 (관리자)"
+                    ? aiJudgmentComplete ? "다시 판정하기 (관리자)" : "판정 시작하기 (관리자)"
                     : "판정 시작하기"
                   : `대기 중 (${AI_ACTIVE_FROM_HOUR}시 활성화)`}
               </button>
@@ -991,6 +1022,7 @@ function WalletPage({ user, onLogout }) {
             <BudgetCard
               yearMonth={`${viewYear}-${pad2(viewMonth)}`}
               spent={loading ? null : monthExpenseTotal}
+              expenses={loading ? null : expenseRows}
             />
           </div>
         </div>

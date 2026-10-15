@@ -37,10 +37,21 @@ public class UserService {
     private final com.vori.backend.onboarding.BaselineSeeder baselineSeeder;
     private final SpendingPlanService spendingPlanService;
 
+    /**
+     * 가입 축하 코인(2026-10-08 팀 결정, 상점 가격 1/10 과 함께). 코인 0 으로 시작하면 경진대회 게스트가
+     * 가입한 날 상점을 하나도 못 써 본다. 새 계정은 시작 펫이 있어 알은 사도 배웅 전엔 못 까므로,
+     * 그날 해 볼 수 있는 건 가구다 — 1,000 이면 처음부터 열린 테마의 가구(300~500) 2~3개를 산다.
+     */
+    static final int WELCOME_COINS = 1_000;
+
     @Transactional
     public User signup(SignupRequest req) {
-        if (userRepository.existsByEmail(req.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다");
+        Optional<User> existing = userRepository.findByEmail(req.email());
+        if (existing.isPresent()) {
+            // 탈퇴 대기 계정이면 새로 만들 게 아니라 로그인으로 복구하면 된다고 알려 준다
+            throw new ResponseStatusException(HttpStatus.CONFLICT, existing.get().isPendingDeletion()
+                ? "탈퇴 대기 중인 계정이에요. 로그인하면 복구돼요."
+                : "이미 사용 중인 이메일입니다");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -53,6 +64,7 @@ public class UserService {
             .termsAgreedAt(now)
             .privacyAgreedAt(now)
             .marketingAgreedAt(Boolean.TRUE.equals(req.marketingAgreed()) ? now : null)
+            .gameMoney(WELCOME_COINS)
             .createdAt(now)
             .build();
 
@@ -71,7 +83,7 @@ public class UserService {
      *    사람이 자기 비밀번호로 주인의 기록을 볼 수 있게 된다(탈취). 이미 다른 구글이 연결된 계정을
      *    덮어쓰는 일도 같이 막힌다.
      * 3) 둘 다 없으면 새로 만든다. 비밀번호는 없고(password_hash NULL), 약관은 구글 버튼
-     *    아래 안내 문구로 동의한 것으로 본다. 일반 가입과 같은 초기화(스탯·시작 펫)를 거친다.
+     *    아래 안내 문구로 동의한 것으로 본다. 일반 가입과 같은 초기화(스탯·시작 펫·가입 축하 코인)를 거친다.
      *    닉네임·이름은 가입 규칙(닉네임 2~12자, 이름 2~30자)에 맞춘다 — 어긋나면 설문 뒤 프로필
      *    저장이 400 으로 막힌다.
      *
@@ -97,6 +109,7 @@ public class UserService {
             .role(Role.USER)
             .termsAgreedAt(now)
             .privacyAgreedAt(now)
+            .gameMoney(WELCOME_COINS)
             .createdAt(now)
             .build();
 
@@ -185,11 +198,24 @@ public class UserService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
 
         Integer previousIncome = user.getMonthlyIncome();
+        Integer previousBudget = user.getMonthlyBudget();
+        java.util.Set<com.vori.backend.common.StatType> previousFocus = user.budgetFocusStatTypes();
+        if (req.monthlyBudget() != null && req.monthlyIncome() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "월 예산을 입력하려면 월 수입을 먼저 입력해 주세요.");
+        }
+        if (req.monthlyBudget() != null && req.monthlyIncome() != null
+                && req.monthlyBudget() > req.monthlyIncome()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "월 예산은 월 수입을 넘을 수 없어요.");
+        }
         // 공백 정리는 ProfileUpdateRequest 가 검사 전에 끝냈다.
-        user.updateProfile(req.nickname(), req.name(), req.age(), req.job(), req.monthlyIncome());
+        user.updateProfile(req.nickname(), req.name(), req.age(), req.job(), req.monthlyIncome(),
+                req.monthlyBudget(), req.budgetFocusStats());
         // 월 수입이 바뀌면 실제 지출이 없는 타입의 초기 기준선을 다시 잡는다(온보딩 씨딩과 같은 규칙).
-        baselineSeeder.reseedFromIncome(userId, req.monthlyIncome());
         if (!java.util.Objects.equals(previousIncome, req.monthlyIncome())) {
+            baselineSeeder.reseedFromIncome(userId, req.monthlyIncome());
+        }
+        if (!java.util.Objects.equals(previousBudget, req.monthlyBudget())
+                || !previousFocus.equals(req.budgetFocusStats())) {
             spendingPlanService.rebuildCurrentPlan(userId);
         }
         return user;

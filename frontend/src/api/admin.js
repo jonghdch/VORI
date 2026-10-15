@@ -152,6 +152,22 @@ export async function updateRationalityRules({ zRed, zGreen }) {
   return res.json();
 }
 
+// ───── AI 사용량 ─────
+
+/**
+ * Gemini 한도 상태와 「없어도 되는 AI」 스위치.
+ * @returns {Promise<{ questionWording: boolean, dailyComment: boolean,
+ *   models: { model: string, exhausted: boolean, availableAt: string|null }[] }>}
+ */
+export function getAiSettings() {
+  return adminGet("/admin/ai-settings", "AI 사용량 조회");
+}
+
+/** 스위치 변경 — 보낸 칸만 바뀐다. 응답은 getAiSettings 와 같다. */
+export function updateAiSettings({ questionWording, dailyComment }) {
+  return adminSend("PUT", "/admin/ai-settings", { questionWording, dailyComment }, "AI 설정 저장");
+}
+
 // ───── 칭호 관리 ─────
 
 // 공통 쓰기 — JSON 본문(선택). 400/404/409 는 서버 message 를 그대로 올린다.
@@ -177,7 +193,7 @@ async function adminSend(method, path, body, label) {
 }
 
 /**
- * 칭호 마스터 전체(비활성 포함, 정렬 순서대로).
+ * 업적 마스터 전체(비활성 포함, 정렬 순서대로). 펫 칭호(pet_titles)는 v1 에서 관리자 화면이 없다.
  * @returns {Promise<Array<{
  *   id:number, code:string, name:string, description:string,
  *   metricType:string, threshold:number, enabled:boolean, sortOrder:number,
@@ -185,27 +201,27 @@ async function adminSend(method, path, body, label) {
  * }>>}
  */
 export function listAdminTitles() {
-  return adminGet("/admin/titles", "칭호 목록 조회");
+  return adminGet("/admin/achievements", "업적 목록 조회");
 }
 
 /** 칭호 생성. code 중복이면 409. */
 export function createTitle(body) {
-  return adminSend("POST", "/admin/titles", body, "칭호 생성");
+  return adminSend("POST", "/admin/achievements", body, "업적 생성");
 }
 
 /** 칭호 수정. code 는 서버가 무시한다(생성 후 변경 불가). */
 export function updateTitle(id, body) {
-  return adminSend("PUT", `/admin/titles/${id}`, body, "칭호 수정");
+  return adminSend("PUT", `/admin/achievements/${id}`, body, "업적 수정");
 }
 
 /** 활성/비활성. 운영 중 칭호를 내리는 기본 경로 — 보유자 기록은 남는다. */
 export function setTitleEnabled(id, enabled) {
-  return adminSend("PATCH", `/admin/titles/${id}/enabled?value=${enabled ? "true" : "false"}`, undefined, "칭호 상태 변경");
+  return adminSend("PATCH", `/admin/achievements/${id}/enabled?value=${enabled ? "true" : "false"}`, undefined, "업적 상태 변경");
 }
 
 /** 삭제. 보유자가 있거나 테마 해금 조건이면 409 (서버 message 에 이유). */
 export function deleteTitle(id) {
-  return adminSend("DELETE", `/admin/titles/${id}`, undefined, "칭호 삭제");
+  return adminSend("DELETE", `/admin/achievements/${id}`, undefined, "업적 삭제");
 }
 
 // ───── 관리자 본인 계정 도구 (/api/admin/me/**) ─────
@@ -231,16 +247,22 @@ export function adminSetMyPetStage(stage) {
   return adminSend("PUT", `/admin/me/pet/stage?stage=${encodeURIComponent(stage)}`, undefined, "펫 단계 변경");
 }
 
-/** 활성 펫 비우기(보상 0 분양). */
+/** 활성 펫 레벨 강제(1~30). 30 이면 배웅 버튼이 열린다. */
+export function adminSetMyPetLevel(level) {
+  return adminSend("PUT", `/admin/me/pet/level?level=${encodeURIComponent(level)}`, undefined, "펫 레벨 변경");
+}
+
+/** 활성 펫 비우기(보상 0 배웅). */
 export function adminClearMyPet() {
   return adminSend("DELETE", "/admin/me/pet", undefined, "펫 비우기");
 }
 
-/** 대상 사용자의 활성 펫을 지정한 성장 단계까지 성장시킨다. */
+/** 대상 사용자의 활성 펫을 지정한 성장 단계(또는 "GRADUATE" = 30레벨, 배웅 가능)까지 성장시킨다. */
 export function growUserPet(userId, stage) {
+  const query = stage === "GRADUATE" ? "level=30" : `stage=${encodeURIComponent(stage)}`;
   return adminSend(
     "POST",
-    `/admin/users/${userId}/pet/grow?stage=${encodeURIComponent(stage)}`,
+    `/admin/users/${userId}/pet/grow?${query}`,
     undefined,
     "펫 성장",
   );

@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMe } from "../api/user";
-import { listTitles } from "../api/titles";
 import CoinIcon from "./CoinIcon";
 
 // onClick 을 주면 클릭 시 그걸 부르고(헤더 아래 내 정보 상자 — AccountMenu), 없으면 프로필 설정으로 간다.
 export default function AccountSummary({ onClick } = {}) {
   const navigate = useNavigate();
   const [account, setAccount] = useState(null);
-  const [title, setTitle] = useState(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -17,10 +15,9 @@ export default function AccountSummary({ onClick } = {}) {
     const refresh = async () => {
       const current = ++revision;
       try {
-        const [user, titles] = await Promise.all([getMe(), listTitles()]);
+        const user = await getMe();
         if (!alive || current !== revision) return;
         setAccount(user);
-        setTitle(titles.find((item) => item.active)?.name || "칭호 없음");
         setError(false);
       } catch {
         if (alive && current === revision) setError(true);
@@ -39,19 +36,8 @@ export default function AccountSummary({ onClick } = {}) {
   if (error) return <button className="home-account-summary" onClick={() => window.dispatchEvent(new Event("vori:account-updated"))}>내 정보 다시 불러오기</button>;
   if (!account) return <span className="home-account-summary" role="status">내 정보 불러오는 중…</span>;
   return (
-    <button type="button" className="home-account-summary" onClick={onClick ?? (() => navigate("/settings/profile"))} aria-haspopup={onClick ? "dialog" : undefined} aria-label={`${title}, ${account.nickname}, 보유 코인 ${account.role === "ADMIN" ? "무제한" : account.gameMoney}. ${onClick ? "내 정보 열기" : "프로필 설정 열기"}`}>
-      {/* 버튼 안이라 버튼을 겹칠 수 없다 — 칭호 글자를 누르면 내 정보 상자 대신 도감의 칭호 탭으로 간다.
-          키보드로는 내 정보 상자의 칭호(🏅) 버튼으로 같은 곳에 갈 수 있다. */}
-      <span
-        className="home-account-title"
-        title={`${title} — 칭호 도감`}
-        onClick={(e) => {
-          e.stopPropagation();
-          navigate("/dex?tab=titles");
-        }}
-      >
-        {title}
-      </span>
+    <button type="button" className="home-account-summary" onClick={onClick ?? (() => navigate("/settings/profile"))} aria-haspopup={onClick ? "dialog" : undefined} aria-label={`${account.nickname}, 보유 코인 ${account.role === "ADMIN" ? "무제한" : account.gameMoney}. ${onClick ? "내 정보 열기" : "프로필 설정 열기"}`}>
+      {/* 칭호 배지는 두지 않는다 — 장착 칭호와 올린 업적은 내 정보 상자(AccountMenu)에서 보여 준다 */}
       <strong className="home-account-nickname" title={account.nickname}>{account.nickname}</strong>
       <span className="home-account-coins">
         <CoinIcon className="home-account-coin-icon" />

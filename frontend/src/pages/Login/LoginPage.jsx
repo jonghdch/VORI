@@ -33,6 +33,8 @@ function LoginPage({ onLogin }) {
       return;
     }
     setPendingUser(null);
+    // 탈퇴 대기 계정이 로그인하면 서버가 탈퇴를 취소한다 — 복구됐다고 알려 준다
+    if (user?.accountRestored) window.alert("탈퇴 신청이 취소되고 계정이 복구됐어요.");
     if (typeof onLogin === "function") onLogin(user);
     if (!status?.profileCompleted) {
       navigate("/signup/profile");
