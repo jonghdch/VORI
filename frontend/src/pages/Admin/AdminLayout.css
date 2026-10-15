@@ -145,6 +145,17 @@
   font-weight: 700;
   background: rgba(127, 176, 105, 0.12);
 }
+/* 아직 화면이 없는 메뉴: 흐리게 + "준비 중" 태그 */
+.admin-nav-link--soon {
+  color: var(--admin-faint);
+}
+.admin-nav-soon {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--admin-faint);
+}
 
 /* ───── 메인 ───── */
 .admin-main {
