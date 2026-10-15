@@ -14,6 +14,6 @@ public class UserStatBudget {
     @Column(nullable = false) private Integer amount;
     @Builder.Default
     @Column(name = "calculation_version", nullable = false)
-    private int calculationVersion = 1;
+    private byte calculationVersion = 1;
     public void updateAmount(int amount) { this.amount = amount; }
 }
