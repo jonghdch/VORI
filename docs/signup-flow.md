@@ -4,6 +4,8 @@
 > 목표는 개인정보를 많이 받는 것이 아니라, 신규 사용자가 첫 지출부터 VORI 의 "내 기준 판정"을 이해하게 만드는 것이다.
 >
 > 작성 기준: 2026-09-23. 연결 문서: [`tutorial-flow.md`](tutorial-flow.md)
+>
+> 2026-10-15 현재 `/signup/profile`·`/onboarding`·`/api/onboarding/*`·`user_spending_profiles` 는 구현돼 있다. 이 문서의 "후보"·"권장" 표현은 설계 당시 기록이고 현행 동작은 코드와 아래 "최소 구현 범위"의 표시를 따른다.
 
 ## 설계 목표
 
@@ -399,15 +401,15 @@ POST /api/auth/signup 성공
 
 중간/최종 발표 전 현실적인 최소 범위는 다음이다.
 
-1. `/signup/profile` 5단계 선택형 화면
-2. `user_spending_profiles` 저장
-3. 식비 선택값을 `ENERGY` 초기 기준선에 반영
-4. 가입 완료 후 `/onboarding`으로 이동
-5. 온보딩 완료 후 `/wallet/new` 또는 `/home` 이동
+1. `/signup/profile` 5단계 선택형 화면 — 구현
+2. `user_spending_profiles` 저장 — 구현 (`V23__user_spending_profiles.sql`)
+3. 식비 선택값을 `ENERGY` 초기 기준선에 반영 — 구현
+4. 가입 완료 후 `/onboarding`으로 이동 — 구현
+5. 온보딩 완료 후 `/wallet/new` 또는 `/home` 이동 — 구현
 
 확장 범위:
 
-- 모든 statType 기준선 초기화
+- 모든 statType 기준선 초기화 — 구현 (나머지 세 타입은 월 수입으로 채운다)
 - 목표 자동 생성
 - AI 질문 톤 개인화
 - 프로필 재설정 화면

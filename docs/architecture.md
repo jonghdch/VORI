@@ -70,16 +70,16 @@ React Router v7 (`BrowserRouter`) 사용. SPA 이지만 URL 이 페이지마다 
 | `/home` | HomeDashboard | **인증 필요** (미인증 시 `/login` 으로 리다이렉트) |
 | `/wallet` | WalletPage (가계부 달력/조회) | **인증 필요** |
 | `/wallet/new` | WalletEntryPage (작성 Step 1 · 입력) | **인증 필요** |
-| `/wallet/analysis` | WalletAnalysisPage (AI 사유 질문·일일 판정) | **인증 필요** |
-| `/wallet/new/confirm` | WalletConfirmPage (Step 3 · 확인) | **인증 필요** |
+| `/wallet/new/confirm` | WalletConfirmPage (작성 Step 2 · 확인) | **인증 필요** |
+| `/wallet/analysis` | WalletAnalysisPage (AI 사유 질문·일일 판정. 작성 흐름과 별개) | **인증 필요** |
 | `/report` | ReportPage (주·월 소비 리포트) | **인증 필요** |
-| `/myroom` | PetPage (마이룸·펫 성장·가구 배치) | **인증 필요** |
+| `/myroom` | PetPage (마이룸·펫 성장·가구 배치). 예전 주소 `/raise` 는 여기로 리다이렉트 | **인증 필요** |
 | `/dex`, `/dex/:appearanceKey` | 펫·업적·칭호 도감 | **인증 필요** |
 | `/shop` | ShopPage (알·가구 상점) | **인증 필요** |
-| `/settings/:tab` | SettingsPage (프로필·기본 설정) | **인증 필요** |
-| `/admin` (→ `/admin/dashboard`) | AdminLayout + 중첩 라우트 (종합 대시보드·유저 현황 등) | **ADMIN 전용** (일반 사용자는 `/home` 으로 리다이렉트) |
+| `/settings/:tab` | SettingsPage (프로필·기본 설정·카드·계좌·계정 탭. `/settings` 는 `/settings/profile` 로) | **인증 필요** |
+| `/admin` (→ `/admin/dashboard`) | AdminLayout + 중첩 라우트 (종합 대시보드·유저 현황 등). 화면이 아직 없는 메뉴는 사이드바에 "준비 중" 으로 표시 | **ADMIN 전용** (일반 사용자는 `/home` 으로 리다이렉트) |
 
-> 가계부 화면은 작성(`/wallet/new` 3-step)과 조회/달력(`/wallet`)으로 나뉜다. 폴더는 각각 `pages/WalletEntry/`, `pages/Wallet/`. 공통 레이아웃(상단바·사이드바)은 `components/AppShell` 이 담당.
+> 가계부 화면은 작성(`/wallet/new` → `/wallet/new/confirm` 2단계)과 조회/달력(`/wallet`)으로 나뉜다. `/wallet/analysis` 는 작성의 다음 단계가 아니라, 저녁 8시 이후 그날 지출을 판정하는 별도 흐름이다. 폴더는 각각 `pages/WalletEntry/`, `pages/Wallet/`. 공통 레이아웃(상단바·사이드바)은 `components/AppShell` 이 담당.
 
 핵심 컴포넌트:
 - `App.js` — `BrowserRouter` 안에 `<Routes>` 정의 + 사용자 state (`user`) 보유 + 첫 진입 시 `me()` 호출로 세션 자동 복원

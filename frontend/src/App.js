@@ -88,15 +88,16 @@ const ADMIN_PAGES = {
 //   /home                   홈 대시보드 (인증 필요)
 //   /wallet                 가계부 달력/조회 (인증 필요)
 //   /wallet/new             가계부 작성 Step 1 (입력)
-//   /wallet/new/confirm     Step 2 (확인)
-//   /wallet/analysis        소비 분석 (오후 8시~자정 이벤트, ledger-ai-card 진입)
+//   /wallet/new/confirm     가계부 작성 Step 2 (확인)
+//   /wallet/analysis        소비 분석 — 작성 흐름과 별개 (오후 8시~자정 이벤트, ledger-ai-card 진입)
 //   /report                 소비 리포트 (플레이스홀더)
 //   /myroom                 마이룸 (펫 키우기)
+//   /raise                  → /myroom 으로 보냄 (예전 주소)
 //   /dex                    펫 도감
 //   /shop                   상점
 //   /settings               환경설정 → /settings/profile 로 보냄
-//   /settings/:tab          환경설정 탭 (profile 프로필 · general 기본 설정)
-//   /titles                 업적/칭호
+//   /settings/:tab          환경설정 탭 (profile 프로필 · general 기본 설정 · payment 카드·계좌 · account 계정)
+//   /titles                 → /dex?tab=titles 로 보냄 (업적/칭호는 도감 탭)
 //   /admin/*                어드민 (ADMIN 전용)
 
 function ScrollToTop() {
