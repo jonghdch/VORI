@@ -14,7 +14,7 @@ import java.util.*;
 
 @Service @RequiredArgsConstructor
 public class SpendingPlanService {
-    private static final int CURRENT_CALCULATION_VERSION = 2;
+    private static final byte CURRENT_CALCULATION_VERSION = 2;
     private final UserStatBudgetRepository statBudgets;
     private final FixedExpenseRepository fixedExpenses;
     private final UserRepository users;
