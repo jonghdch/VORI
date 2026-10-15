@@ -18,7 +18,7 @@ public class SpendingPlanService {
     private final FixedExpenseRepository fixedExpenses;
     private final UserRepository users;
 
-    /** 월 예산에서 고정비를 먼저 제외한 금액을 스탯 그룹별 생활 예산으로 배분한다. */
+    /** 월 예산을 스탯 그룹별로 배분한 뒤, 고정비는 생활·고정비(지구력) 예산에서만 차감한다. */
     @Transactional public void ensurePlan(Long userId, String yearMonth) {
         User user = users.findById(userId).orElseThrow();
         List<UserStatBudget> existing = statBudgets.findByUserIdAndYearMonth(userId, yearMonth);
@@ -32,9 +32,6 @@ public class SpendingPlanService {
         }
         int monthlyBudget = Optional.ofNullable(user.getMonthlyBudget()).orElse(0);
         int fixed = fixedExpenses.findByUserIdOrderByIdAsc(userId).stream().mapToInt(FixedExpense::getAmount).sum();
-        // 사용자가 정한 월 예산에서 매달 반드시 나가는 고정비를 먼저 뺀 금액만
-        // 실제 생활 지출(스탯 그룹) 예산으로 쓴다.
-        int available = Math.max(0, monthlyBudget - fixed);
         EnumMap<StatType, Integer> weights = new EnumMap<>(StatType.class);
         for (StatType type : StatType.values()) weights.put(type, 25);
         // 복수 선택 가능. 선택한 분야마다 기본 비중보다 15포인트를 더 준다.
@@ -42,7 +39,11 @@ public class SpendingPlanService {
         int totalWeight = weights.values().stream().mapToInt(Integer::intValue).sum();
         int assigned = 0;
         for (StatType type : StatType.values()) {
-            int amount = type == StatType.ENDURANCE ? available - assigned : available * weights.get(type) / totalWeight;
+            int amount = type == StatType.ENDURANCE
+                    ? monthlyBudget - assigned
+                    : monthlyBudget * weights.get(type) / totalWeight;
+            // 고정비는 다른 스탯 그룹의 예산에는 영향을 주지 않고 생활·고정비 예산에서만 뺀다.
+            if (type == StatType.ENDURANCE) amount = Math.max(0, amount - fixed);
             assigned += amount;
             statBudgets.save(UserStatBudget.builder().userId(userId).yearMonth(yearMonth).statType(type).amount(amount).build());
         }

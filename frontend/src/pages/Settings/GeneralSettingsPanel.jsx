@@ -98,12 +98,12 @@ function GeneralSettingsPanel() {
 
       <section className="settings-section">
         <div className="settings-row settings-fixed-head">
-          <div className="settings-row-label"><h3 className="settings-row-name">고정비</h3><div className="settings-row-desc">통신비·보험·월세처럼 매달 나가는 금액이에요. 등록한 금액은 이번 달 월 예산에서 바로 차감되고, 생활 지출에 쓸 수 있는 예산이 다시 계산돼요.</div></div>
+          <div className="settings-row-label"><h3 className="settings-row-name">고정비</h3><div className="settings-row-desc">통신비·보험·월세처럼 매달 나가는 금액이에요. 등록한 금액은 생활·고정비(지구력) 예산에서만 바로 차감돼요.</div></div>
         </div>
-        {plan && <p className="settings-row-desc">현재 등록된 고정비 {Number(plan.fixedTotal || 0).toLocaleString("ko-KR")}원이 월 예산에서 차감되어 있어요.</p>}
+        {plan && <p className="settings-row-desc">현재 등록된 고정비 {Number(plan.fixedTotal || 0).toLocaleString("ko-KR")}원이 지구력 예산에서 차감되어 있어요.</p>}
         {plan && <div className="settings-budget-plan">
           <strong>{plan.yearMonth} 생활·고정비 · 지구력 사용 가능 예산</strong>
-          <span>고정비 차감 후 생활 예산<b>{Number(plan.budgets?.ENDURANCE || 0).toLocaleString("ko-KR")}원</b></span>
+          <span>고정비 차감 후 남은 생활 예산<b>{Number(plan.budgets?.ENDURANCE || 0).toLocaleString("ko-KR")}원</b></span>
         </div>}
         <form className="settings-fixed-form" onSubmit={addFixed}>
           <input className="settings-input" value={fixedName} onChange={(e) => setFixedName(e.target.value)} placeholder="예: 휴대폰 통신비" maxLength="50" />
