@@ -59,6 +59,30 @@ class IncomeReceivingAccountTest {
     }
 
     @Test
+    void chosenAccountOverridesAMismatchedPaymentMethod() {
+        // 현금을 받은 곳으로 골라 놓고 신용카드라고 보내도 현금으로 저장 — "현금으로 받은 신용카드 수입" 방지
+        stub(4L, USER_ID, InstrumentKind.CASH, false);
+        when(incomes.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        IncomeResponse res = service.createIncome(USER_ID, new IncomeCreateRequest(
+                IncomeSource.PART_TIME, 50000, "알바비", LocalDate.of(2026, 10, 10), PaymentMethod.CREDIT, null, 4L));
+
+        assertEquals(PaymentMethod.CASH, res.paymentMethod());
+    }
+
+    @Test
+    void savingsAccountKeepsTheMethodTheScreenSent() {
+        // 예적금은 결제수단 종류가 없어 덮어쓰지 않는다
+        stub(5L, USER_ID, InstrumentKind.SAVINGS, false);
+        when(incomes.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        IncomeResponse res = service.createIncome(USER_ID, new IncomeCreateRequest(
+                IncomeSource.PART_TIME, 50000, "이자", LocalDate.of(2026, 10, 10), PaymentMethod.TRANSFER, null, 5L));
+
+        assertEquals(PaymentMethod.TRANSFER, res.paymentMethod());
+    }
+
+    @Test
     void noAccountStaysAsBefore() {
         when(incomes.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

@@ -30,7 +30,8 @@ public record IncomeCreateRequest(
 
         Boolean isRecurring,
 
-        // 받은 곳 — 내 입출금 계좌·예적금·현금 id. 카드는 고를 수 없다.
+        // 받은 곳 — 내 입출금 계좌·체크카드(연결 통장)·예적금·현금 id. 신용카드는 고를 수 없다.
+        // 고르면 paymentMethod 는 그 계좌에 맞춰 서버가 정한다(예적금은 보낸 값 그대로).
         Long paymentInstrumentId
 ) {
     public IncomeCreateRequest {
