@@ -244,10 +244,15 @@ function ReportPage({ user, onLogout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yearMonths, periodKeySet, periodDates, containsToday, navigate, today, reloadKey]);
 
-  // 등록한 카드·계좌 — 결제수단별 지출에서 카드 이름·배지를 붙인다. 못 불러와도 종류별로는 묶인다.
+  // 등록한 카드·계좌 — 결제수단별 지출에서 카드 이름·배지를 붙인다.
+  // 목록은 삭제(보관)하지 않은 것만 온다. 못 불러오면(instrumentsFailed) 카드 대신 결제수단 종류로 묶는다 —
+  // 그러지 않으면 멀쩡한 카드까지 전부 "삭제한 카드·계좌" 로 보였다.
   const [instruments, setInstruments] = useState([]);
+  const [instrumentsFailed, setInstrumentsFailed] = useState(false);
   useEffect(() => {
-    listInstruments().then(setInstruments).catch(() => {});
+    listInstruments()
+      .then(setInstruments)
+      .catch(() => setInstrumentsFailed(true));
   }, []);
 
   // 직전 기간(지난달 / 지난주) — 스냅샷의 비교 한 줄용. null = 불러오는 중, 실패하면 [] 로 두고 문구를 숨긴다.
@@ -365,7 +370,8 @@ function ReportPage({ user, onLogout }) {
     const prevTotal = prevRows
       .filter((r) => r.type === "EXPENSE" && prevKeys.has(dateKey(r.year, r.month, r.day)))
       .reduce((sum, r) => sum + r.amountNum, 0);
-    if (prevTotal === 0 && weekExpenseTotal === 0) return null;
+    // 지난 기간에 쓴 돈이 없으면 비교하지 않는다 — 이번 달 가입한 사람에게 "지난달보다 N원 더 쓰는 중" 이 뜨던 문제
+    if (prevTotal === 0) return null;
     const diff = weekExpenseTotal - prevTotal;
     const span = containsToday ? `${prevUnit} 같은 기간` : prevUnit;
     const text =
@@ -382,17 +388,20 @@ function ReportPage({ user, onLogout }) {
     const byKey = new Map();
     expenseRows.forEach((r) => {
       const inst = r.paymentInstrumentId != null ? instruments.find((i) => i.id === r.paymentInstrumentId) : null;
-      const key = r.paymentInstrumentId != null ? `inst-${r.paymentInstrumentId}` : `kind-${r.paymentMethod ?? "NONE"}`;
+      // 카드별: 목록에 있는 카드 / 목록에 없는 카드는 삭제(보관)한 것이라 한 줄로 묶는다(이름을 알 수 없어 따로 두면 구분이 안 된다).
+      // 목록을 못 불러왔으면 카드를 알 수 없으니 결제수단 종류로 묶는다.
+      const byCard = r.paymentInstrumentId != null && !instrumentsFailed;
+      const key = !byCard ? `kind-${r.paymentMethod ?? "NONE"}` : inst ? `inst-${inst.id}` : "inst-archived";
       if (!byKey.has(key)) {
         byKey.set(key, {
           key,
-          label:
-            r.paymentInstrumentId != null
-              ? inst?.name ?? "삭제한 카드·계좌"
-              : r.paymentMethod
-                ? PAYMENT_LABEL[r.paymentMethod]
-                : "결제수단 미입력",
-          sub: r.paymentInstrumentId != null ? null : r.paymentMethod ? "카드를 고르지 않은 지출" : null,
+          label: byCard
+            ? inst?.name ?? "삭제한 카드·계좌"
+            : r.paymentMethod
+              ? PAYMENT_LABEL[r.paymentMethod]
+              : "결제수단 미입력",
+          // 목록을 못 불러와 종류로 묶은 경우엔 카드를 고른 지출도 섞여 있어 이 설명을 달지 않는다
+          sub: !byCard && !instrumentsFailed && r.paymentMethod ? "카드를 고르지 않은 지출" : null,
           issuer: inst?.issuer ?? null,
           amount: 0,
           count: 0,
@@ -420,7 +429,7 @@ function ReportPage({ user, onLogout }) {
       })
       .sort((a, b) => b.amount - a.amount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, instruments, weekExpenseTotal]);
+  }, [rows, instruments, instrumentsFailed, weekExpenseTotal]);
   // 초과 비율이 가장 높은 결제수단 — 판정된 지출이 2건 이상인 결제수단이 둘 이상일 때만 비교한다.
   const worstPayment = useMemo(() => {
     const comparable = paymentBreakdown.filter((g) => g.judgedCount >= 2);

@@ -90,7 +90,7 @@ const ADMIN_PAGES = {
 //   /wallet/new             가계부 작성 Step 1 (입력)
 //   /wallet/new/confirm     가계부 작성 Step 2 (확인)
 //   /wallet/analysis        소비 분석 — 작성 흐름과 별개 (오후 8시~자정 이벤트, ledger-ai-card 진입)
-//   /report                 소비 리포트 (플레이스홀더)
+//   /report                 소비 리포트 (주·월 지출, 판정 분포, 결제수단별 지출)
 //   /myroom                 마이룸 (펫 키우기)
 //   /raise                  → /myroom 으로 보냄 (예전 주소)
 //   /dex                    펫 도감
