@@ -11,6 +11,9 @@ import urllib.error
 import urllib.request
 import http.cookiejar
 
+# Windows 에서 출력을 파일로 돌리면 cp949 라 「—」를 못 써서 첫 회수 직후 죽는다(demo_seed.py 와 같은 이유).
+sys.stdout.reconfigure(encoding="utf-8")
+
 BASE = os.environ.get("VORI_BASE_URL", "http://127.0.0.1:8080").rstrip("/") + "/api"
 ADMIN_EMAIL = "admin@vori.com"
 ADMIN_PW = os.environ.get("VORI_ADMIN_PASSWORD", "1234")
@@ -42,13 +45,23 @@ def main():
         print(f"어드민 로그인 실패: {code}")
         sys.exit(1)
 
-    code, res = call("GET", "/admin/users?page=0&size=100")
-    if code != 200:
-        print(f"유저 목록 실패: {code} {res}")
-        sys.exit(1)
+    # 서버는 한 번에 최대 100명까지만 준다(AdminUserService.MAX_PAGE_SIZE) — 마지막 페이지까지 돈다.
+    # 도는 중에 누가 가입하면 최신순 목록이 밀려 한 명이 두 번 나올 수 있어 id 로 중복을 없앤다.
+    by_id = {}
+    page = 0
+    while True:
+        code, res = call("GET", f"/admin/users?role=USER&page={page}&size=100")
+        if code != 200:
+            print(f"유저 목록 실패: page={page} {code} {res}")
+            sys.exit(1)
+        content = res.get("content") or []
+        for u in content:
+            by_id[u["id"]] = u
+        page += 1
+        if not content or page >= (res.get("totalPages") or 0):
+            break
 
-    users = res.get("content") or []
-    targets = [u for u in users if u.get("role") == "USER"]
+    targets = [u for u in by_id.values() if u.get("role") == "USER"]
     if not targets:
         print("일반 USER 계정이 없습니다.")
         sys.exit(0)
