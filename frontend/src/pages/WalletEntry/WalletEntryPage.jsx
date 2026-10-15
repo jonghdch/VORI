@@ -60,6 +60,43 @@ function dateChipLabel(iso) {
 const won = (n) => `${Number(n || 0).toLocaleString("ko-KR")}원`;
 const labelOf = (list, value) => list.find((o) => o.value === value)?.label;
 
+// 받은 곳·모은 곳 칩 — 등록한 계좌 중 하나를 고르거나 「고르지 않음」. 등록한 게 없으면 안내만.
+function AccountField({ label, accounts, emptyHint, value, onPick, onManage }) {
+  return (
+    <div className="wr-field">
+      <div className="wr-label-row">
+        <span className="wr-label">{label}</span>
+        <button type="button" className="wr-label-link" onClick={onManage}>
+          카드·계좌 관리 <Icon name="chevronRight" size={13} />
+        </button>
+      </div>
+      {accounts.length === 0 ? (
+        <p className="wr-hint">{emptyHint}</p>
+      ) : (
+        <div className="wr-chips" role="radiogroup" aria-label={label}>
+          {[{ id: null, name: "고르지 않음" }, ...accounts].map((acc) => {
+            const on = value === acc.id;
+            return (
+              <button
+                key={acc.id ?? "none"}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                className={`wr-chip ${acc.id ? "wr-chip--mine" : ""} ${on ? "is-on" : ""}`}
+                onClick={() => onPick(acc.id)}
+              >
+                {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                {acc.id && <span className="wr-chip-dot" style={{ background: issuerOf(acc.issuer).color }} aria-hidden />}
+                {acc.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WalletEntryPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -136,6 +173,8 @@ function WalletEntryPage({ user }) {
     isEditMode ? emptyForm() : { ...emptyForm(), ...(readDraft()?.form || {}), categorizing: false },
   );
   const patch = (p) => setForm((f) => ({ ...f, ...p }));
+  // 등록한 카드를 고른 동안은 결제 수단 종류 칩을 켜지 않는다. 보관해서 목록에 없는 카드면 종류로 보여 준다.
+  const pickedMine = instruments.some((i) => i.id === form.paymentInstrumentId);
   const [notice, setNotice] = useState(null); // { kind: info|ok|warn|err, text } — 영수증·저장 안내
   const [submitError, setSubmitError] = useState(null);
 
@@ -723,76 +762,26 @@ function WalletEntryPage({ user }) {
 
           {/* 받은 곳 (수입만) — 등록한 입출금·예적금·현금. 고르지 않아도 된다 */}
           {type === "income" && (
-            <div className="wr-field">
-              <div className="wr-label-row">
-                <span className="wr-label">받은 곳</span>
-                <button type="button" className="wr-label-link" onClick={() => navigate("/settings/payment")}>
-                  카드·계좌 관리 <Icon name="chevronRight" size={13} />
-                </button>
-              </div>
-              {incomeAccounts.length === 0 ? (
-                <p className="wr-hint">통장·체크카드·현금을 등록하면 어디로 받았는지 고를 수 있어요.</p>
-              ) : (
-                <div className="wr-chips" role="radiogroup" aria-label="받은 곳">
-                  {[{ id: null, name: "고르지 않음" }, ...incomeAccounts].map((acc) => {
-                    const on = (form.paymentInstrumentId ?? null) === acc.id;
-                    return (
-                      <button
-                        key={acc.id ?? "none"}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        className={`wr-chip ${acc.id ? "wr-chip--mine" : ""} ${on ? "is-on" : ""}`}
-                        onClick={() => patch({ paymentInstrumentId: acc.id })}
-                      >
-                        {on && <Icon name="check" size={13} strokeWidth={2.4} />}
-                        {acc.id && (
-                          <span className="wr-chip-dot" style={{ background: issuerOf(acc.issuer).color }} aria-hidden />
-                        )}
-                        {acc.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <AccountField
+              label="받은 곳"
+              accounts={incomeAccounts}
+              emptyHint="통장·체크카드·현금을 등록하면 어디로 받았는지 고를 수 있어요."
+              value={form.paymentInstrumentId ?? null}
+              onPick={(id) => patch({ paymentInstrumentId: id })}
+              onManage={() => navigate("/settings/payment")}
+            />
           )}
 
           {/* 모은 곳 (저축 · 예적금만) — 등록한 저축 통장. 투자는 계좌를 고르지 않는다 */}
           {type === "savings" && form.categoryEnum !== "INVEST" && (
-            <div className="wr-field">
-              <div className="wr-label-row">
-                <span className="wr-label">모은 곳</span>
-                <button type="button" className="wr-label-link" onClick={() => navigate("/settings/payment")}>
-                  카드·계좌 관리 <Icon name="chevronRight" size={13} />
-                </button>
-              </div>
-              {savingsAccounts.length === 0 ? (
-                <p className="wr-hint">저축 통장을 등록하면 어디에 모았는지 고를 수 있어요.</p>
-              ) : (
-                <div className="wr-chips" role="radiogroup" aria-label="모은 곳">
-                  {[{ id: null, name: "고르지 않음" }, ...savingsAccounts].map((acc) => {
-                    const on = (form.paymentInstrumentId ?? null) === acc.id;
-                    return (
-                      <button
-                        key={acc.id ?? "none"}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        className={`wr-chip ${acc.id ? "wr-chip--mine" : ""} ${on ? "is-on" : ""}`}
-                        onClick={() => patch({ paymentInstrumentId: acc.id })}
-                      >
-                        {on && <Icon name="check" size={13} strokeWidth={2.4} />}
-                        {acc.id && (
-                          <span className="wr-chip-dot" style={{ background: issuerOf(acc.issuer).color }} aria-hidden />
-                        )}
-                        {acc.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <AccountField
+              label="모은 곳"
+              accounts={savingsAccounts}
+              emptyHint="저축 통장을 등록하면 어디에 모았는지 고를 수 있어요."
+              value={form.paymentInstrumentId ?? null}
+              onPick={(id) => patch({ paymentInstrumentId: id })}
+              onManage={() => navigate("/settings/payment")}
+            />
           )}
 
           {/* 결제 수단 (지출만) */}
@@ -828,8 +817,6 @@ function WalletEntryPage({ user }) {
                 })}
                 {instruments.length > 0 && <span className="wr-chip-divider" aria-hidden />}
                 {PAYMENT_METHODS.map((p) => {
-                  // 등록한 카드를 고른 동안은 종류 칩을 켜지 않는다. 보관해서 목록에 없는 카드면 종류로 보여 준다.
-                  const pickedMine = instruments.some((i) => i.id === form.paymentInstrumentId);
                   const on = !pickedMine && form.paymentMethod === p.value;
                   return (
                     <button
