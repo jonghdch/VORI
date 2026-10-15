@@ -109,7 +109,7 @@ function WalletEntryPage({ user }) {
   // 쿼리를 직접 수정해도 미래 날짜에는 가계부를 작성할 수 없다.
   const dateStr = requestedDateIsValid && requestedDate <= todayStr ? requestedDate : todayStr;
   const editParam = params.get("edit");
-  const editTargetId = /^\d+$/.test(editParam || "") ? Number(editParam) : null;
+  const editTargetId = /^[1-9]\d{0,15}$/.test(editParam || "") ? Number(editParam) : null;
   const isEditMode = editParam === "true" || editTargetId != null;
 
   // 사용자 설정의 기본 결제수단 — 없으면 CREDIT
@@ -145,6 +145,7 @@ function WalletEntryPage({ user }) {
       sourceTouched: false,
       paymentMethod: defaultPayment,
       paymentInstrumentId: null, // 설정 > 카드·계좌에서 등록한 카드를 골랐으면 그 id
+      linkedInstrumentId: null, // 고치는 지출에 저장돼 있던 카드 id
       memo: "",
       memoOpen: false,
       dbId: null, // 저장된 지출을 고치는 중이면 그 id
@@ -173,6 +174,14 @@ function WalletEntryPage({ user }) {
     isEditMode ? emptyForm() : { ...emptyForm(), ...(readDraft()?.form || {}), categorizing: false },
   );
   const patch = (p) => setForm((f) => ({ ...f, ...p }));
+  // 삭제한 카드·계좌는 목록(칩)에 없다. 「새로 쓰기」·삭제 뒤·임시저장에서 그 id 가 남아 있으면 폼에서 비운다
+  // — 서버가 거절해서, 사용자가 고르지도 않은(보이지도 않는) 카드 때문에 저장이 막힌다. 비우면 칩도 「고르지 않음」으로 보인다.
+  // 저장된 지출에 원래 붙어 있던 카드(linkedInstrumentId)는 그대로 둔다(서버가 허용). 목록을 못 불러왔으면 건드리지 않는다.
+  useEffect(() => {
+    const id = form.paymentInstrumentId ?? null;
+    if (!instrumentsLoaded || id == null || id === form.linkedInstrumentId) return;
+    if (!allInstruments.some((i) => i.id === id)) setForm((f) => ({ ...f, paymentInstrumentId: null }));
+  }, [instrumentsLoaded, allInstruments, form.paymentInstrumentId, form.linkedInstrumentId]);
   // 등록한 카드를 고른 동안은 결제 수단 종류 칩을 켜지 않는다. 보관해서 목록에 없는 카드면 종류로 보여 준다.
   const pickedMine = instruments.some((i) => i.id === form.paymentInstrumentId);
   const [notice, setNotice] = useState(null); // { kind: info|ok|warn|err, text } — 영수증·저장 안내
@@ -246,6 +255,7 @@ function WalletEntryPage({ user }) {
           categoryTouched: true, // 저장된 카테고리 — 자동 분류로 덮지 않음
           paymentMethod: e.paymentMethod || defaultPayment,
           paymentInstrumentId: e.paymentInstrumentId ?? null,
+          linkedInstrumentId: e.paymentInstrumentId ?? null, // 저장된 연결 — 삭제한 카드여도 이건 그대로 둘 수 있다
           memo: e.memo ?? "", // 다시 보낼 때 그대로 돌려줘야 지워지지 않는다
           memoOpen: Boolean(e.memo),
         }),
@@ -260,10 +270,16 @@ function WalletEntryPage({ user }) {
     let alive = true;
     setDay(null);
     loadDay().then((d) => {
-      // 지출 수정으로 들어왔으면 고른 지출(없으면 그날 첫 지출)을 바로 연다
-      if (alive && isEditMode && d?.expenses?.length) {
-        editExpense(d.expenses.find((e) => e.id === editTargetId) ?? d.expenses[0]);
+      // 지출 수정으로 들어왔으면 고른 지출(?edit=true 면 그날 첫 지출)을 바로 연다.
+      // 고른 지출이 그날에 없으면(그새 삭제 등) 다른 지출을 대신 열지 않고 알린다.
+      if (!alive || !isEditMode || !d) return;
+      if (editTargetId == null) {
+        if (d.expenses.length) editExpense(d.expenses[0]);
+        return;
       }
+      const target = d.expenses.find((e) => e.id === editTargetId);
+      if (target) editExpense(target);
+      else setNotice({ kind: "warn", text: "고치려던 지출을 찾지 못했어요. 이미 삭제됐을 수 있어요." });
     });
     return () => {
       alive = false;
@@ -419,14 +435,6 @@ function WalletEntryPage({ user }) {
     setSubmitError(null);
     try {
       const item = form.name.trim();
-      // 삭제한 카드·계좌는 목록(칩)에 없다. 「새로 쓰기」·삭제 뒤·임시저장에서 그 id 가 남아 있으면 보내지 않는다
-      // — 서버가 새 기록에는 거절해서, 사용자가 고르지도 않은 카드 때문에 저장이 막힌다.
-      // 저장된 지출을 고칠 때(dbId)는 원래 붙어 있던 카드를 그대로 보낸다(서버가 허용). 목록을 못 불러왔으면 거르지 않는다.
-      const instrumentFor = (list) => {
-        const id = form.paymentInstrumentId ?? null;
-        if (id == null || !instrumentsLoaded || form.dbId || list.some((i) => i.id === id)) return id;
-        return null;
-      };
       await saveLedgerEntries({
         expenses:
           type === "expense"
@@ -436,7 +444,7 @@ function WalletEntryPage({ user }) {
                 amount: amountNum,
                 categoryId: form.categoryId,
                 paymentMethod: form.paymentMethod,
-                paymentInstrumentId: instrumentFor(instruments),
+                paymentInstrumentId: form.paymentInstrumentId ?? null,
                 spentAt: `${dateStr}T00:00:00`,
                 memo: form.memo ?? "", // 빈 글자 = 메모 없음(수정이면 지움)
               }]
@@ -447,7 +455,7 @@ function WalletEntryPage({ user }) {
                 item,
                 amount: amountNum,
                 source: form.categoryEnum || "OTHER",
-                paymentInstrumentId: instrumentFor(incomeAccounts), // 받은 곳(계좌·현금)
+                paymentInstrumentId: form.paymentInstrumentId ?? null, // 받은 곳(계좌·현금)
                 paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
                 receivedAt: dateStr,
               }]
@@ -460,7 +468,7 @@ function WalletEntryPage({ user }) {
                 savingType: form.categoryEnum || "DEPOSIT",
                 savedAt: dateStr,
                 // 모은 곳은 예적금에서만 (자동 분류가 투자로 바꿔 놓았으면 보내지 않는다)
-                paymentInstrumentId: (form.categoryEnum || "DEPOSIT") === "DEPOSIT" ? instrumentFor(savingsAccounts) : null,
+                paymentInstrumentId: (form.categoryEnum || "DEPOSIT") === "DEPOSIT" ? form.paymentInstrumentId ?? null : null,
               }]
             : [],
       });
