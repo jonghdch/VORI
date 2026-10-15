@@ -71,13 +71,13 @@ class IncomeReceivingAccountTest {
     }
 
     @Test
-    void savingsAccountKeepsTheMethodTheScreenSent() {
-        // 예적금은 결제수단 종류가 없어 덮어쓰지 않는다
+    void savingsAccountIsAlwaysATransfer() {
+        // 예적금 통장으로 받은 돈은 이체 — 화면이 현금이라고 보내도 TRANSFER (Codex 지적)
         stub(5L, USER_ID, InstrumentKind.SAVINGS, false);
         when(incomes.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         IncomeResponse res = service.createIncome(USER_ID, new IncomeCreateRequest(
-                IncomeSource.PART_TIME, 50000, "이자", LocalDate.of(2026, 10, 10), PaymentMethod.TRANSFER, null, 5L));
+                IncomeSource.PART_TIME, 50000, "이자", LocalDate.of(2026, 10, 10), PaymentMethod.CASH, null, 5L));
 
         assertEquals(PaymentMethod.TRANSFER, res.paymentMethod());
     }

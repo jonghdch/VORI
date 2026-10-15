@@ -1034,7 +1034,7 @@ V2 때 보류한 "계좌·지갑명"을 별도 테이블로 정규화했다. 사
 | 추가 | `incomes.payment_instrument_id BIGINT NULL` | FK `ON DELETE SET NULL`. 고르지 않은 수입과 V54 이전 수입은 NULL |
 
 - 고를 수 있는 것: 본인의, 삭제(보관)하지 않은 입출금 계좌·체크카드·예적금·현금. 체크카드는 연결 통장으로 받은 것으로 본다. 신용카드는 400, 남의 것은 404.
-- 받은 곳을 고르면 `payment_method` 를 그 종류로 맞춘다 (입출금·체크카드 → TRANSFER, 현금 → CASH). 화면이 다른 값을 보내도 받은 곳이 이긴다 — 지출과 같은 규칙. 예적금은 종류가 없어 보낸 값을 그대로 둔다(안 보냈으면 NULL).
+- 받은 곳을 고르면 `payment_method` 를 그 종류로 맞춘다 (현금 → CASH, 입출금·체크카드·예적금 → TRANSFER). 화면이 다른 값을 보내도 받은 곳이 이긴다 — 지출과 같은 규칙.
 - `POST /api/incomes`·`POST /api/ledger/entries` 의 수입 행에 `paymentInstrumentId`, 수입 조회와 `GET /api/ledger` 응답에 같은 필드.
 
 마이그레이션: `V54__income_payment_instrument.sql`.

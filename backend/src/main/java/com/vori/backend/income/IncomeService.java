@@ -35,16 +35,14 @@ public class IncomeService {
     @Transactional
     public IncomeResponse createIncome(Long userId, IncomeCreateRequest req) {
         // 받은 곳을 골랐으면 본인의 쓸 수 있는 계좌·체크카드·현금인지 확인하고, 결제수단을 그 계좌에 맞춘다
-        // (입출금·체크카드 → TRANSFER — 체크카드는 연결 통장으로 받는 것이라서, 현금 → CASH).
+        // (현금 → CASH, 그 밖의 계좌 → TRANSFER — 체크카드는 연결 통장, 예적금은 통장으로 들어온 이체라서).
         // 화면이 보낸 값보다 계좌를 믿는다 — 지출이 카드 종류로 결제수단을 맞추는 것과 같은 규칙.
         // 그러지 않으면 "현금으로 받은 신용카드 수입" 처럼 서로 어긋난 기록이 저장된다.
-        // 예적금은 결제수단 종류가 없어(null) 화면이 보낸 값을 그대로 둔다.
+        // 신용카드는 requireIncomeAccount 가 이미 거절한다.
         PaymentMethod method = req.paymentMethod();
         if (req.paymentInstrumentId() != null) {
             PaymentInstrument account = paymentInstrumentService.requireIncomeAccount(userId, req.paymentInstrumentId());
-            PaymentMethod accountMethod = account.getKind() == InstrumentKind.DEBIT
-                    ? PaymentMethod.TRANSFER : account.getKind().paymentMethod();
-            if (accountMethod != null) method = accountMethod;
+            method = account.getKind() == InstrumentKind.CASH ? PaymentMethod.CASH : PaymentMethod.TRANSFER;
         }
         Income income = Income.builder()
                 .userId(userId)
