@@ -28,9 +28,10 @@ public record ExpenseResponse(
         Long paymentInstrumentId
 ) {
     /** 같은 응답에 카드·계좌 id 만 바꾼 것 — 저장 뒤 카드를 붙일 때 사유(reasonCategory)를 잃지 않으려고. */
-    public ExpenseResponse withPaymentInstrumentId(Long id) {
-        return new ExpenseResponse(this.id, spentAt, timeProvided, amount, item, categoryId, paymentMethod, statType,
-                zScore, signalInitial, signalFinal, savedAmount, statDelta, isRecurring, memo, reasonCategory, id);
+    public ExpenseResponse withPaymentInstrumentId(Long instrumentId) {
+        return new ExpenseResponse(id, spentAt, timeProvided, amount, item, categoryId, paymentMethod, statType,
+                zScore, signalInitial, signalFinal, savedAmount, statDelta, isRecurring, memo, reasonCategory,
+                instrumentId);
     }
 
     public static ExpenseResponse from(Expense e) {
