@@ -916,7 +916,8 @@
   padding: 6px 20px 16px;
 }
 .lw-sheet-foot {
-  padding: 4px 20px 20px;
+  /* 아이폰 홈 인디케이터에 [적용] 버튼이 가리지 않게 */
+  padding: 4px 20px calc(20px + env(safe-area-inset-bottom, 0px));
 }
 .lw-sheet-actions {
   display: grid;
@@ -951,6 +952,19 @@
   font-size: 13px;
   color: var(--hm-sub);
   cursor: pointer;
+}
+.lw-filter-chip {
+  min-height: 36px;
+}
+.lw-filter-chip:focus-visible {
+  outline: 2px solid var(--hm-sage);
+  outline-offset: 2px;
+}
+.lw-filter-empty {
+  margin: 0;
+  padding: 0 0 10px 30px;
+  font-size: 13px;
+  color: var(--hm-sub);
 }
 .lw-filter-chip.is-on {
   border-color: var(--hm-sage);
@@ -1059,11 +1073,14 @@
   .lw-sheet {
     width: 100%;
     max-height: 90vh;
+    /* 주소창이 보이는 모바일 브라우저에서도 화면을 넘지 않게 — 지원하면 dvh 가 이긴다 */
+    max-height: 90dvh;
     border-radius: 20px 20px 0 0;
     border-bottom: 0;
   }
   .lw-sheet--search {
     height: 90vh;
+    height: 90dvh;
   }
 }
 

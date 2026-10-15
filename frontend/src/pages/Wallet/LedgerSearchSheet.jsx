@@ -70,6 +70,7 @@ function LedgerSearchSheet({ loadMonth, today, renderRow, onClose }) {
 
   return (
     <LedgerSheet
+      ariaLabel="내역 검색"
       onClose={onClose}
       initialFocusRef={inputRef}
       className="lw-sheet--search"

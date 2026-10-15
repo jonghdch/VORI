@@ -538,13 +538,15 @@ function WalletPage({ user, onLogout }) {
   const [sheet, setSheet] = useState(null); // "filter" | "search" | null
   const closeSheet = useCallback(() => setSheet(null), []);
   const listFilterActive = isListFilterActive(listFilter);
-  // 필터 시트의 지출 카테고리 — 자주 쓰는 기본값 + 이 달에 실제로 쓰인 카테고리
+  // 필터 시트의 지출 카테고리 — 이 기간에 실제로 쓰인 카테고리만, 많이 쓴 순.
+  // 고정 기본값을 두지 않는다. 내역의 카테고리는 "외식·카페" 같은 소분류라, "식비" 같은 대분류나
+  // 없는 이름("교통")을 칩으로 두면 골라도 결과가 늘 0건이었다.
   const categoryOptions = useMemo(() => {
-    const set = new Set(["식비", "카페", "교통", "쇼핑", "문화", "생활", "의료", "교육", "고정비"]);
+    const counts = new Map();
     rows.forEach((r) => {
-      if (r.type === "EXPENSE" && r.cat && r.cat !== "—") set.add(r.cat);
+      if (r.type === "EXPENSE" && r.cat && r.cat !== "—") counts.set(r.cat, (counts.get(r.cat) ?? 0) + 1);
     });
-    return [...set];
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([cat]) => cat);
   }, [rows]);
   // 검색 시트가 최근 몇 달을 불러올 때 — 검색어가 카테고리 한글 이름에도 걸리게 catLabel 을 붙인다
   const loadSearchMonth = useCallback(
@@ -671,13 +673,13 @@ function WalletPage({ user, onLogout }) {
       if (t.closest(".lw-list-card .hm-tx")) return;
       closeDetail(false);
     };
+    // click 으로 본다 — touchstart 는 태블릿에서 목록을 스크롤하려고 손가락만 대도 닫혔고,
+    // 터치 한 번에 touchstart·mousedown 이 둘 다 와 두 번 닫혔다. 스크롤에는 click 이 생기지 않는다.
     document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onPointer);
-    document.addEventListener("touchstart", onPointer, { passive: true });
+    document.addEventListener("click", onPointer);
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onPointer);
-      document.removeEventListener("touchstart", onPointer);
+      document.removeEventListener("click", onPointer);
     };
   }, [detail, listWide, sheet, closeDetail]);
   const renderDetail = (row) => (
@@ -1133,7 +1135,7 @@ function WalletPage({ user, onLogout }) {
                           </span>
                           <span className="hm-tx-mid">
                             <span className="hm-tx-name">{row.name}</span>
-                            <span className="hm-tx-cat">{row.cat}</span>
+                            <span className="hm-tx-cat">{rowCategoryLabel(row)}</span>
                           </span>
                           <span className="hm-tx-right">
                             <span className={`hm-tx-amount ${row.type === "INCOME" ? "lw-amt-in" : ""}`}>
@@ -1161,7 +1163,7 @@ function WalletPage({ user, onLogout }) {
                               </div>
                               <div>
                                 <dt>카테고리</dt>
-                                <dd>{row.cat}</dd>
+                                <dd>{rowCategoryLabel(row)}</dd>
                               </div>
                             </dl>
                             {row.memo && (
@@ -1290,7 +1292,7 @@ function WalletPage({ user, onLogout }) {
                         <span className="hm-tx-mid">
                           <span className="hm-tx-name">{row.name}</span>
                           <span className="hm-tx-cat">
-                            {viewMonth}.{pad2(row.day)} · {row.cat}
+                            {viewMonth}.{pad2(row.day)} · {rowCategoryLabel(row)}
                           </span>
                         </span>
                         <span className="hm-tx-right">

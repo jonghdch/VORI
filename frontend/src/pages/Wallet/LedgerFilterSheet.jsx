@@ -50,7 +50,10 @@ function TypeFilterRow({ label, checked, onCheck, options, selected, onChangeSel
           <Icon name={open ? "chevronDown" : "chevronRight"} size={14} />
         </button>
       </div>
-      {open && checked && (
+      {open && checked && options.length === 0 && (
+        <p className="lw-filter-empty">이 기간에 기록된 {label} 카테고리가 없어요.</p>
+      )}
+      {open && checked && options.length > 0 && (
         <div className="lw-filter-chips lw-filter-chips--cats" role="group" aria-label={`${label} 카테고리`}>
           {options.map((o) => {
             const on = picked.includes(o.value);
@@ -82,8 +85,7 @@ function LedgerFilterSheet({ value, instruments, categoryOptions, incomeOptions,
     <button
       key={key}
       type="button"
-      role="radio"
-      aria-checked={on}
+      aria-pressed={on}
       className={`lw-filter-chip ${on ? "is-on" : ""}`}
       onClick={onClick}
     >
@@ -116,7 +118,8 @@ function LedgerFilterSheet({ value, instruments, categoryOptions, incomeOptions,
       }
     >
       <p className="lw-filter-label">거래수단</p>
-      <div className="lw-filter-chips" role="radiogroup" aria-label="거래수단">
+      {/* 하나만 고르는 칩이지만 화살표 키 이동(radio 규칙)이 없어 눌림 버튼(aria-pressed)으로 둔다 */}
+      <div className="lw-filter-chips" role="group" aria-label="거래수단">
         {chip("all", draft.instrumentId == null, "모든 거래 수단", () => patch({ instrumentId: null }))}
         {instruments.map((i) =>
           chip(i.id, draft.instrumentId === i.id, i.name, () => patch({ instrumentId: i.id }), issuerOf(i.issuer).color),
