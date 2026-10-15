@@ -3,13 +3,20 @@ import { archiveInstrument, createInstrument, listInstruments, updateInstrument 
 import IssuerBadge from "../../components/IssuerBadge";
 import { INSTRUMENT_KINDS, ISSUERS, issuerOf } from "../../constants/issuers";
 
-// 환경설정 > 카드·계좌. 내가 쓰는 카드·계좌를 등록해 두면 가계부 왼쪽 자산 목록에 나온다.
+// 환경설정 > 카드·계좌. 등록해 두면 지출·수입·저축을 적을 때 결제 수단 칩으로 고를 수 있고,
+// 가계부 목록 필터와 리포트의 결제수단별 지출에 쓰인다.
 // 자동 연동이 아니라 "이런 카드를 쓴다"는 꼬리표. 카드 번호 같은 민감 정보는 받지 않는다.
 const KIND_ORDER = ["DEBIT", "CREDIT", "CHECKING", "SAVINGS", "CASH"];
+// 서버 검증(PaymentInstrumentCreateRequest @Max)과 같은 잔액 상한 — 넘으면 저장 전에 알려 준다
+const MAX_BALANCE = 2_000_000_000;
+const balanceTooBig = (v) => Number(v) > MAX_BALANCE;
+const BALANCE_TOO_BIG = `잔액은 ${MAX_BALANCE.toLocaleString("ko-KR")}원까지 적을 수 있어요.`;
 
 function PaymentSettingsPanel() {
   const [items, setItems] = useState(null); // null = 불러오는 중
+  // 오류는 일어난 자리에 — 등록 칸(error) / 등록한 목록의 수정·삭제·불러오기(listError)
   const [error, setError] = useState("");
+  const [listError, setListError] = useState("");
   const [saving, setSaving] = useState(false);
   // 고치는 중인 행 — { id, issuer, name, openingBalance }. null = 고치는 행 없음.
   const [editing, setEditing] = useState(null);
@@ -23,7 +30,7 @@ function PaymentSettingsPanel() {
       .then(setItems)
       .catch((e) => {
         setItems([]);
-        setError(e.message || "카드·계좌를 불러오지 못했어요.");
+        setListError(e.message || "카드·계좌를 불러오지 못했어요.");
       });
   useEffect(() => { reload(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -36,6 +43,10 @@ function PaymentSettingsPanel() {
     const issuerName = isCash ? "" : issuerOf(issuer).name;
     // 이름을 비우면 "토스뱅크 체크카드"처럼 카드사 + 종류로 채운다.
     const finalName = name.trim() || `${issuerName} ${INSTRUMENT_KINDS[kind].label}`.trim();
+    if (hasBalance && balanceTooBig(openingBalance)) {
+      setError(BALANCE_TOO_BIG);
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -56,18 +67,22 @@ function PaymentSettingsPanel() {
   };
 
   const startEdit = (item) => {
-    setError("");
+    setListError("");
     setEditing({ id: item.id, issuer: item.issuer, name: item.name, openingBalance: String(item.openingBalance ?? 0) });
   };
   const handleUpdate = async (e, item) => {
     e.preventDefault();
     if (saving) return;
     if (!editing.name.trim()) {
-      setError("이름을 입력해주세요.");
+      setListError("이름을 입력해주세요.");
+      return;
+    }
+    if (item.group !== "CARD" && balanceTooBig(editing.openingBalance)) {
+      setListError(BALANCE_TOO_BIG);
       return;
     }
     setSaving(true);
-    setError("");
+    setListError("");
     try {
       await updateInstrument(item.id, {
         issuer: item.kind === "CASH" ? item.issuer : editing.issuer,
@@ -77,20 +92,24 @@ function PaymentSettingsPanel() {
       setEditing(null);
       await reload();
     } catch (err) {
-      setError(err.message || "수정하지 못했어요.");
+      setListError(err.message || "수정하지 못했어요.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleArchive = async (item) => {
+    if (saving) return; // 연타로 삭제 요청이 두 번 가지 않게
     if (!window.confirm(`'${item.name}'을 삭제할까요? 이 카드로 적은 지난 내역은 그대로 남아요.`)) return;
-    setError("");
+    setSaving(true);
+    setListError("");
     try {
       await archiveInstrument(item.id);
       await reload();
     } catch (err) {
-      setError(err.message || "삭제하지 못했어요.");
+      setListError(err.message || "삭제하지 못했어요.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -146,6 +165,7 @@ function PaymentSettingsPanel() {
                   className="settings-input"
                   type="number"
                   min="0"
+                  max={MAX_BALANCE}
                   value={openingBalance}
                   onChange={(e) => setOpeningBalance(e.target.value)}
                   placeholder="0"
@@ -162,6 +182,7 @@ function PaymentSettingsPanel() {
 
       <section className="settings-section">
         <h3 className="settings-row-name">등록한 카드·계좌</h3>
+        {listError && <p className="settings-hint-error" role="alert">{listError}</p>}
         {items == null ? (
           <p className="settings-row-desc">불러오는 중…</p>
         ) : items.length === 0 ? (
@@ -200,6 +221,7 @@ function PaymentSettingsPanel() {
                           aria-label="잔액"
                           type="number"
                           min="0"
+                          max={MAX_BALANCE}
                           value={editing.openingBalance}
                           onChange={(e) => setEditing((d) => ({ ...d, openingBalance: e.target.value }))}
                         />
@@ -229,7 +251,7 @@ function PaymentSettingsPanel() {
                 <button type="button" className="pay-item-edit" onClick={() => startEdit(item)}>
                   수정
                 </button>
-                <button type="button" className="pay-item-archive" onClick={() => handleArchive(item)}>
+                <button type="button" className="pay-item-archive" disabled={saving} onClick={() => handleArchive(item)}>
                   삭제
                 </button>
               </li>
