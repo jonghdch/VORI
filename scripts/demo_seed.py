@@ -17,6 +17,11 @@
 리허설은 세팅 상태를 소모한다(지출 10번째·배치·배웅·개봉을 실제로 해버린다).
 발표용 계정은 --rehearse 없이 만들 것.
 
+배포 서버에 세팅할 때는 주소와 비밀번호를 환경변수로 준다(기본값은 로컬 개발용):
+    VORI_BASE_URL=https://<서버 주소>  VORI_ADMIN_PASSWORD=<서버 관리자 비밀번호>
+    VORI_DEMO_PASSWORD=<시연 계정 비밀번호>  python scripts/demo_seed.py
+저장소가 공개라 기본 비밀번호(1234, Vori!2026)는 누구나 본다 — 로컬이 아닌 서버에서 기본값이면 멈춘다.
+
 지출은 전부 식비 계열(categories 2~6, statType=ENERGY)을 쓴다. EMA 기준선이
 statType 별로 따로 관리되므로, 다른 계열을 섞으면 절약액 계산이 어긋난다.
 """
@@ -25,16 +30,41 @@ import datetime
 import http.cookiejar
 import io
 import json
+import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-BASE = "http://127.0.0.1:8080"
-ADMIN_EMAIL, ADMIN_PW = "admin@vori.com", "1234"
-PW = "Vori!2026"
+# 기본값은 로컬 개발용. 배포 서버는 환경변수로 바꾼다(머리말).
+DEFAULT_ADMIN_PW, DEFAULT_PW = "1234", "Vori!2026"
+BASE = os.environ.get("VORI_BASE_URL", "http://127.0.0.1:8080").rstrip("/")
+ADMIN_EMAIL = "admin@vori.com"
+ADMIN_PW = os.environ.get("VORI_ADMIN_PASSWORD", DEFAULT_ADMIN_PW)
+PW = os.environ.get("VORI_DEMO_PASSWORD", DEFAULT_PW)
+# 출력에 비밀번호를 그대로 찍는 건 공개된 기본값일 때만 — 따로 정한 비밀번호는 화면·로그에 남기지 않는다
+PW_LABEL = PW if PW == DEFAULT_PW else "(VORI_DEMO_PASSWORD 값)"
+
+
+def refuse_public_passwords_on_server():
+    """로컬이 아닌 서버에 공개 저장소의 기본 비밀번호로 접속·계정 생성을 하지 않는다.
+
+    시연 계정을 기본 비밀번호로 배포 서버에 만들면 GitHub 를 본 누구나 대회 중에 그 계정으로 들어와
+    무대 세팅(코인·가구·펫)을 바꿀 수 있다.
+    """
+    if urllib.parse.urlparse(BASE).hostname in ("127.0.0.1", "localhost", "::1"):
+        return
+    unsafe = [name for name, value, default in (
+        ("VORI_ADMIN_PASSWORD", ADMIN_PW, DEFAULT_ADMIN_PW),
+        ("VORI_DEMO_PASSWORD", PW, DEFAULT_PW),
+    ) if value == default]
+    if unsafe:
+        print(f"로컬이 아닌 서버({BASE})에 공개된 기본 비밀번호를 쓰려고 합니다: {', '.join(unsafe)}")
+        print("환경변수로 다른 비밀번호를 정한 뒤 다시 실행하세요 (scripts/demo_seed.py 머리말).")
+        sys.exit(2)
 
 # 첫 건이 기준선을 올리고, 나머지 8건이 그 평균 대비 절약으로 잡힌다.
 # (categoryId, 금액, 품목)
@@ -185,7 +215,7 @@ def seed(email):
         print(f"로그인 실패: {code} {msg(res)}")
         sys.exit(1)
     complete_onboarding(user)
-    print(f"계정 생성 — id={user_id}  {email} / {PW}\n")
+    print(f"계정 생성 — id={user_id}  {email} / {PW_LABEL}\n")
 
     # ── 지출 9건 ──
     print("지출 9건 등록")
@@ -273,16 +303,23 @@ def prepare_screens(user):
     - 펫 이름 짓기 팝업: 이름이 없으면 뜬다 → 이름을 지어 두면 다시 안 뜬다.
     - 출석 창: 그날 출석하지 않았으면 하루 한 번 뜬다 → **그날** 출석해야 안 뜬다.
       전날 만든 발표용 계정은 발표 당일 아침 `--checkin --email <이메일>` 로 다시 출석시킨다.
+
+    펫이 있고 이름이 있으며 오늘 출석까지 됐을 때만 True. 출석만 보고 성공으로 끝내면
+    이름 짓기가 실패해도 「준비 완료」로 끝나 무대 첫 화면에 팝업이 뜬다.
     """
     _, pet = user.call("GET", "/api/pets/active")
-    if isinstance(pet, dict) and not pet.get("name"):
+    named = isinstance(pet, dict) and bool(pet.get("name"))
+    if not isinstance(pet, dict):
+        print("  키우는 펫이 없음 — 세팅부터 다시 하세요")
+    elif not named:
         code, res = user.call("PUT", f"/api/pets/{pet['id']}/name", {"name": PET_NAME})
-        print(f"  펫 이름 '{PET_NAME}'" if code == 200 else f"  펫 이름 짓기 실패: {code} {msg(res)}")
+        named = code == 200
+        print(f"  펫 이름 '{PET_NAME}'" if named else f"  펫 이름 짓기 실패: {code} {msg(res)}")
     user.call("POST", "/api/attendance")  # 이미 출석했으면 서버가 거절해도 상관없다 — 아래에서 확인
     _, att = user.call("GET", "/api/attendance")
     checked = isinstance(att, dict) and att.get("checkedIn") is True
     print(f"  오늘({datetime.date.today()}) 출석 " + ("완료" if checked else "안 됨"))
-    return checked
+    return named and checked
 
 
 def verify(user, stage_coins):
@@ -441,7 +478,9 @@ def rehearse(user, user_id):
         check("ENERGY 신호 RED → GREEN 완화", final_energy_signal == "GREEN",
               f"signal={final_energy_signal}")
     else:
-        print(f"     1차 ENERGY 그룹이 RED가 아니었습니다: {initial_energy_signal or '없음'}")
+        # 빨강 → 초록 완화가 무대의 핵심 장면이다. 1차부터 빨강이 아니면 그 장면 없이 통과해 버린다
+        check("1차 ENERGY(식비) 그룹 RED (빨강→초록 장면의 전제)", False,
+              f"signal={initial_energy_signal or '없음'}")
 
     coin_after_finalize, stat_after_finalize = wallet(user)
     print(f"     최종 판정 전후 코인 {coin_before_finalize:,} → {coin_after_finalize:,}"
@@ -519,6 +558,7 @@ def main():
     ap.add_argument("--checkin", action="store_true",
                     help="이미 만든 --email 계정을 오늘 날짜로 출석시키고 펫 이름을 확인만 한다 (발표 당일 아침)")
     args = ap.parse_args()
+    refuse_public_passwords_on_server()
 
     if args.checkin:
         # 출석 창은 그날 출석하지 않았으면 하루 한 번 뜬다 — 전날 만든 계정은 발표 날 다시 출석해야 한다
@@ -535,7 +575,10 @@ def main():
     user, user_id, stage_coins = seed(email)
     passed = verify(user, stage_coins)
 
-    if args.rehearse:
+    if args.rehearse and not passed:
+        # 잘못 세팅된 계정으로 리허설하면 배치·배웅·개봉까지 소모하고 실패 원인만 더 복잡해진다
+        print("\n세팅 확인이 실패해 리허설을 건너뜁니다. 위 실패를 먼저 고치세요.")
+    elif args.rehearse:
         rehearse(user, user_id)
 
     print("\n" + "=" * 62)
@@ -545,7 +588,7 @@ def main():
     if args.rehearse:
         print("\n※ 리허설로 세팅이 소모되었습니다. 발표용 계정은 --rehearse 없이 다시 만드세요.")
     elif passed:
-        print(f"\n발표 당일 이 계정으로 로그인하세요:  {email} / {PW}")
+        print(f"\n발표 당일 이 계정으로 로그인하세요:  {email} / {PW_LABEL}")
     print("=" * 62)
     sys.exit(0 if not fail else 1)
 

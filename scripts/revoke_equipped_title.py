@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
-"""장착 중인 칭호 회수 — 어드민 API. bootRun 실행 중일 때."""
+"""장착 중인 칭호 회수 — 어드민 API. bootRun 실행 중일 때.
+
+배포 서버에서는 VORI_BASE_URL(서버 주소)·VORI_ADMIN_PASSWORD(서버 관리자 비밀번호)를 환경변수로 준다.
+기본값은 로컬 개발용이다(demo_seed.py 와 같다).
+"""
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
 import http.cookiejar
 
-BASE = "http://127.0.0.1:8080/api"
-ADMIN_EMAIL, ADMIN_PW = "admin@vori.com", "1234"
+BASE = os.environ.get("VORI_BASE_URL", "http://127.0.0.1:8080").rstrip("/") + "/api"
+ADMIN_EMAIL = "admin@vori.com"
+ADMIN_PW = os.environ.get("VORI_ADMIN_PASSWORD", "1234")
 
 
 def main():
