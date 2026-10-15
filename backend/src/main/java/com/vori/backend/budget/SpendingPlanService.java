@@ -14,6 +14,7 @@ import java.util.*;
 
 @Service @RequiredArgsConstructor
 public class SpendingPlanService {
+    private static final int CURRENT_CALCULATION_VERSION = 2;
     private final UserStatBudgetRepository statBudgets;
     private final FixedExpenseRepository fixedExpenses;
     private final UserRepository users;
@@ -26,7 +27,10 @@ public class SpendingPlanService {
         // 처음 확인할 때만 다시 만든다. 고정비 변경은 add/remove 에서 현재 월 계획을 재생성한다.
         if (!existing.isEmpty()) {
             boolean emptyPlan = existing.stream().mapToInt(UserStatBudget::getAmount).sum() == 0;
-            if (!emptyPlan || Optional.ofNullable(user.getMonthlyBudget()).orElse(0) <= 0) return;
+            boolean needsFixedCostRefresh = existing.stream()
+                    .anyMatch(plan -> plan.getCalculationVersion() < CURRENT_CALCULATION_VERSION);
+            if ((!emptyPlan && !needsFixedCostRefresh)
+                    || Optional.ofNullable(user.getMonthlyBudget()).orElse(0) <= 0) return;
             statBudgets.deleteAll(existing);
             statBudgets.flush();
         }
@@ -45,7 +49,9 @@ public class SpendingPlanService {
             // 고정비는 다른 스탯 그룹의 예산에는 영향을 주지 않고 생활·고정비 예산에서만 뺀다.
             if (type == StatType.ENDURANCE) amount = Math.max(0, amount - fixed);
             assigned += amount;
-            statBudgets.save(UserStatBudget.builder().userId(userId).yearMonth(yearMonth).statType(type).amount(amount).build());
+            statBudgets.save(UserStatBudget.builder()
+                    .userId(userId).yearMonth(yearMonth).statType(type).amount(amount)
+                    .calculationVersion(CURRENT_CALCULATION_VERSION).build());
         }
     }
     /** 월 예산·선호 분야·고정비가 바뀌면 현재 월 계획을 다시 배분한다. */

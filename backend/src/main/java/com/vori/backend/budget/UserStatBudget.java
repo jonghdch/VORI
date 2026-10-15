@@ -12,5 +12,8 @@ public class UserStatBudget {
     @Column(name = "`year_month`", nullable = false, columnDefinition = "CHAR(7)") private String yearMonth;
     @Enumerated(EnumType.STRING) @Column(name = "stat_type", nullable = false) private StatType statType;
     @Column(nullable = false) private Integer amount;
+    @Builder.Default
+    @Column(name = "calculation_version", nullable = false)
+    private int calculationVersion = 1;
     public void updateAmount(int amount) { this.amount = amount; }
 }
