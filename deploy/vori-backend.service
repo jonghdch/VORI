@@ -1,0 +1,31 @@
+# VORI 백엔드 systemd 서비스 초안 — 서버가 재부팅돼도, 백엔드가 죽어도 다시 띄운다.
+# 놓을 곳: /etc/systemd/system/vori-backend.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now vori-backend
+#   로그: journalctl -u vori-backend -f
+#
+# /opt/vori 에 둘 것
+#   vori-backend.jar  ← backend 에서 ./gradlew bootJar 한 build/libs/backend-0.0.1-SNAPSHOT.jar (-plain 이 아닌 것)
+#   .env              ← deploy/server.env.example 을 채운 것. 권한 600, 이 서비스 사용자만 읽게.
+# 서버는 작업 디렉터리의 ./.env 를 읽는다(application.properties 의 spring.config.import).
+# 그래서 WorkingDirectory 가 .env 가 있는 폴더여야 한다 — 다르면 DB 비밀번호가 안 넘어가
+# "Access denied ... (using password: NO)" 로 뜨지 않는다.
+
+[Unit]
+Description=VORI backend (Spring Boot)
+# MySQL 서비스 이름: Amazon Linux 는 mysqld, Ubuntu 는 mysql
+After=network.target mysqld.service
+Wants=mysqld.service
+
+[Service]
+User=vori
+WorkingDirectory=/opt/vori
+# prod 프로필: SQL 로그를 끈다(application-prod.properties).
+# 힙은 인스턴스 메모리에 맞춘다 — MySQL 과 한 대에 두면 1GB 인스턴스는 빠듯하다(추정, 실측 필요).
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -Dspring.profiles.active=prod -jar /opt/vori/vori-backend.jar
+Restart=on-failure
+RestartSec=5
+# 끌 때 진행 중인 요청을 마칠 시간
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
