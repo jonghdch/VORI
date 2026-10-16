@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import SiteHeader from "../../components/SiteHeader";
+import VoriWordmark from "../../components/VoriWordmark";
 import boriImage from "../../assets/pets/bori.png";
 import "./LandingPage.css";
 
@@ -71,7 +72,7 @@ function LandingPage({ user, onLogout }) {
     <section id="team" className="landing-studio-team"><div className="landing-studio-container"><div className="landing-studio-team-intro"><div><span className="landing-studio-kicker">ABOUT THE PROJECT</span><h2>잘 쓰는 습관을 만드는<br /><strong>졸업작품 프로젝트</strong></h2></div><div><p>VORI는 단순히 지출을 줄이라고 말하는 대신, 평소 소비 패턴과 지출 이유를 함께 살펴 더 나은 선택을 돕는 AI 소비 기록 서비스입니다.</p><div className="landing-studio-stack" aria-label="사용 기술"><span>React</span><span>Spring Boot</span><span>MySQL</span><span>Gemini AI</span></div></div></div><div className="landing-studio-team-head"><span>VORI TEAM</span><p>기획부터 개발과 디자인까지, 네 명이 함께 만들고 있습니다.</p></div><div className="landing-studio-team-grid">{TEAM.map((member, index) => <motion.article key={member.name} className="landing-studio-team-card" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.5, delay: index * 0.06 }}><span className="landing-studio-team-num">0{index + 1}</span><small>{member.role}</small><h3>{member.name}</h3><p>{member.desc}</p></motion.article>)}</div></div></section>
     <section className="landing-faq landing-studio-faq"><div className="landing-studio-section-head"><span>FAQ</span><h2>시작하기 전에 궁금한 점</h2></div><div className="landing-faq-list"><FaqItem question="VORI는 무료인가요?">네. 현재 가입과 제공되는 기본 기능은 별도 결제 없이 사용할 수 있어요.</FaqItem><FaqItem question="AI는 어떤 기준으로 판단하나요?">사용자별 카테고리 소비 평균과 변화량을 먼저 계산하고, 예외적인 지출에는 사용자가 적은 이유를 추가로 반영해요.</FaqItem><FaqItem question="처음 가입하면 기록이 없어도 괜찮나요?">소비 프로필로 초기 기준을 부드럽게 잡고, 실제 기록이 쌓일수록 나에게 맞는 기준으로 조정돼요.</FaqItem><FaqItem question="모바일에서도 사용할 수 있나요?">네. 별도 앱 설치 없이 모바일과 PC 웹 브라우저에서 사용할 수 있어요.</FaqItem></div></section>
     <section className="landing-studio-final"><div className="landing-studio-container"><span>READY TO START?</span><h2>오늘 쓴 돈 하나부터,<br />보리와 함께 기록해보세요.</h2><p>몇 분이면 내 소비 기준이 준비됩니다.</p><button type="button" onClick={() => navigate(startPath)}>{user ? "VORI로 돌아가기" : "무료로 시작하기"} <span>→</span></button></div></section>
-  </main><footer className="landing-footer"><div className="landing-footer-inner"><div className="landing-footer-brand"><div className="landing-logo landing-logo-sm">VORI</div><p className="landing-footer-desc">AI 소비 기록 · 펫 성장 서비스</p></div><div className="landing-footer-meta"><div className="landing-footer-legal"><a href="/terms">이용약관</a><span aria-hidden>·</span><a href="/privacy">개인정보처리방침</a></div><span>졸업작품 © 2026 VORI Team</span></div></div></footer></div>;
+  </main><footer className="landing-footer"><div className="landing-footer-inner"><div className="landing-footer-brand"><div className="landing-logo landing-logo-sm"><VoriWordmark title="VORI" /></div><p className="landing-footer-desc">AI 소비 기록 · 펫 성장 서비스</p></div><div className="landing-footer-meta"><div className="landing-footer-legal"><a href="/terms">이용약관</a><span aria-hidden>·</span><a href="/privacy">개인정보처리방침</a></div><span>졸업작품 © 2026 VORI Team</span></div></div></footer></div>;
 }
 
 export default LandingPage;

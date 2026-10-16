@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./SignupPage.css";
 import { signup, login } from "../../api/auth";
+import VoriWordmark from "../../components/VoriWordmark";
 
 // 회원가입 페이지.
 // - POST /api/auth/signup 호출 → 성공 시 자동으로 /api/auth/login 까지 호출해
@@ -113,7 +114,7 @@ function SignupPage({ onLogin }) {
           onClick={() => navigate("/")}
           aria-label="VORI 홈으로"
         >
-          VORI
+          <VoriWordmark />
         </button>
       </header>
 

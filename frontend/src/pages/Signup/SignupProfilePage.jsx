@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { saveSpendingProfile } from "../../api/onboarding";
+import VoriWordmark from "../../components/VoriWordmark";
 import "./SignupPage.css";
 
 const STEPS = [
@@ -126,7 +127,9 @@ function SignupProfilePage({ onLogout }) {
     <div className="signup">
       <header className="signup-header">
         {/* 설문은 필수라 다른 화면으로 가는 길을 두지 않는다. 계정을 떠나는 로그아웃만 연다. */}
-        <span className="signup-logo-btn signup-logo-static">VORI</span>
+        <span className="signup-logo-btn signup-logo-static">
+          <VoriWordmark title="VORI" />
+        </span>
         <button type="button" className="signup-logout" onClick={onLogout}>
           로그아웃
         </button>

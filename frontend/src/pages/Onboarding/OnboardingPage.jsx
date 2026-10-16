@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { completeOnboarding, getOnboardingStatus } from "../../api/onboarding";
+import VoriWordmark from "../../components/VoriWordmark";
 import "../Signup/SignupPage.css";
 
 const MEAL_LABEL = {
@@ -79,7 +80,7 @@ function OnboardingPage() {
           onClick={() => navigate("/")}
           aria-label="VORI 홈으로"
         >
-          VORI
+          <VoriWordmark />
         </button>
       </header>
 

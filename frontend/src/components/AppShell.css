@@ -13,8 +13,8 @@
   --home-card-border: #e8e3d8;
   --home-sidebar-link: #9c9488;
 
-  --home-logo-vo: #3d3830;
-  --home-logo-ri: #7c9e6b;
+  /* 글자 로고 색 — 앱 글자색(HomeScreen.css --hm-ink)과 같다. 로고는 한 색(currentColor) */
+  --home-logo: #3d3830;
 
   --home-bar-green: #7fb069;
   --home-bar-red: #e07a7a;
@@ -163,24 +163,21 @@
   }
 }
 
+/* 확정 글자 로고(Jost + 달-동전 O). 예전 두 색 글자 로고(Nunito 「VO」+「RI」)를 대신한다. */
 .home-logo {
+  display: inline-flex;
+  align-items: center;
   border: none;
   background: none;
-  font-family: "Nunito", "Pretendard", sans-serif;
-  font-weight: 900;
-  font-size: 22px;
-  letter-spacing: -0.02em;
-  color: inherit;
+  color: var(--home-logo);
   cursor: pointer;
-  padding: 4px 0;
+  padding: 6px 0;
 }
 
-.home-logo-vo {
-  color: var(--home-logo-vo);
-}
-
-.home-logo-ri {
-  color: var(--home-logo-ri);
+.home-logo-mark {
+  display: block;
+  height: 20px;
+  width: auto;
 }
 
 .home-topnav {
@@ -804,8 +801,10 @@
     padding: 10px 16px;
   }
   .app-has-tabbar .home-logo {
-    display: inline-block;
-    font-size: 20px;
+    display: inline-flex;
+  }
+  .app-has-tabbar .home-logo-mark {
+    height: 18px;
   }
 
   /* 본문이 탭 바 뒤로 숨지 않게 아래 여백을 탭 바 높이만큼 */
