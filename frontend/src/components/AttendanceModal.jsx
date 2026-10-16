@@ -27,6 +27,14 @@ export const markShownToday = () => {
     localStorage.setItem(SHOWN_KEY, dateKeyOf(new Date()));
   } catch {}
 };
+// 표시는 계정이 아니라 기기에 남는다. 기기 하나를 여럿이 돌려 쓰면(시연·대회) 앞사람이 닫은 표시 때문에
+// 다음 사람에게 자동으로 안 뜬다 — 로그인·로그아웃 때 지운다(App). 계정별로 나누려면 화면마다 계정 조회가
+// 하나 더 필요해 이 방식을 골랐다. 같은 사람이 다시 로그인하면 출석 전일 때만 한 번 더 뜬다.
+export const clearShownToday = () => {
+  try {
+    localStorage.removeItem(SHOWN_KEY);
+  } catch {}
+};
 
 /**
  * 출석 팝업 — 원래 /attendance 페이지였던 내용을 그대로 담은 다이얼로그.

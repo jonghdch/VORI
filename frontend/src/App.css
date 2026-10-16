@@ -1,17 +1,21 @@
 /* App 전체 wrapper용 (현재는 비어 있음).
    페이지별 스타일은 각 페이지 폴더 안의 .css 파일에 작성하세요. */
 
-/* 설문 상태 확인 실패 — ProfileRequiredGuard */
-.profile-guard-error {
+/* 설문 상태 확인 실패 — ProfileRequiredGuard, 로그인 상태 확인 실패 — ProtectedRoute·AdminRoute */
+.profile-guard-error,
+.auth-restore-error {
   min-height: 60vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 12px;
+  padding: 0 16px;
   color: #444;
+  text-align: center;
 }
-.profile-guard-error button {
+.profile-guard-error button,
+.auth-restore-error button {
   padding: 8px 16px;
   border: 1px solid #ccc;
   border-radius: 8px;

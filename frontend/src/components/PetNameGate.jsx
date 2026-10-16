@@ -6,6 +6,17 @@ import "./PetNameGate.css";
 
 export const PET_NAME_MAX = 10;
 
+// 출석 팝업(AttendanceGate)이 이 팝업과 겹쳐 뜨지 않게 지금 상태를 알린다.
+// checked: 이름 지을 펫이 있는지 확인을 마쳤는지, open: 이름 짓기 팝업이 떠 있는지.
+// 출석 쪽이 DOM 에 이 팝업이 있는지 보고 판단하던 방식은, 펫 조회가 출석 조회보다 늦게 끝나면 둘 다 띄웠다.
+export const PET_NAME_GATE_EVENT = "vori:pet-name-gate";
+let gateState = { checked: false, open: false };
+export const getPetNameGateState = () => gateState;
+function publishGateState(next) {
+  gateState = next;
+  window.dispatchEvent(new Event(PET_NAME_GATE_EVENT));
+}
+
 /**
  * 이름 없는 펫을 키우고 있으면 이름 짓기 팝업을 띄운다. AppShell 이 모든 화면에 둔다.
  *
@@ -19,15 +30,23 @@ function PetNameGate() {
   useEffect(() => {
     let alive = true;
     // 조회 실패는 조용히 넘긴다 — 로그인 만료·서버 오류 안내는 각 화면이 이미 한다.
+    // 실패해도 확인은 끝난 것으로 알린다. 그래야 출석 팝업이 이 확인을 기다리다 영영 안 뜨는 일이 없다.
     const load = () =>
       getActivePet()
-        .then((p) => alive && setPet(p && !p.name ? p : null))
-        .catch(() => {});
+        .then((p) => {
+          if (!alive) return;
+          const needsName = Boolean(p && !p.name);
+          setPet(needsName ? p : null);
+          publishGateState({ checked: true, open: needsName });
+        })
+        .catch(() => alive && publishGateState({ checked: true, open: false }));
     load();
     window.addEventListener(PET_CHANGED_EVENT, load);
     return () => {
       alive = false;
       window.removeEventListener(PET_CHANGED_EVENT, load);
+      // 화면을 옮기면 AppShell 과 함께 새로 그려진다 — 다음 화면은 다시 확인한 뒤에 출석 팝업을 연다
+      gateState = { checked: false, open: false };
     };
   }, []);
 
@@ -37,6 +56,8 @@ function PetNameGate() {
       pet={pet}
       onNamed={() => {
         setPet(null);
+        // 이름 짓기를 기다리던 출석 팝업이 이제 뜬다
+        publishGateState({ checked: true, open: false });
         // 홈·마이룸이 새 이름으로 다시 그리게 한다
         notifyPetChanged();
       }}

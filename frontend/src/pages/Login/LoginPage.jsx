@@ -24,20 +24,28 @@ function LoginPage({ onLogin }) {
   // 상태를 못 읽었으면 홈으로 보내지 않는다. 못 읽은 것을 "다 마쳤다" 로 치면 온보딩을 안 한
   // 계정이 그대로 홈에 들어간다. 로그인 상태(onLogin)도 상태를 읽은 뒤에 올린다 — 먼저 올리면
   // 설문 가드(App.js)가 화면을 다시 그려 이 화면의 안내가 사라진다.
+  //
+  // 관리자는 설문 대상이 아니다(App.js ProfileRequiredGuard·서버 OnboardingRequiredFilter 도 뺀다).
+  // 상태를 묻지 않고 홈으로 보낸다 — 물으면 설문이 없으니 설문 화면으로 갔다. 관리 메뉴는 홈 사이드바에 있다.
   const afterLogin = async (user) => {
-    let status;
-    try {
-      status = await getOnboardingStatus();
-    } catch {
-      setPendingUser(user);
-      setError("로그인은 됐지만 계정 상태를 확인하지 못했어요.");
-      return;
+    const isAdmin = user?.role === "ADMIN";
+    let status = null;
+    if (!isAdmin) {
+      try {
+        status = await getOnboardingStatus();
+      } catch {
+        setPendingUser(user);
+        setError("로그인은 됐지만 계정 상태를 확인하지 못했어요.");
+        return;
+      }
     }
     setPendingUser(null);
     // 탈퇴 대기 계정이 로그인하면 서버가 탈퇴를 취소한다 — 복구됐다고 알려 준다
     if (user?.accountRestored) window.alert("탈퇴 신청이 취소되고 계정이 복구됐어요.");
     if (typeof onLogin === "function") onLogin(user);
-    if (!status?.profileCompleted) {
+    if (isAdmin) {
+      navigate("/home");
+    } else if (!status?.profileCompleted) {
       navigate("/signup/profile");
     } else if (!status.tutorialDone) {
       navigate("/onboarding");
