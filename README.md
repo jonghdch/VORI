@@ -37,7 +37,7 @@
 
 > **`.env` 로딩**: `.env`(DB 비밀번호·Gemini 키)는 **repo 루트**에 있다. `bootRun` 은 작업 디렉터리를 repo 루트로 고정해 두었으므로(`build.gradle`) `backend/` 에서 `./gradlew bootRun` 해도 `.env` 를 읽는다. IDE 에서 `BackendApplication` 을 직접 실행할 때는 **Working directory 를 repo 루트로** 잡아야 한다 — 아니면 `.env` 를 못 읽어 DB·AI 연결이 깨진다(로그인 실패 포함).
 >
-> **Windows 로그인 안 될 때**: DB URL 은 `127.0.0.1` 로 고정돼 있다(Windows 는 `localhost` 를 IPv6 `::1` 로 먼저 해석해 MySQL 연결이 실패할 수 있음). 그래도 안 되면 `.env` 를 **CRLF→LF** 로 저장하고, 본인 MySQL `root` 비밀번호를 `.env` 의 `DB_PASSWORD` 에 명시. 프론트는 `localhost:3000` / `127.0.0.1:3000` 둘 다 허용된다. 시드 계정은 `admin@vori.com` / `1234`.
+> **Windows 로그인 안 될 때**: DB URL 은 `127.0.0.1` 로 고정돼 있다(Windows 는 `localhost` 를 IPv6 `::1` 로 먼저 해석해 MySQL 연결이 실패할 수 있음). 그래도 안 되면 `.env` 를 **CRLF→LF** 로 저장하고, 본인 MySQL `root` 비밀번호를 `.env` 의 `DB_PASSWORD` 에 명시. 프론트는 `localhost:3000` / `127.0.0.1:3000` 둘 다 허용된다. 시드 관리자 계정은 `admin@vori.com` / `.env` 의 `ADMIN_PASSWORD`(로컬 예시 `1234`).
 
 ### 프론트엔드 (React.js)
 ```bash
@@ -75,6 +75,7 @@ repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"
 3. **`.env` 작성** — repo 루트에 `.env.example` 복사 후 값 채우기
    - `DB_USERNAME` / `DB_PASSWORD` = 본인 MySQL 계정 (Windows root 는 보통 비밀번호 있음 → 반드시 명시)
    - `GEMINI_API_KEY` = 본인 키
+   - `ADMIN_PASSWORD` = 관리자 계정 비밀번호(로컬은 시연 스크립트와 맞춰 `1234`). **비우면 관리자 계정을 만들지 않는다**
 4. **백엔드 실행** — `cd backend && ./gradlew bootRun` (IDE 직접 실행 시엔 Working directory 를 repo 루트로)
 5. **프론트엔드**: `cd frontend && npm ci && npm start`
    - `npm ci` 는 `package-lock.json` 그대로 설치하고 lock 을 바꾸지 않는다. 라이브러리를 **추가할 때만** `npm install <이름>` 후 lock 까지 커밋
@@ -82,7 +83,9 @@ repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"
 ### 백엔드가 자동으로 하는 것 (위 준비가 끝났으면)
 - MySQL 커넥션 풀 생성·연결
 - Flyway 마이그레이션 자동 실행 → 테이블 생성/검증
-- 시드 자동 생성 — 관리자 계정 `admin@vori.com` / `1234`
+- 시드 자동 생성 — 관리자 계정 `admin@vori.com`. 비밀번호는 `.env` 의 `ADMIN_PASSWORD`, 값이 없으면 관리자를 만들지 않는다(이미 있는 관리자는 그대로)
+
+> **배포 서버**: `SPRING_PROFILES_ACTIVE=prod` 로 켜면 `application-prod.properties` 가 SQL 로그를 끈다. `ADMIN_PASSWORD` 는 길고 다른 값으로.
 
 > Windows 에서 로그인 안 될 때 트러블슈팅은 위 [백엔드 셋업](#백엔드-spring-boot) 주의 박스 참조.
 

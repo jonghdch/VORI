@@ -81,7 +81,18 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
         @Param("userId") Long userId,
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end);
-    List<Expense> findByUserIdAndSpentAtBetween(Long userId, LocalDateTime start, LocalDateTime end);
+
+    /**
+     * 기간 내 본인 지출 — 끝은 포함하지 않는다(start 이상 end 미만). 위 OrderBy 판과 같은 규칙.
+     * 이름만 보고 파생 쿼리(Between)로 두면 끝이 포함돼, 다음 날 0시 지출이 전날에 들어간다 —
+     * 지출 기록 화면이 시간을 받지 않는 지출을 그날 00:00:00 으로 저장하므로(WalletEntryPage)
+     * 다음 날 지출 전부가 전날 리포트·판정의 이번 달 합계에 섞였다. 호출부는 모두 「다음 날 0시」를 끝으로 준다.
+     */
+    @Query("SELECT e FROM Expense e WHERE e.userId = :userId AND e.spentAt >= :start AND e.spentAt < :end")
+    List<Expense> findByUserIdAndSpentAtBetween(
+        @Param("userId") Long userId,
+        @Param("start") LocalDateTime start,
+        @Param("end") LocalDateTime end);
 
     /**
      * 기간 내 지출을 남긴 사용자 id 목록 — 일일 리포트 배치 대상 선별용.
