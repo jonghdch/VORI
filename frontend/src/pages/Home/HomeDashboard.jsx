@@ -9,7 +9,7 @@ import { getActivePet } from "../../api/pet";
 import { PET_CHANGED_EVENT } from "../../api/user";
 import { getUnreadMonthlyReport } from "../../api/monthlyReports";
 import { listAchievements } from "../../api/achievements";
-import { PetArt, petDisplayName, levelProgressPct } from "../../components/petVisual";
+import { PetArt, petDisplayName, levelProgressPct, withJosa } from "../../components/petVisual";
 import { AI_ACTIVE_FROM_HOUR } from "../../config";
 import { NO_RECORD_LINE, SPENDING_LINES, monthlyReportLine, petTmiLines } from "../../components/petLines";
 import TodayAllowanceCard from "./TodayAllowanceCard";
@@ -303,7 +303,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   >
                     {equippedTitle?.name ?? "칭호 없음"}
                   </button>
-                  <h2 className="home-pet-name">{activePet ? petDisplayName(activePet) : "보리"}</h2>
+                  {/* 펫을 불러오기 전에 「보리」를 잠깐 보여 주면 이름이 다른 사용자에게 틀린 이름이 스친다 */}
+                  <h2 className="home-pet-name">{petDisplayName(activePet)}</h2>
                   <span className="home-pet-level-label">Lv. {petLevel}</span>
                 </div>
               </div>
@@ -488,7 +489,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
         <p className="home-footnote">
           {user?.role === "ADMIN"
             ? "관리자는 언제든지 소비 판정을 확인할 수 있어요"
-            : `매일 ${AI_ACTIVE_FROM_HOUR}시에 보리가 소비 검사를 시작해요`}
+            : // 지금 키우는 펫 이름으로 — 「보리」로 고정돼 있어 이름이 다른 펫에게도 보리라고 했다
+              `매일 ${AI_ACTIVE_FROM_HOUR}시에 ${withJosa(petDisplayName(activePet), "이", "가")} 소비 검사를 시작해요`}
         </p>
       </main>
 
