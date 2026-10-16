@@ -3,6 +3,9 @@
 // - 백엔드 CORS 가 http://localhost:3000 을 허용하도록 설정돼 있어야 함.
 
 import { API_BASE } from "./base";
+// 서버에 닿지 못했을 때(로그인 화면에 영어 "Failed to fetch" 가 나가던 것)·조회가 오래 걸릴 때의
+// 한국어 문구는 http.js 의 send 가 맡는다.
+import { send } from "./http";
 
 export class AuthError extends Error {
   constructor(message, status) {
@@ -22,7 +25,7 @@ async function parseErrorMessage(res, fallback) {
 }
 
 export async function login(email, password) {
-  const res = await fetch(`${API_BASE}/auth/login`, {
+  const res = await send(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -45,7 +48,7 @@ export async function login(email, password) {
  * 401 = 토큰 검증 실패, 403 = 이메일 미확인·제재 계정, 503 = 서버에 클라이언트 ID 미설정.
  */
 export async function loginWithGoogle(credential) {
-  const res = await fetch(`${API_BASE}/auth/google`, {
+  const res = await send(`${API_BASE}/auth/google`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -59,7 +62,7 @@ export async function loginWithGoogle(credential) {
 }
 
 export async function logout() {
-  const res = await fetch(`${API_BASE}/auth/logout`, {
+  const res = await send(`${API_BASE}/auth/logout`, {
     method: "POST",
     credentials: "include",
   });
@@ -69,7 +72,7 @@ export async function logout() {
 }
 
 export async function me() {
-  const res = await fetch(`${API_BASE}/auth/me`, {
+  const res = await send(`${API_BASE}/auth/me`, {
     credentials: "include",
   });
   if (res.status === 401) return null;
@@ -88,7 +91,7 @@ export async function signup({
   privacyAgreed,
   marketingAgreed,
 }) {
-  const res = await fetch(`${API_BASE}/auth/signup`, {
+  const res = await send(`${API_BASE}/auth/signup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
