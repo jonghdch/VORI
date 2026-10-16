@@ -18,9 +18,16 @@ const STATUS_MESSAGE = {
   409: "이미 처리된 요청이에요",
 };
 
+// 로그인한 채 쓰던 중 세션이 끝났다는 신호(서버 재시작·세션 만료·탈퇴 대기). App 이 듣고 로그아웃 상태로
+// 바꿔 로그인 화면으로 보낸다. 이게 없으면 화면은 로그인된 줄 알고 요청마다 실패를 보여 주고,
+// 닫는 길이 없는 펫 이름 팝업 같은 화면에 갇힌다. 각 화면의 401 처리는 그대로 둔다(같이 돌아도 된다).
+// 로그인·구글 로그인의 401(비밀번호 틀림)은 auth.js 가 따로 부르므로 여기로 오지 않는다.
+export const SESSION_EXPIRED_EVENT = "vori:session-expired";
+
 // 응답 → 값, 또는 status 를 실은 Error. JSON 요청과 multipart 업로드가 함께 쓴다.
 async function handle(res) {
   if (!res.ok) {
+    if (res.status === 401) window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
     let msg = STATUS_MESSAGE[res.status] || `요청 실패 (${res.status})`;
     try {
       const data = await res.json();

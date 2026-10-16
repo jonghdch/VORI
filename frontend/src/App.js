@@ -1,4 +1,12 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import {
+  createContext,
+  lazy,
+  Suspense,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import {
   BrowserRouter,
   Routes,
@@ -12,7 +20,9 @@ import LoginPage from "./pages/Login/LoginPage";
 import SignupPage from "./pages/Signup/SignupPage";
 import HomeDashboard from "./pages/Home/HomeDashboard";
 import { me, logout } from "./api/auth";
+import { SESSION_EXPIRED_EVENT } from "./api/http";
 import { getOnboardingStatus } from "./api/onboarding";
+import { clearShownToday } from "./components/AttendanceModal";
 import { ADMIN_NAV } from "./pages/Admin/adminNav";
 
 // Story 페이지는 three.js + GLTFLoader 를 포함해서 무거움 (~100+ KB).
@@ -108,10 +118,28 @@ function ScrollToTop() {
   return null;
 }
 
+// 첫 me() 가 실패했는지(네트워크·서버 오류)와 다시 묻는 함수. 로그아웃(401)과는 다르다 —
+// 로그인했는지 모르는 상태라 로그인 화면으로 보내지 않고 다시 시도하게 한다.
+// 보호 라우트가 열네 곳이라 라우트마다 props 를 넘기는 대신 context 로 넘긴다.
+const AuthRestoreContext = createContext({ failed: false, retry: () => {} });
+
+function AuthRestoreError({ onRetry }) {
+  return (
+    <div className="auth-restore-error" role="alert">
+      <p>로그인 상태를 확인하지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.</p>
+      <button type="button" onClick={onRetry}>
+        다시 시도
+      </button>
+    </div>
+  );
+}
+
 // 보호 라우트 — 미인증 사용자는 /login 으로 보냄.
 // 첫 me() 호출 끝날 때까지는 화면 깜빡임 방지 위해 아무것도 렌더 X.
 function ProtectedRoute({ user, authLoading, children }) {
+  const restore = useContext(AuthRestoreContext);
   if (authLoading) return null;
+  if (!user && restore.failed) return <AuthRestoreError onRetry={restore.retry} />;
   if (!user) return <Navigate to="/login" replace />;
   return children;
 }
@@ -161,7 +189,9 @@ function ProfileRequiredGuard({ user, children }) {
 // 어드민 라우트 — 관리자(role === "ADMIN") 만 허용.
 // 미인증은 /login, 로그인했지만 일반 사용자면 /home 으로 보냄.
 function AdminRoute({ user, authLoading, children }) {
+  const restore = useContext(AuthRestoreContext);
   if (authLoading) return null;
+  if (!user && restore.failed) return <AuthRestoreError onRetry={restore.retry} />;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== "ADMIN") return <Navigate to="/home" replace />;
   return children;
@@ -170,26 +200,52 @@ function AdminRoute({ user, authLoading, children }) {
 function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [authFailed, setAuthFailed] = useState(false);
 
   // 새로고침 등으로 진입했을 때 세션 쿠키가 살아있으면 자동 복원.
-  useEffect(() => {
+  // 401 은 me() 가 null 을 준다(로그아웃 상태). 그 밖의 실패를 로그아웃으로 치면
+  // 서버가 잠깐 오류를 낸 것만으로 살아 있는 세션을 버리고 로그인 화면으로 보낸다.
+  const restoreSession = useCallback(() => {
+    setAuthLoading(true);
+    setAuthFailed(false);
     me()
       .then((u) => setUser(u))
-      .catch(() => setUser(null))
+      .catch(() => {
+        setUser(null);
+        setAuthFailed(true);
+      })
       .finally(() => setAuthLoading(false));
   }, []);
 
-  const handleLogin = (u) => setUser(u);
+  useEffect(() => {
+    restoreSession();
+  }, [restoreSession]);
+
+  // 쓰던 중 세션이 끝나면(http.js 가 401 을 받으면) 로그아웃 상태로 바꾼다 — 보호 화면이 로그인으로 보낸다.
+  useEffect(() => {
+    const expire = () => setUser(null);
+    window.addEventListener(SESSION_EXPIRED_EVENT, expire);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, expire);
+  }, []);
+
+  // 출석 팝업의 「오늘 보여 줌」 표시는 기기에 남으므로 계정이 바뀌는 때 지운다 (AttendanceModal 참고).
+  const handleLogin = (u) => {
+    clearShownToday();
+    setAuthFailed(false);
+    setUser(u);
+  };
 
   const handleLogout = async () => {
     try {
       await logout();
     } finally {
+      clearShownToday();
       setUser(null);
     }
   };
 
   return (
+    <AuthRestoreContext.Provider value={{ failed: authFailed, retry: restoreSession }}>
     <BrowserRouter>
       <ScrollToTop />
       <Suspense fallback={null}>
@@ -358,6 +414,7 @@ function App() {
         </ProfileRequiredGuard>
       </Suspense>
     </BrowserRouter>
+    </AuthRestoreContext.Provider>
   );
 }
 

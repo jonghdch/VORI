@@ -1,5 +1,6 @@
 package com.vori.backend.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,7 +11,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionHandler;
 
+@Slf4j
 @Configuration
 @EnableAsync
 @EnableScheduling // 일일 리포트 배치(DailyReportScheduler)용
@@ -43,6 +46,15 @@ public class AsyncConfig {
                 .build();
     }
 
+    /**
+     * AI 문구 생성처럼 없어도 기능이 멈추지 않는 비동기 작업용 (AiInquiryService.handleAnomalyEvent).
+     *
+     * <p>꽉 차면(스레드 5개가 다 일하고 대기 100개) 작업을 버리고 경고만 남긴다. 기본 정책(AbortPolicy)은
+     * 예외를 던지는데, 이 작업은 지출 저장이 커밋된 직후(AFTER_COMMIT) 같은 요청 스레드에서 넘겨져서
+     * 그 예외가 저장 요청까지 올라간다 — 지출은 이미 저장됐는데 사용자는 오류를 보고 다시 눌러 같은 지출이
+     * 두 번 들어간다. 버려도 질문은 지출과 같은 트랜잭션에서 템플릿 문구로 이미 저장돼 있다.
+     * CallerRunsPolicy 는 Gemini 응답(7~14초)을 저장 요청이 기다리게 되어 쓰지 않는다.
+     */
     @Bean("aiExecutor")
     public Executor aiExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -50,7 +62,12 @@ public class AsyncConfig {
         executor.setMaxPoolSize(5);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("ai-async-");
+        executor.setRejectedExecutionHandler(SKIP_WHEN_FULL);
         executor.initialize();
         return executor;
     }
+
+    static final RejectedExecutionHandler SKIP_WHEN_FULL = (task, pool) ->
+            log.warn("AI 비동기 대기열이 꽉 차 작업을 건너뜀 — 질문은 템플릿 문구로 남는다 (실행 중 {}, 대기 {})",
+                    pool.getActiveCount(), pool.getQueue().size());
 }

@@ -5,6 +5,7 @@ import AdminTools from "./AdminTools";
 import PetNameGate from "./PetNameGate";
 import AttendanceGate from "./AttendanceGate";
 import Icon from "./Icon";
+import VoriWordmark from "./VoriWordmark";
 import { getMe } from "../api/user";
 import "./AppShell.css";
 
@@ -115,8 +116,7 @@ function AppShell({
               onClick={() => go("home")}
               aria-label="VORI 홈"
             >
-              <span className="home-logo-vo">VO</span>
-              <span className="home-logo-ri">RI</span>
+              <VoriWordmark className="home-logo-mark" />
             </button>
           </div>
           <nav className="home-topnav" aria-label="주 메뉴">

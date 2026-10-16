@@ -103,14 +103,19 @@ export async function signup({
     }),
   });
 
+  // 서버가 준 문구를 먼저 쓴다. 400 은 이메일 형식·닉네임 길이·비밀번호·약관 중 무엇이든 될 수 있고
+  // (SignupRequest 가 항목마다 문구를 준다), 409 는 이미 쓰는 이메일과 탈퇴 대기 계정이 문구가 다르다.
+  // 아래 문구는 본문이 없을 때만 쓴다.
   if (res.status === 409) {
-    throw new AuthError("이미 사용 중인 이메일입니다", 409);
+    const msg = await parseErrorMessage(res, "이미 사용 중인 이메일입니다");
+    throw new AuthError(msg, 409);
   }
   if (res.status === 400) {
-    throw new AuthError(
-      "입력값을 확인해 주세요 (비밀번호 8자 이상·특수문자 포함, 필수 약관 동의)",
-      400
+    const msg = await parseErrorMessage(
+      res,
+      "입력값을 확인해 주세요 (비밀번호 8자 이상·특수문자 포함, 필수 약관 동의)"
     );
+    throw new AuthError(msg, 400);
   }
   if (!res.ok) {
     const msg = await parseErrorMessage(res, `회원가입 실패 (${res.status})`);
