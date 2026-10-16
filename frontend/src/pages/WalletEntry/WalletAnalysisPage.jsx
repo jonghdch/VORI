@@ -3,34 +3,66 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { toIsoDate } from "./utils";
 import { answerInquiry, listInquiriesByDate } from "../../api/inquiries";
 import { listExpensesByDate } from "../../api/ledger";
+import { getActivePet } from "../../api/pet";
 import { finalizeDateJudgment, getDateJudgment, startDateJudgment } from "../../api/dailyJudgment";
-import JudgmentResults, { judgmentReason } from "./JudgmentResults";
+import JudgmentResults, { isSoftenedByReason, judgmentReason, RULE_TEXT } from "./JudgmentResults";
 import { canUseAiJudge } from "../../config";
-import { SIGNAL_LABELS } from "../../signalLabels";
-import "./WalletEntry.css";
+import { SIGNAL_STATUS } from "../../signalLabels";
+import { petDisplayName } from "../../components/petVisual";
+import Icon from "../../components/Icon";
+import SignalChip, { categoryIcon } from "../../components/SignalChip";
+import { REASON_CHIPS } from "./reasonChips";
+import "../Home/HomeScreen.css";
+import "./WalletAnalysisScreen.css";
 
-// 소비 분석 — /wallet 의 ledger-ai-card 에서 저녁 이벤트로 진입하는 독립 페이지.
-// (더 이상 가계부 작성 위저드의 단계가 아니다.)
-// - 백엔드가 z-score 로 anomaly 감지한 expense 만 AI 질문 생성됨 (비동기).
-// - 질문이 없으면 안내 + "완료" 만 표시.
-// - 있으면 페이지네이션으로 한 건씩 답변. 판정은 1차 판정 → 예외 지출 사유 → 확정 순서다(docs/judgment-flow.md).
-//   "완료"는 답변을 보낸 뒤, "건너뛰고 판정 받기"는 답변 없이 확정한다. 보상은 그날 자정에 한 번 들어온다.
-//   "돌아가기"로 나가면 확정하지 않은 채 남고, 그날 다시 들어오면 질문부터 이어서 답한다.
-// - 활성 시간대 밖에서 직접 URL 로 들어오면 /wallet 로 돌려보낸다.
-//   열리는 시각은 config.AI_ACTIVE_FROM_HOUR (기본 20시).
-
-// 답변 사유 칩 — 서버 ReasonCategory 와 같은 값. 문구는 판정 문구처럼 중립으로(병원비·장례비에도 나간다).
-// 칩만 고르면 서버가 같은 문구(ReasonRules.CHIP_LABEL)를 답변으로 남긴다.
-const REASON_CHIPS = [
-  { value: "CEREMONY", label: "경조사" },
-  { value: "EMERGENCY", label: "갑작스러운 일" },
-  { value: "SOCIAL", label: "모임·만남" },
-  { value: "SELF_INVEST", label: "배움·자기계발" },
-  { value: "IMPULSE", label: "사고 싶어서" },
-  { value: "ETC", label: "기타" },
-];
-// 서버 AnswerRequest 의 @Size(max = 500) 과 같다. 넘으면 칩을 골라도 저장이 거절된다.
+// 답변 글자 수는 서버 AnswerRequest 의 @Size(max = 500) 과 같다. 넘으면 칩을 골라도 저장이 거절된다.
 const ANSWER_MAX = 500;
+const STAT_TYPES = ["ENERGY", "CHARM", "IQ", "ENDURANCE"];
+const STAT_LABELS = {
+  ENERGY: "식비",
+  CHARM: "쇼핑·뷰티",
+  IQ: "문화·여가",
+  ENDURANCE: "생활·고정비",
+};
+function formatDateTitle(dateStr) {
+  const [, month, day] = dateStr.split("-");
+  return `${Number(month)}월 ${Number(day)}일 판정`;
+}
+
+function formatTime(expense) {
+  if (!expense?.timeProvided || !expense.spentAt) return null;
+  return String(expense.spentAt).split(/[T ]/)[1]?.slice(0, 5) || null;
+}
+
+function getResultSummary(judgment, expenses) {
+  const finalGroups = judgment?.groupJudgments || {};
+  if (Object.keys(finalGroups).length === 0) return RULE_TEXT.summaryNoDetail;
+  // 그룹 카드의 판정 과정과 같은 기준 — 지출을 고쳐 순해진 그룹을 「사유가 인정돼」라고 하지 않는다
+  const softened = STAT_TYPES.filter((statType) => isSoftenedByReason(statType, judgment, expenses));
+  const exceeded = STAT_TYPES.filter((statType) =>
+    finalGroups[statType]?.signal === "RED" && !finalGroups[statType]?.budgetExhausted
+  );
+  const exceededLabels = exceeded.map((statType) => STAT_LABELS[statType]).join(", ");
+  if (softened.length > 0) {
+    const labels = softened.map((statType) => STAT_LABELS[statType]).join(", ");
+    const statuses = [...new Set(softened.map((statType) => finalGroups[statType].signal))];
+    const status = statuses.length === 1 ? SIGNAL_STATUS[statuses[0]] : null;
+    // 풀린 그룹만 말하면 다른 그룹이 넘어 맨 위가 「초과」인 날에 이유가 안 보인다
+    if (exceeded.length > 0) return RULE_TEXT.summarySoftenedAndExceeded(labels, status, exceededLabels);
+    return status ? RULE_TEXT.summarySoftened(labels, status) : RULE_TEXT.summarySoftenedMixed(labels);
+  }
+  if (exceeded.length > 0) return RULE_TEXT.summaryExceeded(exceededLabels);
+
+  const exhausted = STAT_TYPES.filter((statType) => finalGroups[statType]?.budgetExhausted);
+  if (exhausted.length > 0) {
+    return RULE_TEXT.summaryExhausted(exhausted.map((statType) => STAT_LABELS[statType]).join(", "));
+  }
+
+  if (STAT_TYPES.every((statType) => finalGroups[statType]?.signal === "GREEN")) {
+    return RULE_TEXT.summaryAllGreen;
+  }
+  return RULE_TEXT.summaryNoExceeded;
+}
 
 function WalletAnalysisPage({ user }) {
   const navigate = useNavigate();
@@ -54,9 +86,23 @@ function WalletAnalysisPage({ user }) {
   const [reasons, setReasons] = useState({}); // inquiryId → 사유 칩(REASON_CHIPS 의 value)
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [petName, setPetName] = useState(null);
   // 부분 실패 후 retry 시 이미 POST 된 inquiry 재호출 방지. 백엔드도 answeredAt 가드가 있지만
   // 클라이언트도 skip 해 불필요한 round-trip 차단.
   const submittedRef = useRef(new Set());
+
+  // 펫 이름 조회는 판정 조회와 분리해 실패·지연이 질문 화면을 막지 않게 한다.
+  useEffect(() => {
+    let cancelled = false;
+    getActivePet()
+      .then((pet) => {
+        if (!cancelled && pet) setPetName(petDisplayName(pet));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // mount 시 fetch. 질문 행은 지출 저장과 같은 트랜잭션에서 템플릿 문구로 만들어지므로
   // 첫 조회에 잡힌다. 질문 없는 RED 지출이 보이면(저장 직후 아주 짧은 창, 또는 이 방식
@@ -171,29 +217,39 @@ function WalletAnalysisPage({ user }) {
     };
   }, [dateStr, isEventOpen, reloadKey, confirmedDate]);
 
+  // 질문을 넘기면 새 질문을 단계 표시부터 보이게 한다 — 스크롤이 아래에 남으면 사유 칩부터 보인다
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page]);
+
   // 활성 시간대 밖이면 가계부로 돌려보낸다.
   if (!isEventOpen) {
     return <Navigate to="/wallet" replace />;
   }
 
   const total = inquiries.length;
-  const dailySignal = getDailySignal(expenses);
   const judgedExpenseCount = expenses.length;
   const goPrev = () => setPage((p) => Math.max(1, p - 1));
   const goNext = () => setPage((p) => Math.min(total, p + 1));
 
-  // 이벤트 종료/닫기는 모두 가계부로 복귀.
+  // 나가기는 늘 같은 날짜의 가계부로 돌아간다.
   const goDone = () => navigate(`/wallet?date=${dateStr}`);
   const goBack = goDone;
 
-  // 답변 입력된 inquiry 들만 POST 한 뒤 판정을 확정한다(withAnswers=false 면 건너뛰기 — 답변 없이 1차 판정 그대로 확정).
-  // 확정 응답이 최종 판정·보상이다. 갱신된 소비별 판정 결과를 보여준다.
-  const finish = async (withAnswers) => {
+  // 칩을 고르거나 글을 적은 질문이 하나라도 있는지 — 건너뛰기 버튼 문구를 바꾼다.
+  const hasTypedAnswer = inquiries.some(
+    (inq) => (answers[inq.inquiryId] || "").trim() || reasons[inq.inquiryId]
+  );
+
+  // 답변 입력된 inquiry 들만 POST 한 뒤 판정을 확정한다. 확정 응답이 최종 판정·보상이다.
+  // 「건너뛰고 판정 받기」도 같다 — 앞 질문에 적어 둔 답은 버리지 않고, 안 적은 질문만 건너뛴다
+  // (1번에 답하고 2번에서 건너뛰면 1번 답까지 사라지던 문제). 아무것도 안 적었으면 1차 판정 그대로 확정된다.
+  const finish = async () => {
     if (submitting) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      for (const inq of withAnswers ? inquiries : []) {
+      for (const inq of inquiries) {
         if (submittedRef.current.has(inq.inquiryId)) continue;
         const text = (answers[inq.inquiryId] || "").trim();
         const reason = reasons[inq.inquiryId] || null;
@@ -205,6 +261,8 @@ function WalletAnalysisPage({ user }) {
       // 확정된 뒤에는 답해도 반영되지 않는다 — 아래 조회가 실패해도 질문이 남지 않게 먼저 비운다
       setInquiries([]);
       setPage(1);
+      // 결과 화면은 맨 위(최종 판정 칩·요약)부터 보여 준다
+      window.scrollTo(0, 0);
       const refreshedExpenses = await listExpensesByDate(dateStr);
       setExpenses(refreshedExpenses);
       setInquiries([]);
@@ -216,34 +274,34 @@ function WalletAnalysisPage({ user }) {
     }
   };
 
-  return (
-    <div className="ledger">
-      <header className="ledger-entry-header">
-        <button
-          type="button"
-          className="ledger-logo-btn"
-          onClick={() => navigate("/home")}
-          aria-label="VORI 홈으로"
-        >
-          VORI
-        </button>
-      </header>
+  const dateTitle = formatDateTitle(dateStr);
+  const resultSignal = judgment?.signal || "GREEN";
+  const resultStage = judgment?.status === "FINALIZED" ? "최종 판정" : "1차 판정";
 
-      <main className="ledger-entry-main">
-        <p className="ledger-subtitle">{dateStr} 소비 판정{user?.role === "ADMIN" ? " · 관리자 시연" : ""}</p>
+  return (
+    <div className="ja-page">
+      <div className="ja hm">
+        <header className="ja-header">
+          <button type="button" className="ja-back" onClick={goBack} aria-label="가계부로 돌아가기">
+            <Icon name="chevronLeft" size={21} />
+          </button>
+          <h1>{dateTitle}</h1>
+          {user?.role === "ADMIN" && <span className="ja-admin">관리자 시연</span>}
+        </header>
+
         {needsConfirm === null ? null : needsConfirm ? (
           <JudgeConfirmDialog onCancel={goBack} onConfirm={() => setConfirmedDate(dateStr)} />
         ) : loading ? (
-          <div className="ledger-center-y">
-            <div className="ledger-title-block ledger-title-block-center">
-              <h1 className="ledger-title">{waitingForQuestion ? "질문을 준비하고 있어요" : "분석 중이에요"}</h1>
-              <p className="ledger-subtitle">
+          <main className="ja-state ja-loading">
+            <div className="ja-title-block">
+              <h2>{waitingForQuestion ? "질문을 준비하고 있어요" : "분석 중이에요"}</h2>
+              <p>
                 {waitingForQuestion
                   ? "평소보다 큰 지출이 있어서 물어볼 말을 고르는 중이에요. 조금만 더 기다려 주세요."
-                  : "AI가 예외적인 지출을 살펴보고 있어요. 잠시만 기다려주세요."}
+                  : "지출을 스탯별 예산과 비교하고 있어요. 잠시만 기다려 주세요."}
               </p>
               <div
-                className="ledger-judgment-progress"
+                className="ja-progress"
                 role="progressbar"
                 aria-label="소비 판정 진행률"
                 aria-valuemin="0"
@@ -252,35 +310,29 @@ function WalletAnalysisPage({ user }) {
               >
                 <span style={{ width: `${loadProgress}%` }} />
               </div>
-              <span className="ledger-judgment-progress-label">{loadProgress}%</span>
+              <span className="ja-progress-label">{loadProgress}%</span>
             </div>
-          </div>
+          </main>
         ) : loadError ? (
-          // ───── 질문 조회 실패 — 갇히지 않게 재시도/복귀 제공 ─────
-          <div className="ledger-center-y">
-            <div className="ledger-title-block">
-              <h1 className="ledger-title">질문을 불러오지 못했어요</h1>
-              <p className="ledger-subtitle">
-                네트워크 상태를 확인하고 다시 시도해주세요.
-              </p>
+          <main className="ja-state ja-error-state">
+            <div className="ja-title-block">
+              <h2>질문을 불러오지 못했어요</h2>
+              <p>네트워크 상태를 확인하고 다시 시도해 주세요.</p>
             </div>
             {expenses.length > 0 && (
-              <div className="ledger-judgment-list" aria-label="소비별 판정 결과">
+              <div className="ja-expense-errors" aria-label="소비별 판정 결과">
                 {expenses.map((expense) => {
                   const signal = expense.signalFinal || expense.signalInitial || "GRAY";
                   return (
-                    <article key={expense.id} className="ledger-judgment-card">
-                      <div className="ledger-judgment-card-head">
+                    <article key={expense.id} className="hm-card ja-error-card">
+                      <div className="ja-error-card-head">
                         <div>
                           <strong>{expense.item || "지출"}</strong>
                           <span>{Number(expense.amount || 0).toLocaleString("ko-KR")}원</span>
                         </div>
-                        <span className={`ledger-signal-result ledger-signal-result--${signal.toLowerCase()}`}>
-                          <span className="ledger-signal-dot" aria-hidden />
-                          {signalLabel(signal)}
-                        </span>
+                        <SignalChip signal={signal} />
                       </div>
-                      <div className="ledger-judgment-reason">
+                      <div className="ja-error-reason">
                         <span>판정 이유</span>
                         <p>{judgmentReason(expense, signal)}</p>
                       </div>
@@ -289,234 +341,182 @@ function WalletAnalysisPage({ user }) {
                 })}
               </div>
             )}
-            <div className="ledger-actions">
-              <div className="ledger-actions-row">
-                <button type="button" className="ledger-back" onClick={goBack}>
-                  돌아가기
-                </button>
-                <button
-                  type="button"
-                  className="ledger-next"
-                  onClick={() => setReloadKey((k) => k + 1)}
-                >
-                  다시 시도
-                </button>
-              </div>
+            <div className="ja-actions ja-error-actions">
+              <button type="button" className="hm-btn hm-btn--dark ja-primary" onClick={() => setReloadKey((k) => k + 1)}>
+                다시 시도
+              </button>
+              <button type="button" className="ja-btn-line" onClick={goBack}>돌아가기</button>
             </div>
-          </div>
+          </main>
         ) : total === 0 ? (
-          // ───── AI 질문 없음 — 무지출 또는 오늘 소비의 최종 신호 안내 ─────
-          <div className="ledger-center-y">
-            <div className="ledger-title-block ledger-title-block--result">
-              <div className={`ledger-signal-result ledger-signal-result--${dailySignal.toLowerCase()}`}>
-                <span className="ledger-signal-dot" aria-hidden />
-                <strong>{signalLabel(dailySignal)}</strong>
-              </div>
-              <h1 className="ledger-title">
-                {judgedExpenseCount === 0 ? "선택한 날짜에는 지출이 없습니다" : "소비 판정이 완료됐어요"}
-              </h1>
-              <p className="ledger-subtitle">
-                {judgedExpenseCount === 0
-                  ? "지출이 없어 초록으로 표시했어요. 지급 보상은 아래에서 확인하세요."
-                  : dailySignal === "GREEN"
-                    ? "모든 지출이 초록으로 분류됐어요. 항목별로 판정 이유를 확인해 보세요."
-                    : dailySignal === "GRAY"
-                      ? "노랑 지출이 포함되어 있어요. 하루 색상은 빨강, 노랑, 초록 순으로 가장 주의가 필요한 지출을 따라요."
-                      : "빨강 지출이 포함되어 있어요. 아래 항목별 금액 비교와 사유를 확인해 보세요."}
-              </p>
+          <main className="ja-state ja-result-state">
+            <div className="ja-status-row">
+              <SignalChip
+                signal={resultSignal}
+                size="lg"
+                label={`${resultStage} · ${SIGNAL_STATUS[resultSignal] || SIGNAL_STATUS.GRAY}`}
+              />
             </div>
+            <section className="hm-card ja-summary-card">
+              <h2>
+                {judgedExpenseCount === 0
+                  ? "이날은 지출이 없어요"
+                  : user?.role === "ADMIN" && dateStr !== enteredOn
+                    ? "판정이 끝났어요"
+                    : "오늘 판정이 끝났어요"}
+              </h2>
+              <p>
+                {judgedExpenseCount === 0
+                  ? "보상은 아래에서 확인해 주세요."
+                  : getResultSummary(judgment, expenses)}
+              </p>
+            </section>
             {questionPending && (
-              <p className="ledger-hint">
-                질문이 없는 빨강 지출이 있어요. 아래 항목별 판정을 확인하고, 사유를 남기고 싶으면 가계부에서 그 지출을 수정해 주세요.
+              <p className="ja-question-pending" role="status">
+                질문이 없는 초과 지출이 있어요. 사유를 남기고 싶으면 가계부에서 그 지출을 고쳐 주세요.
               </p>
             )}
             <JudgmentResults expenses={expenses} judgment={judgment} />
-            <div className="ledger-actions">
-              <div className="ledger-actions-row">
-                <button type="button" className="ledger-next" onClick={goDone}>
-                  가계부로 돌아가기
-                </button>
-              </div>
-            </div>
-          </div>
+            <button type="button" className="hm-btn hm-btn--dark hm-btn--block ja-primary ja-done" onClick={goDone}>
+              가계부로 돌아가기 <Icon name="arrowRight" size={17} />
+            </button>
+          </main>
         ) : (
-          // ───── 질문 있음 — 페이지네이션으로 한 건씩 ─────
-          <>
-            <div className="ledger-title-block">
-              <h1 className="ledger-title">
-                선택한 날짜의 소비를 분석해볼게요
-                <span className="ledger-info-wrap">
-                  <button
-                    type="button"
-                    className="ledger-info-icon"
-                    aria-label="안내"
-                  >
-                    i
-                  </button>
-                  <span className="ledger-info-tooltip" role="tooltip">
-                    <span className="ledger-info-card-icon" aria-hidden>i</span>
-                    <span className="ledger-info-tooltip-text">
-                      <span>예외적인 지출이 있으면 AI가 질문해요</span>
-                      <span>하루가 지나면 사라집니다</span>
-                    </span>
-                  </span>
-                </span>
-              </h1>
-              <p className="ledger-subtitle">
-                평소보다 큰 지출이 있어 소비한 이유를 기록해주세요. AI가 사유를 평가해 판정에 반영해요.
-              </p>
-              {judgment?.status === "PENDING" && (
-                <p className="ledger-hint">
-                  1차 판정: {signalLabel(judgment.signal)}. 사유를 답하거나 건너뛰면 최종 판정이 나고, 보상은 오늘 자정에 들어와요.
-                </p>
-              )}
-            </div>
+          <main className="ja-state ja-question-state">
+            <ol className="ja-steps" aria-label="판정 단계">
+              <li className="ja-step ja-step--done">
+                <span className="ja-step-dot"><Icon name="check" size={13} /></span>
+                <span>1차 판정</span>
+              </li>
+              <li className="ja-step ja-step--current" aria-current="step">
+                <span className="ja-step-dot" />
+                <span>질문</span>
+              </li>
+              <li className="ja-step ja-step--upcoming">
+                <span className="ja-step-dot" />
+                <span>최종 판정</span>
+              </li>
+            </ol>
 
-            <div className="ledger-pager">
-              <button
-                type="button"
-                className="ledger-pager-btn"
-                onClick={goPrev}
-                disabled={page === 1}
-                aria-label="이전"
-              >
-                {"<"}
-              </button>
-              <span className="ledger-pager-count">{page} / {total}</span>
-              <button
-                type="button"
-                className="ledger-pager-btn"
-                onClick={goNext}
-                disabled={page === total}
-                aria-label="다음"
-              >
-                {">"}
-              </button>
-            </div>
-
-            {/* 분석 대상 expense (읽기 전용) */}
             {(() => {
               const inq = inquiries[page - 1];
+              const expense = expenses.find((item) => item.id === inq.expenseId);
+              const statType = expense?.statType;
+              const groupName = statType ? STAT_LABELS[statType] : null;
+              const firstSignal = statType
+                ? judgment?.groupJudgments?.[statType]?.signal || judgment?.signal || "GRAY"
+                : judgment?.signal || "GRAY";
+              // 카테고리 이름은 질문 응답에만 있다(지출 응답에는 categoryId 뿐). 시간은 지출 응답에서.
+              const categoryNames = [
+                formatTime(expense),
+                inq.parentCategoryName,
+                inq.categoryName,
+              ].filter(Boolean);
+              const itemName = expense?.item || inq.item || "지출";
+              const amount = expense?.amount ?? inq.amount;
+              const categoryName = `${inq.parentCategoryName ?? ""} ${inq.categoryName ?? ""}`;
+              const selectedReason = reasons[inq.inquiryId];
+              const answer = answers[inq.inquiryId] || "";
+              const isLastQuestion = page === total;
+
               return (
                 <>
-                  <div className="ledger-entry-row ledger-row-readonly">
-                    <div className="ledger-row-head">
-                      <span className="ledger-row-num">
-                        {String(page).padStart(2, "0")}
-                      </span>
-                      <span className="ledger-chip ledger-chip-readonly">
-                        {paymentLabel(inq.paymentMethod)}
-                      </span>
-                      <span className="ledger-row-spacer" />
-                      <span className="ledger-chip ledger-chip-readonly ledger-chip-auto">
-                        {inq.parentCategoryName
-                          ? `${inq.parentCategoryName} · ${inq.categoryName}`
-                          : inq.categoryName || "기타"}
-                      </span>
-                    </div>
-                    <div className="ledger-row-field">
-                      <span className="ledger-row-label">내역</span>
-                      <input
-                        type="text"
-                        className="ledger-row-input"
-                        value={inq.item || ""}
-                        disabled
-                      />
-                    </div>
-                    <div className="ledger-row-field">
-                      <span className="ledger-row-label">금액</span>
-                      <div className="ledger-row-input-wrap">
-                        <input
-                          type="text"
-                          className="ledger-row-input"
-                          value={
-                            inq.amount != null
-                              ? Number(inq.amount).toLocaleString("ko-KR")
-                              : ""
-                          }
-                          disabled
-                        />
-                        <span className="ledger-row-unit">원</span>
-                      </div>
-                    </div>
+                  <div className="ja-context-row">
+                    <span>{groupName ? `${groupName} 1차 판정 · 확인 필요` : "1차 판정 · 확인 필요"}</span>
+                    <SignalChip signal={firstSignal} />
                   </div>
 
-                  <div className="ledger-qa-card">
-                    <div className="ledger-qa-question">
-                      <strong>Q.</strong> {inq.question}
+                  {total > 1 && (
+                    <nav className="ja-pager" aria-label="질문 이동">
+                      {/* 주 버튼 「다음 질문」과 화면 낭독 이름이 겹치지 않게 「보기」를 붙인다 */}
+                      <button type="button" onClick={goPrev} disabled={page === 1} aria-label="이전 질문 보기">
+                        <Icon name="chevronLeft" size={18} />
+                      </button>
+                      <span>{page} / {total}</span>
+                      <button type="button" onClick={goNext} disabled={page === total} aria-label="다음 질문 보기">
+                        <Icon name="chevronRight" size={18} />
+                      </button>
+                    </nav>
+                  )}
+
+                  <section className="hm-card ja-expense-card" aria-label="질문이 나온 지출">
+                    <span className="ja-category-icon"><Icon name={categoryIcon(categoryName)} size={21} /></span>
+                    <span className="ja-expense-copy">
+                      <strong title={itemName}>{itemName}</strong>
+                      <small>{categoryNames.join(" · ")}</small>
+                    </span>
+                    <strong className="ja-expense-amount">{Number(amount || 0).toLocaleString("ko-KR")}원</strong>
+                  </section>
+
+                  <section className="ja-question-block" aria-label="오늘의 질문">
+                    <span className="ja-paw-tile"><Icon name="paw" size={20} /></span>
+                    <div className="ja-speech-bubble">
+                      {petName && <strong>{petName}</strong>}
+                      <p>{inq.question}</p>
                     </div>
-                    {/* 사유 칩 — 고르면 AI 없이 바로 처리된다(Gemini 한도가 끝나도 답변 저장). 다시 누르면 해제 */}
-                    <div className="ledger-qa-reasons" role="group" aria-label="이유 고르기">
-                      {REASON_CHIPS.map((c) => {
-                        const selected = reasons[inq.inquiryId] === c.value;
+                  </section>
+
+                  <section className="ja-answer-section">
+                    <h2>지출 사유 선택</h2>
+                    <div className="ja-reason-chips" role="group" aria-label="이유 고르기">
+                      {REASON_CHIPS.map((chip) => {
+                        const selected = selectedReason === chip.value;
                         return (
                           <button
-                            key={c.value}
+                            key={chip.value}
                             type="button"
-                            className={`ledger-chip${selected ? " ledger-chip-selected" : ""}`}
+                            className={`ja-reason-chip${selected ? " ja-reason-chip--selected" : ""}`}
                             aria-pressed={selected}
-                            onClick={() =>
-                              setReasons((prev) => ({
-                                ...prev,
-                                [inq.inquiryId]: selected ? null : c.value,
-                              }))
-                            }
+                            onClick={() => setReasons((previous) => ({
+                              ...previous,
+                              [inq.inquiryId]: selected ? null : chip.value,
+                            }))}
                           >
-                            {c.label}
+                            {selected && <Icon name="check" size={14} />}
+                            {chip.label}
                           </button>
                         );
                       })}
                     </div>
-                    <textarea
-                      className="ledger-qa-answer"
-                      rows={6}
-                      maxLength={ANSWER_MAX}
-                      placeholder="자유롭게 적어도 돼요 (선택)"
-                      value={answers[inq.inquiryId] || ""}
-                      onChange={(e) =>
-                        setAnswers((prev) => ({
-                          ...prev,
-                          [inq.inquiryId]: e.target.value,
-                        }))
-                      }
-                    />
+                    <label className="ja-answer-wrap">
+                      <span className="ja-sr-only">사유 직접 적기</span>
+                      <textarea
+                        aria-label="사유 직접 적기"
+                        rows={4}
+                        maxLength={ANSWER_MAX}
+                        placeholder="가볍게 적어도 돼요 (선택)"
+                        value={answer}
+                        onChange={(event) => setAnswers((previous) => ({
+                          ...previous,
+                          [inq.inquiryId]: event.target.value,
+                        }))}
+                      />
+                      <span className="ja-answer-count">{answer.length}/{ANSWER_MAX}</span>
+                    </label>
+                  </section>
+
+                  <p className="ja-rule-note"><Icon name="info" size={16} />{RULE_TEXT.questionGuidance()}</p>
+                  <div className="ja-actions">
+                    {submitError && <p className="ja-submit-error" role="alert">{submitError}</p>}
+                    <button
+                      type="button"
+                      className="hm-btn hm-btn--dark hm-btn--block ja-primary"
+                      onClick={isLastQuestion ? finish : goNext}
+                      disabled={submitting}
+                    >
+                      {submitting ? "판정하는 중…" : isLastQuestion ? "답하고 판정 받기" : "다음 질문"}
+                    </button>
+                    <button type="button" className="ja-skip" onClick={finish} disabled={submitting}>
+                      {hasTypedAnswer ? "남은 질문 건너뛰고 판정 받기" : "건너뛰고 판정 받기"}
+                    </button>
                   </div>
+                  <p className="ja-leave-note">나가도 오늘 안에는 이어서 답할 수 있어요. 자정까지 답하지 않으면 1차 판정 그대로 보상을 받아요.</p>
                 </>
               );
             })()}
-
-            <div className="ledger-actions">
-              {submitError && <p className="ledger-hint">{submitError}</p>}
-              <button
-                type="button"
-                className="ledger-skip-link"
-                onClick={() => finish(false)}
-                disabled={submitting}
-              >
-                건너뛰고 판정 받기
-              </button>
-              <div className="ledger-actions-row">
-                <button
-                  type="button"
-                  className="ledger-back"
-                  onClick={goBack}
-                  disabled={submitting}
-                >
-                  돌아가기
-                </button>
-                <button
-                  type="button"
-                  className="ledger-next"
-                  onClick={() => finish(true)}
-                  disabled={submitting}
-                >
-                  {submitting ? "저장 중…" : "완료"}
-                </button>
-              </div>
-            </div>
-          </>
+          </main>
         )}
-      </main>
+      </div>
     </div>
   );
 }
@@ -542,7 +542,7 @@ function JudgeConfirmDialog({ onCancel, onConfirm }) {
       onCancel();
       return;
     }
-    // Tab 이 창 밖(뒤 화면의 로고 버튼)으로 나가지 않게 창 안에서만 돈다.
+    // Tab 이 창 밖으로 나가지 않게 창 안에서만 돈다.
     if (event.key !== "Tab") return;
     const focusable = dialogRef.current?.querySelectorAll("button");
     if (!focusable || focusable.length === 0) return;
@@ -558,53 +558,27 @@ function JudgeConfirmDialog({ onCancel, onConfirm }) {
   };
 
   return (
-    <div className="ledger-confirm-backdrop">
+    <div className="ja-confirm-backdrop">
       <div
         ref={dialogRef}
-        className="ledger-confirm-dialog"
+        className="hm-card ja-confirm-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={textId}
         onKeyDown={onKeyDown}
       >
-        <h2 id={titleId} className="ledger-confirm-title">하루에 한 번 판정할 수 있습니다.</h2>
-        <p id={textId} className="ledger-confirm-text">판정 시작할까요?</p>
-        <div className="ledger-confirm-actions">
-          <button type="button" className="ledger-back" onClick={onCancel}>
-            돌아가기
-          </button>
-          <button type="button" className="ledger-next" onClick={onConfirm} autoFocus>
+        <h2 id={titleId}>하루에 한 번만 판정할 수 있어요</h2>
+        <p id={textId}>지금 판정할까요? 판정 뒤에 지출을 고쳐도 오늘 보상은 바뀌지 않아요.</p>
+        <div className="ja-confirm-actions">
+          <button type="button" className="ja-btn-line" onClick={onCancel}>돌아가기</button>
+          <button type="button" className="hm-btn hm-btn--dark ja-primary" onClick={onConfirm} autoFocus>
             판정하기
           </button>
         </div>
       </div>
     </div>
   );
-}
-
-function paymentLabel(pm) {
-  switch (pm) {
-    case "CASH": return "현금";
-    case "DEBIT": return "체크카드";
-    case "CREDIT": return "신용카드";
-    case "TRANSFER": return "계좌이체";
-    case "MOBILE_PAY": return "모바일페이";
-    default: return "결제수단";
-  }
-}
-
-function getDailySignal(expenses) {
-  if (!expenses || expenses.length === 0) return "GREEN";
-  const rank = { GREEN: 1, GRAY: 2, RED: 3 };
-  return expenses.reduce((worst, expense) => {
-    const signal = expense.signalFinal || expense.signalInitial || "GRAY";
-    return rank[signal] > rank[worst] ? signal : worst;
-  }, "GREEN");
-}
-
-function signalLabel(signal) {
-  return SIGNAL_LABELS[signal] || SIGNAL_LABELS.GRAY;
 }
 
 export default WalletAnalysisPage;
