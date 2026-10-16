@@ -12,7 +12,8 @@
 }
 
 .home-row-pet {
-  grid-template-columns: 1fr; /* 펫+스탯 통합 카드 한 줄 */
+  /* 펫+스탯 통합 카드 한 줄. 1fr 은 내용의 최소 폭보다 줄지 않아 카드가 화면 밖으로 밀릴 수 있다 */
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* 지출 요약 행과 하단 행은 같은 3등분 열을 쓴다 —
@@ -75,6 +76,8 @@
   gap: 16px;
   flex: 1;            /* 카드 세로 채움 */
   margin-top: 12px;
+  /* 게이지·펫 그림이 이 폭(cqi)을 기준으로 줄어든다 — 아래 .home-pet-gauge */
+  container-type: inline-size;
 }
 
 /* 말풍선 — 날짜 바로 아래, 좌측 */
@@ -150,10 +153,12 @@
 }
 
 /* 원형 경험치 게이지 — 보리를 감싸는 270° 아치 */
+/* 넓은 화면은 340px 그대로, 카드 안쪽이 그보다 좁은 휴대폰에서는 그 폭에 맞춘다. 340px 고정이면 폭 약 420px
+   미만 휴대폰(안드로이드 대부분·아이폰 일반)에서 카드가 화면 밖으로 밀려 「마이룸 가기」·「지구력」이 잘렸다. */
 .home-pet-gauge {
   position: relative;
-  width: 340px;
-  height: 340px;
+  width: min(340px, 100cqi);
+  height: min(340px, 100cqi);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -292,8 +297,9 @@
 
 .home-pet-image {
   display: block;
-  width: 250px;
-  height: 250px;
+  /* 게이지와 같은 비율로 줄인다(250 / 340) — 게이지만 줄면 그림이 링을 덮는다 */
+  width: min(250px, 73.5cqi);
+  height: min(250px, 73.5cqi);
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -757,7 +763,7 @@
   .home-row-pet,
   .home-row-kpi,
   .home-row-bottom {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .home-pet-body {
