@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
  * AI 가 사용자에게 지출 사유를 물어본 기록. expense_id UQ — 지출 1건당 질문 1개.
@@ -27,7 +28,7 @@ public class AiInquiry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "expense_id", nullable = false, unique = true)
+    @Column(name = "expense_id", unique = true)
     private Long expenseId;
 
     /** 개별 지출이 아니라 하루 스탯 그룹의 예산 초과를 묻는 질문인지 여부. */
@@ -41,6 +42,9 @@ public class AiInquiry {
 
     @Column(name = "group_amount")
     private Integer groupAmount;
+
+    @Column(name = "group_date")
+    private LocalDate groupDate;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
@@ -86,14 +90,14 @@ public class AiInquiry {
     }
 
     /** 하루 예산을 초과한 스탯 그룹의 지출을 한 번에 묻는다. */
-    public static AiInquiry pendingDailyGroup(Long expenseId, Long userId, StatType statType,
+    public static AiInquiry pendingDailyGroup(Long userId, LocalDate date, StatType statType,
                                                String label, int totalAmount, int availableAmount) {
         return AiInquiry.builder()
-                .expenseId(expenseId)
                 .userId(userId)
                 .dailyGroupInquiry(true)
                 .groupStatType(statType)
                 .groupAmount(totalAmount)
+                .groupDate(date)
                 .question(templateDailyGroupQuestion(label, totalAmount, availableAmount))
                 .signalAdjusted(false)
                 .askedAt(LocalDateTime.now())

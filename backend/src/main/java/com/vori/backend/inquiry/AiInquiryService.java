@@ -43,10 +43,11 @@ public class AiInquiryService {
     public List<InquiryResponse> listPendingByDate(Long userId, LocalDate date) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
-        List<AiInquiry> inquiries = aiInquiryRepository.findPendingByDate(userId, start, end);
+        List<AiInquiry> inquiries = aiInquiryRepository.findPendingByDate(userId, date, start, end);
         if (inquiries.isEmpty()) return List.of();
 
-        List<Long> expenseIds = inquiries.stream().map(AiInquiry::getExpenseId).toList();
+        List<Long> expenseIds = inquiries.stream().map(AiInquiry::getExpenseId)
+                .filter(java.util.Objects::nonNull).toList();
         Map<Long, Expense> expById = expenseRepository.findAllById(expenseIds).stream()
                 .collect(Collectors.toMap(Expense::getId, Function.identity()));
 

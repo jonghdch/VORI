@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,7 +49,7 @@ public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
      */
     List<AiInquiry> findByExpenseIdIn(List<Long> expenseIds);
 
-    List<AiInquiry> findByExpenseIdInAndDailyGroupInquiryTrue(List<Long> expenseIds);
+    List<AiInquiry> findByUserIdAndGroupDateAndDailyGroupInquiryTrue(Long userId, LocalDate groupDate);
 
     /** 답변을 마친 AI 질문 수 — 소통 관련 칭호 조건. */
     long countByUserIdAndAnsweredAtIsNotNull(Long userId);
@@ -76,15 +77,16 @@ public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
      */
     @Query(value = """
         SELECT i.* FROM ai_inquiries i
-        JOIN expenses e ON i.expense_id = e.id
+        LEFT JOIN expenses e ON i.expense_id = e.id
         WHERE i.user_id = :userId
           AND i.answered_at IS NULL
-          AND e.spent_at >= :start
-          AND e.spent_at < :end
+          AND ((e.spent_at >= :start AND e.spent_at < :end)
+               OR (i.daily_group_inquiry = TRUE AND i.group_date = :date))
         ORDER BY i.asked_at ASC
         """, nativeQuery = true)
     List<AiInquiry> findPendingByDate(
         @Param("userId") Long userId,
+        @Param("date") java.time.LocalDate date,
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end
     );

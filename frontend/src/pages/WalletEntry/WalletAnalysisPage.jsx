@@ -369,7 +369,9 @@ function WalletAnalysisPage({ user }) {
                 </span>
               </h1>
               <p className="ledger-subtitle">
-                평소보다 큰 지출이 있어 소비한 이유를 기록해주세요. AI가 사유를 평가해 판정에 반영해요.
+                {inquiries.some((inquiry) => inquiry.dailyGroupInquiry)
+                  ? "오늘 예산을 넘긴 소비 그룹이 있어 이유를 기록해주세요. AI가 사유를 평가해 해당 그룹 판정에 반영해요."
+                  : "평소보다 큰 지출이 있어 소비한 이유를 기록해주세요. AI가 사유를 평가해 판정에 반영해요."}
               </p>
               {judgment?.status === "PENDING" && (
                 <p className="ledger-hint">

@@ -160,7 +160,7 @@ public class DailyJudgmentService {
 
     /** 그날 아직 답하지 않은 AI 질문 수 — 0 이면 사유를 기다릴 것이 없어 1차 판정에서 바로 확정한다. */
     private int pendingInquiryCount(Long userId,LocalDate date){
-        return inquiries.findPendingByDate(userId,date.atStartOfDay(),date.plusDays(1).atStartOfDay()).size();
+        return inquiries.findPendingByDate(userId,date,date.atStartOfDay(),date.plusDays(1).atStartOfDay()).size();
     }
     private static int maxReward(Evaluation e){return e.rewards.values().stream().mapToInt(Integer::intValue).max().orElse(0);}
     private static String details(Evaluation e){return e.rewards.entrySet().stream().filter(x->x.getValue()>0).map(x->x.getKey()+":"+x.getValue()).collect(Collectors.joining(","));}
@@ -199,7 +199,7 @@ public class DailyJudgmentService {
             Signal approvedExpense=todayRows.stream().filter(e -> e.getStatType()==type && e.getId()!=null && approvedIds.contains(e.getId()))
                     .map(Expense::getSignalFinal).filter(s -> s != null && s != Signal.RED)
                     .min(Comparator.comparingInt(this::rank)).orElse(Signal.RED);
-            Signal approvedGroup=approvedDailyGroupSignal(type, todayRows);
+            Signal approvedGroup=approvedDailyGroupSignal(userId, date, type);
             Signal approved=rank(approvedExpense) <= rank(approvedGroup) ? approvedExpense : approvedGroup;
             if(signal==Signal.RED && approved!=Signal.RED) signal=approved;
             // 이미 월 예산이 소진된 그룹은 남은 예산이 없으므로 코인과 스탯 보상을 만들지 않는다.
@@ -223,10 +223,8 @@ public class DailyJudgmentService {
                 .map(com.vori.backend.inquiry.AiInquiry::getExpenseId).collect(Collectors.toSet());
     }
     /** 일일 그룹 질문의 답변이 인정되면 그 그룹의 빨강 판정만 다시 완화한다. */
-    private Signal approvedDailyGroupSignal(StatType type, List<Expense> rows) {
-        List<Long> ids=rows.stream().map(Expense::getId).filter(Objects::nonNull).toList();
-        if(ids.isEmpty()) return Signal.RED;
-        return inquiries.findByExpenseIdInAndDailyGroupInquiryTrue(ids).stream()
+    private Signal approvedDailyGroupSignal(Long userId, LocalDate date, StatType type) {
+        return inquiries.findByUserIdAndGroupDateAndDailyGroupInquiryTrue(userId, date).stream()
                 .filter(i -> i.getGroupStatType()==type && Boolean.TRUE.equals(i.getSignalAdjusted()))
                 .map(AiInquiry::getReasonCategory).map(this::signalForReason)
                 .min(Comparator.comparingInt(this::rank)).orElse(Signal.RED);
@@ -241,20 +239,13 @@ public class DailyJudgmentService {
                                            Map<StatType, DailyJudgmentResponse.GroupJudgment> groups) {
         List<Expense> rows=expenses.findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(userId,date.atStartOfDay(),date.plusDays(1).atStartOfDay());
         if(rows.isEmpty()) return;
-        List<Long> ids=rows.stream().map(Expense::getId).filter(Objects::nonNull).toList();
-        Map<Long, AiInquiry> existing=ids.isEmpty()?Map.of():inquiries.findByExpenseIdIn(ids).stream()
-                .collect(Collectors.toMap(AiInquiry::getExpenseId, i -> i));
+        List<AiInquiry> existing=inquiries.findByUserIdAndGroupDateAndDailyGroupInquiryTrue(userId,date);
         for(var entry:groups.entrySet()) {
             StatType type=entry.getKey();
             DailyJudgmentResponse.GroupJudgment group=entry.getValue();
             if(group.signal()!=Signal.RED) continue;
-            List<Expense> groupRows=rows.stream().filter(e -> e.getStatType()==type).toList();
-            // 개별 이상 지출 질문이 이미 있으면 같은 그룹에 질문을 더 만들지 않는다.
-            if(groupRows.stream().anyMatch(e -> existing.containsKey(e.getId()))) continue;
-            Expense representative=groupRows.stream().filter(e -> !Boolean.TRUE.equals(e.getIsRecurring()))
-                    .max(Comparator.comparingInt(Expense::getAmount)).orElse(null);
-            if(representative==null) continue;
-            inquiries.save(AiInquiry.pendingDailyGroup(representative.getId(),userId,type,groupLabel(type),
+            if(existing.stream().anyMatch(i -> i.getGroupStatType()==type)) continue;
+            inquiries.save(AiInquiry.pendingDailyGroup(userId,date,type,groupLabel(type),
                     group.todaySpent(),group.availableToday()));
         }
     }
