@@ -136,27 +136,12 @@ function LoginPage({ onLogin }) {
               </div>
             </label>
 
-            <div className="login-row-between">
-              <label className="login-check">
-                <input type="checkbox" />
-                <span>로그인 상태 유지</span>
-              </label>
-              <button
-                type="button"
-                className="login-link"
-                onClick={() =>
-                  alert("비밀번호 찾기 화면은 다음에 만들 예정이에요.")
-                }
-              >
-                비밀번호를 잊으셨나요?
-              </button>
-            </div>
-
             {error && (
               <p
                 className="login-error"
                 role="alert"
-                style={{ color: "#c0392b", margin: "4px 0 0", fontSize: "0.9rem" }}
+                // keep-all: 한글 문구가 「다 / 시」처럼 낱말 가운데서 줄이 바뀌지 않게
+                style={{ color: "#c0392b", margin: "4px 0 0", fontSize: "0.9rem", wordBreak: "keep-all" }}
               >
                 {error}
                 {pendingUser && (

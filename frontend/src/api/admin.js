@@ -3,6 +3,8 @@
 // 세션 쿠키 인증이라 credentials: 'include' 필수.
 
 import { API_BASE } from "./base";
+// 서버에 닿지 못했을 때·조회가 오래 걸릴 때의 한국어 문구는 http.js 의 send 가 맡는다.
+import { send } from "./http";
 
 export class AdminApiError extends Error {
   constructor(message, status) {
@@ -21,7 +23,7 @@ export async function listUsers({ page = 0, size = 20, role = null } = {}) {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (role) params.set("role", role);
 
-  const res = await fetch(`${API_BASE}/admin/users?${params.toString()}`, {
+  const res = await send(`${API_BASE}/admin/users?${params.toString()}`, {
     credentials: "include",
   });
 
@@ -44,7 +46,7 @@ export async function listUsers({ page = 0, size = 20, role = null } = {}) {
  *   signupTrend: { date: string, count: number }[] }>}
  */
 export async function getDashboardSummary() {
-  const res = await fetch(`${API_BASE}/admin/dashboard/summary`, {
+  const res = await send(`${API_BASE}/admin/dashboard/summary`, {
     credentials: "include",
   });
 
@@ -62,7 +64,7 @@ export async function getDashboardSummary() {
 
 // 공통 GET — 401/403/기타 에러 분기 후 JSON 반환.
 async function adminGet(path, label) {
-  const res = await fetch(`${API_BASE}${path}`, { credentials: "include" });
+  const res = await send(`${API_BASE}${path}`, { credentials: "include" });
   if (res.status === 401) throw new AdminApiError("로그인이 필요합니다", 401);
   if (res.status === 403) throw new AdminApiError("관리자 권한이 필요합니다", 403);
   if (!res.ok) throw new AdminApiError(`${label} 실패 (${res.status})`, res.status);
@@ -100,7 +102,7 @@ export function getSanctions({ page = 0, size = 20 } = {}) {
 
 /** 제재 생성. type=SUSPENSION 이면 durationDays 필요(미입력 시 400). */
 export async function createSanction({ userId, type, reason, durationDays }) {
-  const res = await fetch(`${API_BASE}/admin/sanctions`, {
+  const res = await send(`${API_BASE}/admin/sanctions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -121,7 +123,7 @@ export async function createSanction({ userId, type, reason, durationDays }) {
 
 /** 제재 해제. */
 export async function liftSanction(id) {
-  const res = await fetch(`${API_BASE}/admin/sanctions/${id}/lift`, {
+  const res = await send(`${API_BASE}/admin/sanctions/${id}/lift`, {
     method: "POST",
     credentials: "include",
   });
@@ -133,7 +135,7 @@ export async function liftSanction(id) {
 
 /** 합리성 룰 수정 (zGreen < zRed 필수, 위반 시 400). */
 export async function updateRationalityRules({ zRed, zGreen }) {
-  const res = await fetch(`${API_BASE}/admin/rationality-rules`, {
+  const res = await send(`${API_BASE}/admin/rationality-rules`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -172,7 +174,7 @@ export function updateAiSettings({ questionWording, dailyComment }) {
 
 // 공통 쓰기 — JSON 본문(선택). 400/404/409 는 서버 message 를 그대로 올린다.
 async function adminSend(method, path, body, label) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await send(`${API_BASE}${path}`, {
     method,
     credentials: "include",
     headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
