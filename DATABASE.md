@@ -47,54 +47,38 @@ mysql> SHOW TABLES;
 
 ## 스키마 적용
 
-### 현재 (Flyway 도입 전)
+**Flyway 가 스키마를 만든다.** Hibernate 는 테이블을 만들지 않고 Entity 와 맞는지 검사만 한다(`ddl-auto=validate`).
 
-`application.properties` 에 다음 두 줄이 있으면 Spring Boot 가 JPA Entity 클래스로부터 테이블을 자동 생성:
+1. 빈 `vori` DB 만 만들어 두고(위 2단계) 앱을 켠다(`./gradlew bootRun`).
+2. Flyway 가 `backend/src/main/resources/db/migration/` 의 `V1__init.sql` 부터 마지막 번호까지 **아직 적용 안 된 SQL 만** 차례로 실행하고,
+   적용 이력을 `flyway_schema_history` 테이블에 남긴다.
+3. 그다음 Hibernate 가 Entity 와 테이블이 맞는지 검사한다. 안 맞으면 앱이 뜨지 않는다(아래 트러블슈팅).
 
-```properties
-spring.jpa.hibernate.ddl-auto=update
-```
+스키마를 바꿀 때는 Entity 만 고치지 말고 **새 `V<N>__<설명>.sql` 을 추가**한다. 번호는 `origin/main` 의 마지막 번호 + 1
+(아래 「브랜치끼리 같은 번호를 썼다」).
 
-- `update` — Entity 변경 시 알아서 컬럼 추가 (운영 단계 위험, 졸작 OK)
-- `validate` — 스키마 검증만 (Flyway 도입 후 권장)
-
-### Flyway 도입 후 (목표)
-
-1. `build.gradle` 에 추가:
-   ```gradle
-   implementation 'org.flywaydb:flyway-core'
-   implementation 'org.flywaydb:flyway-mysql'
-   ```
-
-2. 마이그레이션 파일 위치:
-   ```
-   backend/src/main/resources/db/migration/
-     V1__init.sql                 # 초기 테이블 11종
-     V2__add_<feature>.sql        # 이후 변경
-   ```
-
-3. `application.properties`:
-   ```properties
-   spring.jpa.hibernate.ddl-auto=validate
-   spring.flyway.enabled=true
-   ```
-
-4. `./gradlew bootRun` 으로 앱 시작 시 Flyway 가 자동으로 미적용 SQL 만 실행 → 메타 테이블 `flyway_schema_history` 에 적용 이력 기록.
+> 예전 안내 「Flyway 도입 전, `ddl-auto=update` 로 Entity 에서 테이블 자동 생성」은 Flyway 를 쓰기 시작하며 없어졌다.
+> 지금 `update` 로 바꾸면 Flyway 이력과 실제 스키마가 어긋나 다음 마이그레이션이 깨질 수 있다.
 
 ---
 
 ## `application.properties`
 
+DB 관련 부분만 옮겼다. 전체는 `backend/src/main/resources/application.properties`.
+
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/vori?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+# 127.0.0.1 고정 — Windows 는 localhost 를 IPv6(::1) 로 먼저 해석해 연결이 실패할 수 있다
+spring.datasource.url=jdbc:mysql://127.0.0.1:3306/vori?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
 spring.datasource.username=${DB_USERNAME:root}
 spring.datasource.password=${DB_PASSWORD:}
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
 spring.jpa.database-platform=org.hibernate.dialect.MySQLDialect
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.hibernate.ddl-auto=validate
+
+spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration
+spring.flyway.baseline-on-migrate=true
 ```
 
 비밀번호는 **`.env`** 또는 환경변수로:
@@ -115,9 +99,9 @@ DB_PASSWORD=<실제값>
 
 ```
 backend/src/main/java/com/vori/backend/seeder/
-  CategorySeeder.java         # 카테고리 44개
+  CategorySeeder.java         # 카테고리
   PetSpeciesSeeder.java       # 펫 종류
-  AdminPromoteRunner.java     # 본인 이메일을 ADMIN 으로 승격
+  AdminSeeder.java            # 관리자 계정 (admin@vori.com) — 비밀번호 설정은 README 의 실행 안내
 ```
 
 각 시더는 `CommandLineRunner` 를 구현하고, 첫 줄에서 `if (repository.count() > 0) return;` 로 재실행 방지.
@@ -150,7 +134,7 @@ public class CategorySeeder implements CommandLineRunner {
 - 본문 = 현재 진실 (최신 컬럼 명세)
 - 변경 이력 (#1 ~ #11) = 각 결정의 사유·DDL 스냅샷
 
-실제 DB 에 적용된 스키마는 `backend/src/main/resources/db/migration/V1__init.sql`. 코드 작성 전에 명세 + 관련 변경 이력 확인.
+실제 DB 스키마는 `backend/src/main/resources/db/migration/` 의 마이그레이션 전체(`V1__init.sql` 부터 마지막 번호까지)를 차례로 적용한 결과다. 코드 작성 전에 명세 + 관련 변경 이력 확인.
 
 ---
 
@@ -163,9 +147,12 @@ public class CategorySeeder implements CommandLineRunner {
 ### 한글이 `???` 으로 저장됨
 - DB 생성 시 `utf8mb4` 빠뜨림. 다시 생성하거나 `ALTER DATABASE vori CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
 
-### 앱 시작 시 `Table 'vori.users' doesn't exist`
-- `spring.jpa.hibernate.ddl-auto=update` 인지 확인
-- Entity 클래스에 `@Entity` + `@Table(name="users")` 붙어 있는지 확인
+### 앱 시작 시 `Table 'vori.users' doesn't exist` 또는 `Schema-validation: missing table/column`
+- 테이블은 Flyway 가 만든다. `ddl-auto` 를 `update` 로 바꾸지 말 것(위 「스키마 적용」).
+- 앱이 다른 DB 를 보고 있지 않은지 — `.env` 의 DB 설정과 `vori` DB 이름 확인.
+- `SELECT version, success FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 5;` 로 마지막 적용 번호와 실패 여부 확인.
+  `success = 0` 인 행이 있으면 그 SQL 이 중간에 실패한 것이다.
+- 새로 추가한 Entity·컬럼이면 그에 맞는 `V<N>__*.sql` 을 같이 만들었는지 확인.
 
 ### Flyway 가 마이그레이션 충돌 (`checksum mismatch`)
 
@@ -194,5 +181,5 @@ public class CategorySeeder implements CommandLineRunner {
 - `.env` 는 절대 커밋 금지 (`.gitignore` 에 이미 포함)
 - DB 비밀번호·API 키는 코드·로그·문서에 평문 X
 - `ddl-auto=create-drop` 사용 금지 (앱 종료 시 테이블 다 날아감)
-- 운영 단계 진입 시 `ddl-auto=validate` + Flyway 로 전환
+- `ddl-auto` 는 `validate` 그대로 둔다 — 스키마 변경은 Flyway 마이그레이션으로만
 - 마이그레이션 파일은 **append-only**. 이미 적용된 파일 수정 X, 새 파일 추가로만 변경
