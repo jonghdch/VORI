@@ -881,7 +881,11 @@ function WalletEntryPage({ user }) {
             <div className="wr-actions-row">
               {!editing && (
                 <button type="button" className="wr-btn wr-btn--ghost" onClick={() => save(true)} disabled={!canSave}>
-                  저장하고 하나 더
+                  {/* 좁은 폰에서 「저장하고 하나 / 더」로 「더」만 넘어가지 않게 「하나 더」를 묶는다.
+                      버튼이 flex 라 바깥 span 으로 한 덩어리로 감싸야 그 안에서 줄이 바뀐다 */}
+                  <span>
+                    저장하고 <span className="wr-nowrap">하나 더</span>
+                  </span>
                 </button>
               )}
               <button type="button" className="wr-btn wr-btn--dark" onClick={() => save(false)} disabled={!canSave}>

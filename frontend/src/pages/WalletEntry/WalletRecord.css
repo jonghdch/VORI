@@ -509,6 +509,9 @@
   color: var(--wr-ink);
   font-size: 14px;
 }
+.wr-nowrap {
+  white-space: nowrap;
+}
 .wr-btn--ghost:hover:not(:disabled) {
   background: var(--wr-sunk);
 }
