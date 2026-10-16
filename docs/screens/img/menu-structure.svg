@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1210" height="640" viewBox="0 0 1210 640" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker></defs>
+<rect width="1210" height="640" fill="#fff"/>
+<text x="28" y="58" font-size="34" font-weight="700" fill="#111">Menu Structure</text>
+<rect x="520.0" y="96" width="170" height="40" fill="#111"/>
+<text x="605.0" y="121.2" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">VORI</text>
+<path d="M605.0,136 V160 M125.0,160 H1085.0" stroke="#bdbdbd" stroke-width="1.5" fill="none"/>
+<path d="M125.0,160 V178" stroke="#bdbdbd" stroke-width="1.5"/>
+<rect x="40.0" y="178" width="170" height="38" fill="#111"/>
+<text x="125.0" y="201.9" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">공개</text>
+<rect x="46.0" y="232" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="125.0" y="252.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">랜딩  /</text>
+<rect x="46.0" y="272" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="125.0" y="292.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">스토리  /story</text>
+<rect x="46.0" y="312" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="125.0" y="332.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">이용약관  /terms</text>
+<rect x="46.0" y="352" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="125.0" y="372.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">개인정보처리방침  /privacy</text>
+<path d="M317.0,160 V178" stroke="#bdbdbd" stroke-width="1.5"/>
+<rect x="232.0" y="178" width="170" height="38" fill="#111"/>
+<text x="317.0" y="201.9" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">계정</text>
+<rect x="238.0" y="232" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="317.0" y="252.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">로그인  /login</text>
+<rect x="238.0" y="272" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="317.0" y="292.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">회원가입  /signup</text>
+<rect x="238.0" y="312" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="317.0" y="332.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">소비 프로필 설문</text>
+<rect x="238.0" y="352" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="317.0" y="372.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">온보딩  /onboarding</text>
+<path d="M509.0,160 V178" stroke="#bdbdbd" stroke-width="1.5"/>
+<rect x="424.0" y="178" width="170" height="38" fill="#111"/>
+<text x="509.0" y="201.9" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">메뉴</text>
+<rect x="430.0" y="232" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="509.0" y="252.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">홈 대시보드  /home</text>
+<rect x="430.0" y="272" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="509.0" y="292.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">가계부  /wallet</text>
+<rect x="430.0" y="312" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="509.0" y="332.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">└ 가계부 작성</text>
+<rect x="430.0" y="352" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="509.0" y="372.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">└ 하루 판정</text>
+<rect x="430.0" y="392" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="509.0" y="412.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">소비 리포트  /report</text>
+<path d="M701.0,160 V178" stroke="#bdbdbd" stroke-width="1.5"/>
+<rect x="616.0" y="178" width="170" height="38" fill="#111"/>
+<text x="701.0" y="201.9" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">게임</text>
+<rect x="622.0" y="232" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="701.0" y="252.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">상점  /shop</text>
+<rect x="622.0" y="272" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="701.0" y="292.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">마이룸  /myroom</text>
+<rect x="622.0" y="312" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="701.0" y="332.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">도감  /dex</text>
+<rect x="622.0" y="352" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="701.0" y="372.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">└ 펫 상세</text>
+<path d="M893.0,160 V178" stroke="#bdbdbd" stroke-width="1.5"/>
+<rect x="808.0" y="178" width="170" height="38" fill="#111"/>
+<text x="893.0" y="201.9" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">설정</text>
+<rect x="814.0" y="232" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="893.0" y="252.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">프로필</text>
+<rect x="814.0" y="272" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="893.0" y="292.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">기본 설정</text>
+<rect x="814.0" y="312" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="893.0" y="332.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">카드·계좌</text>
+<rect x="814.0" y="352" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="893.0" y="372.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">계정(탈퇴)</text>
+<path d="M1085.0,160 V178" stroke="#bdbdbd" stroke-width="1.5"/>
+<rect x="1000.0" y="178" width="170" height="38" fill="#111"/>
+<text x="1085.0" y="201.9" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">관리 (ADMIN)</text>
+<rect x="1006.0" y="232" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="1085.0" y="252.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">종합 대시보드</text>
+<rect x="1006.0" y="272" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="1085.0" y="292.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">유저 현황</text>
+<rect x="1006.0" y="312" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="1085.0" y="332.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">제재 관리</text>
+<rect x="1006.0" y="352" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="1085.0" y="372.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">펫 성장 지원</text>
+<rect x="1006.0" y="392" width="158" height="32" fill="#fff" stroke="#333" stroke-width="1"/>
+<text x="1085.0" y="412.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">… 준비 중 9개</text>
+<path d="M125.0,452 H509.0 M125.0,452 V470 M317.0,452 V470 M509.0,452 V470" stroke="#bdbdbd" stroke-width="1.5" fill="none"/>
+<text x="40.0" y="440.2" font-size="12" font-weight="600" fill="#555" text-anchor="start">앱 화면 공통 (AppShell 위에 겹쳐 뜸)</text>
+<rect x="40.0" y="470" width="170" height="38" fill="#111"/>
+<text x="125.0" y="493.9" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">펫 이름 짓기</text>
+<rect x="46.0" y="524" width="158" height="32" fill="#fff" stroke="#333"/>
+<text x="125.0" y="544.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">이름 없는 펫 → 강제</text>
+<rect x="232.0" y="470" width="170" height="38" fill="#111"/>
+<text x="317.0" y="493.9" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">출석 팝업</text>
+<rect x="238.0" y="524" width="158" height="32" fill="#fff" stroke="#333"/>
+<text x="317.0" y="544.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">하루 한 번</text>
+<rect x="424.0" y="470" width="170" height="38" fill="#111"/>
+<text x="509.0" y="493.9" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">어드민 도구</text>
+<rect x="430.0" y="524" width="158" height="32" fill="#fff" stroke="#333"/>
+<text x="509.0" y="544.0" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">ADMIN 플로팅</text>
+</svg>
