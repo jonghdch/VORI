@@ -48,6 +48,8 @@ public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
      */
     List<AiInquiry> findByExpenseIdIn(List<Long> expenseIds);
 
+    List<AiInquiry> findByExpenseIdInAndDailyGroupInquiryTrue(List<Long> expenseIds);
+
     /** 답변을 마친 AI 질문 수 — 소통 관련 칭호 조건. */
     long countByUserIdAndAnsweredAtIsNotNull(Long userId);
 

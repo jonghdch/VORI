@@ -29,6 +29,12 @@ const REASON_CHIPS = [
   { value: "IMPULSE", label: "사고 싶어서" },
   { value: "ETC", label: "기타" },
 ];
+const GROUP_LABELS = {
+  ENERGY: "식비 · 카페",
+  CHARM: "쇼핑 · 뷰티",
+  IQ: "문화 · 여가",
+  ENDURANCE: "생활 · 고정비",
+};
 // 서버 AnswerRequest 의 @Size(max = 500) 과 같다. 넘으면 칩을 골라도 저장이 거절된다.
 const ANSWER_MAX = 500;
 
@@ -397,6 +403,7 @@ function WalletAnalysisPage({ user }) {
             {/* 분석 대상 expense (읽기 전용) */}
             {(() => {
               const inq = inquiries[page - 1];
+              const groupLabel = GROUP_LABELS[inq.groupStatType] || "소비 그룹";
               return (
                 <>
                   <div className="ledger-entry-row ledger-row-readonly">
@@ -405,11 +412,13 @@ function WalletAnalysisPage({ user }) {
                         {String(page).padStart(2, "0")}
                       </span>
                       <span className="ledger-chip ledger-chip-readonly">
-                        {paymentLabel(inq.paymentMethod)}
+                        {inq.dailyGroupInquiry ? "일일 그룹" : paymentLabel(inq.paymentMethod)}
                       </span>
                       <span className="ledger-row-spacer" />
                       <span className="ledger-chip ledger-chip-readonly ledger-chip-auto">
-                        {inq.parentCategoryName
+                        {inq.dailyGroupInquiry
+                          ? groupLabel
+                          : inq.parentCategoryName
                           ? `${inq.parentCategoryName} · ${inq.categoryName}`
                           : inq.categoryName || "기타"}
                       </span>
@@ -419,7 +428,7 @@ function WalletAnalysisPage({ user }) {
                       <input
                         type="text"
                         className="ledger-row-input"
-                        value={inq.item || ""}
+                        value={inq.dailyGroupInquiry ? `${groupLabel} 지출 합계` : inq.item || ""}
                         disabled
                       />
                     </div>
@@ -430,8 +439,8 @@ function WalletAnalysisPage({ user }) {
                           type="text"
                           className="ledger-row-input"
                           value={
-                            inq.amount != null
-                              ? Number(inq.amount).toLocaleString("ko-KR")
+                            (inq.dailyGroupInquiry ? inq.groupAmount : inq.amount) != null
+                              ? Number(inq.dailyGroupInquiry ? inq.groupAmount : inq.amount).toLocaleString("ko-KR")
                               : ""
                           }
                           disabled

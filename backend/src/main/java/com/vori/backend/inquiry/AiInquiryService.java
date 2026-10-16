@@ -74,7 +74,10 @@ public class AiInquiryService {
                             e != null ? e.getPaymentMethod() : null,
                             c != null ? c.getId() : null,
                             c != null ? c.getName() : null,
-                            p != null ? p.getName() : null
+                            p != null ? p.getName() : null,
+                            Boolean.TRUE.equals(i.getDailyGroupInquiry()),
+                            i.getGroupStatType(),
+                            i.getGroupAmount()
                     );
                 })
                 .toList();
@@ -145,6 +148,12 @@ public class AiInquiryService {
             AiInquiry fresh = aiInquiryRepository.findByIdForUpdate(inquiryId).orElseThrow();
             if (fresh.getAnsweredAt() != null) return; // 동시 답변 멱등 가드 재확인
 
+            if (Boolean.TRUE.equals(fresh.getDailyGroupInquiry())) {
+                Signal groupSignal = computeSignalFinal(Signal.RED, reason);
+                fresh.recordAnswer(answerText, reason, groupSignal != Signal.RED);
+                eventPublisher.publishEvent(new com.vori.backend.pettitle.PetTitleCheckEvent(userId, "AI_ANSWERED"));
+                return;
+            }
             Expense expense = expenseRepository.findById(fresh.getExpenseId()).orElseThrow();
             // 질문의 목적은 예외 지출을 평가하는 것이다. AI가 사유를 합당하다고
             // 분류하면 과소비를 보통 또는 합리적으로 조정한다.
