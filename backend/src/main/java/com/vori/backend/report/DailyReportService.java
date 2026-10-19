@@ -146,11 +146,6 @@ public class DailyReportService {
     }
 
     /**
-     * 본인 리포트만 즉시 생성 — 시연·디버깅용.
-     * 스케줄러를 기다리지 않고 그 자리에서 결과를 볼 수 있게 한다. 전체 배치가 아니라
-     * 호출자 1명만 처리하므로 아무나 눌러도 남에게 영향이 없다.
-     */
-    /**
      * 사용자가 부르는 즉시 생성(시연·확인용). 날짜를 바꿔 가며 부르면 호출마다 Gemini 를 써서
      * 전체 사용자가 함께 쓰는 하루 한도가 바닥난다. 그래서 지난 30일 안의 지난 날짜만 받고,
      * 이미 만든 리포트는 AI 를 다시 부르지 않고 그대로 돌려준다.
@@ -163,6 +158,11 @@ public class DailyReportService {
         return existing != null ? existing : generateNow(userId, date);
     }
 
+    /**
+     * 본인 리포트만 즉시 생성 — 시연·디버깅용.
+     * 스케줄러를 기다리지 않고 그 자리에서 결과를 볼 수 있게 한다. 전체 배치가 아니라
+     * 호출자 1명만 처리하므로 아무나 눌러도 남에게 영향이 없다.
+     */
     public DailyReportResponse generateNow(Long userId, LocalDate date) {
         generateForUser(userId, date);
         return getByDate(userId, date);
