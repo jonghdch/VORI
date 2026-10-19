@@ -115,7 +115,7 @@ class ReceiptServiceTest {
     @Test
     @DisplayName("오늘 인식 횟수를 다 쓴 사용자는 Gemini 를 부르지 않고 429 — 전체가 함께 쓰는 한도를 혼자 쓰지 못하게")
     void dailyLimitPerUser() {
-        when(repository.countByUserIdAndRequestedAtGreaterThanEqual(eq(1L), any())).thenReturn(20L);
+        when(repository.countByUserIdAndRequestedAtGreaterThanEqual(eq(1L), any())).thenReturn(5L);
 
         assertThatThrownBy(() -> service.process(1L, PNG))
                 .isInstanceOf(ResponseStatusException.class)

@@ -49,11 +49,12 @@ public class ReceiptService {
     private static final long MAX_BYTES = 10L * 1024 * 1024; // 10MB
 
     /**
-     * 사용자당 하루 인식 횟수. 판정·코멘트·펫 대화와 같은 Gemini 하루 한도를 나눠 쓰므로
-     * 한 사람이 다 쓰지 못하게 묶는다. 접수 기록(receipt_ocr_jobs)으로 세서 재시작해도 유지된다.
+     * 사용자당 하루 인식 횟수. 판정·코멘트·펫 대화와 같은 Gemini 하루 한도(모델당 약 20회)를 나눠 쓰므로
+     * 한 사람이 다 쓰지 못하게 묶는다 — 영수증 한 건에 재촬영 한두 번을 보고 5회.
+     * 접수 기록(receipt_ocr_jobs)으로 세서 재시작해도 유지된다.
      */
-    @Value("${receipt.daily-limit:20}")
-    private int dailyLimit = 20;
+    @Value("${receipt.daily-limit:5}")
+    private int dailyLimit = 5;
 
     /** 업로드 → OCR → 결과. 실패해도 job 은 FAILED 로 남겨 이력을 추적한다. */
     public ReceiptOcrResponse process(Long userId, MultipartFile file) {
