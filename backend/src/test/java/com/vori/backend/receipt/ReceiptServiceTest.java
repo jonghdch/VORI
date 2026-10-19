@@ -55,6 +55,7 @@ class ReceiptServiceTest {
         when(tx.execute(any())).thenAnswer(inv -> ((TransactionCallback<Object>) inv.getArgument(0)).doInTransaction(null));
         when(repository.save(any())).thenReturn(job);
         when(repository.findById(any())).thenReturn(Optional.of(job));
+        when(userRepository.findByIdForUpdate(any())).thenReturn(Optional.of(mock(com.vori.backend.user.User.class)));
     }
 
     @Test

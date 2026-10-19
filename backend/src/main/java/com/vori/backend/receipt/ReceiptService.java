@@ -66,7 +66,8 @@ public class ReceiptService {
         // 1) 한도 확인 + 접수 기록 — 짧은 쓰기. 사용자 행을 잠가 같은 사람의 동시 업로드를 줄 세운다.
         //    세기와 접수가 한 트랜잭션이 아니면 동시에 온 업로드가 모두 같은 횟수를 읽고 한도를 넘긴다.
         ReceiptOcrJob job = transactionTemplate.execute(tx -> {
-            userRepository.findByIdForUpdate(userId);
+            userRepository.findByIdForUpdate(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
             long usedToday = receiptOcrJobRepository.countByUserIdAndRequestedAtGreaterThanEqual(
                     userId, LocalDate.now().atStartOfDay());
             if (usedToday >= dailyLimit) {
