@@ -64,7 +64,7 @@ public class DailyReportController {
     /**
      * POST /api/daily-reports/generate?date=2026-08-26 — 본인 리포트 즉시 생성.
      * 스케줄러(매일 00:10)를 기다리지 않고 시연·디버깅에서 바로 결과를 보기 위한 것.
-     * date 를 안 주면 어제 날짜로 만든다.
+     * date 를 안 주면 어제 날짜로 만든다. 지난 30일 안만, 이미 있으면 그대로 돌려준다.
      */
     @PostMapping("/generate")
     public DailyReportResponse generateNow(
@@ -72,7 +72,8 @@ public class DailyReportController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        LocalDate target = date != null ? date : LocalDate.now().minusDays(1);
-        return dailyReportService.generateNow(principal.getId(), target);
+        LocalDate today = LocalDate.now();
+        LocalDate target = date != null ? date : today.minusDays(1);
+        return dailyReportService.generateOnRequest(principal.getId(), target, today);
     }
 }
