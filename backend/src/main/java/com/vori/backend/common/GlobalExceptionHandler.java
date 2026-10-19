@@ -2,6 +2,7 @@ package com.vori.backend.common;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -11,6 +12,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.format.DateTimeParseException;
+import java.util.NoSuchElementException;
 
 /**
  * 예외 → 사용자에게 보여줄 수 있는 에러 응답.
@@ -98,6 +102,35 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(
                 ErrorResponse.of(HttpStatus.BAD_REQUEST,
                         e.getMessage() == null ? "잘못된 요청입니다." : e.getMessage(),
+                        request.getRequestURI()));
+    }
+
+    /** 월·날짜 파라미터 파싱 실패(YearMonth.parse, LocalDate.parse). 지금까지는 message 없는 500 이었다. */
+    @ExceptionHandler(DateTimeParseException.class)
+    public ResponseEntity<ErrorResponse> handleDateParse(
+            DateTimeParseException e, HttpServletRequest request) {
+        return ResponseEntity.badRequest().body(
+                ErrorResponse.of(HttpStatus.BAD_REQUEST, "날짜 형식이 올바르지 않아요.", request.getRequestURI()));
+    }
+
+    /** 인자 없는 orElseThrow() — 찾는 행이 없다. 지금까지는 message 없는 500 이었다. */
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<ErrorResponse> handleNoSuchElement(
+            NoSuchElementException e, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ErrorResponse.of(HttpStatus.NOT_FOUND, "요청한 정보를 찾을 수 없어요.", request.getRequestURI()));
+    }
+
+    /**
+     * 유니크·FK 제약 위반 — 같은 요청이 동시에 두 번 와서 한쪽이 먼저 행을 만든 경우가 대부분이다.
+     * 제약 이름·값이 담긴 DB 문구는 내보내지 않고 로그로만 남긴다.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(
+            DataIntegrityViolationException e, HttpServletRequest request) {
+        log.warn("제약 위반 — {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ErrorResponse.of(HttpStatus.CONFLICT, "이미 처리된 요청이에요. 새로고침 후 다시 확인해 주세요.",
                         request.getRequestURI()));
     }
 }
