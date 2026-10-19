@@ -12,6 +12,8 @@ import com.vori.backend.user.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -79,6 +82,30 @@ class MonthlyReportServiceTest {
                 .thenReturn(Optional.of(MonthlyReport.builder().userId(USER).yearMonth("2026-09").build()));
         service.settle(USER, MONTH);
         verify(reports, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("사용자 요청 정산은 끝나지 않은 달을 거절한다 — 미리 만들면 말일 정산이 건너뛴다")
+    void requestRejectsOpenMonth() {
+        assertThatThrownBy(() -> service.settleClosedMonth(USER, MONTH, MONTH))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThatThrownBy(() -> service.settleClosedMonth(USER, MONTH.plusMonths(1), MONTH))
+                .isInstanceOf(ResponseStatusException.class);
+        verify(reports, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("사용자 요청 정산은 지난 달이면 그대로 정산한다")
+    void requestSettlesClosedMonth() {
+        when(reports.findByUserIdAndYearMonth(USER, "2026-09")).thenReturn(Optional.empty());
+        when(expenses.findByUserIdAndSpentAtBetween(eq(USER), any(), any())).thenReturn(List.of());
+        when(incomes.findByUserIdAndReceivedAtBetween(eq(USER), any(), any())).thenReturn(List.of());
+        when(judgments.findByUserIdAndJudgmentDateBetweenOrderByJudgmentDate(eq(USER), any(), any())).thenReturn(List.of());
+
+        assertThat(service.settleClosedMonth(USER, MONTH, MONTH.plusMonths(1))).isTrue();
+        verify(reports).save(any());
     }
 
     @Test

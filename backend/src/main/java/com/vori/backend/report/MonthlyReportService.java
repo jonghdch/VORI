@@ -12,8 +12,10 @@ import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -48,6 +50,18 @@ public class MonthlyReportService {
             }
         }
         return done;
+    }
+
+    /**
+     * 사용자가 직접 부르는 정산(시연·확인용). 끝나지 않은 달을 미리 만들면 settle 이 이미 있는 리포트로 보고
+     * 말일 정산을 건너뛰어 중간 집계가 굳으므로, current 보다 앞선 달만 받는다.
+     */
+    @Transactional
+    public boolean settleClosedMonth(Long userId, YearMonth month, YearMonth current) {
+        if (!month.isBefore(current)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지난 달 리포트만 정산할 수 있습니다");
+        }
+        return settle(userId, month);
     }
 
     /** 한 사용자의 그 달 리포트를 정산한다. 이미 있으면 false. */
