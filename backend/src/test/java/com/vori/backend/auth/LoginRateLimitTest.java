@@ -23,7 +23,7 @@ class LoginRateLimitTest {
 
     private final AuthenticationManager authManager = mock(AuthenticationManager.class);
     private final LoginAttemptLimiter limiter =
-            new LoginAttemptLimiter(5, 50, Duration.ofMinutes(15), () -> Instant.parse("2026-10-19T00:00:00Z"));
+            new LoginAttemptLimiter(5, 20, 50, Duration.ofMinutes(15), () -> Instant.parse("2026-10-19T00:00:00Z"));
     private final AuthController controller = new AuthController(
             mock(UserService.class), authManager, new HttpSessionSecurityContextRepository(),
             mock(GoogleTokenVerifier.class), mock(CustomUserDetailsService.class), mock(AccountDeletionService.class),
@@ -67,5 +67,15 @@ class LoginRateLimitTest {
         for (var c : calls) c.get();
         pool.shutdown();
         verify(authManager, times(5)).authenticate(any());
+    }
+
+    /** 제재 계정은 맞는 비밀번호로 여러 번 들어와도 429 가 아니라 제재 안내를 계속 본다. */
+    @Test
+    void suspendedAccountKeepsGetting403Not429() {
+        when(authManager.authenticate(any())).thenThrow(new org.springframework.security.authentication.LockedException("locked"));
+        LoginRequest req = new LoginRequest("banned@vori.com", "right");
+        for (int i = 0; i < 8; i++) {
+            assertEquals(403, status(() -> controller.login(req, new MockHttpServletRequest(), new MockHttpServletResponse())));
+        }
     }
 }

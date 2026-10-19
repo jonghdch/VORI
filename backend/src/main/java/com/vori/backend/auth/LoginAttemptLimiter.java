@@ -18,11 +18,14 @@ import java.util.function.Supplier;
  * 이메일 로그인 무차별 대입 방어. 비밀번호를 확인하기 전에 {@link #acquire} 로 시도를 하나 세고,
  * 성공하면 {@link #recordSuccess} 로 지운다. 틀린 시도는 센 그대로 남는다.
  *
- * <p>두 가지 기준으로 센다. 첫 시도부터 window 가 지날 때까지,
+ * <p>세 가지 기준으로 센다. 첫 시도부터 window 가 지날 때까지,
  * <ul>
- *   <li>같은 이메일 + 같은 IP 로 maxPerAccount 번 — 남이 다른 곳에서 틀려도 본인은 잠기지 않는다</li>
+ *   <li>같은 이메일 + 같은 IP 로 maxPerAccount 번 — 남이 다른 곳에서 몇 번 틀려도 본인은 바로 잠기지 않는다</li>
+ *   <li>같은 이메일로 IP 상관없이 maxPerEmail 번 — IP 를 바꿔 가며 한 계정을 대입하는 것을 막는다.
+ *       이 한도까지 채우면 본인도 잠기므로 maxPerAccount 보다 넉넉하게 둔다</li>
  *   <li>같은 IP 에서 이메일 상관없이 maxPerIp 번 — 한 곳에서 여러 계정을 대입하는 것을 막는다</li>
  * </ul>
+ * 비밀번호가 틀린 것이 아닌 실패(제재 계정·서버 오류)는 {@link #release} 로 센 것을 돌려준다.
  * 세기와 한도 확인을 한 번에(compute) 하므로 요청이 동시에 몰려도 한도를 넘겨 인증까지 가지 못한다.
  *
  * <p>메모리에만 센다 — 서버를 다시 띄우면 초기화된다. 서버 한 대 기준(PetChatService 의 횟수 제한과 같은 전제).
@@ -34,11 +37,12 @@ public class LoginAttemptLimiter {
     private static final Duration SWEEP_EVERY = Duration.ofMinutes(1);
 
     private final int maxPerAccount;
+    private final int maxPerEmail;
     private final int maxPerIp;
     private final Duration window;
     private final Supplier<Instant> clock;
 
-    /** 키별 (첫 시도 시각, 시도 횟수). 키는 "a:이메일|IP" 또는 "i:IP". */
+    /** 키별 (첫 시도 시각, 시도 횟수). 키는 "a:이메일|IP", "e:이메일", "i:IP". */
     private final Map<String, Attempts> attempts = new ConcurrentHashMap<>();
     private final AtomicReference<Instant> lastSweep;
 
@@ -46,14 +50,16 @@ public class LoginAttemptLimiter {
 
     @Autowired
     public LoginAttemptLimiter(@Value("${auth.login.max-failures:5}") int maxPerAccount,
+                               @Value("${auth.login.max-failures-per-email:20}") int maxPerEmail,
                                @Value("${auth.login.max-failures-per-ip:50}") int maxPerIp,
                                @Value("${auth.login.lock-minutes:15}") int lockMinutes) {
-        this(maxPerAccount, maxPerIp, Duration.ofMinutes(lockMinutes), Instant::now);
+        this(maxPerAccount, maxPerEmail, maxPerIp, Duration.ofMinutes(lockMinutes), Instant::now);
     }
 
     /** 테스트에서 시각을 고정하려고 분리했다. */
-    LoginAttemptLimiter(int maxPerAccount, int maxPerIp, Duration window, Supplier<Instant> clock) {
+    LoginAttemptLimiter(int maxPerAccount, int maxPerEmail, int maxPerIp, Duration window, Supplier<Instant> clock) {
         this.maxPerAccount = maxPerAccount;
+        this.maxPerEmail = maxPerEmail;
         this.maxPerIp = maxPerIp;
         this.window = window;
         this.clock = clock;
@@ -66,16 +72,30 @@ public class LoginAttemptLimiter {
         sweepIfDue(now);
         String ipKey = ipKey(ip);
         if (!take(ipKey, maxPerIp, now)) throw tooMany(ipKey, now);
+        String emailKey = emailKey(email);
+        if (!take(emailKey, maxPerEmail, now)) {
+            giveBack(ipKey); // 뒤 기준에서 막혔으면 앞에서 센 것은 돌려준다
+            throw tooMany(emailKey, now);
+        }
         String accountKey = accountKey(email, ip);
         if (!take(accountKey, maxPerAccount, now)) {
-            giveBack(ipKey); // 계정 쪽에서 막혔으면 IP 쪽에 센 것은 돌려준다
+            giveBack(ipKey);
+            giveBack(emailKey);
             throw tooMany(accountKey, now);
         }
     }
 
-    /** 로그인에 성공하면 그 계정에 센 것을 지우고, IP 쪽에 센 이번 시도는 돌려준다. */
+    /** 로그인에 성공하면 그 계정(이메일+IP)에 센 것을 지우고, 이메일·IP 쪽에 센 이번 시도는 돌려준다. */
     public void recordSuccess(String email, String ip) {
         attempts.remove(accountKey(email, ip));
+        giveBack(emailKey(email));
+        giveBack(ipKey(ip));
+    }
+
+    /** 비밀번호가 틀린 게 아닌 실패(제재 계정·서버 오류) — 이번 시도로 센 것을 모두 돌려준다. */
+    public void release(String email, String ip) {
+        giveBack(accountKey(email, ip));
+        giveBack(emailKey(email));
         giveBack(ipKey(ip));
     }
 
@@ -106,7 +126,8 @@ public class LoginAttemptLimiter {
     private ResponseStatusException tooMany(String key, Instant now) {
         Attempts a = attempts.get(key);
         Instant until = a == null ? now : a.since().plus(window);
-        long minutes = Math.max(1, Duration.between(now, until).toMinutes() + 1);
+        long seconds = Math.max(0, Duration.between(now, until).toSeconds());
+        long minutes = Math.max(1, (seconds + 59) / 60); // 남은 시간을 분 단위로 올림
         return new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                 "로그인 시도가 너무 많아요. " + minutes + "분 뒤에 다시 시도해 주세요.");
     }
@@ -122,8 +143,15 @@ public class LoginAttemptLimiter {
     }
 
     private static String accountKey(String email, String ip) {
-        String e = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
-        return "a:" + e + "|" + (ip == null ? "" : ip);
+        return "a:" + normalize(email) + "|" + (ip == null ? "" : ip);
+    }
+
+    private static String emailKey(String email) {
+        return "e:" + normalize(email);
+    }
+
+    private static String normalize(String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
     }
 
     private static String ipKey(String ip) {

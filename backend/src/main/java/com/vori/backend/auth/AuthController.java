@@ -55,19 +55,24 @@ public class AuthController {
                               HttpServletResponse response) {
         // 시도를 먼저 센다 — 동시에 몰린 요청도 한도를 넘겨 비밀번호 확인까지 가지 못한다. 틀리면 센 그대로 남는다
         loginAttemptLimiter.acquire(req.email(), request.getRemoteAddr());
+        Authentication auth;
         try {
-            Authentication auth = authenticationManager.authenticate(
+            auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.email(), req.password())
             );
-            loginAttemptLimiter.recordSuccess(req.email(), request.getRemoteAddr());
-
-            return establishSession(auth, request, response);
         } catch (BadCredentialsException e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다");
         } catch (LockedException e) {
-            // 제재(정지·영구정지) 계정 — CustomUserDetailsService 가 잠금 처리한 경우
+            // 제재(정지·영구정지) 계정 — CustomUserDetailsService 가 잠금 처리한 경우. 비밀번호를 틀린 게 아니라 센 것을 돌려준다
+            loginAttemptLimiter.release(req.email(), request.getRemoteAddr());
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "제재 중인 계정입니다");
+        } catch (RuntimeException e) {
+            // 그 밖의 인증 실패·서버 오류도 비밀번호를 틀린 게 아니다
+            loginAttemptLimiter.release(req.email(), request.getRemoteAddr());
+            throw e;
         }
+        loginAttemptLimiter.recordSuccess(req.email(), request.getRemoteAddr());
+        return establishSession(auth, request, response);
     }
 
     /**
