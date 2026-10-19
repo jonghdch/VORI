@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vori.backend.gemini.AiQuotaException;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.receipt.dto.ReceiptOcrResponse;
+import com.vori.backend.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,8 +37,9 @@ class ReceiptServiceTest {
     private final ReceiptOcrJobRepository repository = mock(ReceiptOcrJobRepository.class);
     private final GeminiClient geminiClient = mock(GeminiClient.class);
     private final TransactionTemplate tx = mock(TransactionTemplate.class);
+    private final UserRepository userRepository = mock(UserRepository.class);
     private final ReceiptService service = new ReceiptService(
-            repository, geminiClient, new ObjectMapper(), tx, mock(ApplicationEventPublisher.class));
+            repository, userRepository, geminiClient, new ObjectMapper(), tx, mock(ApplicationEventPublisher.class));
 
     private final ReceiptOcrJob job = ReceiptOcrJob.builder()
             .userId(1L).provider(OcrProvider.GEMINI).status(OcrStatus.PROCESSING)
@@ -123,5 +125,21 @@ class ReceiptServiceTest {
                 .isEqualTo(429);
         verifyNoInteractions(geminiClient);
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("하루 한도는 사용자 행을 잠근 트랜잭션 안에서 세고 바로 접수한다 — 동시 업로드가 같은 횟수를 읽지 않게")
+    void dailyLimitIsCountedUnderUserLock() {
+        when(geminiClient.extractReceipt(any(), anyString())).thenReturn("""
+                {"sourceType":"CARD_ALERT","storeName":"GS25","date":"2026-10-01","time":null,
+                 "totalAmount":4500,"items":null,"paymentMethod":"DEBIT","representativeItem":null}""");
+
+        service.process(1L, PNG);
+
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(tx, userRepository, repository);
+        order.verify(tx).execute(any());
+        order.verify(userRepository).findByIdForUpdate(1L);
+        order.verify(repository).countByUserIdAndRequestedAtGreaterThanEqual(eq(1L), any());
+        order.verify(repository).save(any());
     }
 }

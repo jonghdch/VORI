@@ -6,6 +6,7 @@ import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.receipt.dto.ExtractedReceipt;
 import com.vori.backend.receipt.dto.ReceiptOcrResponse;
 import com.vori.backend.title.TitleCheckEvent;
+import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,6 +41,7 @@ import java.util.Set;
 public class ReceiptService {
 
     private final ReceiptOcrJobRepository receiptOcrJobRepository;
+    private final UserRepository userRepository;
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
@@ -59,22 +61,25 @@ public class ReceiptService {
     /** 업로드 → OCR → 결과. 실패해도 job 은 FAILED 로 남겨 이력을 추적한다. */
     public ReceiptOcrResponse process(Long userId, MultipartFile file) {
         byte[] image = validateAndRead(file);
-        long usedToday = receiptOcrJobRepository.countByUserIdAndRequestedAtGreaterThanEqual(
-                userId, LocalDate.now().atStartOfDay());
-        if (usedToday >= dailyLimit) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "오늘 사진 인식은 " + dailyLimit + "번까지예요. 내일 다시 쓰거나 직접 입력해 주세요.");
-        }
         String mimeType = file.getContentType();
 
-        // 1) 접수 기록 — 짧은 쓰기
-        ReceiptOcrJob job = transactionTemplate.execute(tx ->
-                receiptOcrJobRepository.save(ReceiptOcrJob.builder()
-                        .userId(userId)
-                        .provider(OcrProvider.GEMINI)
-                        .status(OcrStatus.PROCESSING)
-                        .requestedAt(LocalDateTime.now())
-                        .build()));
+        // 1) 한도 확인 + 접수 기록 — 짧은 쓰기. 사용자 행을 잠가 같은 사람의 동시 업로드를 줄 세운다.
+        //    세기와 접수가 한 트랜잭션이 아니면 동시에 온 업로드가 모두 같은 횟수를 읽고 한도를 넘긴다.
+        ReceiptOcrJob job = transactionTemplate.execute(tx -> {
+            userRepository.findByIdForUpdate(userId);
+            long usedToday = receiptOcrJobRepository.countByUserIdAndRequestedAtGreaterThanEqual(
+                    userId, LocalDate.now().atStartOfDay());
+            if (usedToday >= dailyLimit) {
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                        "오늘 사진 인식은 " + dailyLimit + "번까지예요. 내일 다시 쓰거나 직접 입력해 주세요.");
+            }
+            return receiptOcrJobRepository.save(ReceiptOcrJob.builder()
+                    .userId(userId)
+                    .provider(OcrProvider.GEMINI)
+                    .status(OcrStatus.PROCESSING)
+                    .requestedAt(LocalDateTime.now())
+                    .build());
+        });
 
         // 2) 외부 호출 — 트랜잭션 밖
         String raw;
