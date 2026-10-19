@@ -26,6 +26,7 @@ public record ProfileUpdateRequest(
         String job,
 
         @Min(value = 0, message = "월 수입은 0 이상으로 입력해 주세요")
+        @Max(value = 100_000_000, message = "월 수입이 너무 큽니다") // 온보딩(SpendingProfileRequest)과 같은 상한
         Integer monthlyIncome
 ) {
     /** 공백을 먼저 잘라 둔다. 검사(@Size)와 저장이 같은 값을 봐야 "a " 가 2자로 통과한 뒤 1자로 저장되지 않는다. */

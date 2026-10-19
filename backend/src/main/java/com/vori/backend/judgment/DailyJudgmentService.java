@@ -181,7 +181,7 @@ public class DailyJudgmentService {
             int availableToday=0;
             int todaySpent=0;
             for(int day=1; day<=date.getDayOfMonth(); day++) {
-                int baseForDay=monthlyBudget*day/daysInMonth-monthlyBudget*(day-1)/daysInMonth;
+                int baseForDay=(int)((long)monthlyBudget*day/daysInMonth-(long)monthlyBudget*(day-1)/daysInMonth); // long — 예산×일수가 int 를 넘지 않게
                 int available=Math.max(0,baseForDay+carry);
                 int spent=spendingByDay.getOrDefault(month.atDay(day),Map.of()).getOrDefault(type,0);
                 if(day==date.getDayOfMonth()) { availableToday=available; todaySpent=spent; break; }
