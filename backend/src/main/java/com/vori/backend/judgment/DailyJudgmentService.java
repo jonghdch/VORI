@@ -32,7 +32,7 @@ public class DailyJudgmentService {
 
     @Transactional(readOnly=true) public Optional<DailyJudgmentResponse> getToday(Long id){ return getByDate(id, LocalDate.now()); }
     @Transactional(readOnly=true) public Optional<DailyJudgmentResponse> getByDate(Long id,LocalDate date){return judgments.findByUserIdAndJudgmentDate(id,date).map(j->DailyJudgmentResponse.from(j,true));}
-    @Transactional(readOnly=true) public List<DailyJudgmentResponse> getByMonth(Long id,YearMonth month){return judgments.findByUserIdAndJudgmentDateBetweenOrderByJudgmentDate(id,month.atDay(1),month.plusMonths(1).atDay(1)).stream().map(j->DailyJudgmentResponse.from(j,true)).toList();}
+    @Transactional(readOnly=true) public List<DailyJudgmentResponse> getByMonth(Long id,YearMonth month){return judgments.findByUserIdAndJudgmentDateBetweenOrderByJudgmentDate(id,month.atDay(1),month.atEndOfMonth()).stream().map(j->DailyJudgmentResponse.from(j,true)).toList();}
     @Transactional public DailyJudgmentResponse judgeToday(Long id,Role role){return judgeDate(id,role,LocalDate.now());}
 
     /**
