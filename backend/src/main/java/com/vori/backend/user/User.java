@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,8 +14,10 @@ import java.time.LocalDateTime;
 /**
  * 회원. 이메일·비번 해시·약관 동의 시각·튜토리얼 수집값·게임 자원 보유.
  * 회원가입 트랜잭션은 UserService.signup 참조. 가입 시 user_stat_stats 4행도 같이 INSERT.
+ * UPDATE 는 바뀐 컬럼만 쓴다(@DynamicUpdate) — 잠금 없이 읽은 요청이 그사이 커밋된 game_money 를 되돌리지 않게.
  */
 @Entity
+@DynamicUpdate
 @Table(name = "users")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

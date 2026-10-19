@@ -147,7 +147,7 @@ class ExpenseServiceUpdateTest {
 
     private User userWithTotalSaved(int totalSaved) {
         User user = User.builder().id(USER_ID).role(Role.USER).totalSaved(totalSaved).build();
-        when(users.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(users.findByIdForUpdate(USER_ID)).thenReturn(Optional.of(user));
         return user;
     }
 
