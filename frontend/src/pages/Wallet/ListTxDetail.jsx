@@ -78,9 +78,9 @@ function ListTxDetail({ row, iconName, categoryLabel, instrument, onOpenDate, on
           <Icon name="calendar" size={16} />
           날짜에서 보기
         </button>
-        {!isIncome && (
+        {onEdit && (
           <button type="button" className="hm-btn hm-btn--dark" onClick={onEdit}>
-            <Icon name="pencil" size={16} strokeWidth={2.2} />이 날 지출 수정
+            <Icon name="pencil" size={16} strokeWidth={2.2} />이 지출 수정
           </button>
         )}
       </div>

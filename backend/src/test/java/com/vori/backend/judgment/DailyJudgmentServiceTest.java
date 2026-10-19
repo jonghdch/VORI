@@ -460,4 +460,12 @@ class DailyJudgmentServiceTest {
         assertTrue(result.coinReward() > 0);
         assertEquals(result.coinReward(), admin.getGameMoney());
     }
+
+    @Test
+    void monthRangeEndsOnLastDay() {
+        // Between 은 양 끝을 포함한다 — 끝값이 다음 달 1일이면 그날 판정이 이 달 목록에 섞인다
+        service.getByMonth(1L, YearMonth.of(2026, 9));
+        verify(judgments).findByUserIdAndJudgmentDateBetweenOrderByJudgmentDate(
+                1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
+    }
 }

@@ -24,7 +24,8 @@ public class SpendingPlanService {
 
     /** 설문으로 만든 이번 달 예산은 이후 고정비를 추가해도 바꾸지 않는다. */
     @Transactional public void ensurePlan(Long userId, String yearMonth) {
-        User user = users.findById(userId).orElseThrow();
+        // 같은 GET 이 동시에 와도 한쪽이 만든 뒤 다른 쪽이 보도록 사용자 행으로 줄 세운다(uq_user_stat_budget 충돌 방지).
+        User user = users.findByIdForUpdate(userId).orElseThrow();
         List<UserStatBudget> existing = statBudgets.findByUserIdAndYearMonth(userId, yearMonth);
         // 수입 입력 전 생성된 0원 예산은 판정 보상을 전부 0으로 만든다. 수입이 등록된 뒤
         // 처음 확인할 때만 다시 만들고, 정상적으로 생성된 이번 달 예산은 고정비 변경으로 바꾸지 않는다.
@@ -37,7 +38,7 @@ public class SpendingPlanService {
         UserSpendingProfile profile = profiles.findById(userId).orElse(null);
         int income = Optional.ofNullable(user.getMonthlyIncome()).orElse(0);
         int fixed = fixedExpenses.findByUserIdOrderByIdAsc(userId).stream().mapToInt(FixedExpense::getAmount).sum();
-        int reserve = Math.max(0, Math.round(income * 0.15f)); // 누락 고정비를 위한 안전금
+        int reserve = Math.max(0, (int) Math.round(income * 15L / 100.0)); // 누락 고정비를 위한 안전금 — float(0.15f)는 큰 수입에서 1원씩 틀린다
         int available = Math.max(0, income - fixed - reserve);
         // 월수입 변경이 예산에 바로 반영되도록 실제 가용 수입을 기준으로 배분한다.
         // 설문의 자유지출 답은 소비 성향 데이터로만 보관하고 고정 상한으로 쓰지 않는다.
@@ -50,7 +51,7 @@ public class SpendingPlanService {
         int totalWeight = weights.values().stream().mapToInt(Integer::intValue).sum();
         int assigned = 0;
         for (StatType type : StatType.values()) {
-            int amount = type == StatType.ENDURANCE ? available - assigned : available * weights.get(type) / totalWeight;
+            int amount = type == StatType.ENDURANCE ? available - assigned : (int) ((long) available * weights.get(type) / totalWeight);
             assigned += amount;
             statBudgets.save(UserStatBudget.builder().userId(userId).yearMonth(yearMonth).statType(type).amount(amount).build());
         }

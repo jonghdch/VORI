@@ -20,6 +20,8 @@
 
 | 문서 | 책임 |
 |---|---|
+| [`screens/README.md`](screens/README.md) | 화면설계서 — 화면 목록·화면별 기능 명세(상태 포함)·공통 정책·흐름도·권한 (구현 기준) |
+| [`screens/IA.md`](screens/IA.md) | 정보구조도 — 기능 나열·메뉴 트리·Depth 별 구조·핵심 경로 |
 | [`signup-flow.md`](signup-flow.md) | 회원가입·소비 프로필 수집 흐름 |
 | [`tutorial-flow.md`](tutorial-flow.md) | 온보딩과 인앱 튜토리얼 설계 |
 | [`judgment-flow.md`](judgment-flow.md) | 하루 판정 흐름 재설계 — 1차 판정 → 예외 지출 사유 → 확정·보상 |

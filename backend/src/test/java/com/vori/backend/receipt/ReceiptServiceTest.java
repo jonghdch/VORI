@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vori.backend.gemini.AiQuotaException;
 import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.receipt.dto.ReceiptOcrResponse;
+import com.vori.backend.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,15 +12,21 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -30,8 +37,9 @@ class ReceiptServiceTest {
     private final ReceiptOcrJobRepository repository = mock(ReceiptOcrJobRepository.class);
     private final GeminiClient geminiClient = mock(GeminiClient.class);
     private final TransactionTemplate tx = mock(TransactionTemplate.class);
+    private final UserRepository userRepository = mock(UserRepository.class);
     private final ReceiptService service = new ReceiptService(
-            repository, geminiClient, new ObjectMapper(), tx, mock(ApplicationEventPublisher.class));
+            repository, userRepository, geminiClient, new ObjectMapper(), tx, mock(ApplicationEventPublisher.class));
 
     private final ReceiptOcrJob job = ReceiptOcrJob.builder()
             .userId(1L).provider(OcrProvider.GEMINI).status(OcrStatus.PROCESSING)
@@ -47,6 +55,7 @@ class ReceiptServiceTest {
         when(tx.execute(any())).thenAnswer(inv -> ((TransactionCallback<Object>) inv.getArgument(0)).doInTransaction(null));
         when(repository.save(any())).thenReturn(job);
         when(repository.findById(any())).thenReturn(Optional.of(job));
+        when(userRepository.findByIdForUpdate(any())).thenReturn(Optional.of(mock(com.vori.backend.user.User.class)));
     }
 
     @Test
@@ -104,5 +113,34 @@ class ReceiptServiceTest {
 
         assertThat(r.status()).isEqualTo(OcrStatus.FAILED);
         assertThat(r.errorMessage()).contains("AI 사용량을 다 써서").contains("직접 입력");
+    }
+
+    @Test
+    @DisplayName("오늘 인식 횟수를 다 쓴 사용자는 Gemini 를 부르지 않고 429 — 전체가 함께 쓰는 한도를 혼자 쓰지 못하게")
+    void dailyLimitPerUser() {
+        when(repository.countByUserIdAndRequestedAtGreaterThanEqual(eq(1L), any())).thenReturn(5L);
+
+        assertThatThrownBy(() -> service.process(1L, PNG))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode().value())
+                .isEqualTo(429);
+        verifyNoInteractions(geminiClient);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("하루 한도는 사용자 행을 잠근 트랜잭션 안에서 세고 바로 접수한다 — 동시 업로드가 같은 횟수를 읽지 않게")
+    void dailyLimitIsCountedUnderUserLock() {
+        when(geminiClient.extractReceipt(any(), anyString())).thenReturn("""
+                {"sourceType":"CARD_ALERT","storeName":"GS25","date":"2026-10-01","time":null,
+                 "totalAmount":4500,"items":null,"paymentMethod":"DEBIT","representativeItem":null}""");
+
+        service.process(1L, PNG);
+
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(tx, userRepository, repository);
+        order.verify(tx).execute(any());
+        order.verify(userRepository).findByIdForUpdate(1L);
+        order.verify(repository).countByUserIdAndRequestedAtGreaterThanEqual(eq(1L), any());
+        order.verify(repository).save(any());
     }
 }
