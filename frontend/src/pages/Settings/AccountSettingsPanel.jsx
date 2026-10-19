@@ -43,8 +43,8 @@ function AccountSettingsPanel({ user, onLogout }) {
       window.alert(
         `탈퇴 신청이 완료됐어요.\n${formatDate(res.deleteAt)}에 모든 기록이 삭제돼요. 그 전에 다시 로그인하면 계정이 복구돼요.`,
       );
-      // 서버가 세션을 이미 끊었다. 화면의 로그인 상태만 정리한다
-      if (typeof onLogout === "function") await onLogout();
+      // 서버가 세션을 이미 끊었다. 화면의 로그인 상태만 정리한다(체험 계정 로그아웃 확인창도 띄우지 않는다)
+      if (typeof onLogout === "function") await onLogout({ confirmed: true });
       navigate("/", { replace: true });
     } catch (err) {
       setError(err.message || "탈퇴 신청을 처리하지 못했어요.");

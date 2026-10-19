@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
-import { login } from "../../api/auth";
+import { login, startGuest } from "../../api/auth";
 import GoogleSignInButton from "../../components/GoogleSignInButton";
 import VoriWordmark from "../../components/VoriWordmark";
 import { getOnboardingStatus } from "../../api/onboarding";
@@ -73,6 +73,21 @@ function LoginPage({ onLogin }) {
       await afterLogin(await login(email, password));
     } catch (err) {
       setError(err.message || "로그인 중 오류가 발생했어요");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 「체험하기」 — 서버가 기록·코인을 채운 임시 계정을 만들고 바로 로그인시킨다. 뒤는 로그인과 같은 길(afterLogin)
+  const tryAsGuest = async () => {
+    if (loading) return;
+    setError("");
+    setPendingUser(null);
+    setLoading(true);
+    try {
+      await afterLogin(await startGuest());
+    } catch (err) {
+      setError(err.message || "체험 계정을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setLoading(false);
     }
@@ -207,6 +222,16 @@ function LoginPage({ onLogin }) {
               onClick={() => navigate("/signup")}
             >
               회원가입
+            </button>
+          </p>
+          <p className="login-signup">
+            <button
+              type="button"
+              className="login-link"
+              onClick={tryAsGuest}
+              disabled={loading}
+            >
+              가입 없이 체험하기
             </button>
           </p>
         </section>

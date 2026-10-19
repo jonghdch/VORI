@@ -24,7 +24,8 @@ function UserAvatarMenu({ user, onLogout }) {
 
   const handleLogout = async () => {
     setOpen(false);
-    if (typeof onLogout === "function") await onLogout();
+    // 체험 계정이 확인창에서 취소하면 false — 로그인된 채 그 화면에 머문다
+    if (typeof onLogout === "function" && (await onLogout()) === false) return;
     navigate("/");
   };
 

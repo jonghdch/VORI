@@ -58,6 +58,28 @@ export async function loginWithGoogle(credential) {
   return res.json(); // { id, email, nickname, role }
 }
 
+// 「체험하기」 임시 계정의 이메일 도메인 — 서버 GuestAccountService.EMAIL_DOMAIN 과 같다.
+const GUEST_EMAIL_DOMAIN = "@guest.vori.local";
+
+/** 체험 계정인지 — 비밀번호가 없어 로그아웃하면 다시 들어올 수 없다. */
+export const isGuestUser = (user) => Boolean(user?.email?.endsWith(GUEST_EMAIL_DOMAIN));
+
+/**
+ * 「체험하기」 — 서버가 임시 계정을 만들어 세팅하고 바로 로그인시킨다(이메일·실명·비밀번호 없음).
+ * 429 = 오늘 준비한 체험 계정을 다 씀, 403 = 체험하기 꺼짐 — 서버 문구를 그대로 쓴다.
+ */
+export async function startGuest() {
+  const res = await fetch(`${API_BASE}/auth/guest`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res, `체험 계정을 만들지 못했어요 (${res.status})`);
+    throw new AuthError(msg, res.status);
+  }
+  return res.json(); // 로그인과 같은 MeResponse
+}
+
 export async function logout() {
   const res = await fetch(`${API_BASE}/auth/logout`, {
     method: "POST",
