@@ -61,17 +61,27 @@ public class MonthlyReportService {
         if (!month.isBefore(current)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지난 달 리포트만 정산할 수 있습니다");
         }
+        // 가입하기 전 달은 기록이 없다 — 막지 않으면 month=0001-01 같은 요청마다 빈 리포트와 알림이 생긴다
+        LocalDateTime joinedAt = userRepository.findById(userId).map(User::getCreatedAt).orElse(null);
+        if (joinedAt != null && month.isBefore(YearMonth.from(joinedAt))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "가입하기 전 달은 정산할 수 없습니다");
+        }
         return settle(userId, month);
     }
 
-    /** 한 사용자의 그 달 리포트를 정산한다. 이미 있으면 false. */
+    /** 한 사용자의 그 달 리포트를 정산한다. 이미 있으면 false — 달이 끝나기 전에 만든 리포트만 다시 센다. */
     @Transactional
     public boolean settle(Long userId, YearMonth month) {
         String key = month.toString();
-        if (monthlyReportRepository.findByUserIdAndYearMonth(userId, key).isPresent()) return false;
-
         LocalDateTime start = month.atDay(1).atStartOfDay();
         LocalDateTime end = month.plusMonths(1).atDay(1).atStartOfDay();
+
+        Optional<MonthlyReport> existing = monthlyReportRepository.findByUserIdAndYearMonth(userId, key);
+        // 끝나기 전에 미리 만든 리포트(예전 즉시 정산 API)는 중간 집계라, 말일이 지난 뒤 정산하면 다시 센다. 알림은 다시 보내지 않는다
+        boolean frozenEarly = existing.map(r -> r.getGeneratedAt() != null && r.getGeneratedAt().isBefore(end)).orElse(false);
+        boolean stale = frozenEarly && !LocalDateTime.now().isBefore(end);
+        if (existing.isPresent() && !stale) return false;
+
         long expenseTotal = expenseRepository.sumAmountInRange(userId, start, end);
         int expenseCount = expenseRepository.findByUserIdAndSpentAtBetween(userId, start, end).size();
         long incomeTotal = incomeRepository
@@ -82,7 +92,7 @@ public class MonthlyReportService {
                 .findByUserIdAndJudgmentDateBetweenOrderByJudgmentDate(userId, month.atDay(1), month.atEndOfMonth())
                 .stream().filter(DailyJudgment::isFinalized).toList(); // 사유를 기다리는 1차 판정은 아직 그날 결과가 아니다
 
-        monthlyReportRepository.save(MonthlyReport.builder()
+        MonthlyReport totals = MonthlyReport.builder()
                 .userId(userId)
                 .yearMonth(key)
                 .expenseTotal((int) expenseTotal)
@@ -93,7 +103,12 @@ public class MonthlyReportService {
                 .grayDays(count(judged, Signal.GRAY))
                 .redDays(count(judged, Signal.RED))
                 .generatedAt(LocalDateTime.now())
-                .build());
+                .build();
+        if (existing.isPresent()) {
+            existing.get().refresh(totals);
+            return true;
+        }
+        monthlyReportRepository.save(totals);
 
         notificationService.notify(userId, NotificationType.MONTHLY_REPORT,
                 month.getMonthValue() + "월 리포트가 도착했어요",

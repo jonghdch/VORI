@@ -69,4 +69,16 @@ public class MonthlyReport {
     public void markRead(LocalDateTime at) {
         if (readAt == null) readAt = at;
     }
+
+    /** 달이 끝나기 전에 만들어져 중간 집계로 굳은 리포트를 말일 기준 합계로 고친다. 읽음 표시는 그대로 둔다. */
+    public void refresh(MonthlyReport totals) {
+        expenseTotal = totals.expenseTotal;
+        expenseCount = totals.expenseCount;
+        incomeTotal = totals.incomeTotal;
+        judgedDays = totals.judgedDays;
+        greenDays = totals.greenDays;
+        grayDays = totals.grayDays;
+        redDays = totals.redDays;
+        generatedAt = totals.generatedAt;
+    }
 }
