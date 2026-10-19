@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import SiteHeader from "../../components/SiteHeader";
+import { startGuest } from "../../api/auth";
 import VoriWordmark from "../../components/VoriWordmark";
 import boriImage from "../../assets/pets/bori.png";
 import "./LandingPage.css";
@@ -58,11 +59,28 @@ const TEAM = [
   { name: "신동엽", role: "Team", desc: "기획과 검증에 함께하며 서비스의 완성도를 높입니다." },
 ];
 
-function LandingPage({ user, onLogout }) {
+function LandingPage({ user, onLogin, onLogout }) {
   const navigate = useNavigate();
   const startPath = user ? "/home" : "/signup";
+  // 「체험하기」 — 경진대회 관람객이 QR 로 들어와 가입 없이 바로 써 본다. 서버가 기록·코인을 채운 임시 계정을 만든다
+  const [guestBusy, setGuestBusy] = useState(false);
+  const [guestError, setGuestError] = useState("");
+  const tryAsGuest = async () => {
+    if (guestBusy) return;
+    setGuestBusy(true);
+    setGuestError("");
+    try {
+      const me = await startGuest();
+      if (typeof onLogin === "function") onLogin(me);
+      navigate("/home");
+    } catch (err) {
+      setGuestError(err.message || "체험 계정을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setGuestBusy(false);
+    }
+  };
   return <div className="landing landing-studio"><SiteHeader user={user} onLogout={onLogout} /><main>
-    <section className="landing-studio-hero"><img className="landing-studio-hero-bg" src={`${process.env.PUBLIC_URL}/images/hero-bg.jpg`} alt="" aria-hidden /><div className="landing-studio-hero-shade" /><div className="landing-studio-container landing-studio-hero-grid"><motion.div className="landing-studio-hero-copy" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}><span className="landing-studio-kicker">AI CONSUMPTION JOURNAL</span><h1>쓴 돈을 기록하면,<br /><strong>내 소비가 이해되기 시작해요.</strong></h1><p>VORI는 금액만 세는 가계부가 아니에요. 나의 평소 패턴과 소비 이유를 함께 살피고, 더 나은 선택을 펫의 성장으로 돌려드립니다.</p><div className="landing-studio-tags"><span>#자동분류</span><span>#AI판정</span><span>#펫성장</span><span>#소비리포트</span></div><div className="landing-studio-actions"><button type="button" className="landing-studio-primary" onClick={() => navigate(startPath)}>{user ? "내 기록 보러가기" : "무료로 시작하기"} <span>→</span></button><button type="button" className="landing-studio-secondary" onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>사용 방법 보기</button></div></motion.div><motion.div className="landing-studio-hero-visual" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.12 }}><HeroPreview /></motion.div></div></section>
+    <section className="landing-studio-hero"><img className="landing-studio-hero-bg" src={`${process.env.PUBLIC_URL}/images/hero-bg.jpg`} alt="" aria-hidden /><div className="landing-studio-hero-shade" /><div className="landing-studio-container landing-studio-hero-grid"><motion.div className="landing-studio-hero-copy" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}><span className="landing-studio-kicker">AI CONSUMPTION JOURNAL</span><h1>쓴 돈을 기록하면,<br /><strong>내 소비가 이해되기 시작해요.</strong></h1><p>VORI는 금액만 세는 가계부가 아니에요. 나의 평소 패턴과 소비 이유를 함께 살피고, 더 나은 선택을 펫의 성장으로 돌려드립니다.</p><div className="landing-studio-tags"><span>#자동분류</span><span>#AI판정</span><span>#펫성장</span><span>#소비리포트</span></div><div className="landing-studio-actions"><button type="button" className="landing-studio-primary" onClick={() => navigate(startPath)}>{user ? "내 기록 보러가기" : "무료로 시작하기"} <span>→</span></button>{!user && <button type="button" className="landing-studio-secondary landing-studio-guest" onClick={tryAsGuest} disabled={guestBusy}>{guestBusy ? "체험 계정 준비 중…" : "가입 없이 체험하기"}</button>}<button type="button" className="landing-studio-secondary" onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })}>사용 방법 보기</button></div>{!user && <p className="landing-studio-guest-note">이메일·이름 없이 바로 써 볼 수 있어요. 체험 계정은 대회가 끝나면 지워지고, 누르면 <a href="/terms">이용약관</a>·<a href="/privacy">개인정보처리방침</a>에 동의한 것으로 봐요.</p>}{guestError && <p className="landing-studio-guest-error" role="alert">{guestError}</p>}</motion.div><motion.div className="landing-studio-hero-visual" initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.12 }}><HeroPreview /></motion.div></div></section>
     <section className="landing-studio-facts" aria-label="VORI 핵심 특징"><div className="landing-studio-container landing-studio-facts-grid"><div><strong>3단계</strong><span>기록부터 성장까지</span></div><div><strong>3가지</strong><span>소비 시그널</span></div><div><strong>4종</strong><span>펫 성장 스탯</span></div><div><strong>16종</strong><span>함께할 펫</span></div></div></section>
     <section id="features" className="landing-studio-services"><div className="landing-studio-container"><div className="landing-studio-section-head"><span>WHAT VORI DOES</span><h2><em>소비 기록</em>이 습관이 되도록</h2><p>입력의 번거로움은 줄이고, 기록 뒤에 돌아오는 가치는 더 분명하게 만들었어요.</p></div><div className="landing-studio-service-grid">{FEATURES.map((feature, index) => <motion.article key={feature.title} className="landing-studio-service-card" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ duration: 0.5, delay: index * 0.05 }}><span className="landing-studio-service-icon">{feature.icon}</span><h3>{feature.title}</h3><p>{feature.desc}</p><span className="landing-studio-card-index">0{index + 1}</span></motion.article>)}</div></div></section>
     <section className="landing-studio-value"><div className="landing-studio-container landing-studio-value-grid"><div className="landing-studio-value-copy"><span className="landing-studio-kicker">AFTER RECORDING</span><h2>기록으로 끝나지 않고,<br /><strong>다음 선택까지 이어져요.</strong></h2><p>오늘의 소비를 이해하고, 내일의 기준을 만들고, 그 과정이 보리의 성장으로 남습니다.</p><button type="button" onClick={() => navigate("/story")}>VORI 이야기 보기 <span>→</span></button></div><div className="landing-studio-value-list"><article><span>01</span><div><h3>평소의 나와 비교</h3><p>고정된 정답 대신 개인별 소비 평균과 변화 흐름을 사용해요.</p></div></article><article><span>02</span><div><h3>맥락까지 다시 판단</h3><p>경조사, 긴급 지출, 자기투자처럼 금액만으로 알 수 없는 이유를 반영해요.</p></div></article><article><span>03</span><div><h3>성장으로 돌아오는 보상</h3><p>합리적인 선택과 절약이 펫 스탯, 게임머니, 업적으로 연결돼요.</p></div></article></div></div></section>

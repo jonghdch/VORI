@@ -83,6 +83,7 @@ public class SecurityConfig {
                     "/api/auth/signup",
                     "/api/auth/login",
                     "/api/auth/google",
+                    "/api/auth/guest",
                     "/api/auth/logout",
                     "/error"
                 ).permitAll()

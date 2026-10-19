@@ -119,6 +119,31 @@ public class UserService {
         return saved;
     }
 
+    /**
+     * 「체험하기」 임시 계정 — 경진대회 관람객이 이메일·실명·비밀번호 없이 바로 써 본다(GuestAccountService).
+     * 구글 계정처럼 비밀번호가 없고(password_hash NULL — 이메일 로그인으로는 못 들어온다), 약관은 체험하기 버튼
+     * 아래 안내 문구로 동의한 것으로 본다. 일반 가입과 같은 초기화(스탯·시작 펫·가입 축하 코인)를 거친다.
+     */
+    @Transactional
+    public User createGuest(String email, String nickname, String name) {
+        LocalDateTime now = LocalDateTime.now();
+        User user = User.builder()
+            .email(email)
+            .nickname(nickname)
+            .name(name)
+            .role(Role.USER)
+            .termsAgreedAt(now)
+            .privacyAgreedAt(now)
+            .gameMoney(WELCOME_COINS)
+            .createdAt(now)
+            .build();
+
+        User saved = userRepository.saveAndFlush(user);
+        initializeStatStats(saved.getId());
+        grantStarterPet(saved.getId(), now);
+        return saved;
+    }
+
     /** 구글 표시 이름이 없으면 이메일 앞부분을 닉네임으로. nickname 은 NOT NULL·30자. */
     // 가입 규칙(SignupRequest)과 같은 길이 — 닉네임 2~12자, 이름 2~30자
     private static final int NICKNAME_MIN = 2, NICKNAME_MAX = 12, NAME_MIN = 2, NAME_MAX = 30;
