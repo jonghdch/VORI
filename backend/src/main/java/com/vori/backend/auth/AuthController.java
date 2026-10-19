@@ -40,6 +40,7 @@ public class AuthController {
     private final GoogleTokenVerifier googleTokenVerifier;
     private final CustomUserDetailsService userDetailsService;
     private final AccountDeletionService accountDeletionService;
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
@@ -52,13 +53,16 @@ public class AuthController {
     public MeResponse login(@Valid @RequestBody LoginRequest req,
                               HttpServletRequest request,
                               HttpServletResponse response) {
+        loginAttemptLimiter.check(req.email());
         try {
             Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.email(), req.password())
             );
+            loginAttemptLimiter.recordSuccess(req.email());
 
             return establishSession(auth, request, response);
         } catch (BadCredentialsException e) {
+            loginAttemptLimiter.recordFailure(req.email());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다");
         } catch (LockedException e) {
             // 제재(정지·영구정지) 계정 — CustomUserDetailsService 가 잠금 처리한 경우
