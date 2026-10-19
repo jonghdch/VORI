@@ -25,7 +25,8 @@ class UnhandledExceptionStatusTest {
     static class Probe {
         @GetMapping("/month") String month(@RequestParam String month) { return YearMonth.parse(month).toString(); }
         @GetMapping("/missing") String missing() { return Optional.<String>empty().orElseThrow(); }
-        @GetMapping("/duplicate") String duplicate() { throw new DataIntegrityViolationException("Duplicate entry 'x' for key 'uq_secret_index'"); }
+        @GetMapping("/duplicate") String duplicate() { throw new DataIntegrityViolationException("could not execute statement",
+                new java.sql.SQLIntegrityConstraintViolationException("Duplicate entry 'x' for key 'uq_secret_index'", "23000", 1062)); }
     }
 
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new Probe())
