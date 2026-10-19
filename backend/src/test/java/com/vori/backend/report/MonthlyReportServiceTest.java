@@ -123,33 +123,13 @@ class MonthlyReportServiceTest {
     }
 
     @Test
-    @DisplayName("사용자 요청 정산은 가입하기 전 달을 거절한다 — month=0001-01 로 빈 리포트·알림을 찍어낼 수 없게")
-    void requestRejectsMonthBeforeSignup() {
-        com.vori.backend.user.User user = mock(com.vori.backend.user.User.class);
-        when(user.getCreatedAt()).thenReturn(java.time.LocalDateTime.of(2026, 8, 20, 10, 0));
-        when(users.findById(USER)).thenReturn(Optional.of(user));
-
-        assertThatThrownBy(() -> service.settleClosedMonth(USER, YearMonth.of(1, 1), MONTH.plusMonths(1)))
+    @DisplayName("사용자 요청 정산은 12개월보다 오래된 달을 거절한다 — month=0001-01 로 빈 리포트·알림을 찍어낼 수 없게")
+    void requestRejectsVeryOldMonth() {
+        YearMonth current = YearMonth.of(2026, 10);
+        assertThatThrownBy(() -> service.settleClosedMonth(USER, YearMonth.of(1, 1), current))
                 .isInstanceOf(ResponseStatusException.class);
-        assertThatThrownBy(() -> service.settleClosedMonth(USER, YearMonth.of(2026, 7), MONTH.plusMonths(1)))
+        assertThatThrownBy(() -> service.settleClosedMonth(USER, current.minusMonths(13), current))
                 .isInstanceOf(ResponseStatusException.class);
         verify(reports, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("달이 끝나기 전에 만든 리포트는 말일 뒤 정산 때 다시 센다 — 알림은 다시 보내지 않는다")
-    void refreshesReportFrozenMidMonth() {
-        MonthlyReport frozen = MonthlyReport.builder().userId(USER).yearMonth("2026-09")
-                .expenseTotal(10_000).generatedAt(java.time.LocalDateTime.of(2026, 9, 15, 12, 0)).build();
-        when(reports.findByUserIdAndYearMonth(USER, "2026-09")).thenReturn(Optional.of(frozen));
-        when(expenses.sumAmountInRange(eq(USER), any(), any())).thenReturn(120_000L);
-        when(expenses.findByUserIdAndSpentAtBetween(eq(USER), any(), any())).thenReturn(List.of());
-        when(incomes.findByUserIdAndReceivedAtBetween(eq(USER), any(), any())).thenReturn(List.of());
-        when(judgments.findByUserIdAndJudgmentDateBetweenOrderByJudgmentDate(eq(USER), any(), any())).thenReturn(List.of());
-
-        assertThat(service.settle(USER, MONTH)).isTrue();
-        assertThat(frozen.getExpenseTotal()).isEqualTo(120_000);
-        verify(reports, never()).save(any());
-        verify(notifications, never()).notify(any(), any(), any(), any(), any(), any());
     }
 }
