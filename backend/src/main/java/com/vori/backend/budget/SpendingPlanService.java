@@ -24,7 +24,8 @@ public class SpendingPlanService {
 
     /** 설문으로 만든 이번 달 예산은 이후 고정비를 추가해도 바꾸지 않는다. */
     @Transactional public void ensurePlan(Long userId, String yearMonth) {
-        User user = users.findById(userId).orElseThrow();
+        // 같은 GET 이 동시에 와도 한쪽이 만든 뒤 다른 쪽이 보도록 사용자 행으로 줄 세운다(uq_user_stat_budget 충돌 방지).
+        User user = users.findByIdForUpdate(userId).orElseThrow();
         List<UserStatBudget> existing = statBudgets.findByUserIdAndYearMonth(userId, yearMonth);
         // 수입 입력 전 생성된 0원 예산은 판정 보상을 전부 0으로 만든다. 수입이 등록된 뒤
         // 처음 확인할 때만 다시 만들고, 정상적으로 생성된 이번 달 예산은 고정비 변경으로 바꾸지 않는다.
