@@ -11,15 +11,21 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -104,5 +110,18 @@ class ReceiptServiceTest {
 
         assertThat(r.status()).isEqualTo(OcrStatus.FAILED);
         assertThat(r.errorMessage()).contains("AI 사용량을 다 써서").contains("직접 입력");
+    }
+
+    @Test
+    @DisplayName("오늘 인식 횟수를 다 쓴 사용자는 Gemini 를 부르지 않고 429 — 전체가 함께 쓰는 한도를 혼자 쓰지 못하게")
+    void dailyLimitPerUser() {
+        when(repository.countByUserIdAndRequestedAtGreaterThanEqual(eq(1L), any())).thenReturn(20L);
+
+        assertThatThrownBy(() -> service.process(1L, PNG))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode().value())
+                .isEqualTo(429);
+        verifyNoInteractions(geminiClient);
+        verify(repository, never()).save(any());
     }
 }

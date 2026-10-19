@@ -8,6 +8,7 @@ import com.vori.backend.receipt.dto.ReceiptOcrResponse;
 import com.vori.backend.title.TitleCheckEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -47,9 +48,22 @@ public class ReceiptService {
     private static final Set<String> ALLOWED_TYPES = Set.of("image/png", "image/jpeg");
     private static final long MAX_BYTES = 10L * 1024 * 1024; // 10MB
 
+    /**
+     * 사용자당 하루 인식 횟수. 판정·코멘트·펫 대화와 같은 Gemini 하루 한도를 나눠 쓰므로
+     * 한 사람이 다 쓰지 못하게 묶는다. 접수 기록(receipt_ocr_jobs)으로 세서 재시작해도 유지된다.
+     */
+    @Value("${receipt.daily-limit:20}")
+    private int dailyLimit = 20;
+
     /** 업로드 → OCR → 결과. 실패해도 job 은 FAILED 로 남겨 이력을 추적한다. */
     public ReceiptOcrResponse process(Long userId, MultipartFile file) {
         byte[] image = validateAndRead(file);
+        long usedToday = receiptOcrJobRepository.countByUserIdAndRequestedAtGreaterThanEqual(
+                userId, LocalDate.now().atStartOfDay());
+        if (usedToday >= dailyLimit) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "오늘 사진 인식은 " + dailyLimit + "번까지예요. 내일 다시 쓰거나 직접 입력해 주세요.");
+        }
         String mimeType = file.getContentType();
 
         // 1) 접수 기록 — 짧은 쓰기
