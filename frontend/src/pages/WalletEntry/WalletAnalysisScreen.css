@@ -376,6 +376,20 @@
   word-break: keep-all;
 }
 
+/* 사유로 풀린 그룹 표시 — 판정 칩보다 한 단계 약하게(테두리만) */
+.ja-group-softened {
+  display: inline-flex;
+  align-items: center;
+  min-height: 21px;
+  padding: 1px 7px;
+  border: 1px solid var(--hm-line);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--hm-sub);
+  white-space: nowrap;
+}
+
 .ja-chip-none {
   display: inline-flex;
   align-items: center;

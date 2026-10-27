@@ -272,6 +272,8 @@ function GroupJudgmentCard({ group, judgment }) {
             : group.signal
               ? <SignalChip signal={group.signal} />
               : <span className="ja-chip-none">{NO_RECORD_LABEL}</span>}
+          {/* 접힌 줄만 보면 예산을 크게 넘은 그룹에 「여유」가 붙어 헷갈린다 — 사유로 풀린 것임을 같이 보인다 */}
+          {changed && <span className="ja-group-softened">사유 인정</span>}
         </span>
         <span className="ja-group-metrics">
           {summary}

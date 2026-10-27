@@ -837,9 +837,10 @@
     border: 0;
     background: none;
     font-family: inherit;
-    font-size: 11px;
+    /* 11px·#8f877b 는 바탕 위 대비 약 3.5:1 이라 흐렸다 — 12px, 4.5:1 넘는 색으로 */
+    font-size: 12px;
     font-weight: 600;
-    color: #8f877b;
+    color: #6f675c;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
