@@ -194,6 +194,35 @@
   color: var(--sp-green-ink);
   word-break: keep-all;
 }
+/* 알을 아직 못 까는 때(키우는 펫이 만렙 전) 안내 — 초록 안내와 구별되게 연한 주황 */
+.sp-guide--note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  border-color: #efdcb6;
+  background: #fbf3e3;
+  color: #6f4f12;
+}
+.sp-guide--note p {
+  margin: 0;
+  flex: 1 1 220px;
+}
+.sp-guide-link {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
 .sp-eggs {
   list-style: none;
   margin: 0;

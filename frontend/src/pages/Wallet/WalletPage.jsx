@@ -496,15 +496,18 @@ function WalletPage({ user, onLogout }) {
     });
   }, [viewYear, viewMonth, selectedDay]);
 
-  // 표시 범위의 지출 — 월 모드는 달 전체, 주 모드는 보고 있는 주(이번 달 날짜만)
+  // 표시 범위의 지출 — 월 모드는 달 전체, 주 모드는 보고 있는 주(이번 달 날짜만).
+  // 최근 날짜가 위로(목록 탭과 같은 순서) — 오래된 순이면 방금 적은 지출이 맨 아래 페이지에 있다.
+  // 같은 날은 나중에 저장한 것(id 가 큰 것)이 위.
   const visibleExpenseRows = useMemo(() => {
-    if (viewMode !== "week") return expenseRows;
+    const newestFirst = (list) => [...list].sort((a, b) => b.day - a.day || b.dbId - a.dbId);
+    if (viewMode !== "week") return newestFirst(expenseRows);
     const weekDaySet = new Set(
       weekDates
         .filter((d) => d.getFullYear() === viewYear && d.getMonth() + 1 === viewMonth)
         .map((d) => d.getDate()),
     );
-    return expenseRows.filter((r) => weekDaySet.has(r.day));
+    return newestFirst(expenseRows.filter((r) => weekDaySet.has(r.day)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, weekDates, rows]);
   const visibleExpenseTotal = visibleExpenseRows.reduce((s, r) => s + r.amountNum, 0);
@@ -1016,7 +1019,8 @@ function WalletPage({ user, onLogout }) {
                 <p className="hm-hero-foot">월수입을 입력하면 고정비·예비비를 뺀 예산과 비교해 드려요.</p>
               ) : null}
               <p className="lw-hero-sub">
-                수입 {formatWon(monthIncomeTotal)} · 기록 {rows.length}건 · AI 판정 {aiJudgedCount}건
+                {/* 판정은 규칙이 한다 — AI 는 큰 지출에 이유를 물을 뿐이라 「AI 판정」이 아니라 「질문」으로 센다 */}
+                수입 {formatWon(monthIncomeTotal)} · 기록 {rows.length}건 · 질문 {aiJudgedCount}건
               </p>
             </section>
 
@@ -1180,7 +1184,7 @@ function WalletPage({ user, onLogout }) {
                             )}
                             {row.aiStatus && (
                               <p className="lw-detail-ai">
-                                AI 판정 <SignalChip signal={row.signal} />
+                                질문 결과 <SignalChip signal={row.signal} />
                               </p>
                             )}
                           </div>
@@ -1364,6 +1368,14 @@ function WalletPage({ user, onLogout }) {
           </>
           )}
         </div>
+
+        {/* 가계부의 주 행동 — 날짜 카드의 「지출 추가」는 달력 아래(스크롤 한 번)에 있어 첫 화면에서 안 보인다.
+            어느 화면에서든 오늘 기록을 바로 열 수 있게 띄워 둔다. 지난 날짜는 날짜 카드에서 연다.
+            날짜는 넘기지 않는다 — 기록 화면이 누른 순간의 오늘로 연다(화면을 연 채 자정을 넘겨도 어제가 아니게). */}
+        <button type="button" className="lw-fab" onClick={() => navigate("/wallet/new")}>
+          <Icon name="plus" size={18} strokeWidth={2.4} />
+          지출 추가
+        </button>
       </main>
 
       <AppRightSidebar />

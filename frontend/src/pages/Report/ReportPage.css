@@ -265,7 +265,8 @@
 }
 .report-cat-legend-row {
   display: grid;
-  grid-template-columns: 12px 56px 1fr auto;
+  /* 라벨 칸 56px 는 「기타 생활」「마트·식자재」(6자)가 잘렸다 — 6자까지 들어가게, 막대가 줄어든다 */
+  grid-template-columns: 12px minmax(56px, 84px) 1fr auto;
   align-items: center;
   gap: 10px;
 }
@@ -302,7 +303,7 @@
     flex-direction: column;
   }
   .report-cat-legend-row {
-    grid-template-columns: 10px 48px 1fr auto;
+    grid-template-columns: 10px minmax(48px, 80px) 1fr auto;
   }
 }
 

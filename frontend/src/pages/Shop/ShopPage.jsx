@@ -4,8 +4,16 @@ import AppShell from "../../components/AppShell";
 import Icon from "../../components/Icon";
 import PurchaseHistoryModal from "../../components/PurchaseHistoryModal";
 import CoinIcon from "../../components/CoinIcon";
-import { STAGE_LABEL, TIER_LABEL, VARIANT_LABEL, petVisual } from "../../components/petVisual";
-import { buyEgg, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
+import {
+  MAX_LEVEL,
+  STAGE_LABEL,
+  TIER_LABEL,
+  VARIANT_LABEL,
+  petDisplayName,
+  petVisual,
+  withJosa,
+} from "../../components/petVisual";
+import { buyEgg, getActivePet, listEggProducts, listMyEggs, openEgg } from "../../api/pet";
 import { buyFurniture, listFurnitureProducts, listMyFurniture } from "../../api/furniture";
 import { getMe, notifyPetChanged } from "../../api/user";
 import { furnitureVisual, isSurface } from "../../components/furnitureVisual";
@@ -23,7 +31,7 @@ import "./ShopScreen.css";
 const GRADE_COPY = {
   BASIC: "어떤 친구가 태어날지 두근두근한 기본 알이에요.",
   PREMIUM: "희귀한 친구를 만날 확률이 높아진 고급 알이에요.",
-  LEGENDARY: "S등급 친구가 가장 잘 나오는 최고급 알이에요.",
+  LEGENDARY: "레전드 친구를 만날 확률이 가장 높은 최고급 알이에요.",
 };
 
 const TIER_ORDER = ["S", "A", "B", "C"];
@@ -42,6 +50,8 @@ function ShopPage({ user, onLogout }) {
   const [busy, setBusy] = useState(null); // "buy:BASIC" | "open:12" | "furniture:CODE"
   const [notice, setNotice] = useState(null); // { kind: "ok"|"err", text }
   const [result, setResult] = useState(null); // 개봉 결과 { pet, remainGameMoney }
+  // 지금 키우는 펫 — 알은 배웅한 뒤에만 깔 수 있어(EggService) 사기 전에 알린다. 없거나 못 읽으면 null
+  const [activePet, setActivePet] = useState(null);
 
   // 가구 상점 — 상품(잠긴 것 포함)과 내 보유 가구. 보유 수를 상품 카드에 표시한다.
   const [furnitureProducts, setFurnitureProducts] = useState([]);
@@ -70,6 +80,19 @@ function ShopPage({ user, onLogout }) {
     const [prodRes, mineRes] = await Promise.all([listFurnitureProducts(), listMyFurniture()]);
     setFurnitureProducts(prodRes);
     setMyFurniture(mineRes);
+  }, []);
+
+  // 키우는 펫은 안내에만 쓰므로 실패해도 상점은 그대로 뜬다
+  useEffect(() => {
+    let alive = true;
+    getActivePet()
+      .then((pet) => {
+        if (alive) setActivePet(pet || null);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // 가구는 알과 별도로 불러 한쪽이 실패해도 다른 쪽은 뜨게 한다.
@@ -114,6 +137,16 @@ function ShopPage({ user, onLogout }) {
   }, [navigate]);
 
   const gameMoney = me?.gameMoney ?? 0;
+  // 키우는 펫이 있으면(만렙이어도 배웅 전이면) 서버가 개봉을 막는다(EggService) — 사기 전에 알린다.
+  // 체험 계정(1레벨)이 여기서 막혔다.
+  const petMaxLevel = activePet?.maxLevel || MAX_LEVEL;
+  const eggLocked = Boolean(activePet);
+  const petReadyToSend = eggLocked && activePet.level >= petMaxLevel;
+  // 안내 버튼으로 탭을 바꾸면 버튼이 사라진다 — 키보드 초점을 가구 탭으로 옮겨 잃지 않게
+  const showFurnitureFirst = () => {
+    setShopTab("furniture");
+    requestAnimationFrame(() => document.getElementById("shop-tab-furniture")?.focus());
+  };
   const unlimitedCoins = me?.role === "ADMIN";
 
   const handleBuy = async (product) => {
@@ -140,6 +173,9 @@ function ShopPage({ user, onLogout }) {
     try {
       const res = await openEgg(egg.id);
       setResult(res);
+      // 새 펫이 키우는 펫이 된다 — 안내(배웅 전엔 개봉 못 함)를 바로 맞춘다. 펫이 없던 사람이 알 두 개를 샀을 때
+      // 두 번째 개봉이 아무 안내 없이 409 로 막혔다
+      if (res?.pet) setActivePet(res.pet);
       // 새 펫이 생겼다 — 이름 짓기 팝업(PetNameGate)이 이 신호를 받고 뜬다
       notifyPetChanged();
       await reload();
@@ -254,6 +290,30 @@ function ShopPage({ user, onLogout }) {
               <p className="sp-card sp-guide">
                 절약한 돈이 코인이 되고, 코인으로 새 친구가 태어날 알을 살 수 있어요.
               </p>
+              {eggLocked && (
+                <div className="sp-card sp-guide sp-guide--note" role="note">
+                  {petReadyToSend ? (
+                    <>
+                      <p>
+                        {withJosa(petDisplayName(activePet), "을", "를")} 마이룸에서 배웅하면 알을 개봉할 수 있어요.
+                      </p>
+                      <button type="button" className="sp-guide-link" onClick={() => navigate("/myroom")}>
+                        마이룸 가기
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p>
+                        알은 지금 키우는 {withJosa(petDisplayName(activePet), "을", "를")} {petMaxLevel}레벨까지 키워
+                        배웅한 뒤에 개봉할 수 있어요. 미리 사 둘 수는 있어요.
+                      </p>
+                      <button type="button" className="sp-guide-link" onClick={showFurnitureFirst}>
+                        가구 먼저 보기
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
 
               {loading && products.length === 0 && <p className="sp-state">상품을 불러오는 중…</p>}
               {error && <p className="sp-state sp-state--error">{error}</p>}
@@ -289,7 +349,7 @@ function ShopPage({ user, onLogout }) {
                               key={t}
                               className={`sp-prob sp-prob--${t.toLowerCase()} ${pct > 0 ? "" : "is-zero"}`}
                             >
-                              <b>{t}</b> {pct}%
+                              <b>{TIER_LABEL[t]}</b> {pct}%
                             </li>
                           );
                         })}

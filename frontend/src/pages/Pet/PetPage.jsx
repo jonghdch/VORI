@@ -84,9 +84,9 @@ function clamp(value, min, max) {
 
 // 방 카드 아래에 한 문장씩 돌아가며 보여주는 팁
 const ROOM_TIPS = [
-  "펫과 가구를 드래그해서 원하는 위치에 배치해요.",
-  "펫을 우클릭하거나 아래 버튼으로 쓰다듬고 칭찬할 수 있어요.",
-  "가구는 더블클릭하면 인벤토리로 회수돼요.",
+  "펫과 가구를 끌어서 원하는 자리에 놓아요.",
+  "아래 버튼으로 펫을 쓰다듬고 칭찬할 수 있어요. PC 에서는 펫을 우클릭해도 돼요.",
+  "놓은 가구를 빠르게 두 번 누르면 보유 가구로 돌아가요.",
   "배치한 가구만 배웅 선물 보너스에 반영돼요.",
 ];
 
@@ -626,7 +626,7 @@ function PetPage({ user, onLogout }) {
                       onPointerCancel={endDrag}
                       onDoubleClick={(event) => event.preventDefault()}
                       aria-label={`${item.name} 이동`}
-                      title={`${item.name} 드래그 이동, 더블클릭 회수`}
+                      title={`${item.name} 끌어서 이동, 빠르게 두 번 누르면 회수`}
                     >
                       {image ? (
                         <img src={image} alt={item.name} className="pet-placed-image" />

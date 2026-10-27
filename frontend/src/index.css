@@ -16,6 +16,31 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: #f5f3ee;
   color: #3d3830;
+  /* 한글은 낱말 단위로 줄을 바꾼다 — 기본값(normal)은 「손/님」「기다/리는」처럼 낱말 가운데서 끊는다.
+     화면마다 하나씩 keep-all 을 달다 보니 빠진 곳(이야기 제목·설문 제목 등)이 생겨 전체에 건다.
+     띄어쓰기 없는 긴 영문·주소는 칸을 넘칠 때만 아무 데서나 끊는다(break-word). */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* 휴대폰에서 16px 보다 작은 입력칸을 누르면 아이폰 사파리가 화면을 저절로 확대한다(돌아오지 않는다).
+   터치 기기에서만 사용자 화면의 입력칸을 16px 로 올린다. 페이지 CSS 가 뒤에 불려도 이기도록 html 을 붙였다.
+   금액처럼 원래 16px 보다 큰 입력칸은 목록에 없으니 그대로다.
+   클래스 없는 입력칸 규칙은 :where 로 우선순위를 0 으로 둔다 — 크기를 정한 클래스(금액 41px 등)를 덮지 않게. */
+@media (hover: none) and (pointer: coarse) {
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select),
+  html .login-input,
+  html .signup-input,
+  html .settings-input,
+  html .settings-select,
+  html .wr-input,
+  html .ledger-row-input,
+  html .lw-search-input,
+  html .ja-answer-wrap textarea,
+  html .pet-chat-input,
+  html .sp-select {
+    font-size: 16px;
+  }
 }
 
 * {

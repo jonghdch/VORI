@@ -1176,3 +1176,46 @@
     animation: none;
   }
 }
+
+/* ── 「기록하기」 떠 있는 버튼 (탭 바가 있는 폭에서만) ──
+   데스크톱은 오른쪽 바로가기에 「지출 입력」이 있어 띄우지 않는다.
+   색은 홈의 주 버튼과 같은 짙은 갈색 — 흰 글자 대비가 충분하다. */
+.lw-fab {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  /* 맨 아래 카드가 떠 있는 버튼 뒤에 숨지 않게 버튼 높이만큼 더 띄운다 */
+  .lw-layout {
+    padding-bottom: 72px;
+  }
+  .lw-fab {
+    position: fixed;
+    right: 16px;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 16px);
+    z-index: 15; /* 헤더(20)·그 안의 알림 팝오버, 탭 바(35)·상세 시트(40) 아래 */
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 48px;
+    padding: 0 18px 0 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--hm-ink, #3d3830);
+    color: #fffdf9;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    box-shadow: 0 6px 18px rgba(61, 56, 48, 0.22);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lw-fab:active {
+    transform: translateY(1px);
+  }
+  /* 테두리는 바깥(바탕) 위에 그려진다 — 연한 초록은 대비 1.7:1 이라 가계부 다른 버튼과 같은 진한 초록으로 */
+  .lw-fab:focus-visible {
+    outline: 2px solid var(--hm-green-ink, #3f6b2e);
+    outline-offset: 2px;
+  }
+}
