@@ -124,6 +124,7 @@ python scripts/demo_seed.py --checkin --email <이메일>   발표 당일 아침
 ---
 
 ## 관련 문서
+- [`final-presentation.md`](final-presentation.md) — 최종발표 대본·예상 질문, 배포가 늦어질 때 노트북 시연
 - [`judgment-flow.md`](judgment-flow.md) — 하루 판정 흐름(1차 → 사유 → 최종, 자정 정산)
 - [`demo-plan.md`](demo-plan.md) — 9월 중간발표 각본(기록) · [`demo-plan-history.md`](demo-plan-history.md) — 그 이전 기록
 - `scripts/demo_seed.py` — 시연 계정 세팅·리허설
