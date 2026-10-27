@@ -9,8 +9,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,6 +53,51 @@ class CategorizeServiceTest {
         assertEquals("카페", CategorizeService.ruleLeafName("메가커피 아메리카노"));
         assertEquals("게임·구독", CategorizeService.ruleLeafName("넷플릭스"));
         assertEquals("의료·약국", CategorizeService.ruleLeafName("약국 감기약"));
+    }
+
+    @Test
+    void 물건_이름_규칙은_임베딩_없이_분류하고_모호한_부분문자열은_건너뛴다() {
+        String[][] cases = {
+                {"옷걸이", "생필품·잡화"}, {"옷장", "생필품·잡화"}, {"샴푸", "생필품·잡화"}, {"린스", "생필품·잡화"},
+                {"치약", "생필품·잡화"}, {"칫솔", "생필품·잡화"},
+                {"운동화", "신발·잡화"}, {"신발", "신발·잡화"}, {"슬리퍼", "신발·잡화"},
+                {"샌들", "신발·잡화"}, {"양말", "신발·잡화"},
+                {"티셔츠", "의류"}, {"셔츠", "의류"}, {"맨투맨", "의류"}, {"후드티", "의류"},
+                {"청바지", "의류"}, {"반바지", "의류"}, {"슬랙스", "의류"}, {"니트", "의류"},
+                {"가디건", "의류"}, {"패딩", "의류"}, {"자켓", "의류"}, {"재킷", "의류"},
+                {"원피스", "의류"}, {"스커트", "의류"}, {"옷", "의류"},
+                {"립스틱", "화장품"}, {"립밤", "화장품"}, {"틴트", "화장품"}, {"선크림", "화장품"},
+                {"마스카라", "화장품"}, {"파운데이션", "화장품"},
+                {"감기약", "의료·약국"}, {"두통약", "의료·약국"}, {"진통제", "의료·약국"},
+                {"소화제", "의료·약국"},
+                {"공책", "학용품·문구"}, {"지우개", "학용품·문구"},
+                {"교재", "도서"}, {"문제집", "도서"}, {"참고서", "도서"}
+        };
+        long id = 100;
+        for (String[] rule : cases) {
+            assertEquals(rule[1], CategorizeService.ruleLeafName(rule[0]), rule[0]);
+            Category c = leaf(id++, rule[1], true);
+            when(repo.findFirstByName(rule[1])).thenReturn(Optional.of(c));
+            when(repo.findById(c.getId())).thenReturn(Optional.of(c));
+        }
+
+        CategorizeService service = new CategorizeService(repo, gemini, expenses);
+        for (String[] rule : cases) {
+            assertEquals(rule[1], service.categorize(rule[0]).leafName(), rule[0]);
+        }
+        assertEquals("신발·잡화", service.categorize("나이키 운동화").leafName());
+        assertEquals("생필품·잡화", service.categorize("옷걸이 10개").leafName());
+        assertEquals("의류", service.categorize("청바지").leafName());
+        assertEquals("의료·약국", service.categorize("감기약").leafName());
+        assertEquals("도서", service.categorize("토익 문제집").leafName());
+        assertEquals("도서", CategorizeService.ruleLeafName("중고 전공책"), "「공책」보다 먼저 본다");
+        assertNull(CategorizeService.ruleLeafName("바지락 칼국수"));
+        assertNull(CategorizeService.ruleLeafName("책상"));
+        assertNull(CategorizeService.ruleLeafName("크림 파스타"));
+        assertNull(CategorizeService.ruleLeafName("파스쿠찌"));
+        assertNull(CategorizeService.ruleLeafName("섬유유연제 샤프란"));
+        assertEquals("카페", CategorizeService.ruleLeafName("스타벅스 대구두류점"));
+        verify(gemini, never()).embed(anyString());
     }
 
     @Test
@@ -309,5 +356,68 @@ class CategorizeServiceTest {
                 Clock.fixed(t0.plus(CategorizeService.EMBED_PAUSE), ZoneOffset.UTC));
         service.suggest(7L, "문밸리 타코");
         verify(gemini, times(2)).embed(anyString());
+    }
+
+    @Test
+    void 부팅_임베딩_실패는_부분_캐시를_버리고_5분_뒤_분류_요청에서_다시_준비한다() {
+        Category parent = Category.builder().id(50L).name("쇼핑").build();
+        Category clothes = Category.builder().id(51L).parentId(50L).name("의류").isActive(true).build();
+        Category shoes = Category.builder().id(52L).parentId(50L).name("신발·잡화").isActive(true).build();
+        when(repo.findAll()).thenReturn(List.of(parent, clothes, shoes));
+        when(gemini.embed(anyString())).thenReturn(new double[]{1, 0})
+                .thenThrow(new RuntimeException("embedding outage"));
+
+        CategorizeService service = new CategorizeService(repo, gemini, expenses);
+        Instant t0 = Instant.parse("2026-10-27T03:00:00Z");
+        ReflectionTestUtils.setField(service, "clock", Clock.fixed(t0, ZoneOffset.UTC));
+        ReflectionTestUtils.setField(service, "loader", (Executor) Runnable::run);
+
+        service.initAsync();
+
+        assertFalse(service.isReady());
+        assertTrue(((java.util.Map<?, ?>) ReflectionTestUtils.getField(service, "leafEmbeddings")).isEmpty());
+        assertTrue(((java.util.Map<?, ?>) ReflectionTestUtils.getField(service, "leafMeta")).isEmpty());
+
+        ReflectionTestUtils.setField(service, "clock", Clock.fixed(t0.plusSeconds(60), ZoneOffset.UTC));
+        assertNull(service.categorize("미분류 물건"));
+        verify(gemini, times(2)).embed(anyString());
+
+        doAnswer(invocation -> {
+            String text = invocation.getArgument(0);
+            return text.contains("의류") || text.equals("미분류 물건")
+                    ? new double[]{1, 0} : new double[]{0, 1};
+        }).when(gemini).embed(anyString());
+        ReflectionTestUtils.setField(service, "clock",
+                Clock.fixed(t0.plus(CategorizeService.EMBED_PAUSE), ZoneOffset.UTC));
+
+        assertNull(service.categorize("미분류 물건"), "준비를 시작한 이번 요청은 임베딩 결과를 기다리지 않는다");
+        assertTrue(service.isReady());
+        CategorizeService.Result result = service.categorize("미분류 물건");
+
+        assertEquals("의류", result.leafName());
+        assertEquals(CategorizeService.Source.EMBEDDING, result.source());
+        verify(gemini, times(5)).embed(anyString());
+    }
+
+    @Test
+    void 임베딩_준비_중에는_겹쳐서_다시_시작하지_않는다() {
+        Category parent = Category.builder().id(50L).name("쇼핑").build();
+        Category clothes = Category.builder().id(51L).parentId(50L).name("의류").isActive(true).build();
+        when(repo.findAll()).thenReturn(List.of(parent, clothes));
+        when(gemini.embed(anyString())).thenReturn(new double[]{1, 0});
+        List<Runnable> pending = new ArrayList<>();
+        CategorizeService service = new CategorizeService(repo, gemini, expenses);
+        ReflectionTestUtils.setField(service, "loader", (Executor) pending::add);
+
+        service.initAsync();
+
+        assertEquals(1, pending.size());
+        assertNull(service.categorize("미분류 물건"));
+        assertEquals(1, pending.size());
+        verify(gemini, never()).embed(anyString());
+
+        pending.get(0).run();
+        assertTrue(service.isReady());
+        assertFalse(((java.util.concurrent.atomic.AtomicBoolean) ReflectionTestUtils.getField(service, "loading")).get());
     }
 }
