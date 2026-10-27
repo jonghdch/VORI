@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 사용자가 입력한 내역(name) 의 의도를 추론해 카테고리 leaf 를 결정.
@@ -40,9 +42,9 @@ public class CategorizeService {
     private final ExpenseRepository expenseRepository;
 
     // leaf id → 임베딩 벡터 (768차원)
-    private final Map<Long, double[]> leafEmbeddings = new HashMap<>();
+    private volatile Map<Long, double[]> leafEmbeddings = Map.of();
     // leaf id → 부모 + 자식 정보 (응답 생성용)
-    private final Map<Long, CachedLeaf> leafMeta = new HashMap<>();
+    private volatile Map<Long, CachedLeaf> leafMeta = Map.of();
     private volatile boolean ready = false;
 
     // 점수 미달 시 null. 0.55 정도면 매칭. 튜닝 필요.
@@ -55,6 +57,10 @@ public class CategorizeService {
      */
     static final Duration EMBED_PAUSE = Duration.ofMinutes(5);
     private volatile Instant embedPausedUntil = Instant.MIN;
+    private volatile Instant nextLoadAt = Instant.MIN;
+    private AtomicBoolean loading = new AtomicBoolean();
+    /** 테스트에서는 동기로 실행해 준비 시점을 제어한다. */
+    private Executor loader = r -> new Thread(r, "categorize-init").start();
     /** 지금 시각. 테스트가 바꾼다. */
     private Clock clock = Clock.systemUTC();
 
@@ -115,7 +121,18 @@ public class CategorizeService {
     @PostConstruct
     void initAsync() {
         // 부팅 차단하지 않게 별도 스레드. 첫 분류 요청 전엔 ready=false 라 fallback 처리.
-        new Thread(this::loadEmbeddings, "categorize-init").start();
+        startLoading();
+    }
+
+    private void startLoading() {
+        if (!loading.compareAndSet(false, true)) return;
+        loader.execute(() -> {
+            try {
+                loadEmbeddings();
+            } finally {
+                loading.set(false);
+            }
+        });
     }
 
     private void loadEmbeddings() {
@@ -125,7 +142,8 @@ public class CategorizeService {
             for (Category c : all) {
                 if (c.getParentId() == null) parents.put(c.getId(), c.getName());
             }
-            int loaded = 0;
+            Map<Long, double[]> embeddings = new HashMap<>();
+            Map<Long, CachedLeaf> metadata = new HashMap<>();
             for (Category c : all) {
                 if (c.getParentId() == null) continue; // leaf 만
                 if (!Boolean.TRUE.equals(c.getIsActive())) continue;
@@ -136,16 +154,22 @@ public class CategorizeService {
                         ? parentName + " " + c.getName()
                         : parentName + " " + c.getName() + " - " + hint;
                 double[] vec = geminiClient.embed(text);
-                leafEmbeddings.put(c.getId(), vec);
-                leafMeta.put(c.getId(), new CachedLeaf(
+                embeddings.put(c.getId(), vec);
+                metadata.put(c.getId(), new CachedLeaf(
                         c.getId(), c.getName(), c.getParentId(), parentName
                 ));
-                loaded++;
             }
+            Map<Long, double[]> completeEmbeddings = Map.copyOf(embeddings);
+            Map<Long, CachedLeaf> completeMetadata = Map.copyOf(metadata);
+            leafEmbeddings = completeEmbeddings;
+            leafMeta = completeMetadata;
             ready = true;
-            log.info("CategorizeService 준비 완료 — {} 개 leaf 임베딩 캐시됨", loaded);
+            nextLoadAt = Instant.MIN;
+            log.info("CategorizeService 준비 완료 — {} 개 leaf 임베딩 캐시됨", embeddings.size());
         } catch (Exception e) {
-            log.error("카테고리 임베딩 초기화 실패. /api/categorize 응답 안 됨", e);
+            ready = false;
+            nextLoadAt = clock.instant().plus(EMBED_PAUSE);
+            log.warn("카테고리 임베딩 준비 실패 — 5분 뒤 분류 요청 때 다시 준비한다 ({})", e.toString());
         }
     }
 
@@ -334,7 +358,7 @@ public class CategorizeService {
      * 자주 나오고 뜻이 하나뿐인 상호·낱말은 규칙으로 먼저 정해 그 흔들림을 없앤다. Gemini 가 안 돼도 동작한다.
      * 「편의점」「다이소」「쿠팡」「올리브영」「치킨」처럼 무엇을 샀는지 이름만으로 모르는 것은 넣지 않는다
      * — 그런 건 사용자에게 물어야 한다. 「커피」처럼 다른 물건 이름 안에도 들어가는 일반 낱말도 넣지 않는다
-     * (커피머신이 카페로 확정되면 화면이 그대로 골라 버린다) — 상호와 장소·서비스 이름만 둔다.
+     * (커피머신이 카페로 확정되면 화면이 그대로 골라 버린다) — 뜻이 하나뿐인 물건과 상호·장소·서비스 이름을 둔다.
      *
      * 위에서부터 처음 맞는 규칙을 쓴다. 그래서 더 구체적인 것을 먼저 둔다(물건 이름 → 판매처, 이마트24 → 이마트,
      * 고속버스 → 버스, 동물병원 → 병원). 영문 4자 이하(CU·KT·PT 등)는 앞뒤가 영문·숫자가 아닐 때만 맞춘다(CUP 은 아님).
@@ -342,6 +366,23 @@ public class CategorizeService {
     private static final String[][] RULES = {
         // 물건 이름이 판매처보다 먼저 — 「홈플러스 세제」「GS25 물티슈」는 마트·편의점이 아니라 생필품이다(Codex 검토).
         // 큰 마트·편의점은 식자재 말고도 여러 물건을 팔아, 판매처만으로는 무엇을 샀는지 모른다.
+        // 「바지」(바지락), 「치마」(치마살), 「책」(책상·책장·책가방), 「약」(너무 넓음), 「코트」(테니스 코트), 「파스」(파스타·파스쿠찌),
+        // 「구두」(대구 두류동 같은 지점 이름), 「샤프」(섬유유연제 샤프란)는 부분 문자열 오분류를 막기 위해 제외한다.
+        {"옷걸이", "생필품·잡화"}, {"옷장", "생필품·잡화"}, {"샴푸", "생필품·잡화"}, {"린스", "생필품·잡화"},
+        {"치약", "생필품·잡화"}, {"칫솔", "생필품·잡화"},
+        {"운동화", "신발·잡화"}, {"신발", "신발·잡화"}, {"슬리퍼", "신발·잡화"},
+        {"샌들", "신발·잡화"}, {"양말", "신발·잡화"},
+        {"티셔츠", "의류"}, {"셔츠", "의류"}, {"맨투맨", "의류"}, {"후드티", "의류"},
+        {"청바지", "의류"}, {"반바지", "의류"}, {"슬랙스", "의류"}, {"니트", "의류"},
+        {"가디건", "의류"}, {"패딩", "의류"}, {"자켓", "의류"}, {"재킷", "의류"},
+        {"원피스", "의류"}, {"스커트", "의류"}, {"옷", "의류"},
+        {"립스틱", "화장품"}, {"립밤", "화장품"}, {"틴트", "화장품"}, {"선크림", "화장품"},
+        {"마스카라", "화장품"}, {"파운데이션", "화장품"},
+        {"감기약", "의료·약국"}, {"두통약", "의료·약국"}, {"진통제", "의료·약국"},
+        {"소화제", "의료·약국"},
+        {"전공책", "도서"}, // 「공책」이 안에 들어 있어 먼저 본다
+        {"공책", "학용품·문구"}, {"지우개", "학용품·문구"},
+        {"교재", "도서"}, {"문제집", "도서"}, {"참고서", "도서"},
         {"노트북", "생필품·잡화"}, {"충전기", "생필품·잡화"}, {"보조배터리", "생필품·잡화"}, {"휴지", "생필품·잡화"},
         {"물티슈", "생필품·잡화"}, {"세제", "생필품·잡화"},
         {"사료", "펫용품"}, {"형광펜", "학용품·문구"}, {"볼펜", "학용품·문구"},
@@ -367,7 +408,7 @@ public class CategorizeService {
         // 문화
         {"CGV", "영화"}, {"메가박스", "영화"}, {"롯데시네마", "영화"}, {"영화", "영화"},
         {"뮤지컬", "공연·뮤지컬"}, {"콘서트", "공연·뮤지컬"}, {"연극", "공연·뮤지컬"},
-        {"교보문고", "도서"}, {"알라딘", "도서"}, {"예스24", "도서"}, {"영풍문고", "도서"}, {"전공책", "도서"},
+        {"교보문고", "도서"}, {"알라딘", "도서"}, {"예스24", "도서"}, {"영풍문고", "도서"},
         // 여가
         {"넷플릭스", "게임·구독"}, {"티빙", "게임·구독"}, {"왓챠", "게임·구독"}, {"디즈니플러스", "게임·구독"}, {"웨이브", "게임·구독"},
         {"유튜브 프리미엄", "게임·구독"}, {"스포티파이", "게임·구독"}, {"멜론", "게임·구독"}, {"스팀", "게임·구독"}, {"닌텐도", "게임·구독"},
@@ -418,7 +459,11 @@ public class CategorizeService {
             Result r = leafResult(ruled, 1.0, Source.RULE);
             if (r != null) return r;
         }
-        if (!ready || clock.instant().isBefore(embedPausedUntil)) return null;
+        if (!ready) {
+            if (!clock.instant().isBefore(nextLoadAt)) startLoading();
+            return null;
+        }
+        if (clock.instant().isBefore(embedPausedUntil)) return null;
         double[] queryVec;
         try {
             queryVec = geminiClient.embed(name.trim());
@@ -430,7 +475,9 @@ public class CategorizeService {
 
         Long bestId = null;
         double bestScore = -1.0;
-        for (Map.Entry<Long, double[]> e : leafEmbeddings.entrySet()) {
+        Map<Long, double[]> embeddings = leafEmbeddings;
+        Map<Long, CachedLeaf> metadata = leafMeta;
+        for (Map.Entry<Long, double[]> e : embeddings.entrySet()) {
             double score = cosine(queryVec, e.getValue());
             if (score > bestScore) {
                 bestScore = score;
@@ -438,7 +485,7 @@ public class CategorizeService {
             }
         }
         if (bestId == null || bestScore < MATCH_THRESHOLD) return null;
-        CachedLeaf m = leafMeta.get(bestId);
+        CachedLeaf m = metadata.get(bestId);
         return new Result(m.id, m.name, m.parentId, m.parentName, bestScore, Source.EMBEDDING);
     }
 

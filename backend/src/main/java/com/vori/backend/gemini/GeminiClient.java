@@ -294,7 +294,7 @@ public class GeminiClient {
             for (int i = 0; i < vec.length; i++) vec[i] = values.get(i).doubleValue();
             return vec;
         } catch (Exception e) {
-            log.error("Gemini embedding 호출 실패 — text={}", text, e);
+            logGeminiFailure("임베딩", e);
             throw new RuntimeException("AI 분류 서비스 호출에 실패했습니다.");
         }
     }
@@ -321,7 +321,7 @@ public class GeminiClient {
         } catch (AiQuotaException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Gemini 펫 대화 호출 실패", e);
+            logGeminiFailure("펫 대화", e);
             throw new RuntimeException("AI 서비스 호출에 실패했습니다.");
         }
     }
@@ -338,7 +338,7 @@ public class GeminiClient {
         } catch (AiQuotaException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Gemini API 호출 실패", e);
+            logGeminiFailure("텍스트 생성", e);
             throw new RuntimeException("AI 서비스 호출에 실패했습니다.");
         }
     }
@@ -376,8 +376,18 @@ public class GeminiClient {
         } catch (AiQuotaException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Gemini 영수증 인식 실패", e);
+            logGeminiFailure("영수증 인식", e);
             throw new RuntimeException("영수증 인식에 실패했습니다.");
+        }
+    }
+
+    private void logGeminiFailure(String operation, Exception e) {
+        if (e instanceof RestClientResponseException response) {
+            log.warn("[Gemini] {} 실패 — HTTP {}", operation, response.getStatusCode().value());
+        } else if (e instanceof ResourceAccessException) {
+            log.warn("[Gemini] {} 실패 — timeout/IO", operation);
+        } else {
+            log.error("Gemini {} 호출 실패", operation, e);
         }
     }
 

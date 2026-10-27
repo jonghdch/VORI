@@ -71,7 +71,7 @@ public class ReceiptService {
                     ? "오늘 준비한 AI 사용량을 다 써서 사진을 읽지 못했어요. 직접 입력해 주세요."
                     : "지금 요청이 몰렸어요. 1분 뒤 다시 올려 주세요.", e);
         } catch (Exception e) {
-            return fail(job.getId(), "AI 인식 호출에 실패했습니다.", e);
+            return fail(job.getId(), "사진을 읽지 못했어요. 잠시 뒤 다시 올리거나 직접 입력해 주세요.", e);
         }
 
         ExtractedReceipt extracted;
@@ -80,7 +80,7 @@ public class ReceiptService {
         } catch (Exception e) {
             log.warn("영수증 JSON 파싱 실패 — jobId={}, raw={}", job.getId(),
                     raw == null ? "null" : raw.substring(0, Math.min(200, raw.length())));
-            return fail(job.getId(), "인식 결과를 해석하지 못했습니다.", e);
+            return fail(job.getId(), "사진에서 내용을 알아보지 못했어요. 다시 찍어 올리거나 직접 입력해 주세요.", e);
         }
 
         // 여러 건이 찍힌 캡처는 프롬프트가 값을 비우게 했지만, 모델이 하나를 골라 채워 와도 쓰지 않는다 —
