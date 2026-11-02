@@ -19,10 +19,10 @@ import "./HomeDashboard.css";
 // 홈 요약(summary.stats)은 지출에 쌓인 변동만 합산해서, 출석 아이템처럼 펫에만 반영되는
 // 변화가 빠진다. 그래서 이 카드에는 쓰지 않는다.
 const STAT_META = [
-  { key: "statEnergy", label: "에너지", color: "var(--home-bar-green)" },
-  { key: "statCharm", label: "매력", color: "var(--home-bar-red)" },
-  { key: "statIq", label: "지능", color: "var(--home-bar-orange)" },
-  { key: "statEndurance", label: "지구력", color: "var(--home-bar-blue)" },
+  { key: "statEnergy", label: "에너지", color: "var(--c-data-green)" },
+  { key: "statCharm", label: "매력", color: "var(--c-data-red)" },
+  { key: "statIq", label: "지능", color: "var(--c-data-orange)" },
+  { key: "statEndurance", label: "지구력", color: "var(--c-data-blue)" },
 ];
 
 const won = (n) => `${(n ?? 0).toLocaleString("ko-KR")}원`;
@@ -221,7 +221,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                   <p>상점에서 새 친구를 데려올 수 있어요.</p>
                   <button
                     type="button"
-                    className="home-btn home-btn-primary"
+                    className="btn btn--primary home-btn home-btn-primary"
                     onClick={() => navigate("/shop")}
                   >
                     상점 가기
@@ -400,7 +400,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               </button>
               <button
                 type="button"
-                className="home-btn home-btn-dark"
+                className="btn btn--primary home-btn home-btn-dark"
                 onClick={() => navigate("/wallet/new")}
               >
                 + 지출 추가하기
@@ -441,7 +441,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             </ul>
             <button
               type="button"
-              className="home-btn home-btn-primary home-btn-block"
+              className="btn btn--primary btn--block home-btn home-btn-primary home-btn-block"
               onClick={() => navigate("/dex?tab=achievements")}
             >
               ▶ 더 많은 업적 확인하기
@@ -465,7 +465,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             {reportMonth ? (
               <button
                 type="button"
-                className="home-btn home-btn-primary home-btn-block"
+                className="btn btn--primary btn--block home-btn home-btn-primary home-btn-block"
                 onClick={() => navigate(`/report?month=${reportMonth}`)}
               >
                 ▶ 리포트 확인하기
@@ -473,7 +473,7 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             ) : (
               <button
                 type="button"
-                className="home-btn home-btn-primary home-btn-block"
+                className="btn btn--primary btn--block home-btn home-btn-primary home-btn-block"
                 onClick={() => navigate("/wallet")}
               >
                 ▶ 가계부 이동하기

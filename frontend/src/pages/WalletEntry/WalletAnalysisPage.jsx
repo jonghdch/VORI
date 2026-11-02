@@ -342,10 +342,10 @@ function WalletAnalysisPage({ user }) {
               </div>
             )}
             <div className="ja-actions ja-error-actions">
-              <button type="button" className="hm-btn hm-btn--dark ja-primary" onClick={() => setReloadKey((k) => k + 1)}>
+              <button type="button" className="btn btn--primary hm-btn hm-btn--dark ja-primary" onClick={() => setReloadKey((k) => k + 1)}>
                 다시 시도
               </button>
-              <button type="button" className="ja-btn-line" onClick={goBack}>돌아가기</button>
+              <button type="button" className="btn btn--secondary ja-btn-line" onClick={goBack}>돌아가기</button>
             </div>
           </main>
         ) : total === 0 ? (
@@ -377,7 +377,7 @@ function WalletAnalysisPage({ user }) {
               </p>
             )}
             <JudgmentResults expenses={expenses} judgment={judgment} />
-            <button type="button" className="hm-btn hm-btn--dark hm-btn--block ja-primary ja-done" onClick={goDone}>
+            <button type="button" className="btn btn--primary btn--block hm-btn hm-btn--dark hm-btn--block ja-primary ja-done" onClick={goDone}>
               가계부로 돌아가기 <Icon name="arrowRight" size={17} />
             </button>
           </main>
@@ -500,7 +500,7 @@ function WalletAnalysisPage({ user }) {
                     {submitError && <p className="ja-submit-error" role="alert">{submitError}</p>}
                     <button
                       type="button"
-                      className="hm-btn hm-btn--dark hm-btn--block ja-primary"
+                      className="btn btn--primary btn--block hm-btn hm-btn--dark hm-btn--block ja-primary"
                       onClick={isLastQuestion ? finish : goNext}
                       disabled={submitting}
                     >
@@ -558,10 +558,10 @@ function JudgeConfirmDialog({ onCancel, onConfirm }) {
   };
 
   return (
-    <div className="ja-confirm-backdrop">
+    <div className="modal-backdrop ja-confirm-backdrop">
       <div
         ref={dialogRef}
-        className="hm-card ja-confirm-dialog"
+        className="modal ja-confirm-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -570,9 +570,9 @@ function JudgeConfirmDialog({ onCancel, onConfirm }) {
       >
         <h2 id={titleId}>하루에 한 번만 판정할 수 있어요</h2>
         <p id={textId}>지금 판정할까요? 판정 뒤에 지출을 고쳐도 오늘 보상은 바뀌지 않아요.</p>
-        <div className="ja-confirm-actions">
-          <button type="button" className="ja-btn-line" onClick={onCancel}>돌아가기</button>
-          <button type="button" className="hm-btn hm-btn--dark ja-primary" onClick={onConfirm} autoFocus>
+        <div className="modal-actions ja-confirm-actions">
+          <button type="button" className="btn btn--secondary ja-btn-line" onClick={onCancel}>돌아가기</button>
+          <button type="button" className="btn btn--primary hm-btn hm-btn--dark ja-primary" onClick={onConfirm} autoFocus>
             판정하기
           </button>
         </div>
