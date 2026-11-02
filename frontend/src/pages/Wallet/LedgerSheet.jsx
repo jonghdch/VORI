@@ -63,14 +63,14 @@ function LedgerSheet({
 
   return (
     <div
-      className="lw-sheet-backdrop"
+      className="modal-backdrop modal-backdrop--sheet lw-sheet-backdrop"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
         ref={dialogRef}
-        className={`lw-sheet ${className}`}
+        className={`sheet lw-sheet ${className}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
@@ -78,19 +78,19 @@ function LedgerSheet({
         tabIndex={-1}
         onKeyDown={onKeyDown}
       >
-        <span className="lw-sheet-grip" aria-hidden />
+        <span className="sheet-grip lw-sheet-grip" aria-hidden />
         {header ?? (
-          <header className="lw-sheet-head">
-            <h2 id={titleId} className="lw-sheet-title">{title}</h2>
+          <header className="modal-head lw-sheet-head">
+            <h2 id={titleId} className="modal-title lw-sheet-title">{title}</h2>
             {showClose && (
-              <button ref={closeRef} type="button" className="hm-icon-btn" aria-label="닫기" onClick={onClose}>
+              <button ref={closeRef} type="button" className="modal-close" aria-label="닫기" onClick={onClose}>
                 <Icon name="close" size={18} />
               </button>
             )}
           </header>
         )}
-        <div className="lw-sheet-body">{children}</div>
-        {footer && <div className="lw-sheet-foot">{footer}</div>}
+        <div className="modal-body lw-sheet-body">{children}</div>
+        {footer && <div className="modal-foot lw-sheet-foot">{footer}</div>}
       </div>
     </div>
   );

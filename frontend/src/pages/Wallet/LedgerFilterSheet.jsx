@@ -100,10 +100,10 @@ function LedgerFilterSheet({ value, instruments, categoryOptions, incomeOptions,
       title="내역 필터"
       onClose={onClose}
       footer={
-        <div className="lw-sheet-actions">
+        <div className="modal-actions lw-sheet-actions">
           <button
             type="button"
-            className="hm-btn lw-btn-soft"
+            className="btn btn--secondary hm-btn lw-btn-soft"
             onClick={() => {
               setDraft(EMPTY_LIST_FILTER);
               setResetKey((k) => k + 1);
@@ -111,7 +111,7 @@ function LedgerFilterSheet({ value, instruments, categoryOptions, incomeOptions,
           >
             초기화
           </button>
-          <button type="button" className="hm-btn hm-btn--dark" onClick={() => onApply(draft)}>
+          <button type="button" className="btn btn--primary hm-btn hm-btn--dark" onClick={() => onApply(draft)}>
             적용
           </button>
         </div>

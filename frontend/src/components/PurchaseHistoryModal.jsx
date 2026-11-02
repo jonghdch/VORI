@@ -89,14 +89,14 @@ function PurchaseHistoryModal({ onClose }) {
 
   return (
     <div
-      className="purchase-backdrop"
+      className="modal-backdrop purchase-backdrop"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
         ref={dialogRef}
-        className="purchase-dialog"
+        className="modal purchase-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -104,13 +104,13 @@ function PurchaseHistoryModal({ onClose }) {
         onKeyDown={onKeyDown}
       >
         <header className="purchase-head">
-          <h2 id={titleId} className="purchase-title">
+          <h2 id={titleId} className="modal-title purchase-title">
             구매 내역
           </h2>
           <button
             ref={closeRef}
             type="button"
-            className="purchase-close"
+            className="modal-close purchase-close"
             onClick={onClose}
             aria-label="닫기"
           >
