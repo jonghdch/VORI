@@ -20,18 +20,21 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -135,5 +138,27 @@ class DailyReportServiceTest {
         service.generateNow(USER, DAY);
 
         verify(geminiClient, never()).generateDailyComment(any());
+    }
+
+    @Test
+    @DisplayName("사용자 요청 생성은 이미 있는 리포트를 그대로 돌려주고 AI 를 다시 부르지 않는다")
+    void requestReusesExistingReport() {
+        when(dailyReportRepository.findByUserIdAndReportDate(USER, DAY)).thenReturn(Optional.of(
+                DailyReport.builder().userId(USER).reportDate(DAY).incomeTotal(0).expenseTotal(0).savedAmount(0)
+                        .aiComment("이미 있음").build()));
+
+        assertThat(service.generateOnRequest(USER, DAY, DAY.plusDays(1)).aiComment()).isEqualTo("이미 있음");
+        verifyNoInteractions(geminiClient);
+    }
+
+    @Test
+    @DisplayName("사용자 요청 생성은 오늘·미래·30일보다 오래된 날짜를 거절한다 — 날짜를 바꿔 가며 AI 한도를 쓰지 못하게")
+    void requestRejectsOutOfRangeDates() {
+        LocalDate today = DAY.plusDays(1);
+        for (LocalDate bad : List.of(today, today.plusDays(1), today.minusDays(31))) {
+            assertThatThrownBy(() -> service.generateOnRequest(USER, bad, today))
+                    .isInstanceOf(ResponseStatusException.class);
+        }
+        verifyNoInteractions(geminiClient);
     }
 }

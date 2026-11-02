@@ -223,7 +223,7 @@ public class LedgerService {
 
         int saved = e.getSavedAmount() == null ? 0 : e.getSavedAmount();
         if (saved > 0) {
-            User user = userRepository.findById(userId).orElseThrow();
+            User user = userRepository.findByIdForUpdate(userId).orElseThrow();
             int current = user.getTotalSaved() == null ? 0 : user.getTotalSaved();
             user.addTotalSaved(-Math.min(saved, current)); // 음수 방지 클램프
         }

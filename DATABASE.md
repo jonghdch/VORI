@@ -31,6 +31,8 @@ mysql -u root -e "CREATE DATABASE vori CHARACTER SET utf8mb4 COLLATE utf8mb4_uni
 
 - `utf8mb4` 필수 — 이모지·한국어 보존
 - 사용자 분리는 졸작 스코프에선 `root` 그대로 사용해도 됨. 운영 단계엔 별도 계정
+- 백엔드 테스트(`gradlew test`)는 `vori` 가 아니라 `vori_test` DB 를 쓴다. 없으면 테스트가 처음 돌 때 만든다.
+  `root` 가 아닌 계정을 쓴다면 그 계정에 `vori_test` 권한도 준다(아래 트러블슈팅).
 
 ### 3. 접속 확인
 
@@ -143,6 +145,16 @@ public class CategorySeeder implements CommandLineRunner {
 ### `Access denied for user 'root'@'localhost'`
 - `mysql -u root -p` 로 직접 접속해서 비밀번호 맞는지 확인
 - 비번 모르면: `brew services stop mysql` → `mysqld_safe --skip-grant-tables &` → 비번 재설정
+
+### 테스트만 `Access denied for user ... to database 'vori_test'`
+- 테스트는 `vori_test` DB 를 쓰는데, 지금 계정에 `vori` 권한만 있어서 DB 를 만들지 못한 경우다.
+- `root` 로 접속해 권한을 준다(Windows·macOS 같은 명령). `'vori'@'localhost'` 는 `.env` 에 적은 계정 이름으로 바꾼다.
+  ```sql
+  CREATE DATABASE IF NOT EXISTS vori_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  GRANT ALL PRIVILEGES ON vori_test.* TO 'vori'@'localhost';
+  ```
+- 권한을 줄 수 없으면 쓸 수 있는 DB 를 직접 지정해서 돌린다. 이때 그 DB 에 테스트 데이터가 쌓이므로 개발용 `vori` 는 피한다.
+  PowerShell: `$env:SPRING_DATASOURCE_URL="jdbc:mysql://127.0.0.1:3306/<DB 이름>?serverTimezone=Asia/Seoul"; .\gradlew test`
 
 ### 한글이 `???` 으로 저장됨
 - DB 생성 시 `utf8mb4` 빠뜨림. 다시 생성하거나 `ALTER DATABASE vori CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`

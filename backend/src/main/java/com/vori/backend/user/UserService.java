@@ -186,7 +186,7 @@ public class UserService {
 
     @Transactional
     public void recordLogin(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
         user.incrementLoginCount();
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "LOGIN"));

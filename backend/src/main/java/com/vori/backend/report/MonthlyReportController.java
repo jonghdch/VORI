@@ -37,10 +37,12 @@ public class MonthlyReportController {
         monthlyReportService.markRead(principal.getId(), yearMonth);
     }
 
-    /** POST /api/monthly-reports/generate?month=2026-09 — 본인 리포트 즉시 정산(시연·확인용). 생략하면 이번 달. */
+    /** POST /api/monthly-reports/generate?month=2026-09 — 본인 리포트 즉시 정산(시연·확인용). 지난 달까지만, 생략하면 지난 달. */
     @PostMapping("/generate")
     public void generate(@AuthenticationPrincipal UserPrincipal principal,
                          @RequestParam(required = false) String month) {
-        monthlyReportService.settle(principal.getId(), month == null ? YearMonth.now() : YearMonth.parse(month));
+        YearMonth current = YearMonth.now();
+        monthlyReportService.settleClosedMonth(principal.getId(),
+                month == null ? current.minusMonths(1) : YearMonth.parse(month), current);
     }
 }
