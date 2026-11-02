@@ -110,6 +110,39 @@ cp .env.example .env   # repo 루트에서
 > 백엔드는 `spring.config.import` 로 `.env` 를 **repo 루트 기준 상대경로**로 읽는다. 그래서 백엔드는 항상 **repo 루트를 작업 디렉터리로** 실행해야 한다(위 1회 준비 4번).
 > 편집기에서 `.env` 저장 시 **줄바꿈은 LF** 로 (CRLF 면 값 끝에 `\r` 이 붙어 DB 비번이 깨질 수 있음).
 
+## Docker 로 실행
+
+Node·Java·MySQL 을 따로 설치하지 않고 프론트·백엔드·MySQL 을 컨테이너 3개로 띄운다. 로컬 확인과 시연 연습용이고 배포 서버는 `deploy/` 구성을 쓴다.
+
+1. [Docker Desktop](https://www.docker.com/products/docker-desktop/) 을 설치하고 실행한다 (macOS 는 OrbStack 도 된다)
+2. repo 루트에 `.env` 를 만든다. 이미 있으면 건너뛴다
+   - Windows (PowerShell): `Copy-Item .env.example .env`
+   - macOS: `cp .env.example .env`
+3. repo 루트에서 실행한다
+
+```bash
+docker compose up -d --build
+```
+
+첫 빌드는 몇 분 걸린다. 끝나면 http://localhost:3000 으로 접속한다.
+
+| 컨테이너 | PC 에서 접속하는 주소 | 설명 |
+|---|---|---|
+| `frontend` | `localhost:3000` | React 빌드 + Nginx. `/api` 를 백엔드로 넘긴다 |
+| `backend` | `localhost:8080` | Spring Boot. `.env` 를 읽고 DB 접속만 `db` 컨테이너로 고정한다 |
+| `db` | `127.0.0.1:3307` (계정 `vori` / 비밀번호 `vori`) | MySQL 8.4. PC 에 깔린 MySQL 과 데이터가 분리된다 |
+
+| 명령 | 하는 일 |
+|---|---|
+| `docker compose logs -f backend` | 백엔드 로그 보기 |
+| `docker compose up -d --build` | 코드를 바꾼 뒤 다시 빌드해서 띄우기 |
+| `docker compose down` | 끄기. 데이터는 남는다 |
+| `docker compose down -v` | 끄고 **DB 데이터까지 삭제** |
+
+- **포트가 겹칠 때**: `npm start`·`bootRun` 으로 띄운 개발 서버가 3000·8080 을 쓰고 있으면 먼저 끈다. 같이 켜 두려면 `.env` 에 `FRONTEND_PORT`·`BACKEND_PORT`·`DB_PORT` 를 적는다
+- **DB 는 빈 상태로 시작한다**: Flyway 가 테이블을 만들고 관리자 계정은 `.env` 의 `ADMIN_PASSWORD` 로 생긴다. 시연 데이터가 필요하면 `python scripts/demo_seed.py` 를 실행한다
+- **프론트 설정값**: `frontend/.env.local` 은 읽지 않는다. 구글 로그인은 루트 `.env` 의 `GOOGLE_CLIENT_ID`, AI 판정 시각은 `REACT_APP_AI_ACTIVE_FROM_HOUR` 를 쓰고 값을 바꾸면 `--build` 로 다시 빌드한다
+
 ## 파일별 역할 가이드
 
 ---
