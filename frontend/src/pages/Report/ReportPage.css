@@ -34,7 +34,7 @@
 .report-side-col {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--sp-5);
   min-width: 0;
 }
 .report-side-col > .home-card {
@@ -61,13 +61,13 @@
 .report-card-title {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
 }
 .report-card-period {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -82,24 +82,24 @@
 .report-cal-legend {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--home-muted);
+  gap: var(--sp-2);
+  font-size: var(--fs-caption);
+  color: var(--c-text-2);
   white-space: nowrap;
 }
 .report-cal-swatch {
   display: inline-block;
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   margin-left: 8px;
 }
 .report-cal-swatch.is-marked {
-  background: var(--home-green);
+  background: var(--c-primary);
 }
 .report-cal-swatch.is-highlight {
-  background: var(--home-green-soft);
-  box-shadow: inset 0 0 0 1px var(--home-green);
+  background: var(--c-primary-soft);
+  box-shadow: var(--ring-primary);
 }
 .report-cal-legend .report-cal-swatch:first-child {
   margin-left: 0;
@@ -109,18 +109,18 @@
 .report-hero-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px 16px;
+  gap: var(--sp-3) var(--sp-4);
   margin: 14px 0 4px;
 }
 .report-kpi {
-  padding: 12px 14px;
-  border-radius: var(--home-radius-sm);
-  background: #f6f8f3;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--c-bg);
   min-width: 0;
 }
 .report-kpi .home-kpi-title {
   margin-bottom: 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
 }
 .report-kpi .home-kpi-value {
   margin-bottom: 2px;
@@ -130,19 +130,19 @@
   font-variant-numeric: tabular-nums;
 }
 .report-kpi .home-kpi-sub {
-  font-size: 12px;
+  font-size: var(--fs-caption);
 }
 .report-kpi-unit {
   margin-left: 4px;
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 .report-kpi-value--pos {
-  color: var(--home-bar-green);
+  color: var(--c-data-green);
 }
 .report-kpi-value--neg {
-  color: var(--home-bar-red);
+  color: var(--c-data-red);
 }
 @media (max-width: 620px) {
   .report-hero-stats {
@@ -161,9 +161,9 @@
   margin-top: 4px;
   display: flex;
   height: 14px;
-  border-radius: 999px;
+  border-radius: var(--r-full);
   overflow: hidden;
-  background: #eef1ea;
+  background: var(--c-bg);
   gap: 2px;
 }
 .report-signal-seg {
@@ -172,23 +172,23 @@
   min-width: 4px;
   transition: width 0.4s ease;
 }
-.report-signal-seg--green { background: var(--home-bar-green); }
+.report-signal-seg--green { background: var(--c-data-green); }
 .report-signal-seg--gray  { background: #b9c0b3; }
-.report-signal-seg--red   { background: var(--home-bar-red); }
+.report-signal-seg--red   { background: var(--c-data-red); }
 .report-signal-legend {
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
   display: flex;
-  gap: 14px;
-  font-size: 12px;
+  gap: var(--sp-4);
+  font-size: var(--fs-caption);
   font-weight: 600;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 .report-signal-legend li {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--sp-1);
 }
 .report-signal-dot {
   width: 8px;
@@ -197,17 +197,17 @@
 }
 .report-signal-empty {
   margin: 0;
-  font-size: 13px;
-  color: var(--home-muted);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
 }
 
 /* 히어로 본문 — 도넛 + 카테고리 범례(막대) */
 .report-hero-body {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: var(--sp-6);
   flex: 1;
-  padding-top: 8px;
+  padding-top: var(--sp-2);
 }
 .report-donut-wrap {
   flex-shrink: 0;
@@ -223,16 +223,16 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  box-shadow: 0 2px 10px rgba(124, 91, 176, 0.14);
+  box-shadow: var(--shadow-sm);
 }
 .report-donut--empty {
-  background: #eef1ea !important;
+  background: var(--c-bg) !important;
 }
 .report-donut-hole {
   width: 106px;
   height: 106px;
   border-radius: 50%;
-  background: var(--home-card-surface);
+  background: var(--c-surface);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -242,14 +242,14 @@
   gap: 2px;
 }
 .report-donut-total {
-  font-size: 15px;
+  font-size: var(--fs-body);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 .report-donut-label {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 
 /* 카테고리 범례 — 점 · 라벨 · 막대 · 금액(비율) */
@@ -259,7 +259,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-3);
   flex: 1;
   min-width: 0;
 }
@@ -267,7 +267,7 @@
   display: grid;
   grid-template-columns: 12px 56px 1fr auto;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-2);
 }
 .report-cat-legend-dot {
   width: 10px;
@@ -276,9 +276,9 @@
   flex-shrink: 0;
 }
 .report-cat-legend-label {
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 600;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -287,15 +287,15 @@
   height: 10px;
 }
 .report-cat-amount {
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .report-cat-amount small {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 @media (max-width: 620px) {
   .report-hero-body {
@@ -310,10 +310,10 @@
 .report-title {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 24px;
+  gap: var(--sp-2);
+  font-size: var(--fs-h1);
   font-weight: 900;
-  color: var(--home-text);
+  color: var(--c-text);
 }
 .report-title-badge {
   display: inline-flex;
@@ -321,12 +321,12 @@
   justify-content: center;
   width: 38px;
   height: 38px;
-  border-radius: 12px;
-  font-size: 20px;
+  border-radius: var(--r-md);
+  font-size: var(--fs-h2);
   flex-shrink: 0;
-  background: linear-gradient(160deg, #b79ce0 0%, #9b7cd1 55%, #7c5bb0 100%);
+  background: var(--grad-primary);
   transform: rotate(-6deg);
-  box-shadow: 0 3px 0 rgba(110, 79, 158, 0.4), 0 5px 10px rgba(110, 79, 158, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 .report-title-text {
   line-height: 1.3;
@@ -335,8 +335,8 @@
 /* ── 지난달(지난주) 비교 한 줄 — 스냅샷 KPI 아래 ── */
 .report-compare {
   margin: 4px 0 14px;
-  font-size: 13px;
-  color: var(--home-muted);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
 }
 .report-compare--up::before { content: "▲ "; color: #c9605a; }
 .report-compare--down::before { content: "▼ "; color: #5b8db3; }
@@ -347,28 +347,28 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 .report-pay-manage {
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: 12px;
-  color: var(--home-muted);
+  font-size: var(--fs-caption);
+  color: var(--c-text-2);
   cursor: pointer;
 }
-.report-pay-manage:hover { color: var(--home-text); }
-.report-pay-manage:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.report-pay-manage:hover { color: var(--c-text); }
+.report-pay-manage:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: var(--r-sm); }
 .report-pay-insight {
   margin: 6px 0 12px;
-  font-size: 13px;
-  color: var(--home-text);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text);
 }
 .report-pay-insight strong { font-weight: 800; }
 .report-pay-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-3);
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
@@ -377,24 +377,24 @@
   display: grid;
   grid-template-columns: minmax(140px, 200px) minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
+  gap: var(--sp-4);
 }
 .report-pay-name {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-2);
   min-width: 0;
 }
 .report-pay-name-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: var(--home-text);
+  color: var(--c-text);
 }
 .report-pay-name-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.report-pay-name-text small { font-size: 11px; font-weight: 400; color: var(--home-muted); }
+.report-pay-name-text small { font-size: var(--fs-caption); font-weight: 400; color: var(--c-text-2); }
 .report-pay-kind-dot {
   flex: none;
   width: 26px;
@@ -405,36 +405,36 @@
 .report-pay-track {
   display: block;
   height: 12px;
-  border-radius: 999px;
-  background: #efebe2;
+  border-radius: var(--r-full);
+  background: var(--c-track);
   overflow: hidden;
 }
 .report-pay-fill {
   display: flex;
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--r-full);
   overflow: hidden;
 }
 .report-pay-seg { height: 100%; }
-.report-pay-seg--none { background: #d8d2c6; }
+.report-pay-seg--none { background: var(--c-border-strong); }
 .report-pay-amount {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
-  color: var(--home-text);
+  color: var(--c-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.report-pay-amount small { font-size: 11px; font-weight: 400; color: var(--home-muted); }
+.report-pay-amount small { font-size: var(--fs-caption); font-weight: 400; color: var(--c-text-2); }
 .report-pay-red { font-weight: 700; color: #b85c55; }
 .report-pay-legend { margin-top: 14px; }
 
 @media (max-width: 620px) {
   .report-pay-row {
     grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: 6px;
+    row-gap: var(--sp-2);
   }
   .report-pay-track { grid-column: 1 / -1; grid-row: 2; }
 }

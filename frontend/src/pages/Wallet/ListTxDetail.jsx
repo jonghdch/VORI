@@ -74,12 +74,12 @@ function ListTxDetail({ row, iconName, categoryLabel, instrument, onOpenDate, on
         </div>
       </div>
       <div className={`lw-tx-detail-actions ${isIncome ? "is-single" : ""}`}>
-        <button type="button" className="hm-btn lw-btn-soft" onClick={onOpenDate}>
+        <button type="button" className="btn btn--secondary hm-btn lw-btn-soft" onClick={onOpenDate}>
           <Icon name="calendar" size={16} />
           날짜에서 보기
         </button>
         {onEdit && (
-          <button type="button" className="hm-btn hm-btn--dark" onClick={onEdit}>
+          <button type="button" className="btn btn--primary hm-btn hm-btn--dark" onClick={onEdit}>
             <Icon name="pencil" size={16} strokeWidth={2.2} />이 지출 수정
           </button>
         )}

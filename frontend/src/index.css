@@ -1,5 +1,7 @@
 /* Pretendard (한글 본문) + Nunito (영문/로고) 폰트 로드.
    CDN을 쓰기 때문에 별도 설치는 필요 없습니다. */
+@import "./styles/tokens.css";
+@import "./styles/components.css";
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css");
 @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;900&display=swap");
 
@@ -14,8 +16,8 @@ body {
     "Roboto", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f5f3ee;
-  color: #3d3830;
+  background: var(--c-bg);
+  color: var(--c-text);
 }
 
 * {

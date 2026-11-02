@@ -111,8 +111,8 @@ function ProfileSettingsPanel({ user, onUserUpdate }) {
         {error && <p className="profile-message error">{error}</p>}
         {notice && <p className="profile-message success">{notice}</p>}
         <div className="profile-actions">
-          <button type="button" className="profile-cancel" onClick={() => { setForm(initial); setError(""); setNotice(""); }}>취소</button>
-          <button type="submit" className="profile-save" disabled={!changed || saving}>{saving ? "저장 중..." : "저장하기"}</button>
+          <button type="button" className="btn btn--secondary profile-cancel" onClick={() => { setForm(initial); setError(""); setNotice(""); }}>취소</button>
+          <button type="submit" className="btn btn--primary profile-save" disabled={!changed || saving}>{saving ? "저장 중..." : "저장하기"}</button>
         </div>
       </form>
     </div>

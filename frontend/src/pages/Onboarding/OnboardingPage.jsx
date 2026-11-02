@@ -126,7 +126,7 @@ function OnboardingPage() {
           <div className="signup-actions">
             <button
               type="button"
-              className="signup-secondary"
+              className="btn btn--secondary btn--lg signup-secondary"
               onClick={() => navigate("/signup/profile")}
               disabled={saving}
             >
@@ -134,7 +134,7 @@ function OnboardingPage() {
             </button>
             <button
               type="button"
-              className="signup-submit signup-action-primary"
+              className="btn btn--primary btn--lg btn--block signup-submit signup-action-primary"
               onClick={() => finish("/wallet/new")}
               disabled={saving}
             >

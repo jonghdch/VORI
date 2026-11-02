@@ -1,55 +1,51 @@
 .legal-page {
-  --legal-text: #2d3328;
-  --legal-muted: #7a8072;
-  --legal-border: #e6ebe0;
-  --legal-green: #5e8c4e;
-  --legal-bg: #f8f9f5;
+
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--legal-bg);
-  color: var(--legal-text);
+  background: var(--c-bg);
+  color: var(--c-text);
 }
 
 .legal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 28px;
-  border-bottom: 1px solid var(--legal-border);
-  background: #fffdf9;
+  padding: var(--sp-4) var(--sp-7);
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
 }
 
 .legal-logo {
   border: none;
   background: none;
-  font-size: 22px;
+  font-size: var(--fs-h2);
   font-weight: 800;
   letter-spacing: 0.02em;
-  color: var(--legal-text);
+  color: var(--c-text);
   cursor: pointer;
   font-family: inherit;
 }
 
 .legal-back {
-  border: 1px solid var(--legal-border);
+  border: 1px solid var(--c-border);
   background: #fff;
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
-  color: var(--legal-muted);
+  border-radius: var(--r-full);
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   cursor: pointer;
   font-family: inherit;
 }
 .legal-back:hover {
-  background: var(--legal-bg);
+  background: var(--c-bg);
 }
 
 .legal-article {
-  max-width: 760px;
+  max-width: var(--container-max);
   width: 100%;
   margin: 0 auto;
-  padding: 40px 28px 72px;
+  padding: 40px var(--sp-7) 72px;
   box-sizing: border-box;
   flex: 1;
 }
@@ -62,18 +58,18 @@
 }
 
 .legal-effective {
-  font-size: 13px;
-  color: var(--legal-muted);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   margin: 0 0 16px;
 }
 
 .legal-draft-note {
-  font-size: 13px;
-  color: var(--legal-muted);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   background: #fff;
-  border: 1px dashed var(--legal-border);
-  border-radius: 10px;
-  padding: 12px 14px;
+  border: 1px dashed var(--c-border);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
   margin: 0 0 32px;
   line-height: 1.7;
 }
@@ -83,33 +79,33 @@
 }
 
 .legal-section-title {
-  font-size: 17px;
+  font-size: var(--fs-h3);
   font-weight: 700;
   margin: 0 0 10px;
 }
 
 .legal-p {
-  font-size: 14px;
-  color: var(--legal-muted);
+  font-size: var(--fs-body);
+  color: var(--c-text-2);
   line-height: 1.85;
   margin: 0 0 10px;
 }
 
 .legal-p strong {
-  color: var(--legal-text);
+  color: var(--c-text);
 }
 
 .legal-ul {
   margin: 0 0 10px;
-  padding-left: 20px;
+  padding-left: var(--sp-5);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .legal-ul li {
-  font-size: 14px;
-  color: var(--legal-muted);
+  font-size: var(--fs-body);
+  color: var(--c-text-2);
   line-height: 1.7;
 }
 
@@ -117,50 +113,50 @@
   width: 100%;
   border-collapse: collapse;
   margin: 4px 0 10px;
-  font-size: 13.5px;
+  font-size: var(--fs-body-sm);
 }
 .legal-table th,
 .legal-table td {
-  border: 1px solid var(--legal-border);
-  padding: 8px 12px;
+  border: 1px solid var(--c-border);
+  padding: var(--sp-2) var(--sp-3);
   text-align: left;
   vertical-align: top;
   line-height: 1.6;
-  color: var(--legal-muted);
+  color: var(--c-text-2);
   /* 좁은 화면에서 한국어 단어가 중간에 끊기지 않게 */
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
 .legal-table th {
   background: #fff;
-  color: var(--legal-text);
+  color: var(--c-text);
   font-weight: 700;
   white-space: nowrap;
 }
 
 .legal-footer {
   text-align: center;
-  padding: 24px;
-  font-size: 12px;
-  color: var(--legal-muted);
-  border-top: 1px solid var(--legal-border);
+  padding: var(--sp-6);
+  font-size: var(--fs-caption);
+  color: var(--c-text-2);
+  border-top: 1px solid var(--c-border);
 }
 
 @media (max-width: 640px) {
   .legal-header {
-    padding: 14px 16px;
+    padding: var(--sp-4) var(--sp-4);
   }
   .legal-article {
-    padding: 28px 18px 56px;
+    padding: var(--sp-7) var(--sp-4) 56px;
   }
   .legal-title {
-    font-size: 24px;
+    font-size: var(--fs-h1);
   }
   .legal-table {
-    font-size: 12.5px;
+    font-size: var(--fs-caption);
   }
   .legal-table th,
   .legal-table td {
-    padding: 6px 8px;
+    padding: var(--sp-2) var(--sp-2);
   }
 }

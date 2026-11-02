@@ -126,10 +126,10 @@ export function PetNameModal({ pet, onNamed }) {
   };
 
   return (
-    <div className="pet-name-backdrop">
+    <div className="modal-backdrop pet-name-backdrop">
       <div
         ref={dialogRef}
-        className="pet-name-dialog"
+        className="modal pet-name-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -180,7 +180,7 @@ export function PetNameModal({ pet, onNamed }) {
           </p>
           <button
             type="submit"
-            className="home-btn home-btn-primary home-btn-block"
+            className="btn btn--primary btn--block home-btn home-btn-primary home-btn-block"
             disabled={busy}
           >
             {busy ? "저장 중…" : "이름 짓기"}

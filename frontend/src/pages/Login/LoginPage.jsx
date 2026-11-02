@@ -177,7 +177,7 @@ function LoginPage({ onLogin }) {
 
             <button
               type="submit"
-              className="login-submit"
+              className="btn btn--primary btn--lg btn--block login-submit"
               disabled={loading}
             >
               {loading ? "로그인 중…" : "로그인"}

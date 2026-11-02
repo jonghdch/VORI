@@ -2,32 +2,11 @@
    여는 버튼(.sp-history-btn)의 자리·모양은 Shop/ShopScreen.css 가 정한다. */
 /* ── 다이얼로그 ── */
 .purchase-backdrop {
-  position: fixed;
-  inset: 0;
   z-index: 200; /* 사이드바(41)·마이룸 메뉴(50)·가구 회수 확인보다 위 */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(45, 51, 40, 0.48);
-  animation: purchase-fade 0.18s ease-out;
 }
 
 .purchase-dialog {
-  display: flex;
-  flex-direction: column;
   width: min(420px, 100%);
-  max-height: min(560px, calc(100vh - 40px));
-  box-sizing: border-box;
-  padding: 22px 22px 18px;
-  border-radius: var(--home-radius);
-  border: 1px solid var(--home-card-border);
-  background: var(--home-card-surface);
-  color: var(--home-text);
-  box-shadow:
-    0 1px 2px rgba(45, 51, 40, 0.08),
-    0 18px 48px rgba(45, 51, 40, 0.22);
-  animation: purchase-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .purchase-dialog:focus {
@@ -38,28 +17,12 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-}
-
-.purchase-head-text {
-  min-width: 0;
+  gap: var(--sp-3);
 }
 
 .purchase-title {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 900;
-  line-height: 1.35;
   letter-spacing: -0.02em;
   word-break: keep-all;
-}
-
-.purchase-summary {
-  margin: 6px 0 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--home-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .purchase-close {
@@ -68,30 +31,30 @@
   height: 32px;
   margin: -4px -6px 0 0;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--r-full);
   background: none;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   font-family: inherit;
-  font-size: 22px;
+  font-size: var(--fs-h2);
   line-height: 1;
   cursor: pointer;
   transition: background 0.12s ease, color 0.12s ease;
 }
 
 .purchase-close:hover {
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
 }
 
 .purchase-close:focus-visible {
-  outline: 2px solid var(--home-green-dark);
+  outline: 2px solid var(--c-primary-strong);
   outline-offset: 2px;
 }
 
 .purchase-body {
   min-height: 0;
   margin: 16px -6px 0;
-  padding: 0 6px;
+  padding: 0 var(--sp-2);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -100,51 +63,40 @@
   margin: 0;
   padding: 36px 0;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 
 .purchase-state--err {
-  color: var(--home-warn);
+  color: var(--c-danger);
 }
 
 .purchase-retry {
   display: block;
   margin: -24px auto 24px;
-  padding: 8px 14px;
-  border: 1px solid var(--home-card-border);
-  border-radius: 999px;
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-full);
   background: #fff;
-  color: var(--home-green-dark);
+  color: var(--c-primary-strong);
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 800;
   cursor: pointer;
 }
 
 .purchase-retry:hover {
-  background: var(--home-green-soft);
+  background: var(--c-primary-soft);
 }
 
 .purchase-retry:focus-visible {
-  outline: 2px solid var(--home-green-dark);
+  outline: 2px solid var(--c-primary-strong);
   outline-offset: 2px;
-}
-
-.purchase-group {
-  margin-top: 16px;
 }
 
 .purchase-group:first-child {
   margin-top: 0;
-}
-
-.purchase-group-title {
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--home-muted);
 }
 
 .purchase-list {
@@ -153,16 +105,16 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .purchase-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--home-card-border);
-  border-radius: var(--home-radius-sm);
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
   background: #fff;
 }
 
@@ -172,8 +124,8 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
-  background: var(--home-green-soft);
+  border-radius: var(--r-md);
+  background: var(--c-primary-soft);
 }
 
 .purchase-thumb-image {
@@ -184,7 +136,7 @@
 }
 
 .purchase-thumb-emoji {
-  font-size: 24px;
+  font-size: var(--fs-h1);
   line-height: 1;
 }
 
@@ -195,7 +147,7 @@
 
 .purchase-name {
   display: block;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 800;
   line-height: 1.35;
   overflow: hidden;
@@ -207,11 +159,11 @@
   display: flex;
   flex-wrap: wrap; /* 좁은 화면에서는 날짜·상태가 다음 줄로 */
   align-items: center;
-  gap: 2px 6px;
+  gap: 2px var(--sp-2);
   margin-top: 5px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -221,36 +173,32 @@
 
 .purchase-kind {
   flex-shrink: 0;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 11px;
+  padding: 3px var(--sp-2);
+  border-radius: var(--r-full);
+  font-size: var(--fs-caption);
   font-weight: 800;
   line-height: 1;
 }
 
 .purchase-kind--egg {
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
 }
 
 .purchase-kind--furniture {
-  background: #fdf0da;
+  background: var(--c-gold-soft);
   color: #9a6b12;
 }
 
 .purchase-price {
   flex-shrink: 0;
-  font-size: 15px;
+  font-size: var(--fs-body);
   font-weight: 900;
-  color: var(--home-text);
+  color: var(--c-text);
   font-variant-numeric: tabular-nums;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .purchase-backdrop,
-  .purchase-dialog {
-    animation: none;
-  }
 
   .purchase-close,
   .purchase-retry {

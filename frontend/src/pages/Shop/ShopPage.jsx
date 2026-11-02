@@ -304,7 +304,7 @@ function ShopPage({ user, onLogout }) {
                         )}
                         <button
                           type="button"
-                          className="sp-buy"
+                          className="btn btn--primary btn--sm sp-buy"
                           disabled={!affordable || busy !== null}
                           onClick={() => setConfirm({ kind: "egg", product: item, image })}
                         >
@@ -343,7 +343,7 @@ function ShopPage({ user, onLogout }) {
                             </span>
                             <button
                               type="button"
-                              className="sp-btn sp-btn--dark sp-btn--sm"
+                              className="btn btn--primary btn--sm sp-btn sp-btn--dark sp-btn--sm"
                               disabled={busy !== null}
                               onClick={() => handleOpen(egg)}
                             >
@@ -460,16 +460,16 @@ function BuySheet({ product, image, gameMoney, unlimitedCoins, busy, onCancel, o
 
   const after = gameMoney - product.price;
   return (
-    <div className="sp-sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && !busy && onCancel()}>
+    <div className="modal-backdrop modal-backdrop--sheet sp-sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && !busy && onCancel()}>
       <div
-        className="sp-sheet"
+        className="sheet sp-sheet"
         role="dialog"
         aria-modal="true"
         aria-labelledby="sp-sheet-title"
         tabIndex={-1}
         ref={panelRef}
       >
-        <span className="sp-sheet-grip" aria-hidden />
+        <span className="sheet-grip sp-sheet-grip" aria-hidden />
         <h2 id="sp-sheet-title">
           {product.name}
           {objectParticle(product.name)} 살까요?
@@ -494,11 +494,11 @@ function BuySheet({ product, image, gameMoney, unlimitedCoins, busy, onCancel, o
             <dd>{unlimitedCoins ? "무제한" : num(after)}</dd>
           </div>
         </dl>
-        <div className="sp-sheet-actions">
-          <button type="button" className="sp-btn sp-btn--soft" onClick={onCancel} disabled={busy}>
+        <div className="modal-actions sp-sheet-actions">
+          <button type="button" className="btn btn--secondary sp-btn sp-btn--soft" onClick={onCancel} disabled={busy}>
             취소
           </button>
-          <button type="button" className="sp-btn sp-btn--dark" onClick={onConfirm} disabled={busy}>
+          <button type="button" className="btn btn--primary sp-btn sp-btn--dark" onClick={onConfirm} disabled={busy}>
             {busy ? "구매 중…" : "구매하기"}
           </button>
         </div>

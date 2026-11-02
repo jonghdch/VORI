@@ -99,7 +99,7 @@ function AdminTools() {
               </select>
               <button
                 type="button"
-                className="home-btn home-btn-primary"
+                className="btn btn--primary home-btn home-btn-primary"
                 disabled={busy || !speciesId}
                 onClick={() =>
                   run("종족 변경", () => adminSetMyPetAppearance(Number(speciesId), variant), { pet: true })
@@ -118,7 +118,7 @@ function AdminTools() {
                 <button
                   key={st}
                   type="button"
-                  className="home-btn"
+                  className="btn btn--secondary home-btn"
                   disabled={busy}
                   onClick={() => run(`${STAGE_LABEL[st]}(${st})`, () => adminSetMyPetStage(st), { pet: true })}
                 >
@@ -131,7 +131,7 @@ function AdminTools() {
                 <button
                   key={lv}
                   type="button"
-                  className="home-btn"
+                  className="btn btn--secondary home-btn"
                   disabled={busy}
                   onClick={() => run(`Lv. ${lv}`, () => adminSetMyPetLevel(lv), { pet: true })}
                 >
@@ -147,7 +147,7 @@ function AdminTools() {
             <div className="admin-tools-row">
               <button
                 type="button"
-                className="home-btn"
+                className="btn btn--secondary home-btn"
                 disabled={busy}
                 onClick={() => {
                   if (!window.confirm("활성 펫을 비울까요? (보상 0 으로 배웅 처리)")) return;

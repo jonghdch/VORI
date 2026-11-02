@@ -6,14 +6,14 @@
 .admin-dash-title {
   display: inline-block;
   margin: 0 8px 0 0;
-  font-size: 22px;
+  font-size: var(--fs-h2);
   font-weight: 700;
 }
 .admin-dash-sub {
   display: inline-block;
   margin: 0 0 24px;
-  font-size: 14px;
-  color: var(--admin-muted);
+  font-size: var(--fs-body);
+  color: var(--c-text-2);
 }
 
 /* 로딩/에러 공통 상태 */
@@ -22,72 +22,72 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  font-size: 16px;
-  color: var(--admin-faint);
+  gap: var(--sp-3);
+  font-size: var(--fs-body);
+  color: var(--c-text-3);
 }
 .admin-dash-state--error {
   flex-direction: column;
-  color: #b4524a;
+  color: var(--c-danger);
 }
 .admin-dash-state--error button {
-  border: 1px solid var(--admin-border);
-  background: var(--admin-surface);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-2);
   cursor: pointer;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 16px;
-  color: var(--admin-text);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body);
+  color: var(--c-text);
 }
 
 /* ───── KPI 카드 그리드 ───── */
 .admin-dash-kpis {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: var(--sp-4);
   margin-bottom: 24px;
 }
 .admin-dash-kpi {
-  background: var(--admin-card);
-  border: 1px solid var(--admin-card-border);
-  border-radius: 14px;
-  padding: 20px 24px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5) var(--sp-6);
+  box-shadow: var(--shadow-sm);
 }
 .admin-dash-kpi--accent {
-  border-color: var(--admin-green);
+  border-color: var(--c-primary);
   background: rgba(127, 176, 105, 0.07);
 }
 .admin-dash-kpi-label {
-  font-size: 14px;
-  color: var(--admin-muted);
+  font-size: var(--fs-body);
+  color: var(--c-text-2);
   margin-bottom: 4px;
 }
 .admin-dash-kpi-value {
-  font-size: 28px;
+  font-size: var(--fs-h1);
   font-weight: 700;
-  color: var(--admin-text);
+  color: var(--c-text);
   font-variant-numeric: tabular-nums;
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 .admin-dash-kpi--accent .admin-dash-kpi-value {
-  color: var(--admin-green);
+  color: var(--c-primary);
 }
 .admin-dash-kpi-suffix {
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 500;
-  color: var(--admin-faint);
+  color: var(--c-text-3);
 }
 
 /* ───── 차트 카드 ───── */
 .admin-dash-card {
-  background: var(--admin-card);
-  border: 1px solid var(--admin-card-border);
-  border-radius: 14px;
-  padding: 16px 24px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4) var(--sp-6);
+  box-shadow: var(--shadow-sm);
 }
 .admin-dash-card-head {
   display: flex;
@@ -97,16 +97,16 @@
 }
 .admin-dash-card-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 700;
 }
 /* ───── 막대 차트 (순수 CSS) ───── */
 .admin-dash-chart {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: var(--sp-2);
   height: 200px;
-  padding-top: 8px;
+  padding-top: var(--sp-2);
 }
 .admin-dash-bar-col {
   flex: 1;
@@ -116,9 +116,9 @@
   height: 100%;
 }
 .admin-dash-bar-value {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  color: var(--admin-muted);
+  color: var(--c-text-2);
   margin-bottom: 8px;
   font-variant-numeric: tabular-nums;
 }
@@ -133,13 +133,13 @@
   width: 60%;
   max-width: 44px;
   min-height: 3px;
-  background: var(--admin-green);
-  border-radius: 6px 6px 0 0;
+  background: var(--c-primary);
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
   transition: height 0.3s ease;
 }
 .admin-dash-bar-label {
-  font-size: 14px;
-  color: var(--admin-faint);
+  font-size: var(--fs-body);
+  color: var(--c-text-3);
   margin-top: 8px;
   font-variant-numeric: tabular-nums;
 }

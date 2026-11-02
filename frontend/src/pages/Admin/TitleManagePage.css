@@ -1,40 +1,40 @@
 /* 업적/칭호 관리 — 생성·수정 폼 + 목록. 색 토큰은 .admin 스코프 상속(제재 관리와 같은 결). */
 .title-form {
-  padding: 20px 24px;
+  padding: var(--sp-5) var(--sp-6);
   margin-bottom: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-4);
 }
 .title-form-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 14px;
-  color: var(--admin-text);
+  gap: var(--sp-3);
+  font-size: var(--fs-body);
+  color: var(--c-text);
 }
 .title-link {
   border: 0;
   background: none;
   padding: 0;
-  font-size: 13px;
-  color: var(--admin-muted);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   cursor: pointer;
   text-decoration: underline;
 }
 .title-form-row {
   display: flex;
-  gap: 14px;
+  gap: var(--sp-4);
   flex-wrap: wrap;
 }
 .title-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
   flex: 1;
   min-width: 160px;
-  font-size: 13px;
-  color: var(--admin-muted);
+  font-size: var(--fs-input);
+  color: var(--c-text-2);
 }
 .title-field--sm {
   flex: 0 0 150px;
@@ -52,12 +52,12 @@
 .title-field select,
 .title-field input[type="text"],
 .title-field input[type="number"] {
-  padding: 9px 12px;
-  border: 1px solid var(--admin-border);
-  border-radius: 8px;
-  background: var(--admin-surface);
-  font-size: 14px;
-  color: var(--admin-text);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface-2);
+  font-size: var(--fs-input);
+  color: var(--c-text);
 }
 .title-field input:disabled {
   opacity: 0.6;
@@ -65,35 +65,23 @@
 .title-field select:focus,
 .title-field input:focus {
   outline: none;
-  border-color: var(--admin-green);
+  border-color: var(--c-primary);
 }
 .title-submit {
   align-self: flex-start;
-  border: 0;
-  background: var(--admin-green);
-  color: #fff;
-  padding: 10px 22px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
 }
 .title-submit:hover:not(:disabled) {
   filter: brightness(0.95);
 }
-.title-submit:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
 .title-form-error {
   margin: 0;
-  font-size: 13px;
-  color: #b4524a;
+  font-size: var(--fs-body-sm);
+  color: var(--c-danger);
 }
 .title-form-notice {
   margin: 0;
-  font-size: 13px;
-  color: var(--admin-green);
+  font-size: var(--fs-body-sm);
+  color: var(--c-primary);
 }
 .title-row--off td {
   opacity: 0.55;
@@ -102,22 +90,22 @@
   white-space: nowrap;
 }
 .title-action {
-  border: 1px solid var(--admin-border);
-  background: var(--admin-card);
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--admin-muted);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   cursor: pointer;
   margin-right: 6px;
 }
 .title-action:hover:not(:disabled) {
-  color: var(--admin-green);
-  border-color: var(--admin-green);
+  color: var(--c-primary);
+  border-color: var(--c-primary);
 }
 .title-action--danger:hover:not(:disabled) {
-  color: #b4524a;
-  border-color: #b4524a;
+  color: var(--c-danger);
+  border-color: var(--c-danger);
 }
 .title-action:disabled {
   opacity: 0.4;
