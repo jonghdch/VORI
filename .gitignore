@@ -47,3 +47,7 @@ CLAUDE.md
 PHASES.md
 # AI 도구가 만든 시안·캡처 폴더 (팀 공유 X)
 Claude outputs/
+
+# 운영 배포 env 실제 값 (예시 파일은 허용)
+deploy/docker/*.env
+!deploy/docker/*.env.example

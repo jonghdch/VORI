@@ -43,7 +43,7 @@
 | 문서 | 책임 |
 |---|---|
 | [`final-demo-plan.md`](final-demo-plan.md) | 최종발표(11/4)·경진대회(11/11) 시연 각본·무대 규칙·계정 세팅·Gemini 한도 운영 |
-| [`deploy-checklist.md`](deploy-checklist.md) | EC2 + Nginx 배포 점검표(초안) — 서버 `.env`·Nginx·HTTPS·구글 로그인·백업. 설정 파일은 `deploy/` |
+| [`deploy-checklist.md`](deploy-checklist.md) | 운영 배포 점검표(도커, vori.worldpick.co.kr) — 구성·deploy.sh·`.env`·롤백·백업·구글 로그인. 설정 파일 사본은 `deploy/` |
 
 ## 발표·과거 기록
 
