@@ -43,6 +43,7 @@ fi
 [[ $(id -u) -eq $VORI_UID ]] || { echo "vori(uid $VORI_UID) 로 실행하세요 (현재 $(id -un))" >&2; exit 1; }
 id -nG | grep -qw docker || { echo "vori 가 docker 그룹에 없습니다 (usermod -aG docker vori)" >&2; exit 1; }
 export HOME="$H"   # runuser 로 들어오면 HOME 이 /root 로 남아 git·docker 가 설정 파일을 못 읽는다
+cd "$H"   # runuser 로 root 홈에서 들어오면 docker compose 가 cwd 를 못 읽는다
 mkdir -p "$H/logs" "$STATE"
 exec 9>"$STATE/deploy.lock"
 flock -n 9 || { echo "다른 deploy.sh 가 실행 중입니다" >&2; exit 1; }
