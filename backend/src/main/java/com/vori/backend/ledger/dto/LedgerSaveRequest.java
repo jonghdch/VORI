@@ -1,14 +1,15 @@
 package com.vori.backend.ledger.dto;
 
 import com.vori.backend.common.PaymentMethod;
-import com.vori.backend.income.dto.IncomeCreateRequest;
-import com.vori.backend.savings.dto.SavingCreateRequest;
+import com.vori.backend.income.IncomeSource;
+import com.vori.backend.savings.SavingType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,10 +24,10 @@ public record LedgerSaveRequest(
         List<ExpenseEntry> expenses,
 
         @Valid @Size(max = MAX_ROWS, message = "한 번에 저장할 수 있는 수입은 " + MAX_ROWS + "건까지입니다.")
-        List<IncomeCreateRequest> incomes,
+        List<IncomeEntry> incomes,
 
         @Valid @Size(max = MAX_ROWS, message = "한 번에 저장할 수 있는 저축은 " + MAX_ROWS + "건까지입니다.")
-        List<SavingCreateRequest> savings
+        List<SavingEntry> savings
 ) {
     public static final int MAX_ROWS = 100;
 
@@ -71,4 +72,27 @@ public record LedgerSaveRequest(
             this(id, categoryId, amount, item, spentAt, paymentMethod, memo, null);
         }
     }
+
+    /** id 가 있으면 기존 수입 수정, 없으면 새 수입 등록. */
+    public record IncomeEntry(
+            Long id,
+            @NotNull(message = "수입 카테고리를 선택해주세요.") IncomeSource source,
+            @NotNull(message = "금액을 입력해주세요.") @Min(value = 1, message = "금액은 1원 이상이어야 합니다.") Integer amount,
+            @NotBlank(message = "수입 내역을 입력해주세요.") @Size(max = 100, message = "내역은 최대 100자까지 입력 가능합니다.") String item,
+            LocalDate receivedAt,
+            PaymentMethod paymentMethod,
+            Boolean isRecurring,
+            Long paymentInstrumentId
+    ) {}
+
+    /** id 가 있으면 기존 저축 수정, 없으면 새 저축 등록. */
+    public record SavingEntry(
+            Long id,
+            @NotNull(message = "저축 종류를 선택해주세요.") SavingType savingType,
+            @NotNull(message = "금액을 입력해주세요.") @Min(value = 1, message = "금액은 1원 이상이어야 합니다.") Integer amount,
+            @NotBlank(message = "저축 내역을 입력해주세요.") @Size(max = 100, message = "내역은 최대 100자까지 입력 가능합니다.") String item,
+            LocalDate savedAt,
+            @Size(max = 200, message = "메모는 최대 200자까지 입력 가능합니다.") String note,
+            Long paymentInstrumentId
+    ) {}
 }

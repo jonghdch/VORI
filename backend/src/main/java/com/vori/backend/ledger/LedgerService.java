@@ -9,15 +9,22 @@ import com.vori.backend.expense.dto.ExpenseCreateRequest;
 import com.vori.backend.expense.dto.ExpenseResponse;
 import com.vori.backend.expense.dto.ExpenseUpdateRequest;
 import com.vori.backend.income.IncomeRepository;
+import com.vori.backend.income.Income;
 import com.vori.backend.income.IncomeService;
+import com.vori.backend.income.dto.IncomeCreateRequest;
 import com.vori.backend.income.dto.IncomeResponse;
 import com.vori.backend.inquiry.AiInquiry;
 import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.ledger.dto.LedgerSaveRequest;
 import com.vori.backend.ledger.dto.LedgerSaveResponse;
+import com.vori.backend.paymentinstrument.InstrumentKind;
 import com.vori.backend.paymentinstrument.PaymentInstrument;
 import com.vori.backend.paymentinstrument.PaymentInstrumentService;
 import com.vori.backend.savings.SavingService;
+import com.vori.backend.savings.Saving;
+import com.vori.backend.savings.SavingRepository;
+import com.vori.backend.savings.SavingType;
+import com.vori.backend.savings.dto.SavingCreateRequest;
 import com.vori.backend.savings.dto.SavingResponse;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
@@ -43,6 +50,7 @@ public class LedgerService {
 
     private final ExpenseRepository expenseRepository;
     private final IncomeRepository incomeRepository;
+    private final SavingRepository savingRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final AiInquiryRepository aiInquiryRepository;
@@ -113,10 +121,10 @@ public class LedgerService {
             expenses.add(e.id() == null ? createExpense(userId, e) : updateExpense(userId, e));
         }
         List<IncomeResponse> incomes = req.incomes().stream()
-                .map(i -> incomeService.createIncome(userId, i))
+                .map(i -> i.id() == null ? createIncome(userId, i) : updateIncome(userId, i))
                 .toList();
         List<SavingResponse> savings = req.savings().stream()
-                .map(s -> savingService.createSaving(userId, s))
+                .map(s -> s.id() == null ? createSaving(userId, s) : updateSaving(userId, s))
                 .toList();
         return new LedgerSaveResponse(expenses, incomes, savings);
     }
@@ -147,6 +155,53 @@ public class LedgerService {
         return expenseRepository.findById(expenseId)
                 .map(current -> instrumentId.equals(current.getPaymentInstrumentId()))
                 .orElse(false);
+    }
+
+    private IncomeResponse createIncome(Long userId, LedgerSaveRequest.IncomeEntry entry) {
+        return incomeService.createIncome(userId, new IncomeCreateRequest(entry.source(), entry.amount(), entry.item(),
+                entry.receivedAt(), entry.paymentMethod(), entry.isRecurring(), entry.paymentInstrumentId()));
+    }
+
+    private IncomeResponse updateIncome(Long userId, LedgerSaveRequest.IncomeEntry entry) {
+        Income income = incomeRepository.findById(entry.id())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "수입을 찾을 수 없습니다."));
+        if (!income.getUserId().equals(userId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 수입만 수정할 수 있습니다.");
+        // 받은 곳을 새로 골랐으면 등록(IncomeService.createIncome)과 같은 규칙으로 확인하고 결제수단을 맞춘다.
+        // 원래 붙어 있던 곳은 그대로 둘 수 있다 — 지출처럼 삭제(보관)한 계좌여도 지난 기록의 연결을 지킨다.
+        boolean sameAccount = entry.paymentInstrumentId() != null
+                && entry.paymentInstrumentId().equals(income.getPaymentInstrumentId());
+        // 작성 화면은 수입의 결제수단을 보내지 않는다(null). 그때 지우지 않고 저장된 값을 둔다.
+        PaymentMethod method = sameAccount || entry.paymentMethod() == null ? income.getPaymentMethod() : entry.paymentMethod();
+        if (entry.paymentInstrumentId() != null && !sameAccount) {
+            PaymentInstrument account = paymentInstrumentService.requireIncomeAccount(userId, entry.paymentInstrumentId());
+            method = account.getKind() == InstrumentKind.CASH ? PaymentMethod.CASH : PaymentMethod.TRANSFER;
+        }
+        income.update(entry.receivedAt() == null ? income.getReceivedAt() : entry.receivedAt(), entry.amount(),
+                entry.item().trim(), entry.source(), method, entry.paymentInstrumentId(), entry.isRecurring());
+        return IncomeResponse.from(income);
+    }
+
+    private SavingResponse createSaving(Long userId, LedgerSaveRequest.SavingEntry entry) {
+        return savingService.createSaving(userId, new SavingCreateRequest(entry.savingType(), entry.amount(), entry.item(),
+                entry.savedAt(), entry.note(), entry.paymentInstrumentId()));
+    }
+
+    private SavingResponse updateSaving(Long userId, LedgerSaveRequest.SavingEntry entry) {
+        Saving saving = savingRepository.findById(entry.id())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "저축을 찾을 수 없습니다."));
+        if (!saving.getUserId().equals(userId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 저축만 수정할 수 있습니다.");
+        // 모은 곳 규칙은 등록(SavingService.createSaving)과 같다. 원래 붙어 있던 통장은 그대로 둘 수 있다.
+        if (entry.paymentInstrumentId() != null) {
+            if (entry.savingType() != SavingType.DEPOSIT) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "투자는 모은 곳을 고를 수 없어요.");
+            }
+            if (!entry.paymentInstrumentId().equals(saving.getPaymentInstrumentId())) {
+                paymentInstrumentService.requireSavingsAccount(userId, entry.paymentInstrumentId());
+            }
+        }
+        saving.update(entry.savedAt() == null ? saving.getSavedAt() : entry.savedAt(), entry.amount(),
+                entry.item().trim(), entry.savingType(), entry.paymentInstrumentId(), entry.note());
+        return SavingResponse.from(saving);
     }
 
     private ExpenseResponse createExpense(Long userId, LedgerSaveRequest.ExpenseEntry e) {
@@ -229,5 +284,21 @@ public class LedgerService {
         }
 
         expenseRepository.delete(e);
+    }
+
+    @Transactional
+    public void deleteIncome(Long userId, Long incomeId) {
+        Income income = incomeRepository.findById(incomeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "수입을 찾을 수 없습니다."));
+        if (!income.getUserId().equals(userId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 수입만 삭제할 수 있습니다.");
+        incomeRepository.delete(income);
+    }
+
+    @Transactional
+    public void deleteSaving(Long userId, Long savingId) {
+        Saving saving = savingRepository.findById(savingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "저축을 찾을 수 없습니다."));
+        if (!saving.getUserId().equals(userId)) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 저축만 삭제할 수 있습니다.");
+        savingRepository.delete(saving);
     }
 }

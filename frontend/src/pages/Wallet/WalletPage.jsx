@@ -101,6 +101,13 @@ function toIsoDate(year, month, day) {
 }
 
 // 백엔드 LedgerResponse → 화면이 쓰는 행 형태로 변환.
+const BUDGET_GROUPS = [
+  { key: "ENERGY", label: "식비" },
+  { key: "CHARM", label: "쇼핑·뷰티" },
+  { key: "IQ", label: "문화·여가" },
+  { key: "ENDURANCE", label: "생활·고정비" },
+];
+
 function toRow(item) {
   const day = Number(item.date.split("-")[2]);
   return {
@@ -110,6 +117,7 @@ function toRow(item) {
     day,
     name: item.item || (item.type === "INCOME" ? "수입" : "지출"),
     cat: item.category || "—",
+    statType: item.statType || null,
     amountNum: item.amount,
     amount: formatWon(item.amount),
     date: formatDateDisplay(item.date),
@@ -304,7 +312,7 @@ function WalletPage({ user, onLogout }) {
     };
   }, [viewYear, viewMonth, navigate, today, selectedDateParam, initialDate]);
 
-  // 이번 달 사용 가능 예산 — 프로필 수입·고정비·설문으로 계산된 스탯별 예산의 합.
+  // 이번 달 사용 가능 예산 — 월 예산·고정비로 계산된 스탯별 예산의 합.
   // undefined = 불러오는 중, null = 실패. 실패해도 지출 숫자는 그대로 보여 준다.
   const [plan, setPlan] = useState(undefined);
   useEffect(() => {
@@ -374,6 +382,19 @@ function WalletPage({ user, onLogout }) {
   // 이번 달 예산 대비 — 핵심 숫자 아래 막대·판정 칩에 쓴다. 홈과 같은 85%/100% 기준.
   const budgetPct = monthBudget > 0 ? Math.round((monthExpenseTotal / monthBudget) * 100) : 0;
   const budgetSignal = monthBudget > 0 ? signalForUsage(monthExpenseTotal, monthBudget) : null;
+
+  // 소비 그룹별 예산 — 그 달 예산과 쓴 돈을 그룹마다 나눠 보여 준다.
+  const budgetGroups = useMemo(() => {
+    const used = {};
+    expenseRows.forEach((r) => {
+      if (r.statType) used[r.statType] = (used[r.statType] || 0) + r.amountNum;
+    });
+    return BUDGET_GROUPS.map(({ key, label }) => {
+      const budget = Number(plan?.budgets?.[key] || 0);
+      const spent = used[key] || 0;
+      return { key, label, budget, spent, pct: budget > 0 ? Math.round((spent / budget) * 100) : 0 };
+    });
+  }, [expenseRows, plan]);
 
   // 카테고리별 지출 집계 — 금액 내림차순 상위 4개.
   const categoryBreakdown = useMemo(() => {
@@ -749,14 +770,14 @@ function WalletPage({ user, onLogout }) {
   const judgeLabel = !isAiActive
     ? `${AI_ACTIVE_FROM_HOUR}시부터 판정`
     : isFinalJudgment(selectedJudgment)
-      ? "판정 보기"
+      ? isAdmin ? "다시 판정하기 (관리자)" : "판정 보기"
       : "판정 받기";
 
   // 하루 카드 아래 판정·보상 안내 상자
   const rewardStatus = !selectedJudgment
     ? "아직 판정 전"
     : isFinalJudgment(selectedJudgment)
-      ? "판정 완료"
+      ? selectedIsToday ? "오늘 판정 결과" : "판정 완료"
       : selectedDateIso < todayIso
         ? "1차 판정으로 확정 중"
         : "사유 답변 대기";
@@ -1009,11 +1030,43 @@ function WalletPage({ user, onLogout }) {
                       <span className="hm-hero-pct">예산의 {budgetPct}%</span>
                     </span>
                   </p>
+                  <ul className="lw-budget-groups" aria-label="소비 그룹별 예산">
+                    {budgetGroups.map((group) => {
+                      const tone = SIGNAL_META[signalForUsage(group.spent, group.budget)].tone;
+                      return (
+                        <li key={group.key}>
+                          <p className="lw-budget-group-head">
+                            <strong>{group.label}</strong>
+                            <span>{formatWon(group.budget)}</span>
+                          </p>
+                          <div
+                            className={`hm-meter hm-meter--${tone}`}
+                            role="progressbar"
+                            aria-label={`${group.label} 예산 사용률`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={Math.min(group.pct, 100)}
+                            aria-valuetext={`${group.pct}% 사용`}
+                          >
+                            <span style={{ width: `${Math.min(group.pct, 100)}%` }} />
+                          </div>
+                          <p className="lw-budget-group-foot">
+                            <span>{formatWon(group.spent)} 사용 · {group.pct}%</span>
+                            <span>
+                              {group.budget - group.spent >= 0
+                                ? `${formatWon(group.budget - group.spent)} 남음`
+                                : `${formatWon(group.spent - group.budget)} 초과`}
+                            </span>
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </>
               ) : plan === null ? (
                 <p className="hm-hero-foot">예산을 불러오지 못했어요.</p>
               ) : plan !== undefined ? (
-                <p className="hm-hero-foot">월수입을 입력하면 고정비·예비비를 뺀 예산과 비교해 드려요.</p>
+                <p className="hm-hero-foot">환경설정에서 월 예산을 입력하면 소비 그룹별 예산과 비교해 드려요.</p>
               ) : null}
               <p className="lw-hero-sub">
                 수입 {formatWon(monthIncomeTotal)} · 기록 {rows.length}건 · AI 판정 {aiJudgedCount}건
@@ -1197,6 +1250,7 @@ function WalletPage({ user, onLogout }) {
                   <div className="lw-reward-head">
                     <Icon name="paw" size={16} />
                     <strong>{rewardStatus}</strong>
+                    {isFinalJudgment(selectedJudgment) && <SignalChip signal={selectedJudgment.signal} />}
                   </div>
                   {judgmentLoading ? (
                     <p>보상 정보를 불러오는 중이에요.</p>
@@ -1221,6 +1275,9 @@ function WalletPage({ user, onLogout }) {
                             {label} <strong>+{selectedJudgment.statRewards[key]}</strong>
                           </li>
                         ),
+                      )}
+                      {!STAT_REWARDS.some(({ key }) => Number(selectedJudgment.statRewards?.[key] ?? 0) > 0) && (
+                        <li>지급 스탯 없음</li>
                       )}
                     </ul>
                   ) : (
@@ -1263,7 +1320,7 @@ function WalletPage({ user, onLogout }) {
                   />
                 </label>
               )}
-              {showJudgeButton && pendingCount != null && pendingCount > 0 && (
+              {showJudgeButton && pendingCount != null && pendingCount > 0 && !isFinalJudgment(selectedJudgment) && (
                 <p className="lw-footnote">오늘 답하지 않은 질문 {pendingCount}건</p>
               )}
             </section>

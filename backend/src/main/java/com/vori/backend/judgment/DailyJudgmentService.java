@@ -4,6 +4,8 @@ import com.vori.backend.budget.*;
 import com.vori.backend.common.StatType;
 import com.vori.backend.expense.*;
 import com.vori.backend.furniture.*;
+import com.vori.backend.inquiry.AiInquiry;
+import com.vori.backend.inquiry.ReasonCategory;
 import com.vori.backend.pet.*;
 import com.vori.backend.user.*;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +64,11 @@ public class DailyJudgmentService {
                 }
                 return DailyJudgmentResponse.from(existing,false);
             }
+            // 이 배포 전 만들어진 PENDING 판정도 다시 열면 일일 그룹 질문을 보완한다.
+            if(!existing.isFinalized()) {
+                Evaluation evaluation=evaluate(id,date);
+                createDailyGroupInquiries(id,date,evaluation.groups);
+            }
             return DailyJudgmentResponse.from(existing,existing.isFinalized());
         }
         Evaluation first=evaluate(id,date);
@@ -69,7 +76,8 @@ public class DailyJudgmentService {
         // 확정 전까지 최종 칸에도 1차 결과를 넣어 둔다(확정 때 덮어쓴다). 보상 칸은 "확정 때 줄 예정" 값이다.
         DailyJudgment saved=judgments.save(DailyJudgment.builder().userId(id).judgmentDate(date).signal(first.signal).expenseCount(first.count).coinReward(first.saved/100).statRewardPerType(maxReward(first)).rewardDetails(details(first)).groupDetails(groupDetails).savedAmount(first.saved).judgedAt(now)
                 .status(JudgmentStatus.PENDING).initialSignal(first.signal).initialGroupDetails(groupDetails).build());
-        if(pendingInquiryCount(id,date)==0) return finalizeRow(user,saved,now);
+        createDailyGroupInquiries(id, date, first.groups);
+        if(pendingInquiryCount(id,date,first.groups)==0) return finalizeRow(user,saved,now);
         return DailyJudgmentResponse.from(saved,false);
     }
 
@@ -150,9 +158,14 @@ public class DailyJudgmentService {
         return DailyJudgmentResponse.from(row,false);
     }
 
-    /** 그날 아직 답하지 않은 AI 질문 수 — 0 이면 사유를 기다릴 것이 없어 1차 판정에서 바로 확정한다. */
-    private int pendingInquiryCount(Long userId,LocalDate date){
-        return inquiries.findPendingByDate(userId,date.atStartOfDay(),date.plusDays(1).atStartOfDay()).size();
+    /** 예산을 넘긴 그룹의 미답변 AI 질문 수 — 0 이면 사유를 기다릴 것이 없어 1차 판정에서 바로 확정한다. */
+    private long pendingInquiryCount(Long userId,LocalDate date,Map<StatType,DailyJudgmentResponse.GroupJudgment> groups){
+        Set<Long> overBudgetExpenseIds=expenses.findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(userId,date.atStartOfDay(),date.plusDays(1).atStartOfDay()).stream()
+                .filter(e->groups.containsKey(e.getStatType()) && groups.get(e.getStatType()).signal()==Signal.RED)
+                .map(Expense::getId).collect(Collectors.toSet());
+        return inquiries.findPendingByDate(userId,date,date.atStartOfDay(),date.plusDays(1).atStartOfDay()).stream()
+                .filter(i->Boolean.TRUE.equals(i.getDailyGroupInquiry()) || overBudgetExpenseIds.contains(i.getExpenseId()))
+                .count();
     }
     private static int maxReward(Evaluation e){return e.rewards.values().stream().mapToInt(Integer::intValue).max().orElse(0);}
     private static String details(Evaluation e){return e.rewards.entrySet().stream().filter(x->x.getValue()>0).map(x->x.getKey()+":"+x.getValue()).collect(Collectors.joining(","));}
@@ -163,10 +176,7 @@ public class DailyJudgmentService {
         Map<StatType,Integer> budget=new EnumMap<>(StatType.class); budgets.findByUserIdAndYearMonth(userId,ym).forEach(b->budget.put(b.getStatType(),b.getAmount()));
         List<Expense> todayRows=expenses.findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(userId,date.atStartOfDay(),date.plusDays(1).atStartOfDay());
         Map<StatType,Integer> used=sum(expenses.findByUserIdAndSpentAtBetween(userId,month.atDay(1).atStartOfDay(),date.plusDays(1).atStartOfDay()));
-        Map<LocalDate,Map<StatType,Integer>> spendingByDay=new HashMap<>();
-        expenses.findByUserIdAndSpentAtBetween(userId,month.atDay(1).atStartOfDay(),date.plusDays(1).atStartOfDay()).forEach(expense ->
-                spendingByDay.computeIfAbsent(expense.getSpentAt().toLocalDate(), ignored -> new EnumMap<>(StatType.class))
-                        .merge(expense.getStatType(),expense.getAmount(),Integer::sum));
+        Map<StatType,Integer> todayUsed=sum(todayRows);
         Map<StatType,Integer> rewards=new EnumMap<>(StatType.class);
         Map<StatType,DailyJudgmentResponse.GroupJudgment> groups=new EnumMap<>(StatType.class);
         Set<Long> approvedIds=approvedExceptionIds(todayRows);
@@ -175,38 +185,39 @@ public class DailyJudgmentService {
             int monthlyBudget=budget.getOrDefault(type,0);
             int daysInMonth=month.lengthOfMonth();
             int dailyBase=monthlyBudget/daysInMonth;
-            // 일일 봉투: 전날 남긴 금액은 절반만 다음 날에 더하고, 초과 금액은 전부 차감한다.
-            // 누적 나눗셈 차이를 기본 봉투로 써 월 예산의 나머지 1원도 정확히 배분한다.
-            int carry=0;
-            int availableToday=0;
-            int todaySpent=0;
-            for(int day=1; day<=date.getDayOfMonth(); day++) {
-                int baseForDay=(int)((long)monthlyBudget*day/daysInMonth-(long)monthlyBudget*(day-1)/daysInMonth); // long — 예산×일수가 int 를 넘지 않게
-                int available=Math.max(0,baseForDay+carry);
-                int spent=spendingByDay.getOrDefault(month.atDay(day),Map.of()).getOrDefault(type,0);
-                if(day==date.getDayOfMonth()) { availableToday=available; todaySpent=spent; break; }
-                int balance=available-spent;
-                carry=balance>0 ? balance/2 : balance;
-            }
             int monthSpent=used.getOrDefault(type,0);
+            int todaySpent=todayUsed.getOrDefault(type,0);
+            // 남은 월 예산을 남은 날짜로 다시 나눈다. 전날에 덜 쓴 돈을 이월하지 않으므로,
+            // 실제 누적 지출만 월 예산에서 빠지고 다음 날 한도가 공정하게 다시 계산된다.
+            int spentBeforeToday=Math.max(0,monthSpent-todaySpent);
+            int daysRemaining=Math.max(1,daysInMonth-date.getDayOfMonth()+1);
+            int availableToday=Math.max(0,monthlyBudget-spentBeforeToday)/daysRemaining;
             Signal signal=todaySpent<=Math.floor(availableToday*.85)?Signal.GREEN:todaySpent<=availableToday?Signal.GRAY:Signal.RED;
-            // 이미 월 예산을 소진해 오늘 쓸 수 있는 돈이 0원이면, 지출을 쉬었더라도
-            // 절약 상태가 아니다. 보상 없이 주황(예산 소진) 상태로 안내한다.
-            boolean budgetExhausted=monthlyBudget>0 && monthSpent>=monthlyBudget && availableToday==0 && todaySpent==0;
+            // 월 예산을 모두 쓴 뒤에는 다음 날들의 지출이 0원이더라도 절약이 아니다.
+            // 기존에는 "오늘의 봉투도 0원"일 때만 소진으로 판단해, 그 다음 날에
+            // 다시 초록·스탯 보상으로 되돌아가는 문제가 있었다.
+            boolean budgetExhausted=monthlyBudget>0 && monthSpent>=monthlyBudget && todaySpent==0;
             if(budgetExhausted) signal=Signal.GRAY;
             // AI가 답변 사유를 합당한 예외 지출로 인정한 경우, 그 지출이 속한
             // 그룹의 과소비 판정도 같은 수준까지 완화한다. 처음부터 빨강이 아니던 평범한 지출은
             // 완화 근거가 아니다 — 예전엔 그런 지출 하나만 있어도 예산을 넘긴 그룹이 풀렸다.
-            Signal approved=todayRows.stream().filter(e -> e.getStatType()==type && e.getId()!=null && approvedIds.contains(e.getId()))
+            Signal approvedExpense=todayRows.stream().filter(e -> e.getStatType()==type && e.getId()!=null && approvedIds.contains(e.getId()))
                     .map(Expense::getSignalFinal).filter(s -> s != null && s != Signal.RED)
                     .min(Comparator.comparingInt(this::rank)).orElse(Signal.RED);
+            Signal approvedGroup=approvedDailyGroupSignal(userId, date, type, todaySpent);
+            Signal approved=rank(approvedExpense) <= rank(approvedGroup) ? approvedExpense : approvedGroup;
             if(signal==Signal.RED && approved!=Signal.RED) signal=approved;
-            int groupSaved=Math.max(0,availableToday-todaySpent);
+            // 이미 월 예산이 소진된 그룹은 남은 예산이 없으므로 코인과 스탯 보상을 만들지 않는다.
+            // 남은 돈을 남은 날로 다시 나누므로 안 쓴 돈이 다음 날 한도에 또 들어간다. 그대로 보상하면 같은 돈에
+            // 날마다 보상이 나가고 말일에 몰리니, 보상은 그날 기본 예산까지만 센다.
+            int groupSaved=budgetExhausted ? 0 : Math.max(0,Math.min(availableToday,dailyBase)-todaySpent);
             // 하루 동안 남긴 예산 1,000원마다 스탯 1을 준다. 너무 큰 월 예산으로
             // 하루 성장량이 과도해지지 않도록 그룹당 최대 15로 제한한다.
             int statReward=Math.min(15,groupSaved/1000);
             rewards.put(type,statReward);
-            groups.put(type,new DailyJudgmentResponse.GroupJudgment(monthlyBudget,dailyBase,availableToday,todaySpent,monthSpent,groupSaved,groupSaved/2,budgetExhausted,signal));
+            int remainingAfterToday=Math.max(0,monthlyBudget-monthSpent);
+            int tomorrowAvailable=daysRemaining>1 ? remainingAfterToday/(daysRemaining-1) : 0;
+            groups.put(type,new DailyJudgmentResponse.GroupJudgment(monthlyBudget,dailyBase,availableToday,todaySpent,monthSpent,groupSaved,tomorrowAvailable,budgetExhausted,signal));
             saved+=groupSaved; overall=stronger(overall,signal);
         }
         return new Evaluation(overall,todayRows.size(),rewards,groups,saved);
@@ -217,6 +228,46 @@ public class DailyJudgmentService {
         if(redIds.isEmpty()) return Set.of();
         return inquiries.findByExpenseIdIn(redIds).stream().filter(i->Boolean.TRUE.equals(i.getSignalAdjusted()))
                 .map(com.vori.backend.inquiry.AiInquiry::getExpenseId).collect(Collectors.toSet());
+    }
+    /** 일일 그룹 질문의 답변이 인정되면 그 그룹의 빨강 판정만 다시 완화한다. */
+    private Signal approvedDailyGroupSignal(Long userId, LocalDate date, StatType type, int todaySpent) {
+        return inquiries.findByUserIdAndGroupDateAndDailyGroupInquiryTrue(userId, date).stream()
+                // 답한 뒤에 지출이 늘었으면 그 답은 늘어난 금액까지 인정한 것이 아니다.
+                .filter(i -> i.getGroupStatType()==type && Boolean.TRUE.equals(i.getSignalAdjusted())
+                        && i.getGroupAmount()!=null && todaySpent<=i.getGroupAmount())
+                .map(AiInquiry::getReasonCategory).map(this::signalForReason)
+                .min(Comparator.comparingInt(this::rank)).orElse(Signal.RED);
+    }
+    private Signal signalForReason(ReasonCategory reason) {
+        if(reason==ReasonCategory.CEREMONY || reason==ReasonCategory.EMERGENCY || reason==ReasonCategory.SELF_INVEST) return Signal.GREEN;
+        if(reason==ReasonCategory.SOCIAL) return Signal.GRAY;
+        return Signal.RED;
+    }
+    /** 개별 지출에 RED 질문이 없지만, 합산한 일일 그룹 예산을 넘긴 경우 그룹 질문 하나를 만든다. */
+    private void createDailyGroupInquiries(Long userId, LocalDate date,
+                                           Map<StatType, DailyJudgmentResponse.GroupJudgment> groups) {
+        List<Expense> rows=expenses.findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(userId,date.atStartOfDay(),date.plusDays(1).atStartOfDay());
+        if(rows.isEmpty()) return;
+        List<AiInquiry> existing=inquiries.findByUserIdAndGroupDateAndDailyGroupInquiryTrue(userId,date);
+        for(var entry:groups.entrySet()) {
+            StatType type=entry.getKey();
+            DailyJudgmentResponse.GroupJudgment group=entry.getValue();
+            if(group.signal()!=Signal.RED) continue;
+            if(existing.stream().anyMatch(i -> i.getGroupStatType()==type)) continue;
+            // 그룹의 빨강 지출에 이미 개별 질문이 있으면 그 답으로 그룹이 완화되므로 또 묻지 않는다.
+            List<Long> redIds=rows.stream().filter(e->e.getStatType()==type && e.getSignalInitial()==Signal.RED && e.getId()!=null).map(Expense::getId).toList();
+            if(!redIds.isEmpty() && !inquiries.findByExpenseIdIn(redIds).isEmpty()) continue;
+            inquiries.save(AiInquiry.pendingDailyGroup(userId,date,type,groupLabel(type),
+                    group.todaySpent(),group.availableToday()));
+        }
+    }
+    private String groupLabel(StatType type) {
+        return switch(type) {
+            case ENERGY -> "식비";
+            case CHARM -> "쇼핑·뷰티";
+            case IQ -> "문화·여가";
+            case ENDURANCE -> "생활·고정비";
+        };
     }
     private Map<StatType,Integer> sum(List<Expense> rows){Map<StatType,Integer> sums=new EnumMap<>(StatType.class);rows.forEach(e->sums.merge(e.getStatType(),e.getAmount(),Integer::sum));return sums;}
     private void grant(User user,Evaluation result,LocalDateTime now){

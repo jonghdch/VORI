@@ -13,6 +13,8 @@ export const getMonthlyLedger = (yearMonth) =>
   get(`/ledger?yearMonth=${yearMonth}`);
 
 export const deleteExpense = (id) => del(`/ledger/expenses/${id}`);
+export const deleteIncome = (id) => del(`/ledger/incomes/${id}`);
+export const deleteSaving = (id) => del(`/ledger/savings/${id}`);
 
 // 카테고리 트리 (대분류 + 소분류). 가계부 확인 화면에서 categoryId → 이름 매핑용.
 export const listCategoryTree = () => get(`/categories`);

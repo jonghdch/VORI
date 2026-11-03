@@ -14,6 +14,8 @@ import { MAX_RECEIPT_BYTES, prepareReceiptImage, uploadReceipt } from "../../api
 import {
   saveLedgerEntries,
   deleteExpense,
+  deleteIncome,
+  deleteSaving,
   listCategoryTree,
   listExpensesByDate,
   listIncomesByDate,
@@ -148,7 +150,9 @@ function WalletEntryPage({ user }) {
       linkedInstrumentId: null, // 고치는 지출에 저장돼 있던 카드 id
       memo: "",
       memoOpen: false,
-      dbId: null, // 저장된 지출을 고치는 중이면 그 id
+      dbId: null, // 저장된 기록을 고치는 중이면 그 id
+      isRecurring: false, // 수입 — 이 폼에 칸이 없어 고칠 때 저장된 값을 그대로 돌려준다
+      savingNote: null, // 저축 — 이 폼에 칸이 없어 고칠 때 저장된 값을 그대로 돌려준다
       askType: null,
       candidates: [],
       categorizing: false,
@@ -265,6 +269,35 @@ function WalletEntryPage({ user }) {
     },
     [emptyForm, defaultPayment],
   );
+
+  // 저장된 수입·저축을 폼으로 불러와 고친다.
+  const editOtherRecord = (kind, r) => {
+    setType(kind);
+    setForm(
+      emptyForm({
+        dbId: r.id,
+        name: r.item || "",
+        amount: String(r.amount ?? ""),
+        categoryEnum: kind === "income" ? r.source : r.savingType,
+        sourceTouched: true,
+        paymentInstrumentId: r.paymentInstrumentId ?? null,
+        linkedInstrumentId: r.paymentInstrumentId ?? null,
+        isRecurring: Boolean(r.isRecurring),
+        savingNote: r.note ?? null,
+      }),
+    );
+    setNotice(null);
+    setSubmitError(null);
+  };
+
+  // 고치던 기록을 두고 새 기록을 시작한다.
+  const startNew = (nextType) => {
+    setType(nextType);
+    setForm(emptyForm());
+    setNotice(null);
+    setSubmitError(null);
+    amountRef.current?.focus();
+  };
 
   useEffect(() => {
     let alive = true;
@@ -429,6 +462,8 @@ function WalletEntryPage({ user }) {
           : null;
   const canSave = !missing && !submitting;
 
+  const typeLabel = TYPES.find((t) => t.id === type).label;
+
   const save = async (andMore) => {
     if (!canSave) return;
     setSubmitting(true);
@@ -452,9 +487,11 @@ function WalletEntryPage({ user }) {
         incomes:
           type === "income"
             ? [{
+                id: form.dbId ?? null,
                 item,
                 amount: amountNum,
                 source: form.categoryEnum || "OTHER",
+                isRecurring: form.isRecurring,
                 paymentInstrumentId: form.paymentInstrumentId ?? null, // 받은 곳(계좌·현금)
                 paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
                 receivedAt: dateStr,
@@ -463,9 +500,11 @@ function WalletEntryPage({ user }) {
         savings:
           type === "savings"
             ? [{
+                id: form.dbId ?? null,
                 item,
                 amount: amountNum,
                 savingType: form.categoryEnum || "DEPOSIT",
+                note: form.savingNote,
                 savedAt: dateStr,
                 // 모은 곳은 예적금에서만 (자동 분류가 투자로 바꿔 놓았으면 보내지 않는다)
                 paymentInstrumentId: (form.categoryEnum || "DEPOSIT") === "DEPOSIT" ? form.paymentInstrumentId ?? null : null,
@@ -491,14 +530,15 @@ function WalletEntryPage({ user }) {
 
   const removeEditing = async () => {
     if (!form.dbId) return;
-    if (!window.confirm(`'${form.name || "이 지출"}'을 삭제할까요?`)) return;
+    if (!window.confirm(`'${form.name || `이 ${typeLabel}`}'을 삭제할까요?`)) return;
     try {
-      await deleteExpense(form.dbId);
-      setForm(emptyForm({ paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId }));
+      const remove = type === "income" ? deleteIncome : type === "savings" ? deleteSaving : deleteExpense;
+      await remove(form.dbId);
+      setForm(emptyForm(type === "expense" ? { paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId } : {}));
       setNotice({ kind: "ok", text: "삭제했어요." });
       loadDay();
     } catch (error) {
-      setSubmitError(error.message || "지출을 삭제하지 못했어요.");
+      setSubmitError(error.message || `${typeLabel}을 삭제하지 못했어요.`);
     }
   };
 
@@ -531,6 +571,7 @@ function WalletEntryPage({ user }) {
       }),
       ...day.incomes.map((i) => ({
         key: `i-${i.id}`,
+        raw: i,
         kind: "income",
         name: i.item,
         sub: `수입 · ${labelOf(CATEGORIES_BY_TYPE.income, i.source) || "기타"}`,
@@ -539,6 +580,7 @@ function WalletEntryPage({ user }) {
       })),
       ...day.savings.map((s) => ({
         key: `s-${s.id}`,
+        raw: s,
         kind: "savings",
         name: s.item,
         sub: `저축 · ${labelOf(CATEGORIES_BY_TYPE.savings, s.savingType) || "예금"}`,
@@ -558,7 +600,7 @@ function WalletEntryPage({ user }) {
         <button type="button" className="wr-icon-btn" aria-label="뒤로" onClick={goBack}>
           <Icon name="chevronLeft" size={22} />
         </button>
-        <h1 className="wr-top-title">{editing ? "지출 수정" : `${TYPES.find((t) => t.id === type).label} 기록`}</h1>
+        <h1 className="wr-top-title">{`${typeLabel} ${editing ? "수정" : "기록"}`}</h1>
         {/* 그날 기록 — 눌러서 창으로 본다. 건수가 있으면 숫자를 붙인다 */}
         <button
           type="button"
@@ -607,10 +649,11 @@ function WalletEntryPage({ user }) {
 
           {editing && (
             <div className="wr-editing">
-              <span>저장된 지출을 고치는 중이에요</span>
-              <button type="button" onClick={() => setForm(emptyForm({ paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId }))}>
-                새로 쓰기
-              </button>
+              <span>저장된 {typeLabel}을 고치는 중이에요</span>
+              <span className="wr-editing-actions">
+                <button type="button" onClick={() => startNew("expense")}>지출 추가</button>
+                <button type="button" onClick={() => startNew("income")}>수입 추가</button>
+              </span>
             </div>
           )}
 
@@ -878,7 +921,7 @@ function WalletEntryPage({ user }) {
 
           {editing && (
             <button type="button" className="wr-delete" onClick={removeEditing}>
-              <Icon name="trash" size={15} /> 이 지출 삭제
+              <Icon name="trash" size={15} /> 이 {typeLabel} 삭제
             </button>
           )}
 
@@ -923,10 +966,11 @@ function WalletEntryPage({ user }) {
           loading={day === null}
           error={dayError}
           expenseTotal={dayExpenseTotal}
-          editingId={form.dbId}
+          editingKey={form.dbId ? `${type}-${form.dbId}` : null}
           onClose={() => setDayOpen(false)}
-          onEdit={(raw) => {
-            editExpense(raw);
+          onEdit={(row) => {
+            if (row.kind === "expense") editExpense(row.raw);
+            else editOtherRecord(row.kind, row.raw);
             setDayOpen(false);
           }}
         />
@@ -1024,9 +1068,8 @@ function CategorySheet({ tree, value, currentLabel, onClose, onPick }) {
   );
 }
 
-// 그날 기록 — 저장한 것을 확인하고, 지출은 눌러서 폼으로 불러와 고친다.
-// 수입·저축은 서버에 수정 기능이 없어 보기만 한다.
-function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingId, onClose, onEdit }) {
+// 그날 기록 — 저장한 것을 확인하고, 눌러서 폼으로 불러와 고친다.
+function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingKey, onClose, onEdit }) {
   return (
     <Sheet title={title} onClose={onClose}>
       <p className="wr-sheet-current">
@@ -1034,7 +1077,7 @@ function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingId,
           <strong>{rows.length}건</strong>
           {expenseTotal > 0 && <> · 지출 {won(expenseTotal)}</>}
         </span>
-        <span>지출을 누르면 고칠 수 있어요</span>
+        <span>기록을 누르면 고칠 수 있어요</span>
       </p>
       <div className="wr-sheet-body">
         {loading ? (
@@ -1046,7 +1089,7 @@ function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingId,
         ) : (
           <ul className="wr-day-list">
             {rows.map((r) => {
-              const isEditingThis = r.kind === "expense" && editingId === r.raw.id;
+              const isEditingThis = editingKey === `${r.kind}-${r.raw.id}`;
               const body = (
                 <>
                   <span className="wr-day-icon">
@@ -1064,19 +1107,15 @@ function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingId,
               );
               return (
                 <li key={r.key}>
-                  {r.kind === "expense" ? (
-                    <button
-                      type="button"
-                      className={`wr-day-row ${isEditingThis ? "is-current" : ""}`}
-                      onClick={() => onEdit(r.raw)}
-                      aria-label={`${r.name} 고치기`}
-                    >
-                      {body}
-                      <Icon name="pencil" size={15} className="wr-day-edit" />
-                    </button>
-                  ) : (
-                    <div className="wr-day-row">{body}</div>
-                  )}
+                  <button
+                    type="button"
+                    className={`wr-day-row ${isEditingThis ? "is-current" : ""}`}
+                    onClick={() => onEdit(r)}
+                    aria-label={`${r.name} 고치기`}
+                  >
+                    {body}
+                    <Icon name="pencil" size={15} className="wr-day-edit" />
+                  </button>
                 </li>
               );
             })}
