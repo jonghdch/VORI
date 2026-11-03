@@ -2,6 +2,8 @@ package com.vori.backend.user.dto;
 
 import com.vori.backend.user.Role;
 import com.vori.backend.user.User;
+import com.vori.backend.common.StatType;
+import java.util.List;
 
 /**
  * 로그인한 본인 정보. 상점의 보유 코인 배지, 헤더 닉네임, 튜토리얼 분기에 쓴다.
@@ -17,6 +19,8 @@ public record MeResponse(
         Integer age,
         String job,
         Integer monthlyIncome,
+        Integer monthlyBudget,
+        List<StatType> budgetFocusStats,
         Role role,
         int gameMoney,
         int totalSaved,
@@ -35,6 +39,8 @@ public record MeResponse(
                 u.getAge(),
                 u.getJob(),
                 u.getMonthlyIncome(),
+                u.getMonthlyBudget(),
+                u.budgetFocusStatTypes().stream().sorted().toList(),
                 u.getRole(),
                 nz(u.getGameMoney()),
                 nz(u.getTotalSaved()),
@@ -45,7 +51,7 @@ public record MeResponse(
 
     /** 로그인으로 탈퇴가 취소됐다는 표시를 붙인다. */
     public MeResponse withAccountRestored() {
-        return new MeResponse(id, email, nickname, name, age, job, monthlyIncome, role,
+        return new MeResponse(id, email, nickname, name, age, job, monthlyIncome, monthlyBudget, budgetFocusStats, role,
                 gameMoney, totalSaved, tutorialDone, hasPassword, true);
     }
 

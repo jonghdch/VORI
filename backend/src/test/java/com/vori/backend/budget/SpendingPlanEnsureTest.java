@@ -1,6 +1,5 @@
 package com.vori.backend.budget;
 
-import com.vori.backend.onboarding.UserSpendingProfileRepository;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -20,7 +19,7 @@ class SpendingPlanEnsureTest {
     private final UserStatBudgetRepository budgets = mock(UserStatBudgetRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final SpendingPlanService service = new SpendingPlanService(budgets, mock(FixedExpenseRepository.class),
-            users, mock(UserSpendingProfileRepository.class));
+            users);
 
     @Test
     @DisplayName("예산 생성 여부를 보기 전에 사용자 행을 잠근다")
