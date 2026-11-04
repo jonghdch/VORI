@@ -6,15 +6,25 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+import com.vori.backend.common.StatType;
 
 /**
  * 회원. 이메일·비번 해시·약관 동의 시각·튜토리얼 수집값·게임 자원 보유.
  * 회원가입 트랜잭션은 UserService.signup 참조. 가입 시 user_stat_stats 4행도 같이 INSERT.
+ * UPDATE 는 바뀐 컬럼만 쓴다(@DynamicUpdate) — 잠금 없이 읽어 다른 컬럼(totalSaved 등)을 고친 요청이
+ * 그사이 커밋된 game_money 를 되돌리지 않게. game_money 자체를 바꾸는 경로(보상·구매·관리자 지급)는
+ * 이것만으로는 서로 덮어쓰므로 반드시 UserRepository.findByIdForUpdate 로 읽는다.
  */
 @Entity
+@DynamicUpdate
 @Table(name = "users")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -51,6 +61,14 @@ public class User {
 
     @Column(name = "monthly_income", columnDefinition = "INT UNSIGNED")
     private Integer monthlyIncome;
+
+    // 월 수입과 분리한 가계부용 월 소비 예산. NULL 이면 아직 설정하지 않은 상태.
+    @Column(name = "monthly_budget", columnDefinition = "INT UNSIGNED")
+    private Integer monthlyBudget;
+
+    // 예산을 더 배정할 스탯 그룹들. 예: "ENERGY,CHARM". V56 참조.
+    @Column(name = "budget_focus_stats", length = 80)
+    private String budgetFocusStats;
 
     // 현재 장착한 칭호. NULL = 미장착. FK 는 V1 마지막 ALTER 로 추가 (users↔user_titles 순환)
     @Column(name = "active_title_id")
@@ -127,17 +145,38 @@ public class User {
     }
 
     /** 사용자가 환경설정에서 변경하는 공개 프로필 정보. */
-    public void updateProfile(String nickname, String name, Integer age, String job, Integer monthlyIncome) {
+    public void updateProfile(String nickname, String name, Integer age, String job, Integer monthlyIncome,
+                              Integer monthlyBudget, Set<StatType> focusStats) {
         this.nickname = nickname;
         this.name = name;
         this.age = age;
         this.job = job;
         this.monthlyIncome = monthlyIncome;
+        this.monthlyBudget = monthlyBudget;
+        this.budgetFocusStats = serializeFocusStats(focusStats);
     }
 
     /** 온보딩 설문에서 받은 월 수입. 프로필 설정의 updateProfile 과 같은 컬럼을 쓴다. */
     public void updateMonthlyIncome(Integer monthlyIncome) {
         this.monthlyIncome = monthlyIncome;
+    }
+
+    public Set<StatType> budgetFocusStatTypes() {
+        if (budgetFocusStats == null || budgetFocusStats.isBlank()) return EnumSet.noneOf(StatType.class);
+        return Arrays.stream(budgetFocusStats.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(value -> {
+                    try { return StatType.valueOf(value); }
+                    catch (IllegalArgumentException ignored) { return null; }
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(StatType.class)));
+    }
+
+    private static String serializeFocusStats(Set<StatType> focusStats) {
+        if (focusStats == null || focusStats.isEmpty()) return null;
+        return focusStats.stream().sorted().map(Enum::name).collect(Collectors.joining(","));
     }
 
     /** 온보딩 튜토리얼 완료. */

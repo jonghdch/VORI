@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,17 +49,20 @@ public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
      */
     List<AiInquiry> findByExpenseIdIn(List<Long> expenseIds);
 
+    List<AiInquiry> findByUserIdAndGroupDateAndDailyGroupInquiryTrue(Long userId, LocalDate groupDate);
+
     /** 답변을 마친 AI 질문 수 — 소통 관련 칭호 조건. */
     long countByUserIdAndAnsweredAtIsNotNull(Long userId);
 
     /**
      * from 이후에 답한 질문 수 — 단, 질문이 달린 지출도 from 이후에 기록된 것만 센다. 펫 칭호(AI_ANSWERS)용.
      * 옛 지출을 고치면 AI 질문이 새로 생기므로, 답변 시각만 보면 지출 수정으로 수치를 올릴 수 있다.
+     * 그룹 질문은 달린 지출이 없어 질문 시각으로 본다.
      */
     @Query("""
-        SELECT COUNT(a) FROM AiInquiry a, Expense e
-        WHERE e.id = a.expenseId AND a.userId = :userId
-          AND a.answeredAt IS NOT NULL AND a.answeredAt >= :from AND e.createdAt >= :from
+        SELECT COUNT(a) FROM AiInquiry a LEFT JOIN Expense e ON e.id = a.expenseId
+        WHERE a.userId = :userId AND a.answeredAt IS NOT NULL AND a.answeredAt >= :from
+          AND (e.createdAt >= :from OR (a.dailyGroupInquiry = TRUE AND a.askedAt >= :from))
         """)
     long countAnsweredForExpensesSince(@Param("userId") Long userId, @Param("from") LocalDateTime from);
 
@@ -74,15 +78,16 @@ public interface AiInquiryRepository extends JpaRepository<AiInquiry, Long> {
      */
     @Query(value = """
         SELECT i.* FROM ai_inquiries i
-        JOIN expenses e ON i.expense_id = e.id
+        LEFT JOIN expenses e ON i.expense_id = e.id
         WHERE i.user_id = :userId
           AND i.answered_at IS NULL
-          AND e.spent_at >= :start
-          AND e.spent_at < :end
+          AND ((e.spent_at >= :start AND e.spent_at < :end)
+               OR (i.daily_group_inquiry = TRUE AND i.group_date = :date))
         ORDER BY i.asked_at ASC
         """, nativeQuery = true)
     List<AiInquiry> findPendingByDate(
         @Param("userId") Long userId,
+        @Param("date") java.time.LocalDate date,
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end
     );

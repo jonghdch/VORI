@@ -6,8 +6,10 @@ import com.vori.backend.gemini.GeminiClient;
 import com.vori.backend.receipt.dto.ExtractedReceipt;
 import com.vori.backend.receipt.dto.ReceiptOcrResponse;
 import com.vori.backend.title.TitleCheckEvent;
+import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ import java.util.Set;
 public class ReceiptService {
 
     private final ReceiptOcrJobRepository receiptOcrJobRepository;
+    private final UserRepository userRepository;
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
@@ -47,19 +50,37 @@ public class ReceiptService {
     private static final Set<String> ALLOWED_TYPES = Set.of("image/png", "image/jpeg");
     private static final long MAX_BYTES = 10L * 1024 * 1024; // 10MB
 
+    /**
+     * 사용자당 하루 인식 횟수. 판정·코멘트·펫 대화와 같은 Gemini 하루 한도(모델당 약 20회)를 나눠 쓰므로
+     * 한 사람이 다 쓰지 못하게 묶는다 — 영수증 한 건에 재촬영 한두 번을 보고 5회.
+     * 접수 기록(receipt_ocr_jobs)으로 세서 재시작해도 유지된다.
+     */
+    @Value("${receipt.daily-limit:5}")
+    private int dailyLimit = 5;
+
     /** 업로드 → OCR → 결과. 실패해도 job 은 FAILED 로 남겨 이력을 추적한다. */
     public ReceiptOcrResponse process(Long userId, MultipartFile file) {
         byte[] image = validateAndRead(file);
         String mimeType = file.getContentType();
 
-        // 1) 접수 기록 — 짧은 쓰기
-        ReceiptOcrJob job = transactionTemplate.execute(tx ->
-                receiptOcrJobRepository.save(ReceiptOcrJob.builder()
-                        .userId(userId)
-                        .provider(OcrProvider.GEMINI)
-                        .status(OcrStatus.PROCESSING)
-                        .requestedAt(LocalDateTime.now())
-                        .build()));
+        // 1) 한도 확인 + 접수 기록 — 짧은 쓰기. 사용자 행을 잠가 같은 사람의 동시 업로드를 줄 세운다.
+        //    세기와 접수가 한 트랜잭션이 아니면 동시에 온 업로드가 모두 같은 횟수를 읽고 한도를 넘긴다.
+        ReceiptOcrJob job = transactionTemplate.execute(tx -> {
+            userRepository.findByIdForUpdate(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+            long usedToday = receiptOcrJobRepository.countByUserIdAndRequestedAtGreaterThanEqual(
+                    userId, LocalDate.now().atStartOfDay());
+            if (usedToday >= dailyLimit) {
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                        "오늘 사진 인식은 " + dailyLimit + "번까지예요. 내일 다시 쓰거나 직접 입력해 주세요.");
+            }
+            return receiptOcrJobRepository.save(ReceiptOcrJob.builder()
+                    .userId(userId)
+                    .provider(OcrProvider.GEMINI)
+                    .status(OcrStatus.PROCESSING)
+                    .requestedAt(LocalDateTime.now())
+                    .build());
+        });
 
         // 2) 외부 호출 — 트랜잭션 밖
         String raw;

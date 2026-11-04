@@ -53,6 +53,14 @@ tasks.named('test') {
 	// "Access denied ... (using password: NO)" 로 실패한다.
 	workingDir = projectDir.parentFile
 
+	// 테스트는 개발용 vori DB 가 아니라 vori_test 에 붙는다(없으면 만든다). 같은 DB 를 쓰면
+	// 아직 머지 안 된 마이그레이션이 테스트 한 번에 개발 DB 로 들어가 다른 브랜치의 서버가 뜨지 않는다.
+	// SPRING_DATASOURCE_URL 을 직접 주면 그 값을 쓴다(worktree 별 임시 스키마 등).
+	if (!System.getenv('SPRING_DATASOURCE_URL')) {
+		environment 'SPRING_DATASOURCE_URL',
+			'jdbc:mysql://127.0.0.1:3306/vori_test?createDatabaseIfNotExist=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8'
+	}
+
 	// Gradle 기본 테스트 힙(512MB)으로는 스프링 컨텍스트가 여러 개 캐시될 때
 	// 가끔 OutOfMemoryError 로 테스트 JVM 이 죽는다(로컬 MySQL 8.4 에서 2번 중 1번 재현).
 	maxHeapSize = '1g'

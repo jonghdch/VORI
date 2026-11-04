@@ -1,0 +1,65 @@
+# VORI 로컬 실행 — 프론트·백엔드·MySQL 을 컨테이너 3개로 띄운다. 쓰는 법은 README 「Docker 로 실행」.
+# 로컬·시연 연습용이다. 배포 서버는 deploy/ 의 systemd + Nginx 구성을 쓴다.
+#
+# DB 비밀번호를 여기 적어 둔 이유: 이 DB 는 컨테이너 안에만 있고 이 PC 에서만 닿는다(127.0.0.1).
+# 팀원마다 다른 로컬 MySQL 비밀번호(.env 의 DB_PASSWORD)와 상관없이 같은 명령으로 뜨게 한다.
+name: vori
+
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: vori
+      MYSQL_USER: vori
+      MYSQL_PASSWORD: vori
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      # 3306 은 PC 에 깔린 MySQL 이 쓰고 있는 경우가 많아 피한다.
+      - "127.0.0.1:${DB_PORT:-3307}:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uvori", "-pvori", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    # Gemini 키 등은 .env 에서 읽는다. 없어도 뜨고, AI 호출만 실패한다.
+    env_file:
+      - path: .env
+        required: false
+    # .env 와 겹치면 environment 가 이긴다 — DB 접속만은 위 db 컨테이너로 고정한다.
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/vori?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      DB_USERNAME: vori
+      DB_PASSWORD: vori
+      TZ: Asia/Seoul
+    ports:
+      # 시연 스크립트(scripts/demo_seed.py)가 127.0.0.1:8080 으로 부른다.
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./frontend
+      # REACT_APP_* 은 빌드할 때 코드에 박힌다. 값을 바꾸면 --build 로 다시 빌드해야 한다.
+      args:
+        REACT_APP_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+        REACT_APP_AI_ACTIVE_FROM_HOUR: ${REACT_APP_AI_ACTIVE_FROM_HOUR:-}
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:80"
+
+volumes:
+  db-data:

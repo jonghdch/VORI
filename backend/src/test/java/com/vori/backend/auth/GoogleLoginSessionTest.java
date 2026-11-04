@@ -27,7 +27,7 @@ class GoogleLoginSessionTest {
     private final CustomUserDetailsService userDetails = mock(CustomUserDetailsService.class);
     private final AuthController controller = new AuthController(
             userService, mock(AuthenticationManager.class), new HttpSessionSecurityContextRepository(), verifier, userDetails,
-            mock(com.vori.backend.user.AccountDeletionService.class));
+            mock(com.vori.backend.user.AccountDeletionService.class), mock(LoginAttemptLimiter.class));
 
     @AfterEach
     void clear() {

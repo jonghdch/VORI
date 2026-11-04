@@ -1,5 +1,6 @@
 package com.vori.backend.inquiry;
 
+import com.vori.backend.common.StatType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -8,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
  * AI 가 사용자에게 지출 사유를 물어본 기록. expense_id UQ — 지출 1건당 질문 1개.
@@ -26,8 +28,23 @@ public class AiInquiry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "expense_id", nullable = false, unique = true)
+    @Column(name = "expense_id", unique = true)
     private Long expenseId;
+
+    /** 개별 지출이 아니라 하루 스탯 그룹의 예산 초과를 묻는 질문인지 여부. */
+    @Column(name = "daily_group_inquiry", nullable = false)
+    @Builder.Default
+    private Boolean dailyGroupInquiry = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "group_stat_type", columnDefinition = "ENUM('ENERGY','CHARM','IQ','ENDURANCE')")
+    private StatType groupStatType;
+
+    @Column(name = "group_amount")
+    private Integer groupAmount;
+
+    @Column(name = "group_date")
+    private LocalDate groupDate;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
@@ -72,6 +89,21 @@ public class AiInquiry {
                 .build();
     }
 
+    /** 하루 예산을 초과한 스탯 그룹의 지출을 한 번에 묻는다. */
+    public static AiInquiry pendingDailyGroup(Long userId, LocalDate date, StatType statType,
+                                               String label, int totalAmount, int availableAmount) {
+        return AiInquiry.builder()
+                .userId(userId)
+                .dailyGroupInquiry(true)
+                .groupStatType(statType)
+                .groupAmount(totalAmount)
+                .groupDate(date)
+                .question(templateDailyGroupQuestion(label, totalAmount, availableAmount))
+                .signalAdjusted(false)
+                .askedAt(LocalDateTime.now())
+                .build();
+    }
+
     /**
      * 조사(은/는)를 붙이지 않는 문형을 써서 내역이 무엇이든 어색하지 않게 한다.
      * 답변 화면에 사유 칩이 있어 「골라 주거나」를 넣었다 — 질문 문구 생성을 끄면(AiSwitches) 모두가 이 문구를 본다.
@@ -80,6 +112,12 @@ public class AiInquiry {
         String what = (item == null || item.isBlank()) ? "이번 지출" : "이번 " + item.trim();
         String won = amount == null ? "" : String.format(java.util.Locale.KOREA, " %,d원", amount);
         return what + won + ", 평소보다 큰 지출이었어. 어떤 일이었는지 골라 주거나 가볍게 적어 줄래?";
+    }
+
+    static String templateDailyGroupQuestion(String label, int totalAmount, int availableAmount) {
+        return String.format(java.util.Locale.KOREA,
+                "오늘 %s 지출이 합계 %,d원으로 사용할 수 있는 %,d원을 넘었어. 특별한 이유가 있었는지 골라 주거나 가볍게 적어 줄래?",
+                label, totalAmount, availableAmount);
     }
 
     public void recordAnswer(String answerText, ReasonCategory reasonCategory, boolean signalAdjusted) {

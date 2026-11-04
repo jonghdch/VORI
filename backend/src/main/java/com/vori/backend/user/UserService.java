@@ -186,7 +186,7 @@ public class UserService {
 
     @Transactional
     public void recordLogin(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
         user.incrementLoginCount();
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "LOGIN"));
@@ -198,11 +198,27 @@ public class UserService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
 
         Integer previousIncome = user.getMonthlyIncome();
+        Integer previousBudget = user.getMonthlyBudget();
+        java.util.Set<com.vori.backend.common.StatType> previousFocus = user.budgetFocusStatTypes();
+        if (req.monthlyBudget() != null && req.monthlyIncome() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "월 예산을 입력하려면 월 수입을 먼저 입력해 주세요.");
+        }
+        if (req.monthlyBudget() != null && req.monthlyIncome() != null
+                && req.monthlyBudget() > req.monthlyIncome()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "월 예산은 월 수입을 넘을 수 없어요.");
+        }
         // 공백 정리는 ProfileUpdateRequest 가 검사 전에 끝냈다.
-        user.updateProfile(req.nickname(), req.name(), req.age(), req.job(), req.monthlyIncome());
+        user.updateProfile(req.nickname(), req.name(), req.age(), req.job(), req.monthlyIncome(),
+                req.monthlyBudget(), req.budgetFocusStats());
         // 월 수입이 바뀌면 실제 지출이 없는 타입의 초기 기준선을 다시 잡는다(온보딩 씨딩과 같은 규칙).
-        baselineSeeder.reseedFromIncome(userId, req.monthlyIncome());
         if (!java.util.Objects.equals(previousIncome, req.monthlyIncome())) {
+            baselineSeeder.reseedFromIncome(userId, req.monthlyIncome());
+        }
+        // 월 예산을 안 정한 사용자의 예산은 월 수입에서 나오므로 수입이 바뀌어도 다시 만든다.
+        boolean incomeBasedBudgetChanged = req.monthlyBudget() == null
+                && !java.util.Objects.equals(previousIncome, req.monthlyIncome());
+        if (incomeBasedBudgetChanged || !java.util.Objects.equals(previousBudget, req.monthlyBudget())
+                || !previousFocus.equals(req.budgetFocusStats())) {
             spendingPlanService.rebuildCurrentPlan(userId);
         }
         return user;
