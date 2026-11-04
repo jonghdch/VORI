@@ -339,6 +339,8 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
         </div>
 
         {/* 지출 요약 카드 — 펫 카드와 같은 베이지 바탕에 카드마다 파스텔 포인트색(살구·하늘·세이지) */}
+        <TodayAllowanceCard summary={summary} loading={loading} />
+
         <div className="home-row home-row-kpi">
           <article className="home-card home-kpi home-kpi--today">
             <div className="home-kpi-head">
@@ -346,17 +348,17 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
             </div>
             <p className="home-kpi-value">{won(spending?.today)}</p>
           </article>
-          <article className="home-card home-kpi home-kpi--month">
-            <div className="home-kpi-head">
-              <h3 className="home-kpi-title">이번 달 총 지출</h3>
-            </div>
-            <p className="home-kpi-value">{won(spending?.thisMonth)}</p>
-          </article>
           <article className="home-card home-kpi home-kpi--week">
             <div className="home-kpi-head">
               <h3 className="home-kpi-title">이번 주 지출</h3>
             </div>
             <p className="home-kpi-value">{won(spending?.thisWeek)}</p>
+          </article>
+          <article className="home-card home-kpi home-kpi--month">
+            <div className="home-kpi-head">
+              <h3 className="home-kpi-title">이번 달 총 지출</h3>
+            </div>
+            <p className="home-kpi-value">{won(spending?.thisMonth)}</p>
           </article>
         </div>
 
@@ -364,11 +366,10 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
         <div className="home-row home-row-bottom">
           <section className="home-card home-card-list home-sec--list">
             <div className="home-list-head">
-              <h2 className="home-card-title home-card-title--sm home-sec-title">
-                <span className="home-sec-icon" aria-hidden>🧾</span>
-                최근 지출 내역
-              </h2>
-              <p className="home-list-date">최근 {recent.length}건</p>
+              <h2 className="home-card-title home-card-title--sm home-sec-title">최근 지출 내역</h2>
+              <button type="button" className="home-sec-link" onClick={() => navigate("/wallet")}>
+                상세 내역 확인하기
+              </button>
             </div>
             <ul className="home-tx-list">
               {loading ? (
@@ -390,29 +391,15 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                 ))
               )}
             </ul>
-            <div className="home-card-actions">
-              <button
-                type="button"
-                className="home-link-btn"
-                onClick={() => navigate("/wallet")}
-              >
-                ▶ 상세 내역 확인하기
-              </button>
-              <button
-                type="button"
-                className="btn btn--primary home-btn home-btn-dark"
-                onClick={() => navigate("/wallet/new")}
-              >
-                + 지출 추가하기
-              </button>
-            </div>
           </section>
 
           <section className="home-card home-card-achieve home-sec--achieve">
-            <h2 className="home-card-title home-card-title--sm home-sec-title">
-              <span className="home-sec-icon" aria-hidden>🏆</span>
-              최근 업적
-            </h2>
+            <div className="home-list-head">
+              <h2 className="home-card-title home-card-title--sm home-sec-title">최근 업적</h2>
+              <button type="button" className="home-sec-link" onClick={() => navigate("/dex?tab=achievements")}>
+                더 보기
+              </button>
+            </div>
             <ul className="home-ach-list">
               {achievementPreview.length === 0 ? (
                 <li className="home-ach-row">
@@ -433,26 +420,27 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
                     <span
                       className={`home-badge ${title.acquired ? "home-badge--done" : "home-badge--prog"}`}
                     >
-                      {title.acquired ? "✓ 완료" : `${title.progressPct}%`}
+                      {title.acquired ? "완료" : `${title.progressPct}%`}
                     </span>
                   </li>
                 ))
               )}
             </ul>
-            <button
-              type="button"
-              className="btn btn--primary btn--block home-btn home-btn-primary home-btn-block"
-              onClick={() => navigate("/dex?tab=achievements")}
-            >
-              ▶ 더 많은 업적 확인하기
-            </button>
           </section>
 
           <section className="home-card home-card-chart home-sec--calendar">
-            <h2 className="home-card-title home-card-title--sm home-sec-title">
-              <span className="home-sec-icon" aria-hidden>📅</span>
-              {today.getMonth() + 1}월 기록 캘린더
-            </h2>
+            <div className="home-list-head">
+              <h2 className="home-card-title home-card-title--sm home-sec-title">
+                {today.getMonth() + 1}월 기록 캘린더
+              </h2>
+              <button
+                type="button"
+                className="home-sec-link"
+                onClick={() => navigate(reportMonth ? `/report?month=${reportMonth}` : "/wallet")}
+              >
+                {reportMonth ? "리포트 확인하기" : "가계부 이동"}
+              </button>
+            </div>
             <div className="home-cal">
               <RecordCalendar
                 year={today.getFullYear()}
@@ -462,29 +450,10 @@ function HomeDashboard({ user, onNavigate, onLogout }) {
               />
             </div>
             {/* 월말 정산 뒤 일주일은 그 달 리포트로, 그 외에는 가계부로 */}
-            {reportMonth ? (
-              <button
-                type="button"
-                className="btn btn--primary btn--block home-btn home-btn-primary home-btn-block"
-                onClick={() => navigate(`/report?month=${reportMonth}`)}
-              >
-                ▶ 리포트 확인하기
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn btn--primary btn--block home-btn home-btn-primary home-btn-block"
-                onClick={() => navigate("/wallet")}
-              >
-                ▶ 가계부 이동하기
-              </button>
-            )}
           </section>
         </div>
 
         {/* 오늘 남은 돈 — 리디자인 홈에서 가져온 카드 */}
-        <TodayAllowanceCard summary={summary} loading={loading} />
-
         <p className="home-footnote">
           {user?.role === "ADMIN"
             ? "관리자는 언제든지 소비 판정을 확인할 수 있어요"
