@@ -612,3 +612,55 @@
     white-space: normal;
   }
 }
+
+/* 휴대폰: 요약은 3칸 유지, 등급 필터는 가로로 밀어서 본다 */
+@media (max-width: 768px) {
+  .dex-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .dex-summary-card {
+    padding: 12px;
+  }
+  .dex-summary-value {
+    margin-top: 4px;
+    font-size: 20px;
+    overflow-wrap: anywhere;
+  }
+  .dex-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .dex-filters::-webkit-scrollbar {
+    display: none;
+  }
+  .dex-filter {
+    flex: none;
+    min-height: 44px;
+  }
+}
+
+/* 휴대폰: 펫 상세는 왼쪽 정렬, 성장 단계는 2칸씩 */
+@media (max-width: 720px) {
+  .dexd-hero {
+    justify-items: stretch;
+    text-align: left;
+  }
+  .dexd-art {
+    width: 100%;
+    border-radius: 100px;
+  }
+  .dexd-name {
+    justify-content: flex-start;
+  }
+  .dexd-stages {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    justify-content: stretch;
+  }
+  .dexd-stage-btn {
+    width: 100%;
+  }
+}

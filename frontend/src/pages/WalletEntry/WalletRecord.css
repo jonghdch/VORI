@@ -692,3 +692,41 @@ button.wr-day-row:hover,
     background: none;
   }
 }
+
+/* 태블릿·휴대폰도 폼은 PC 와 같은 카드에 두고, 저장 버튼만 화면 아래에 고정한다 */
+@media (max-width: 1023px) {
+  .wr {
+    background: var(--c-bg);
+  }
+  .wr-body {
+    display: block;
+    padding: 24px 16px calc(132px + env(safe-area-inset-bottom, 0px));
+  }
+  .wr-card {
+    border: 1px solid var(--c-border);
+    border-radius: 24px;
+    background: var(--c-surface);
+    box-shadow: 0 2px 12px rgba(61, 56, 48, 0.05);
+  }
+  .wr-form {
+    padding: 28px 32px;
+  }
+  .wr-amount input {
+    font-size: 52px;
+  }
+  .wr-amount-unit {
+    font-size: 24px;
+  }
+  .wr-actions-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .wr-actions-row .wr-btn {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 360px) {
+  .wr-form {
+    padding: 24px 20px;
+  }
+}

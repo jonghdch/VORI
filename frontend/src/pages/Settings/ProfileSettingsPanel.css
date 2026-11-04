@@ -27,3 +27,11 @@
 .profile-message.error { color: var(--c-danger); }.profile-message.success { color: #647944; }
 .profile-actions { display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: 4px; }
 @media (max-width: 560px) { .profile-form { padding: var(--sp-5); }.profile-form-grid, .profile-budget-focus-options { grid-template-columns: 1fr; } }
+
+/* 휴대폰: 취소·저장을 폭 전체로 나눈다 */
+@media (max-width: 560px) {
+  .profile-actions button {
+    flex: 1;
+    min-height: 44px;
+  }
+}

@@ -223,21 +223,80 @@
   color: var(--c-text-3);
 }
 
-/* 좁은 화면 대응 */
+.admin-topbar-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.admin-menu-btn,
+.admin-drawer-scrim {
+  display: none;
+}
+
+/* 좁은 화면 대응 — 사이드바는 왼쪽 서랍으로 접고 햄버거로 연다 */
 @media (max-width: 860px) {
+  .admin-topbar {
+    min-height: 56px;
+    padding: 6px 16px 6px 4px;
+  }
+  .admin-logo {
+    font-size: 18px;
+  }
+  .admin-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--c-text);
+    cursor: pointer;
+  }
+  .admin-menu-btn:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: -2px;
+  }
+  .admin-topbar-link {
+    font-size: 13px;
+    white-space: nowrap;
+  }
   .admin-body {
     flex-direction: column;
   }
+  .admin-drawer-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(41, 36, 31, 0.4);
+  }
   .admin-sidebar {
-    flex-basis: auto;
-    width: 100%;
-    border-right: 0;
-    border-bottom: 1px solid var(--c-border);
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: var(--sp-4);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 41;
+    width: min(264px, 85vw);
+    padding: 28px 16px 24px;
+    border-right: 1px solid var(--c-border);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0.2s;
+  }
+  .admin-sidebar--open {
+    transform: translateX(0);
+    visibility: visible;
   }
   .admin-main {
-    padding: var(--sp-7) var(--sp-5) 60px;
+    padding: 20px 16px 24px;
+  }
+}
+
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) {
+  .admin-sidebar {
+    transition: none;
   }
 }

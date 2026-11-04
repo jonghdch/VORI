@@ -82,7 +82,7 @@
 ## 참고
 
 - API: `GET /admin/dashboard/summary`, `GET /admin/users?page=&size=20&role=`
-- 반응형·쿼리·기타: `/admin` → `/admin/dashboard`. 메뉴별 구현 현황은 [README 7-2](README.md#7-2-어드민-메뉴-구현-현황).
+- 반응형·쿼리·기타: 폭 860px 이하에서는 사이드바를 접고, 상단 햄버거로 왼쪽 서랍을 연다. 바깥을 누르거나 Esc, 메뉴 이동으로 닫힌다. `/admin` → `/admin/dashboard`. 메뉴별 구현 현황은 [README 7-2](README.md#7-2-어드민-메뉴-구현-현황).
 
 ## 의문·미해결
 

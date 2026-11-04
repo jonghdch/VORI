@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ADMIN_NAV } from "./adminNav";
 import VoriWordmark from "../../components/VoriWordmark";
 import "./AdminLayout.css";
@@ -57,21 +58,60 @@ const NAV_ICONS = {
 // 본문은 중첩 라우트가 채운다 (App.js 의 /admin/* 참고).
 function AdminLayout() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // 폭 860px 이하에서만 쓰는 메뉴 서랍. 넓은 화면의 사이드바는 항상 보인다.
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
 
   return (
     <div className="admin">
       <header className="admin-topbar">
-        <button
-          type="button"
-          className="admin-logo"
-          onClick={() => navigate("/admin")}
-          aria-label="VORI ADMIN 홈으로"
-        >
-          <span className="admin-logo-vori">
-            <VoriWordmark />
-          </span>
-          <span className="admin-logo-admin">ADMIN</span>
-        </button>
+        <div className="admin-topbar-left">
+          <button
+            type="button"
+            className="admin-menu-btn"
+            onClick={() => setMenuOpen(true)}
+            aria-label="어드민 메뉴 열기"
+            aria-expanded={menuOpen}
+            aria-controls="admin-sidebar"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              width="22"
+              height="22"
+              aria-hidden
+            >
+              <path d="M4 6.5h16M4 12h16M4 17.5h16" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="admin-logo"
+            onClick={() => navigate("/admin")}
+            aria-label="VORI ADMIN 홈으로"
+          >
+            <span className="admin-logo-vori">
+              <VoriWordmark />
+            </span>
+            <span className="admin-logo-admin">ADMIN</span>
+          </button>
+        </div>
         <button
           type="button"
           className="admin-topbar-link"
@@ -82,7 +122,20 @@ function AdminLayout() {
       </header>
 
       <div className="admin-body">
-        <nav className="admin-sidebar" aria-label="어드민 메뉴">
+        {menuOpen && (
+          <div
+            className="admin-drawer-scrim"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden
+          />
+        )}
+        <nav
+          id="admin-sidebar"
+          className={
+            menuOpen ? "admin-sidebar admin-sidebar--open" : "admin-sidebar"
+          }
+          aria-label="어드민 메뉴"
+        >
           {ADMIN_NAV.map((group, idx) => (
             <div
               key={group.label}

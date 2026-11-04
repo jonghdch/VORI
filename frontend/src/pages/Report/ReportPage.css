@@ -438,3 +438,98 @@
   }
   .report-pay-track { grid-column: 1 / -1; grid-row: 2; }
 }
+
+/* 휴대폰: 지출 내역 표를 2줄 목록으로, 달력 칸을 알약 모양으로 */
+@media (max-width: 620px) {
+  .ledger-history-table-wrap .ledger-history-table,
+  .ledger-history-table-wrap .ledger-history-table tbody {
+    display: block;
+    width: 100%;
+  }
+  .ledger-history-table-wrap .ledger-history-table thead {
+    display: none;
+  }
+  .ledger-history-table-wrap .ledger-history-table tr {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--c-border);
+  }
+  .ledger-history-table-wrap .ledger-history-table td {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 13px;
+    white-space: normal;
+  }
+  .ledger-history-table-wrap .ledger-history-table td,
+  .ledger-history-table-wrap .ledger-history-date {
+    color: var(--c-text-2);
+    font-weight: 500;
+  }
+  .ledger-history-table-wrap .ledger-history-table td:nth-child(2),
+  .ledger-history-table-wrap .ledger-history-table td.ledger-history-amount {
+    color: var(--c-text);
+  }
+  .ledger-history-table-wrap .ledger-history-table td:nth-child(2) {
+    grid-area: 1 / 1 / 2 / 4;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .ledger-history-table-wrap .ledger-history-table td.ledger-history-amount {
+    grid-area: 1 / 4;
+    font-size: 15px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .ledger-history-table-wrap .ledger-history-table td:nth-child(1) {
+    grid-area: 2 / 1;
+  }
+  .ledger-history-table-wrap .ledger-history-table td:nth-child(3) {
+    grid-area: 2 / 2;
+  }
+  .ledger-history-table-wrap .ledger-history-table td:nth-child(4) {
+    grid-area: 2 / 3 / 3 / 5;
+  }
+  .ledger-history-table-wrap .ledger-history-table td:nth-child(4)::before {
+    content: "AI 판정 ";
+    color: var(--c-text-2);
+  }
+  .ledger-history-table-wrap .ledger-history-table td.ledger-history-empty-cell {
+    grid-area: auto / 1 / auto / -1;
+  }
+  .ledger-history-table-wrap .ledger-history-table td.ledger-history-empty-cell::before {
+    content: none;
+  }
+
+  .report-week-table .ledger-history-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .report-cal-card .rc-grid {
+    gap: 38px 14px;
+  }
+  .report-cal-card .rc-weekday {
+    padding-bottom: 0;
+    margin-bottom: -26px;
+  }
+  .report-cal-card .rc-cell {
+    position: relative;
+    aspect-ratio: auto;
+    height: 16px;
+    border-radius: 999px;
+  }
+  .report-cal-card .rc-cell--blank {
+    height: 16px;
+  }
+  /* 누를 수 있는 영역은 칸 크기를 유지한다 */
+  .report-cal-card button.rc-cell::after {
+    content: "";
+    position: absolute;
+    inset: -13px -7px;
+  }
+}

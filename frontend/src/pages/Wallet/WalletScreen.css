@@ -1116,3 +1116,17 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* 휴대폰: 주/월 전환은 제목 아랫줄 */
+@media (max-width: 640px) {
+  .lw-head {
+    flex-wrap: wrap;
+  }
+  .lw-seg {
+    width: 210px;
+  }
+  .lw-seg button {
+    flex: 1;
+    justify-content: center;
+  }
+}
