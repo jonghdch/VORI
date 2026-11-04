@@ -283,6 +283,12 @@
   max-width: 560px;
 }
 
+.signup-onboarding-card .signup-title,
+.signup-onboarding-card .signup-subtitle {
+  word-break: keep-all;
+  text-wrap: balance;
+}
+
 .signup-step-text {
   margin: 0 0 10px;
   color: var(--green-dark);
