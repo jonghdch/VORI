@@ -147,15 +147,12 @@ export function PetNameModal({ pet, onNamed }) {
         <h2 id={titleId} className="pet-name-title">
           {species}의 이름을 지어 주세요
         </h2>
-        <p className="pet-name-lead">앞으로 이 이름으로 불러요.</p>
+        <p className="pet-name-lead">앞으로 같이 지낼 친구예요!</p>
         <form className="pet-name-form" onSubmit={submit} noValidate>
-          <label className="pet-name-label" htmlFor={`${titleId}-input`}>
-            펫 이름
-          </label>
           <input
-            id={`${titleId}-input`}
             className="pet-name-input"
             type="text"
+            aria-label="펫 이름"
             value={name}
             onChange={(event) => {
               setName(event.target.value);
