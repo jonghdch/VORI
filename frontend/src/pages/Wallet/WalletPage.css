@@ -136,7 +136,15 @@
   border-collapse: collapse;
 }
 
-/* 5열 폭 배분: 날짜 96px / 내역 auto / 카테고리 22% / AI 판정 84px / 금액 92px */
+/* 폰에서는 고정 폭 세 열(96+84+92px)만으로 칸이 차서 내역 열이 0px 이 됐다(무엇을 샀는지 안 보임).
+   좁은 화면에선 표를 최소 폭으로 두고 감싼 상자(overflow-x: auto)에서 옆으로 넘겨 본다. */
+@media (max-width: 620px) {
+  .ledger-history-table {
+    min-width: 520px;
+  }
+}
+
+/* 5열 폭 배분: 날짜 96px / 내역 auto / 카테고리 22% / 질문 결과 84px / 금액 92px */
 .ledger-history-table th:nth-child(1) { width: 96px; }
 .ledger-history-table th:nth-child(2) { width: auto; }
 .ledger-history-table th:nth-child(3) { width: 22%; }

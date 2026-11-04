@@ -68,7 +68,7 @@ function ListTxDetail({ row, iconName, categoryLabel, instrument, onOpenDate, on
           )}
           {row.aiStatus && (
             <p className="lw-detail-ai">
-              AI 판정 <SignalChip signal={row.signal} />
+              질문 결과 <SignalChip signal={row.signal} />
             </p>
           )}
         </div>

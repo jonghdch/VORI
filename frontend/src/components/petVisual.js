@@ -87,12 +87,13 @@ export const VARIANT_LABEL = {
   ALIEN: "에일리언",
 };
 
+// 등급 이름은 도감(petCatalog DEX_TIER_LABEL)과 같게 — 상점만 S·A·B·C 라 같은 등급이 두 이름이었다
 export const TIER_LABEL = {
   STARTER: "시작 펫",
-  S: "S등급",
-  A: "A등급",
-  B: "B등급",
-  C: "C등급",
+  S: "레전드",
+  A: "에픽",
+  B: "희귀",
+  C: "일반",
 };
 
 // 레벨·진화 — 백엔드 PetLevel 과 같은 값. 레벨과 레벨 안 진행도는 서버가 PetResponse 로 계산해 준다

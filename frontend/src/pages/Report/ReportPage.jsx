@@ -111,6 +111,12 @@ function ReportPage({ user, onLogout }) {
 
   const today = useMemo(() => new Date(), []);
   const todayKey = dateKey(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  // 「지난 날」 판단의 기준 — 오늘의 끝. 주 보기 날짜는 기준일(anchor)의 시각을 그대로 가져 today 보다
+  // 몇 밀리초 늦을 수 있어, today 와 바로 비교하면 오늘이 지난 날에서 빠졌다(「기록한 날 4 / 3일」)
+  const endOfToday = useMemo(
+    () => new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999),
+    [today],
+  );
 
   // 보기 단위(주/월)와 기준일. 이동 시 anchor 만 갱신되고 기간이 따라간다.
   // ?month=2026-09 로 들어오면(알림·홈 말풍선의 "월간 리포트 확인") 그 달 월간 보기로 연다.
@@ -299,10 +305,8 @@ function ReportPage({ user, onLogout }) {
   // ── 기간 통계 ─────────────────────────────────────────
   // 기록한 날 수 / 기간 일수, 하루 평균(오늘까지 지난 날 기준 — 미래 날짜로 평균을 희석하지 않음).
   const recordedDayCount = new Set(rows.map((r) => dateKey(r.year, r.month, r.day))).size;
-  const elapsedDays = Math.max(
-    1,
-    periodDates.filter((d) => d <= today).length,
-  );
+  const elapsedCount = periodDates.filter((d) => d <= endOfToday).length; // 0 이면 아직 안 온 기간
+  const elapsedDays = Math.max(1, elapsedCount);
   const dailyAvg = Math.round(weekExpenseTotal / elapsedDays);
 
   // AI 판정(예외 지출) 분포.
@@ -358,7 +362,7 @@ function ReportPage({ user, onLogout }) {
 
   // ── 지난달(지난주) 비교 ─────────────────────────────────
   // 오늘이 든 기간이면 지난 기간도 같은 날 수만큼만(1일~오늘 vs 지난달 1일~같은 날), 지나간 기간이면 기간 전체끼리.
-  const elapsedInPeriod = periodDates.filter((d) => d <= today).length;
+  const elapsedInPeriod = elapsedCount;
   const prevUnit = viewMode === "week" ? "지난주" : "지난달";
   const comparison = useMemo(() => {
     if (loading || prevRows == null || prevFailed || elapsedInPeriod === 0) return null;
@@ -576,21 +580,33 @@ function ReportPage({ user, onLogout }) {
               </div>
               <div className="report-kpi">
                 <p className="home-kpi-title">순저축</p>
-                <p
-                  className={`home-kpi-value ${
-                    netSaved >= 0 ? "report-kpi-value--pos" : "report-kpi-value--neg"
-                  }`}
-                >
-                  {netSaved >= 0 ? "+" : "−"}
-                  {formatWon(Math.abs(netSaved))}
-                </p>
-                <p className="home-kpi-sub">수입 − 지출</p>
+                {/* 이 기간에 수입이 없으면(수입을 안 적는 학생 대부분) 「−지출 전체」를 빨간 적자로 보이지 않는다 */}
+                {incomeRows.length === 0 ? (
+                  <>
+                    <p className="home-kpi-value">—</p>
+                    <p className="home-kpi-sub">이 기간 수입 없음</p>
+                  </>
+                ) : (
+                  <>
+                    <p
+                      className={`home-kpi-value ${
+                        netSaved >= 0 ? "report-kpi-value--pos" : "report-kpi-value--neg"
+                      }`}
+                    >
+                      {netSaved >= 0 ? "+" : "−"}
+                      {formatWon(Math.abs(netSaved))}
+                    </p>
+                    <p className="home-kpi-sub">수입 − 지출</p>
+                  </>
+                )}
               </div>
               <div className="report-kpi">
                 <p className="home-kpi-title">기록한 날</p>
                 <p className="home-kpi-value">
                   {recordedDayCount}
-                  <span className="report-kpi-unit">/ {periodDates.length}일</span>
+                  {/* 아직 안 온 날은 셀 수 없으니 분모에서 뺀다 — 하루 평균과 같은 기준(지난 날).
+                      통째로 안 온 기간이면 분모가 없다 */}
+                  <span className="report-kpi-unit">/ {elapsedCount > 0 ? `${elapsedDays}일` : "—"}</span>
                 </p>
                 <p className="home-kpi-sub">하루 평균 {formatWon(dailyAvg)}</p>
               </div>
@@ -678,11 +694,13 @@ function ReportPage({ user, onLogout }) {
 
             <section className="home-card report-signal-card">
               <h2 className="home-card-title home-card-title--sm report-card-title">
-                AI 판정 분포
+                {/* 판정은 규칙이 한다 — AI 가 이유를 물은 지출의 신호만 세는 카드라 「질문 결과」로 부른다.
+                    하루 판정(1차·최종)과 같은 「판정」을 쓰면 둘이 섞인다 */}
+                질문 결과
                 <span className="report-card-period">{signalTotal}건</span>
               </h2>
               {signalTotal === 0 ? (
-                <p className="report-signal-empty">이 {unitLabel}에는 AI 판정을 거친 지출이 없어요.</p>
+                <p className="report-signal-empty">이 {unitLabel}에는 이유를 물어본 지출이 없어요.</p>
               ) : (
                 <>
                   <div className="report-signal-bar" aria-hidden>
@@ -829,7 +847,7 @@ function ReportPage({ user, onLogout }) {
                       <th>날짜</th>
                       <th>내역</th>
                       <th>카테고리</th>
-                      <th>AI 판정</th>
+                      <th>질문 결과</th>
                       <th>금액</th>
                     </tr>
                   </thead>
@@ -986,7 +1004,7 @@ function ReportPage({ user, onLogout }) {
                     {activeRow.aiStatus && (
                       <div className="ledger-detail-ai">
                         <span className="ledger-detail-ai-badge">
-                          AI 판정 · {activeRow.aiStatus}
+                          질문 결과 · {activeRow.aiStatus}
                         </span>
                       </div>
                     )}

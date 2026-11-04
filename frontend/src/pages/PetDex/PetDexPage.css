@@ -337,8 +337,23 @@
 }
 
 @media (max-width: 768px) {
+  /* 세로 세 장이면 첫 화면을 통계가 다 차지해 펫 목록이 안 보인다 — 폰에서도 한 줄 세 칸, 대신 작게 */
   .dex-summary {
-    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .dex-summary-card {
+    padding: 10px 10px 12px;
+  }
+  .dex-summary-label {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dex-summary-value {
+    margin-top: 4px;
+    font-size: 18px;
   }
 
   .dex-grid {
