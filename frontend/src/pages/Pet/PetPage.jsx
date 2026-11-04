@@ -825,17 +825,18 @@ function PetPage({ user, onLogout }) {
                           ))}
                         </div>
 
-                        <div className="mr-release">
-                          <button
-                            type="button"
-                            className="mr-btn mr-btn--release"
-                            disabled={!graduated || releasing}
-                            onClick={handleRelease}
-                          >
-                            {releasing ? "배웅 중…" : `배웅하기 · ${coin(pet.exp)}부터`}
-                          </button>
-                          {!graduated && <p className="mr-help">Lv.{pet.maxLevel}부터 배웅할 수 있어요</p>}
-                        </div>
+                        {graduated && (
+                          <div className="mr-release">
+                            <button
+                              type="button"
+                              className="mr-btn mr-btn--release"
+                              disabled={releasing}
+                              onClick={handleRelease}
+                            >
+                              {releasing ? "배웅 중…" : `배웅하기 · ${coin(pet.exp)}부터`}
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
                     {!pet && !petLoading && !petError && (
