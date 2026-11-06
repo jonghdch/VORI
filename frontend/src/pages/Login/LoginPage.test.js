@@ -1,7 +1,7 @@
 // 로그인 화면 — 오류 표시와 로그인 뒤 갈 곳. 경진대회 관람객이 처음 만나는 화면이다.
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { login } from "../../api/auth";
+import { login, startGuest } from "../../api/auth";
 import { getOnboardingStatus } from "../../api/onboarding";
 import LoginPage from "./LoginPage";
 
@@ -9,7 +9,7 @@ import LoginPage from "./LoginPage";
 // 모듈을 찾지 못한다. 이 화면은 라우터에서 useNavigate 만 쓰므로 그것만 가짜로 두고 어디로 보내는지 본다.
 const mockNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({ useNavigate: () => mockNavigate }), { virtual: true });
-jest.mock("../../api/auth", () => ({ login: jest.fn() }));
+jest.mock("../../api/auth", () => ({ login: jest.fn(), startGuest: jest.fn() }));
 jest.mock("../../api/onboarding", () => ({ getOnboardingStatus: jest.fn() }));
 jest.mock("../../components/GoogleSignInButton", () => ({ __esModule: true, default: () => null }));
 
@@ -80,4 +80,30 @@ test("로그인은 됐지만 계정 상태를 못 읽으면 홈으로 보내지 
   await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/home"));
   expect(login).toHaveBeenCalledTimes(1);
   expect(onLogin).toHaveBeenCalledTimes(1);
+});
+
+test("「가입 없이 체험하기」는 체험 계정으로 로그인해 홈으로 간다", async () => {
+  startGuest.mockResolvedValue({ id: 3, role: "USER" });
+  getOnboardingStatus.mockResolvedValue({ profileCompleted: true, tutorialDone: true });
+  const onLogin = jest.fn();
+  render(<LoginPage onLogin={onLogin} />);
+
+  userEvent.click(screen.getByRole("button", { name: "가입 없이 체험하기" }));
+
+  await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/home"));
+  expect(login).not.toHaveBeenCalled();
+  expect(onLogin).toHaveBeenCalledWith({ id: 3, role: "USER" });
+});
+
+test("오늘 체험 계정을 다 썼으면 받은 문구를 보여 주고 로그인 화면에 남는다", async () => {
+  // 하루 상한(GUEST_DAILY_LIMIT)에 닿으면 서버가 429 와 함께 이 문구를 준다
+  startGuest.mockRejectedValue(new Error("오늘 준비한 체험 계정을 다 썼어요. 회원가입으로 시작해 주세요."));
+  const onLogin = jest.fn();
+  render(<LoginPage onLogin={onLogin} />);
+
+  userEvent.click(screen.getByRole("button", { name: "가입 없이 체험하기" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("오늘 준비한 체험 계정을 다 썼어요.");
+  expect(onLogin).not.toHaveBeenCalled();
+  expect(mockNavigate).not.toHaveBeenCalled();
 });

@@ -53,6 +53,11 @@
 .landing-studio-primary:hover,.landing-studio-final button:hover { background:#71925e; transform:translateY(-2px); }
 .landing-studio-secondary { color:#fff; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.3)!important; }
 .landing-studio-secondary:hover { background:rgba(255,255,255,.15); }
+/* 「체험하기」 — 경진대회 관람객용. 안내·오류는 어두운 첫 화면 위라 밝은 글씨, 낱말 단위 줄바꿈 */
+.landing-studio-guest:disabled { opacity:.7; cursor:wait; }
+.landing-studio-guest-note { margin:14px 0 0; max-width:520px; font-size:13px; line-height:1.6; color:rgba(255,255,255,.82); word-break:keep-all; }
+.landing-studio-guest-note a { color:inherit; text-decoration:underline; }
+.landing-studio-guest-error { margin:8px 0 0; font-size:14px; font-weight:700; color:#ffc9bf; word-break:keep-all; }
 .landing-studio-preview { transform:rotate(1.5deg); border:1px solid rgba(255,255,255,.2); border-radius:24px; overflow:hidden; background:rgba(250,251,247,.96); color:#263022; box-shadow:0 32px 80px rgba(0,0,0,.38); backdrop-filter:blur(12px); }
 .landing-studio-preview-head { display:flex; justify-content:space-between; padding:18px 22px; border-bottom:1px solid #e5e9df; font-weight:800; }
 .landing-studio-live { color:#688657; font-size:12px; }.landing-studio-live i { display:inline-block; width:7px; height:7px; margin-right:6px; border-radius:50%; background:#79a45e; box-shadow:0 0 0 5px #e5f1dc; }

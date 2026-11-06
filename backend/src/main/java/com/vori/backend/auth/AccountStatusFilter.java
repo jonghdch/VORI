@@ -55,11 +55,11 @@ public class AccountStatusFilter extends OncePerRequestFilter {
     /**
      * 세션을 끝내거나 새로 만드는 요청은 옛 세션 상태로 막지 않는다.
      * - 로그아웃: 막으면 제재된 사용자의 로그아웃이 403 에러가 된다
-     * - 로그인·가입: 막으면 제재된 옛 세션이 남은 브라우저에서 다른 계정 로그인이 첫 시도에 막힌다.
+     * - 로그인·가입·체험하기: 막으면 제재된 옛 세션이 남은 브라우저에서 다른 계정 로그인이 첫 시도에 막힌다.
      *   로그인 자체의 제재 확인은 CustomUserDetailsService 가 한다
      */
     private static final Set<String> SESSION_ENDPOINTS =
-        Set.of("/api/auth/logout", "/api/auth/login", "/api/auth/signup", "/api/auth/google");
+        Set.of("/api/auth/logout", "/api/auth/login", "/api/auth/signup", "/api/auth/google", "/api/auth/guest");
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {

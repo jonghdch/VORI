@@ -27,7 +27,7 @@ class LoginRateLimitTest {
     private final AuthController controller = new AuthController(
             mock(UserService.class), authManager, new HttpSessionSecurityContextRepository(),
             mock(GoogleTokenVerifier.class), mock(CustomUserDetailsService.class), mock(AccountDeletionService.class),
-            limiter);
+            limiter, mock(com.vori.backend.guest.GuestAccountService.class));
 
     private int status(Runnable r) {
         return assertThrows(ResponseStatusException.class, r::run).getStatusCode().value();
