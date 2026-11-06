@@ -135,6 +135,9 @@ public class UserService {
             .termsAgreedAt(now)
             .privacyAgreedAt(now)
             .gameMoney(WELCOME_COINS)
+            // 체험 설문은 「식비·카페 중심」이다. #142 뒤 예산은 네 그룹 균등이라 비중을 안 주면
+            // 체험자가 한 끼만 적어도 식비가 「초과」가 된다 — 식비에 비중(+15)을 준다(SpendingPlanService)
+            .budgetFocusStats("ENERGY")
             .createdAt(now)
             .build();
 
