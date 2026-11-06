@@ -29,7 +29,7 @@ class GuestLoginSessionTest {
     private final AuthController controller = new AuthController(
             userService, mock(AuthenticationManager.class), new HttpSessionSecurityContextRepository(),
             mock(GoogleTokenVerifier.class), userDetails,
-            mock(com.vori.backend.user.AccountDeletionService.class), guestAccountService);
+            mock(com.vori.backend.user.AccountDeletionService.class), mock(LoginAttemptLimiter.class), guestAccountService);
 
     @AfterEach
     void clear() {

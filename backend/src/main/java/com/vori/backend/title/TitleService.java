@@ -17,6 +17,7 @@ import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -126,7 +127,12 @@ public class TitleService {
      * 커밋 이후에 실행한다 — 아직 커밋되지 않은 지출을 세면 조건이 어긋난다.
      * 별도 트랜잭션을 여는 것도 그 때문이다(원본 트랜잭션은 이미 끝났다).
      * 실패해도 원래 동작(지출 등록 등)에 영향이 없어야 하므로 예외를 삼킨다.
+     *
+     * 요청 스레드가 아니라 titleExecutor 에서 돈다 — 커밋 직후에도 원래 요청의 DB 연결은 아직 반납 전이라,
+     * 같은 스레드에서 새 트랜잭션을 열면 요청 하나가 연결 두 개를 쥔다. 동시에 10명이면 서로 기다려 서버가
+     * 30초 멈췄다(AsyncConfig.titleExecutor). 그래서 지급은 응답보다 조금 늦을 수 있다(보통 수십 ms).
      */
+    @Async("titleExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTitleCheck(TitleCheckEvent event) {

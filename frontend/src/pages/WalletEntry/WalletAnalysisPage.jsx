@@ -401,19 +401,20 @@ function WalletAnalysisPage({ user }) {
             {(() => {
               const inq = inquiries[page - 1];
               const expense = expenses.find((item) => item.id === inq.expenseId);
-              const statType = expense?.statType;
+              const groupInquiry = Boolean(inq.dailyGroupInquiry);
+              const statType = groupInquiry ? inq.groupStatType : expense?.statType;
               const groupName = statType ? STAT_LABELS[statType] : null;
               const firstSignal = statType
                 ? judgment?.groupJudgments?.[statType]?.signal || judgment?.signal || "GRAY"
                 : judgment?.signal || "GRAY";
               // 카테고리 이름은 질문 응답에만 있다(지출 응답에는 categoryId 뿐). 시간은 지출 응답에서.
-              const categoryNames = [
+              const categoryNames = groupInquiry ? ["일일 그룹"] : [
                 formatTime(expense),
                 inq.parentCategoryName,
                 inq.categoryName,
               ].filter(Boolean);
-              const itemName = expense?.item || inq.item || "지출";
-              const amount = expense?.amount ?? inq.amount;
+              const itemName = groupInquiry ? `${groupName || "소비 그룹"} 지출 합계` : expense?.item || inq.item || "지출";
+              const amount = groupInquiry ? inq.groupAmount : expense?.amount ?? inq.amount;
               const categoryName = `${inq.parentCategoryName ?? ""} ${inq.categoryName ?? ""}`;
               const selectedReason = reasons[inq.inquiryId];
               const answer = answers[inq.inquiryId] || "";
@@ -422,7 +423,11 @@ function WalletAnalysisPage({ user }) {
               return (
                 <>
                   <div className="ja-context-row">
-                    <span>{groupName ? `${groupName} 1차 판정 · 확인 필요` : "1차 판정 · 확인 필요"}</span>
+                    <span>
+                      {groupInquiry
+                        ? `오늘 ${groupName || "소비 그룹"} 예산을 넘겼어요 · 사유를 그룹 판정에 반영해요`
+                        : groupName ? `${groupName} 1차 판정 · 확인 필요` : "1차 판정 · 확인 필요"}
+                    </span>
                     <SignalChip signal={firstSignal} />
                   </div>
 

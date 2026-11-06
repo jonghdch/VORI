@@ -88,9 +88,9 @@ function OnboardingPage() {
         <section className="signup-card signup-onboarding-card">
           <div className="signup-card-head">
             <p className="signup-step-text">시작 준비 완료</p>
-            <h1 className="signup-title">내 소비 기준이 준비됐어요.</h1>
+            <h1 className="signup-title">보리가 내 소비 습관을 알게 됐어요.</h1>
             <p className="signup-subtitle">
-              첫 기록을 남기면 보리가 오늘 소비를 내 평소 기준으로 살펴봐요.
+              이제 지출을 기록하면 아래의 기준으로 이유를 물어봐요.
             </p>
           </div>
 

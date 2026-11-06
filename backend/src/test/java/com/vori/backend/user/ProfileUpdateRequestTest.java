@@ -16,7 +16,13 @@ class ProfileUpdateRequestTest {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     private boolean valid(String nickname, String name) {
-        return validator.validate(new ProfileUpdateRequest(nickname, name, null, null, null)).isEmpty();
+        return validator.validate(new ProfileUpdateRequest(nickname, name, null, null, null, null, null)).isEmpty();
+    }
+
+    @Test
+    void monthlyBudgetOfZeroIsRejectedAndEmptyIsAllowed() {
+        assertFalse(validator.validate(new ProfileUpdateRequest("닉네임", "홍길동", null, null, 100, 0, null)).isEmpty());
+        assertTrue(validator.validate(new ProfileUpdateRequest("닉네임", "홍길동", null, null, 100, null, null)).isEmpty());
     }
 
     @Test
@@ -32,9 +38,9 @@ class ProfileUpdateRequestTest {
     void lengthIsCheckedAfterTrimming() {
         assertFalse(valid("a ", "홍길동"));
         assertFalse(valid("닉네임", " 홍"));
-        assertEquals("닉네임", new ProfileUpdateRequest("  닉네임 ", "홍길동", null, null, null).nickname());
-        assertEquals("대학생", new ProfileUpdateRequest("닉네임", "홍길동", null, " 대학생 ", null).job());
-        assertNull(new ProfileUpdateRequest("닉네임", "홍길동", null, "  ", null).job());
+        assertEquals("닉네임", new ProfileUpdateRequest("  닉네임 ", "홍길동", null, null, null, null, null).nickname());
+        assertEquals("대학생", new ProfileUpdateRequest("닉네임", "홍길동", null, " 대학생 ", null, null, null).job());
+        assertNull(new ProfileUpdateRequest("닉네임", "홍길동", null, "  ", null, null, null).job());
     }
 
     @Test

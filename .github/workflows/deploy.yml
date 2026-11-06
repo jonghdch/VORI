@@ -1,0 +1,111 @@
+# main 에 push → CI 통과 → 운영 서버(vori.worldpick.co.kr)에 자동 배포.
+# 서버 쪽은 vori 계정의 배포 키 강제 명령(forced command)으로만 들어간다:
+#   vori 의 authorized_keys → deploy-ssh-entry.sh(인자 화이트리스트) → deploy.sh (모두 vori 권한)
+# 이 키로는 deploy.sh 외에 아무것도 실행할 수 없다. 자세한 내용은 docs/deploy-checklist.md 2-3절.
+#
+# 필요한 저장소 secrets (Settings → Secrets and variables → Actions):
+#   DEPLOY_SSH_KEY      배포 개인키 전체 (서버 .deploy-state/github-deploy-key)
+#   DEPLOY_HOST         서버 주소
+#   DEPLOY_PORT         sshd 포트
+#   DEPLOY_KNOWN_HOSTS  ssh-keyscan 으로 얻은 호스트 키 한 줄
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: '변경이 없어도 다시 빌드할 대상 (none = 변경 감지에 맡김)'
+        type: choice
+        options: [none, backend, frontend, all]
+        default: none
+
+# 배포끼리 겹치지 않게 한다. 진행 중인 배포는 취소하지 않고 다음 배포가 기다린다.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    # 자동: 이 저장소 main 으로의 push 에서 돈 CI 가 성공했을 때만(PR·포크의 main 브랜치는 제외).
+    # 수동: main 에서 Run workflow 했을 때만.
+    if: >-
+      (github.event_name == 'workflow_run'
+        && github.event.workflow_run.conclusion == 'success'
+        && github.event.workflow_run.event == 'push'
+        && github.event.workflow_run.head_repository.full_name == github.repository)
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      DEPLOY_USER: vori
+      SITE: https://vori.worldpick.co.kr
+    steps:
+      - name: 배포 대상 커밋
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: echo "트리거 ${{ github.event_name }} / 커밋 ${HEAD_SHA:0:7} — 서버는 origin/main 최신을 pull 한다"
+
+      - name: SSH 키·호스트 키 준비
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_KNOWN_HOSTS" ] || { echo "::error::DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS secret 이 비어 있습니다"; exit 1; }
+          install -d -m 700 ~/.ssh
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+      - name: 서버 deploy.sh 실행
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          FORCE_BUILD: ${{ inputs.force_build || 'none' }}
+        run: |
+          args=()
+          case "$FORCE_BUILD" in
+            none|'') ;;
+            backend|frontend|all) args+=(--force-build "$FORCE_BUILD") ;;
+            *) echo "::error::알 수 없는 force_build: $FORCE_BUILD"; exit 1 ;;
+          esac
+          echo "ssh $DEPLOY_USER@<host> ${args[*]:-(옵션 없음)}"
+          # 원격 출력(deploy.sh 로그)을 그대로 보여 주고, 원격 종료 코드가 0 이 아니면 이 단계가 실패한다.
+          ssh -i ~/.ssh/deploy_key \
+              -T -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+              -o ConnectTimeout=20 \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=6 \
+              -p "$DEPLOY_PORT" \
+              "$DEPLOY_USER@$DEPLOY_HOST" -- "${args[@]}"
+
+      - name: 배포 후 확인 (/api/auth/me → 401, / → 200)
+        run: |
+          check() { # 경로 기대코드 — 최대 5번(25초) 다시 시도
+            local code=000
+            for i in 1 2 3 4 5; do
+              code=$(curl -sS -o /dev/null -m 10 -w '%{http_code}' "$SITE$1" || true)
+              [ "$code" = "$2" ] && { echo "$1 → $code OK"; return 0; }
+              sleep 5
+            done
+            echo "::error::$1 응답 $code (기대 $2)"; return 1
+          }
+          ok=0
+          check /api/auth/me 401 || ok=1
+          check / 200 || ok=1
+          exit $ok
+
+      - name: 키 파일 정리
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
