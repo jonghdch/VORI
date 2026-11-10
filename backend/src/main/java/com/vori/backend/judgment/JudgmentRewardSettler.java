@@ -9,7 +9,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
 
 /**
  * 자정 정산 (docs/judgment-flow.md ⑤) — 지난 날의 판정을 마무리하고 보상을 한 번 지급한다.
@@ -18,7 +17,8 @@ import java.time.ZoneId;
  * 2. 어제 지출을 적었는데 판정 받기를 하지 않은 사용자 → 신호등 판정을 대신 내려 확정(사유 반영 없음)
  * 3. 확정됐는데 아직 보상을 주지 않은 판정 → 판정 때 정해 둔 보상을 지급
  *
- * 매일 00:00(한국 시간)에 돌고, 자정에 서버가 꺼져 있었던 경우에 대비해 서버가 뜰 때도 한 번 돈다.
+ * 매일 판정이 닫히는 시각(vori.ai-judge.close-hour, 기본 새벽 2시, 한국 시간)에 돌고,
+ * 그때 서버가 꺼져 있었던 경우에 대비해 서버가 뜰 때도 한 번 돈다. 0시~닫히는 시각은 아직 전날 판정 시간이라 그 전엔 정산하지 않는다.
  * 2번은 어제 하루만 본다 — 배포 첫날 지난 모든 날짜에 판정·보상이 한꺼번에 생기지 않게.
  * 한 건이 실패해도 나머지는 계속 처리하고 ERROR 로그를 남긴다. 실패한 건은 다음 실행 때 다시 처리된다.
  */
@@ -27,20 +27,18 @@ import java.time.ZoneId;
 @RequiredArgsConstructor
 public class JudgmentRewardSettler {
 
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
-
     private final DailyJudgmentRepository judgments;
     private final ExpenseRepository expenses;
     private final DailyJudgmentService service;
 
-    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
-    public void settleAtMidnight() {
-        settle(LocalDate.now(KST));
+    @Scheduled(cron = "0 0 ${vori.ai-judge.close-hour:2} * * *", zone = "Asia/Seoul")
+    public void settleAtClose() {
+        settle(service.currentJudgmentDay());
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void settleOnStartup() {
-        settle(LocalDate.now(KST));
+        settle(service.currentJudgmentDay());
     }
 
     /** today 이전 날짜를 정산한다. 보상을 지급한 건수를 돌려준다. */
@@ -51,7 +49,7 @@ public class JudgmentRewardSettler {
                 if (service.finalizeExpiredAsInitial(row.getId())) finalized++;
             } catch (Exception e) {
                 failed++;
-                log.error("자정 정산 — 미확정 판정 확정 실패 judgmentId={}, userId={}, date={}", row.getId(), row.getUserId(), row.getJudgmentDate(), e);
+                log.error("판정 마감 정산 — 미확정 판정 확정 실패 judgmentId={}, userId={}, date={}", row.getId(), row.getUserId(), row.getJudgmentDate(), e);
             }
         }
         LocalDate yesterday = today.minusDays(1);
@@ -60,7 +58,7 @@ public class JudgmentRewardSettler {
                 if (service.judgeUnjudgedDay(userId, yesterday)) judged++;
             } catch (Exception e) {
                 failed++;
-                log.error("자정 정산 — 판정 안 한 날 판정 실패 userId={}, date={}", userId, yesterday, e);
+                log.error("판정 마감 정산 — 판정 안 한 날 판정 실패 userId={}, date={}", userId, yesterday, e);
             }
         }
         for (DailyJudgment row : judgments.findByStatusAndRewardedAtIsNullAndJudgmentDateBefore(JudgmentStatus.FINALIZED, today)) {
@@ -68,11 +66,11 @@ public class JudgmentRewardSettler {
                 if (service.payReward(row.getId())) paid++;
             } catch (Exception e) {
                 failed++;
-                log.error("자정 정산 — 보상 지급 실패 judgmentId={}, userId={}, date={}", row.getId(), row.getUserId(), row.getJudgmentDate(), e);
+                log.error("판정 마감 정산 — 보상 지급 실패 judgmentId={}, userId={}, date={}", row.getId(), row.getUserId(), row.getJudgmentDate(), e);
             }
         }
         if (finalized + judged + paid + failed > 0) {
-            log.info("자정 정산 — before={}, 미확정 확정={}, 대신 판정={}, 보상 지급={}, 실패={}", today, finalized, judged, paid, failed);
+            log.info("판정 마감 정산 — before={}, 미확정 확정={}, 대신 판정={}, 보상 지급={}, 실패={}", today, finalized, judged, paid, failed);
         }
         return paid;
     }

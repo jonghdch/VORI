@@ -6,7 +6,7 @@ import { listExpensesByDate } from "../../api/ledger";
 import { getActivePet } from "../../api/pet";
 import { finalizeDateJudgment, getDateJudgment, startDateJudgment } from "../../api/dailyJudgment";
 import JudgmentResults, { isSoftenedByReason, judgmentReason, RULE_TEXT } from "./JudgmentResults";
-import { canUseAiJudge } from "../../config";
+import { aiJudgeDate, canUseAiJudge } from "../../config";
 import { SIGNAL_STATUS } from "../../signalLabels";
 import { petDisplayName } from "../../components/petVisual";
 import Icon from "../../components/Icon";
@@ -67,8 +67,9 @@ function getResultSummary(judgment, expenses) {
 function WalletAnalysisPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  // 오늘 날짜는 들어온 순간에 고정한다 — 자정을 넘기면 다른 날짜로 확정을 보내 그날 판정이 확정되지 못한다
-  const [enteredOn] = useState(() => toIsoDate());
+  // 판정할 날짜는 들어온 순간에 고정한다 — 새벽 판정 마감을 넘기면 다른 날짜로 확정을 보내 그날 판정이 확정되지 못한다.
+  // 새벽(마감 전)에 들어오면 전날 판정이다.
+  const [enteredOn] = useState(() => toIsoDate(aiJudgeDate()));
   const dateStr = user?.role === "ADMIN" ? params.get("date") || enteredOn : enteredOn;
   // 이벤트 활성 시간대 가드. 카드 버튼과 동일 기준(config.isAiJudgeOpen).
   // 진입 시점에 1회만 판정해 고정 — 매 렌더 재평가하면 23:59에 답변을
