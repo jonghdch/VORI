@@ -12,7 +12,7 @@
 - [ ] `GEMINI_API_KEY`·`GOOGLE_CLIENT_ID` 입력 → `ssh zzemsoft 'cd /data/home2/vori.worldpick.co.kr && runuser -u vori -- ./deploy.sh'` — `VORI/.env`, 로그 `CategorizeService 카테고리 임베딩 초기화 실패` — S
 - [ ] Google 콘솔 OAuth 클라이언트 '승인된 JavaScript 원본'에 `https://vori.worldpick.co.kr` 추가, 동의 화면이 「테스트」면 「프로덕션」 — `docs/deploy-checklist.md:69-71` — S
 - [ ] DB 백업 cron — `/etc/cron.d/vori-backup` 03:25, `docker exec vori-mysql mysqldump --single-transaction vori | gzip` → `/data/backup/vori/vori_YYYY-MM-DD.sql.gz`, 14일 보존, 복원 리허설 1회(임시 컨테이너에 복원해 `SELECT COUNT(*) FROM users`) — `/home/dockers/backup.sh:26`에 vori 없음 — M
-- [ ] 시연 시각 open-hour=0 — 서버 `VORI/.env` `vori.ai-judge.open-hour=0` 변경 후 `deploy.sh`(프론트 `REACT_APP_AI_ACTIVE_FROM_HOUR` 재빌드 자동 감지). 시연 후 20으로 되돌리기 — `src/config.js:15-20` — S
+- [ ] 시연 시각 open-hour=0 — 서버 `VORI/.env` `vori.ai-judge.open-hour=0` 변경 후 `deploy.sh`(프론트 `REACT_APP_AI_ACTIVE_FROM_HOUR` 재빌드 자동 감지). 시연 후 20으로 되돌리기(`close-hour` 는 건드리지 않는다 — `open-hour=0` 이면 새벽 연장이 없다) — `src/config.js:15-20` — S
 - [ ] 판정 알림 시각을 설정값과 연동 — `JudgmentOpenNotifier.java:30` cron이 20시 고정이라 open-hour=0이어도 알림은 20시. `@Scheduled`를 설정 기반으로 바꾸거나 시연 기간엔 알림 문구를 "지금 판정 가능"으로 — M
 - [ ] 업타임 모니터링 — 외부 체크(`GET /api/auth/me` → 401 정상, `GET /` → 200), 실패 시 알림. 서버에 체계 없음 — S
 - [ ] GitHub Actions 자동 배포 — 2026-11-03 구성(secret 등록 대기). 서버: vori 계정 배포 키(forced command `deploy-ssh-entry.sh` → `deploy.sh`, 접속 시험 통과), 레포: `.github/workflows/deploy.yml`(CI 성공 `workflow_run` + 수동 `workflow_dispatch`). 남은 일: 저장소 Settings → Secrets and variables → Actions 에 `DEPLOY_SSH_KEY`·`DEPLOY_HOST`·`DEPLOY_PORT`·`DEPLOY_KNOWN_HOSTS` 등록(jonghdch 권한 필요) → Actions 에서 `Deploy` 수동 실행 1회로 확인 — `docs/deploy-checklist.md` 2-3절 — S
