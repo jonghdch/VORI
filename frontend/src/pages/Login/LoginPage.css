@@ -140,24 +140,6 @@
   background: var(--green-50);
 }
 
-.login-row-between {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: -4px;
-}
-.login-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-2);
-  cursor: pointer;
-}
-.login-check input {
-  accent-color: var(--green);
-}
-
 .login-link {
   background: transparent;
   border: none;
