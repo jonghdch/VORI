@@ -53,10 +53,10 @@ const FOR_YOU = [
 ];
 
 const TEAM = [
-  { name: "김가은", role: "Frontend", desc: "사용자가 만나는 화면과 서비스 경험을 구현합니다." },
-  { name: "정다은", role: "Design", desc: "캐릭터 디자인과 프론트엔드 경험을 다듬습니다." },
-  { name: "황채린", role: "Backend", desc: "서비스 로직과 판정·AI 질문 흐름, 시스템 설계를 담당합니다." },
-  { name: "신동엽", role: "Team", desc: "기획과 검증에 함께하며 서비스의 완성도를 높입니다." },
+  { name: "김가은", role: "Frontend", desc: "사용자가 매일 머무는 화면을 보기 좋고 편하게 다듬습니다." },
+  { name: "정다은", role: "Team Leader · Backend", desc: "흩어진 아이디어를 하나의 서비스로 엮고, 끝까지 완성도를 책임집니다." },
+  { name: "황채린", role: "PM · Backend", desc: "AI가 소비를 이해하는 방식을 설계하고, 팀이 갈 길을 정리합니다." },
+  { name: "신동엽", role: "Backend", desc: "예산과 보상이 공정하게 돌아가도록 서비스의 규칙을 다집니다." },
 ];
 
 function LandingPage({ user, onLogin, onLogout }) {
