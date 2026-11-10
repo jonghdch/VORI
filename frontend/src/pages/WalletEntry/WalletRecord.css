@@ -170,6 +170,12 @@
   font-weight: 700;
   color: var(--wr-amber-ink);
 }
+.wr-editing-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
 .wr-editing button {
   flex-shrink: 0;
   padding: 2px 0;

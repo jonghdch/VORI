@@ -4,6 +4,7 @@ import com.vori.backend.auth.dto.AuthResponse;
 import com.vori.backend.auth.dto.GoogleLoginRequest;
 import com.vori.backend.auth.dto.LoginRequest;
 import com.vori.backend.auth.dto.SignupRequest;
+import com.vori.backend.guest.GuestAccountService;
 import com.vori.backend.user.AccountDeletionService;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserService;
@@ -40,6 +41,8 @@ public class AuthController {
     private final GoogleTokenVerifier googleTokenVerifier;
     private final CustomUserDetailsService userDetailsService;
     private final AccountDeletionService accountDeletionService;
+    private final LoginAttemptLimiter loginAttemptLimiter;
+    private final GuestAccountService guestAccountService;
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
@@ -52,18 +55,26 @@ public class AuthController {
     public MeResponse login(@Valid @RequestBody LoginRequest req,
                               HttpServletRequest request,
                               HttpServletResponse response) {
+        // 시도를 먼저 센다 — 동시에 몰린 요청도 한도를 넘겨 비밀번호 확인까지 가지 못한다. 틀리면 센 그대로 남는다
+        loginAttemptLimiter.acquire(req.email(), request.getRemoteAddr());
+        Authentication auth;
         try {
-            Authentication auth = authenticationManager.authenticate(
+            auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.email(), req.password())
             );
-
-            return establishSession(auth, request, response);
         } catch (BadCredentialsException e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다");
         } catch (LockedException e) {
-            // 제재(정지·영구정지) 계정 — CustomUserDetailsService 가 잠금 처리한 경우
+            // 제재(정지·영구정지) 계정 — CustomUserDetailsService 가 잠금 처리한 경우. 비밀번호를 틀린 게 아니라 센 것을 돌려준다
+            loginAttemptLimiter.release(req.email(), request.getRemoteAddr());
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "제재 중인 계정입니다");
+        } catch (RuntimeException e) {
+            // 그 밖의 인증 실패·서버 오류도 비밀번호를 틀린 게 아니다
+            loginAttemptLimiter.release(req.email(), request.getRemoteAddr());
+            throw e;
         }
+        loginAttemptLimiter.recordSuccess(req.email(), request.getRemoteAddr());
+        return establishSession(auth, request, response);
     }
 
     /**
@@ -95,7 +106,22 @@ public class AuthController {
         return establishSession(auth, request, response);
     }
 
-    /** 인증 성공 후 세션 수립 — 이메일 로그인·구글 로그인이 공유한다. */
+    /**
+     * 「체험하기」 — 임시 계정을 만들어 세팅하고 바로 로그인시킨다(GuestAccountService).
+     * 비밀번호가 없으므로 구글 로그인처럼 검증된 principal 로 인증 객체를 직접 만든다.
+     * 429 = 오늘 체험 계정 상한, 403 = 체험하기 꺼짐.
+     */
+    @PostMapping("/guest")
+    public MeResponse guest(HttpServletRequest request, HttpServletResponse response) {
+        User user = guestAccountService.create();
+        UserPrincipal principal = (UserPrincipal) userDetailsService.loadUserByUsername(user.getEmail());
+        principal.eraseCredentials();
+        Authentication auth = UsernamePasswordAuthenticationToken.authenticated(
+            principal, null, principal.getAuthorities());
+        return establishSession(auth, request, response);
+    }
+
+    /** 인증 성공 후 세션 수립 — 이메일 로그인·구글 로그인·체험하기가 공유한다. */
     private MeResponse establishSession(Authentication auth,
                                         HttpServletRequest request,
                                         HttpServletResponse response) {

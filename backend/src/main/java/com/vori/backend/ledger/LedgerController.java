@@ -59,4 +59,16 @@ public class LedgerController {
     ) {
         ledgerService.deleteExpense(principal.getId(), id);
     }
+
+    @DeleteMapping("/incomes/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteIncome(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long id) {
+        ledgerService.deleteIncome(principal.getId(), id);
+    }
+
+    @DeleteMapping("/savings/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteSaving(@AuthenticationPrincipal UserPrincipal principal, @PathVariable Long id) {
+        ledgerService.deleteSaving(principal.getId(), id);
+    }
 }

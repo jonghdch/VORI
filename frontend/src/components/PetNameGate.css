@@ -69,13 +69,6 @@
   text-align: left;
 }
 
-.pet-name-label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
 .pet-name-input {
   box-sizing: border-box;
   width: 100%;

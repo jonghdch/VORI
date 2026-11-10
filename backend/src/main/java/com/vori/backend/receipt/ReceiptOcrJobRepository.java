@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ReceiptOcrJobRepository extends JpaRepository<ReceiptOcrJob, Long> {
@@ -13,6 +14,9 @@ public interface ReceiptOcrJobRepository extends JpaRepository<ReceiptOcrJob, Lo
     List<ReceiptOcrJob> findByExpenseId(Long expenseId);
 
     List<ReceiptOcrJob> findByStatus(OcrStatus status);
+
+    /** 하루 인식 횟수 — ReceiptService 의 사용자별 한도. idx_receipt_ocr_user_time 을 탄다. */
+    long countByUserIdAndRequestedAtGreaterThanEqual(Long userId, LocalDateTime from);
 
     /**
      * 실제로 값을 읽어 낸 영수증 수 — 영수증 칭호("스캔 마스터") 조건.

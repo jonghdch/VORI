@@ -75,10 +75,18 @@ function TodayAllowanceCard({ summary, loading }) {
   const allowance = allowanceInfo?.value ?? 0;
   const remaining = allowance - todaySpent;
   const usagePct = allowance > 0 ? Math.round((todaySpent / allowance) * 100) : todaySpent > 0 ? 100 : 0;
-  const todaySignal = signalForUsage(todaySpent, allowance);
-  // 판정 전(또는 사유를 기다리는 1차 판정)의 칩은 예상이다 — 실제 판정은 전날 남긴 돈까지 넣어 계산해 결과가 바뀔 수 있다.
-  const todaySignalFinal = Boolean(judgment) && judgment.status !== "PENDING";
-  const todaySignalText = `${SIGNAL_META[todaySignal].text}${todaySignalFinal ? "" : " 예상"}`;
+  // 칩·막대 색: 오늘 판정을 받았으면 서버 판정(그날 신호 = 네 그룹 중 가장 무거운 그룹)을 그대로 쓴다.
+  // 네 그룹을 합친 사용률로 다시 계산하면, 식비만 넘고 나머지가 0원인 날 판정 결과는 「초과」인데
+  // 여기는 「여유」로 어긋난다. 사유를 기다리는 1차 판정이면 판정 화면처럼 「1차」를 붙인다.
+  // 판정 전에는 서버 값이 없어 합친 사용률로 어림하고 「예상 결과」를 붙인다 — 실제 판정은 그룹별로
+  // 계산해 결과가 바뀔 수 있다.
+  const judged = Boolean(judgment?.signal && SIGNAL_META[judgment.signal]);
+  const todaySignal = judged ? judgment.signal : signalForUsage(todaySpent, allowance);
+  const todaySignalLabel =
+    judged && judgment.status === "PENDING" ? `1차 ${SIGNAL_META[todaySignal].text}` : undefined;
+  const todaySignalText = judged
+    ? todaySignalLabel ?? SIGNAL_META[todaySignal].text
+    : `${SIGNAL_META[todaySignal].text} 예상`;
   const heroLoading = loading || plan === undefined || judgment === undefined;
 
   const dateLabel = new Intl.DateTimeFormat("ko-KR", {
@@ -96,8 +104,8 @@ function TodayAllowanceCard({ summary, loading }) {
           </p>
           {!heroLoading && allowanceInfo && (
             <span className="hm-hero-signal">
-              {!todaySignalFinal && <span className="hm-hero-est-tag">예상 결과</span>}
-              <SignalChip signal={todaySignal} />
+              {!judged && <span className="hm-hero-est-tag">예상 결과</span>}
+              <SignalChip signal={todaySignal} label={todaySignalLabel} />
             </span>
           )}
         </div>

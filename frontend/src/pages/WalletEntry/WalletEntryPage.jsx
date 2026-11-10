@@ -14,6 +14,8 @@ import { MAX_RECEIPT_BYTES, prepareReceiptImage, uploadReceipt } from "../../api
 import {
   saveLedgerEntries,
   deleteExpense,
+  deleteIncome,
+  deleteSaving,
   listCategoryTree,
   listExpensesByDate,
   listIncomesByDate,
@@ -26,7 +28,8 @@ import "./WalletRecord.css";
 
 // 지출 기록 — 한 건씩 적는다. 날짜는 다른 화면에서 ?date= 로 정해 들어오고, 머리의 날짜 칩으로 바꿀 수 있다.
 // 폰: 한 줄 + 아래 고정 버튼. PC: 가운데 입력 카드 한 장. 그날 기록은 머리의 「기록 내역」 버튼으로 여는 창에서 본다.
-// 지출 수정(?edit=true)으로 들어오면 그날 첫 지출을 불러와 고치고, 목록에서 다른 지출을 눌러 바꿔 고친다.
+// 지출 수정(?edit=<지출 id>)으로 들어오면 그 지출을, ?edit=true 면 그날 첫 지출을 불러와 고친다.
+// 목록에서 다른 지출을 눌러 바꿔 고칠 수 있다.
 
 const TYPES = [
   { id: "expense", label: "지출" },
@@ -59,6 +62,43 @@ function dateChipLabel(iso) {
 const won = (n) => `${Number(n || 0).toLocaleString("ko-KR")}원`;
 const labelOf = (list, value) => list.find((o) => o.value === value)?.label;
 
+// 받은 곳·모은 곳 칩 — 등록한 계좌 중 하나를 고르거나 「고르지 않음」. 등록한 게 없으면 안내만.
+function AccountField({ label, accounts, emptyHint, value, onPick, onManage }) {
+  return (
+    <div className="wr-field">
+      <div className="wr-label-row">
+        <span className="wr-label">{label}</span>
+        <button type="button" className="wr-label-link" onClick={onManage}>
+          카드·계좌 관리 <Icon name="chevronRight" size={13} />
+        </button>
+      </div>
+      {accounts.length === 0 ? (
+        <p className="wr-hint">{emptyHint}</p>
+      ) : (
+        <div className="wr-chips" role="radiogroup" aria-label={label}>
+          {[{ id: null, name: "고르지 않음" }, ...accounts].map((acc) => {
+            const on = value === acc.id;
+            return (
+              <button
+                key={acc.id ?? "none"}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                className={`wr-chip ${acc.id ? "wr-chip--mine" : ""} ${on ? "is-on" : ""}`}
+                onClick={() => onPick(acc.id)}
+              >
+                {on && <Icon name="check" size={13} strokeWidth={2.4} />}
+                {acc.id && <span className="wr-chip-dot" style={{ background: issuerOf(acc.issuer).color }} aria-hidden />}
+                {acc.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WalletEntryPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -70,7 +110,9 @@ function WalletEntryPage({ user }) {
     toIsoDate(parseIsoDate(requestedDate)) === requestedDate;
   // 쿼리를 직접 수정해도 미래 날짜에는 가계부를 작성할 수 없다.
   const dateStr = requestedDateIsValid && requestedDate <= todayStr ? requestedDate : todayStr;
-  const isEditMode = params.get("edit") === "true";
+  const editParam = params.get("edit");
+  const editTargetId = /^[1-9]\d{0,15}$/.test(editParam || "") ? Number(editParam) : null;
+  const isEditMode = editParam === "true" || editTargetId != null;
 
   // 사용자 설정의 기본 결제수단 — 없으면 CREDIT
   const defaultPayment = loadUserSettings().defaultPaymentMethod || "CREDIT";
@@ -78,6 +120,7 @@ function WalletEntryPage({ user }) {
   // 설정 > 카드·계좌에 등록한 결제수단. 지출은 결제 수단 칩 앞에(예적금 제외), 수입은 받은 곳 칩으로
   // (신용카드 제외 — 체크카드는 연결 통장으로 받는 것). 못 불러와도 칩 없이 그대로 적을 수 있으니 조용히 넘어간다.
   const [allInstruments, setAllInstruments] = useState([]);
+  const [instrumentsLoaded, setInstrumentsLoaded] = useState(false);
   const instruments = allInstruments.filter((i) => i.group !== "SAVINGS");
   const incomeAccounts = allInstruments.filter((i) => i.kind !== "CREDIT");
   const savingsAccounts = allInstruments.filter((i) => i.kind === "SAVINGS"); // 저축의 모은 곳
@@ -85,7 +128,9 @@ function WalletEntryPage({ user }) {
     let alive = true;
     listInstruments()
       .then((list) => {
-        if (alive) setAllInstruments(list);
+        if (!alive) return;
+        setAllInstruments(list);
+        setInstrumentsLoaded(true);
       })
       .catch(() => {});
     return () => {
@@ -102,9 +147,12 @@ function WalletEntryPage({ user }) {
       sourceTouched: false,
       paymentMethod: defaultPayment,
       paymentInstrumentId: null, // 설정 > 카드·계좌에서 등록한 카드를 골랐으면 그 id
+      linkedInstrumentId: null, // 고치는 지출에 저장돼 있던 카드 id
       memo: "",
       memoOpen: false,
-      dbId: null, // 저장된 지출을 고치는 중이면 그 id
+      dbId: null, // 저장된 기록을 고치는 중이면 그 id
+      isRecurring: false, // 수입 — 이 폼에 칸이 없어 고칠 때 저장된 값을 그대로 돌려준다
+      savingNote: null, // 저축 — 이 폼에 칸이 없어 고칠 때 저장된 값을 그대로 돌려준다
       askType: null,
       candidates: [],
       categorizing: false,
@@ -130,6 +178,16 @@ function WalletEntryPage({ user }) {
     isEditMode ? emptyForm() : { ...emptyForm(), ...(readDraft()?.form || {}), categorizing: false },
   );
   const patch = (p) => setForm((f) => ({ ...f, ...p }));
+  // 삭제한 카드·계좌는 목록(칩)에 없다. 「새로 쓰기」·삭제 뒤·임시저장에서 그 id 가 남아 있으면 폼에서 비운다
+  // — 서버가 거절해서, 사용자가 고르지도 않은(보이지도 않는) 카드 때문에 저장이 막힌다. 비우면 칩도 「고르지 않음」으로 보인다.
+  // 저장된 지출에 원래 붙어 있던 카드(linkedInstrumentId)는 그대로 둔다(서버가 허용). 목록을 못 불러왔으면 건드리지 않는다.
+  useEffect(() => {
+    const id = form.paymentInstrumentId ?? null;
+    if (!instrumentsLoaded || id == null || id === form.linkedInstrumentId) return;
+    if (!allInstruments.some((i) => i.id === id)) setForm((f) => ({ ...f, paymentInstrumentId: null }));
+  }, [instrumentsLoaded, allInstruments, form.paymentInstrumentId, form.linkedInstrumentId]);
+  // 등록한 카드를 고른 동안은 결제 수단 종류 칩을 켜지 않는다. 보관해서 목록에 없는 카드면 종류로 보여 준다.
+  const pickedMine = instruments.some((i) => i.id === form.paymentInstrumentId);
   const [notice, setNotice] = useState(null); // { kind: info|ok|warn|err, text } — 영수증·저장 안내
   const [submitError, setSubmitError] = useState(null);
 
@@ -201,6 +259,7 @@ function WalletEntryPage({ user }) {
           categoryTouched: true, // 저장된 카테고리 — 자동 분류로 덮지 않음
           paymentMethod: e.paymentMethod || defaultPayment,
           paymentInstrumentId: e.paymentInstrumentId ?? null,
+          linkedInstrumentId: e.paymentInstrumentId ?? null, // 저장된 연결 — 삭제한 카드여도 이건 그대로 둘 수 있다
           memo: e.memo ?? "", // 다시 보낼 때 그대로 돌려줘야 지워지지 않는다
           memoOpen: Boolean(e.memo),
         }),
@@ -211,17 +270,54 @@ function WalletEntryPage({ user }) {
     [emptyForm, defaultPayment],
   );
 
+  // 저장된 수입·저축을 폼으로 불러와 고친다.
+  const editOtherRecord = (kind, r) => {
+    setType(kind);
+    setForm(
+      emptyForm({
+        dbId: r.id,
+        name: r.item || "",
+        amount: String(r.amount ?? ""),
+        categoryEnum: kind === "income" ? r.source : r.savingType,
+        sourceTouched: true,
+        paymentInstrumentId: r.paymentInstrumentId ?? null,
+        linkedInstrumentId: r.paymentInstrumentId ?? null,
+        isRecurring: Boolean(r.isRecurring),
+        savingNote: r.note ?? null,
+      }),
+    );
+    setNotice(null);
+    setSubmitError(null);
+  };
+
+  // 고치던 기록을 두고 새 기록을 시작한다.
+  const startNew = (nextType) => {
+    setType(nextType);
+    setForm(emptyForm());
+    setNotice(null);
+    setSubmitError(null);
+    amountRef.current?.focus();
+  };
+
   useEffect(() => {
     let alive = true;
     setDay(null);
     loadDay().then((d) => {
-      // 지출 수정으로 들어왔으면 그날 첫 지출을 바로 연다
-      if (alive && isEditMode && d?.expenses?.length) editExpense(d.expenses[0]);
+      // 지출 수정으로 들어왔으면 고른 지출(?edit=true 면 그날 첫 지출)을 바로 연다.
+      // 고른 지출이 그날에 없으면(그새 삭제 등) 다른 지출을 대신 열지 않고 알린다.
+      if (!alive || !isEditMode || !d) return;
+      if (editTargetId == null) {
+        if (d.expenses.length) editExpense(d.expenses[0]);
+        return;
+      }
+      const target = d.expenses.find((e) => e.id === editTargetId);
+      if (target) editExpense(target);
+      else setNotice({ kind: "warn", text: "고치려던 지출을 찾지 못했어요. 이미 삭제됐을 수 있어요." });
     });
     return () => {
       alive = false;
     };
-  }, [loadDay, isEditMode, editExpense]);
+  }, [loadDay, isEditMode, editTargetId, editExpense]);
 
   // ── 내역 → 자동 분류 ─────────────────────────────────────
   // 지출: 백엔드 분류(내 기록·규칙·Gemini). 400ms 쉬었다 묻는다. 직접 고른 카테고리는 덮지 않는다.
@@ -366,6 +462,8 @@ function WalletEntryPage({ user }) {
           : null;
   const canSave = !missing && !submitting;
 
+  const typeLabel = TYPES.find((t) => t.id === type).label;
+
   const save = async (andMore) => {
     if (!canSave) return;
     setSubmitting(true);
@@ -389,9 +487,11 @@ function WalletEntryPage({ user }) {
         incomes:
           type === "income"
             ? [{
+                id: form.dbId ?? null,
                 item,
                 amount: amountNum,
                 source: form.categoryEnum || "OTHER",
+                isRecurring: form.isRecurring,
                 paymentInstrumentId: form.paymentInstrumentId ?? null, // 받은 곳(계좌·현금)
                 paymentMethod: null, // 수입은 결제수단 없음 — 출처(source)만
                 receivedAt: dateStr,
@@ -400,9 +500,11 @@ function WalletEntryPage({ user }) {
         savings:
           type === "savings"
             ? [{
+                id: form.dbId ?? null,
                 item,
                 amount: amountNum,
                 savingType: form.categoryEnum || "DEPOSIT",
+                note: form.savingNote,
                 savedAt: dateStr,
                 // 모은 곳은 예적금에서만 (자동 분류가 투자로 바꿔 놓았으면 보내지 않는다)
                 paymentInstrumentId: (form.categoryEnum || "DEPOSIT") === "DEPOSIT" ? form.paymentInstrumentId ?? null : null,
@@ -428,14 +530,15 @@ function WalletEntryPage({ user }) {
 
   const removeEditing = async () => {
     if (!form.dbId) return;
-    if (!window.confirm(`'${form.name || "이 지출"}'을 삭제할까요?`)) return;
+    if (!window.confirm(`'${form.name || `이 ${typeLabel}`}'을 삭제할까요?`)) return;
     try {
-      await deleteExpense(form.dbId);
-      setForm(emptyForm({ paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId }));
+      const remove = type === "income" ? deleteIncome : type === "savings" ? deleteSaving : deleteExpense;
+      await remove(form.dbId);
+      setForm(emptyForm(type === "expense" ? { paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId } : {}));
       setNotice({ kind: "ok", text: "삭제했어요." });
       loadDay();
     } catch (error) {
-      setSubmitError(error.message || "지출을 삭제하지 못했어요.");
+      setSubmitError(error.message || `${typeLabel}을 삭제하지 못했어요.`);
     }
   };
 
@@ -468,6 +571,7 @@ function WalletEntryPage({ user }) {
       }),
       ...day.incomes.map((i) => ({
         key: `i-${i.id}`,
+        raw: i,
         kind: "income",
         name: i.item,
         sub: `수입 · ${labelOf(CATEGORIES_BY_TYPE.income, i.source) || "기타"}`,
@@ -476,6 +580,7 @@ function WalletEntryPage({ user }) {
       })),
       ...day.savings.map((s) => ({
         key: `s-${s.id}`,
+        raw: s,
         kind: "savings",
         name: s.item,
         sub: `저축 · ${labelOf(CATEGORIES_BY_TYPE.savings, s.savingType) || "예금"}`,
@@ -495,7 +600,7 @@ function WalletEntryPage({ user }) {
         <button type="button" className="wr-icon-btn" aria-label="뒤로" onClick={goBack}>
           <Icon name="chevronLeft" size={22} />
         </button>
-        <h1 className="wr-top-title">{editing ? "지출 수정" : `${TYPES.find((t) => t.id === type).label} 기록`}</h1>
+        <h1 className="wr-top-title">{`${typeLabel} ${editing ? "수정" : "기록"}`}</h1>
         {/* 그날 기록 — 눌러서 창으로 본다. 건수가 있으면 숫자를 붙인다 */}
         <button
           type="button"
@@ -544,10 +649,11 @@ function WalletEntryPage({ user }) {
 
           {editing && (
             <div className="wr-editing">
-              <span>저장된 지출을 고치는 중이에요</span>
-              <button type="button" onClick={() => setForm(emptyForm({ paymentMethod: form.paymentMethod, paymentInstrumentId: form.paymentInstrumentId }))}>
-                새로 쓰기
-              </button>
+              <span>저장된 {typeLabel}을 고치는 중이에요</span>
+              <span className="wr-editing-actions">
+                <button type="button" onClick={() => startNew("expense")}>지출 추가</button>
+                <button type="button" onClick={() => startNew("income")}>수입 추가</button>
+              </span>
             </div>
           )}
 
@@ -707,76 +813,26 @@ function WalletEntryPage({ user }) {
 
           {/* 받은 곳 (수입만) — 등록한 입출금·예적금·현금. 고르지 않아도 된다 */}
           {type === "income" && (
-            <div className="wr-field">
-              <div className="wr-label-row">
-                <span className="wr-label">받은 곳</span>
-                <button type="button" className="wr-label-link" onClick={() => navigate("/settings/payment")}>
-                  카드·계좌 관리 <Icon name="chevronRight" size={13} />
-                </button>
-              </div>
-              {incomeAccounts.length === 0 ? (
-                <p className="wr-hint">통장·체크카드·현금을 등록하면 어디로 받았는지 고를 수 있어요.</p>
-              ) : (
-                <div className="wr-chips" role="radiogroup" aria-label="받은 곳">
-                  {[{ id: null, name: "고르지 않음" }, ...incomeAccounts].map((acc) => {
-                    const on = (form.paymentInstrumentId ?? null) === acc.id;
-                    return (
-                      <button
-                        key={acc.id ?? "none"}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        className={`wr-chip ${acc.id ? "wr-chip--mine" : ""} ${on ? "is-on" : ""}`}
-                        onClick={() => patch({ paymentInstrumentId: acc.id })}
-                      >
-                        {on && <Icon name="check" size={13} strokeWidth={2.4} />}
-                        {acc.id && (
-                          <span className="wr-chip-dot" style={{ background: issuerOf(acc.issuer).color }} aria-hidden />
-                        )}
-                        {acc.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <AccountField
+              label="받은 곳"
+              accounts={incomeAccounts}
+              emptyHint="통장·체크카드·현금을 등록하면 어디로 받았는지 고를 수 있어요."
+              value={form.paymentInstrumentId ?? null}
+              onPick={(id) => patch({ paymentInstrumentId: id })}
+              onManage={() => navigate("/settings/payment")}
+            />
           )}
 
           {/* 모은 곳 (저축 · 예적금만) — 등록한 저축 통장. 투자는 계좌를 고르지 않는다 */}
           {type === "savings" && form.categoryEnum !== "INVEST" && (
-            <div className="wr-field">
-              <div className="wr-label-row">
-                <span className="wr-label">모은 곳</span>
-                <button type="button" className="wr-label-link" onClick={() => navigate("/settings/payment")}>
-                  카드·계좌 관리 <Icon name="chevronRight" size={13} />
-                </button>
-              </div>
-              {savingsAccounts.length === 0 ? (
-                <p className="wr-hint">저축 통장을 등록하면 어디에 모았는지 고를 수 있어요.</p>
-              ) : (
-                <div className="wr-chips" role="radiogroup" aria-label="모은 곳">
-                  {[{ id: null, name: "고르지 않음" }, ...savingsAccounts].map((acc) => {
-                    const on = (form.paymentInstrumentId ?? null) === acc.id;
-                    return (
-                      <button
-                        key={acc.id ?? "none"}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        className={`wr-chip ${acc.id ? "wr-chip--mine" : ""} ${on ? "is-on" : ""}`}
-                        onClick={() => patch({ paymentInstrumentId: acc.id })}
-                      >
-                        {on && <Icon name="check" size={13} strokeWidth={2.4} />}
-                        {acc.id && (
-                          <span className="wr-chip-dot" style={{ background: issuerOf(acc.issuer).color }} aria-hidden />
-                        )}
-                        {acc.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <AccountField
+              label="모은 곳"
+              accounts={savingsAccounts}
+              emptyHint="저축 통장을 등록하면 어디에 모았는지 고를 수 있어요."
+              value={form.paymentInstrumentId ?? null}
+              onPick={(id) => patch({ paymentInstrumentId: id })}
+              onManage={() => navigate("/settings/payment")}
+            />
           )}
 
           {/* 결제 수단 (지출만) */}
@@ -812,8 +868,6 @@ function WalletEntryPage({ user }) {
                 })}
                 {instruments.length > 0 && <span className="wr-chip-divider" aria-hidden />}
                 {PAYMENT_METHODS.map((p) => {
-                  // 등록한 카드를 고른 동안은 종류 칩을 켜지 않는다. 보관해서 목록에 없는 카드면 종류로 보여 준다.
-                  const pickedMine = instruments.some((i) => i.id === form.paymentInstrumentId);
                   const on = !pickedMine && form.paymentMethod === p.value;
                   return (
                     <button
@@ -867,7 +921,7 @@ function WalletEntryPage({ user }) {
 
           {editing && (
             <button type="button" className="wr-delete" onClick={removeEditing}>
-              <Icon name="trash" size={15} /> 이 지출 삭제
+              <Icon name="trash" size={15} /> 이 {typeLabel} 삭제
             </button>
           )}
 
@@ -916,10 +970,11 @@ function WalletEntryPage({ user }) {
           loading={day === null}
           error={dayError}
           expenseTotal={dayExpenseTotal}
-          editingId={form.dbId}
+          editingKey={form.dbId ? `${type}-${form.dbId}` : null}
           onClose={() => setDayOpen(false)}
-          onEdit={(raw) => {
-            editExpense(raw);
+          onEdit={(row) => {
+            if (row.kind === "expense") editExpense(row.raw);
+            else editOtherRecord(row.kind, row.raw);
             setDayOpen(false);
           }}
         />
@@ -1017,9 +1072,8 @@ function CategorySheet({ tree, value, currentLabel, onClose, onPick }) {
   );
 }
 
-// 그날 기록 — 저장한 것을 확인하고, 지출은 눌러서 폼으로 불러와 고친다.
-// 수입·저축은 서버에 수정 기능이 없어 보기만 한다.
-function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingId, onClose, onEdit }) {
+// 그날 기록 — 저장한 것을 확인하고, 눌러서 폼으로 불러와 고친다.
+function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingKey, onClose, onEdit }) {
   return (
     <Sheet title={title} onClose={onClose}>
       <p className="wr-sheet-current">
@@ -1027,7 +1081,7 @@ function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingId,
           <strong>{rows.length}건</strong>
           {expenseTotal > 0 && <> · 지출 {won(expenseTotal)}</>}
         </span>
-        <span>지출을 누르면 고칠 수 있어요</span>
+        <span>기록을 누르면 고칠 수 있어요</span>
       </p>
       <div className="wr-sheet-body">
         {loading ? (
@@ -1039,7 +1093,7 @@ function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingId,
         ) : (
           <ul className="wr-day-list">
             {rows.map((r) => {
-              const isEditingThis = r.kind === "expense" && editingId === r.raw.id;
+              const isEditingThis = editingKey === `${r.kind}-${r.raw.id}`;
               const body = (
                 <>
                   <span className="wr-day-icon">
@@ -1057,19 +1111,15 @@ function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingId,
               );
               return (
                 <li key={r.key}>
-                  {r.kind === "expense" ? (
-                    <button
-                      type="button"
-                      className={`wr-day-row ${isEditingThis ? "is-current" : ""}`}
-                      onClick={() => onEdit(r.raw)}
-                      aria-label={`${r.name} 고치기`}
-                    >
-                      {body}
-                      <Icon name="pencil" size={15} className="wr-day-edit" />
-                    </button>
-                  ) : (
-                    <div className="wr-day-row">{body}</div>
-                  )}
+                  <button
+                    type="button"
+                    className={`wr-day-row ${isEditingThis ? "is-current" : ""}`}
+                    onClick={() => onEdit(r)}
+                    aria-label={`${r.name} 고치기`}
+                  >
+                    {body}
+                    <Icon name="pencil" size={15} className="wr-day-edit" />
+                  </button>
                 </li>
               );
             })}

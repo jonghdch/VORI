@@ -25,9 +25,9 @@ const NO_RECORD_LABEL = "기록 없음";
 // 판정 규칙(DailyJudgmentService)이 바뀌면 여기만 고친다.
 export const RULE_TEXT = {
   thresholds: "85% 이하 여유 · 100% 이하 적정 · 넘으면 초과",
-  carryFormula: "오늘 쓸 수 있는 돈 = 하루 기본 예산 + 전날 남긴 돈의 절반.",
-  overrun: "넘은 만큼 내일 예산이 줄어요.",
-  questionGuidance: () => "사유가 인정되면 이 그룹 판정을 가볍게 봐요. 그래도 넘은 만큼 내일 예산이 줄어드는 건 같아요.",
+  carryFormula: "오늘 쓸 수 있는 돈 = (이번 달 예산 − 어제까지 쓴 돈) ÷ 남은 날수.",
+  overrun: "넘은 만큼 남은 날의 예산이 줄어요.",
+  questionGuidance: () => "사유가 인정되면 이 그룹 판정을 가볍게 봐요. 그래도 넘은 만큼 남은 날의 예산이 줄어드는 건 같아요.",
   // 「여유로」·「적정으로」 — 조사는 withRo 가 받침을 보고 고른다
   summarySoftened: (groups, status) => `${groups}는 사유가 인정돼 ${withRo(status)} 조정됐어요.`,
   summarySoftenedMixed: (groups) => `${groups}는 사유가 인정돼 판정이 조정됐어요.`,
@@ -40,7 +40,7 @@ export const RULE_TEXT = {
   summaryNoExceeded: "넘은 그룹은 없어요.",
   // 스탯별 상세가 저장되기 전(V49 이전) 판정 — 그룹을 따질 수 없으니 맨 위 칩과 어긋나는 말을 하지 않는다
   summaryNoDetail: "그룹별 상세가 저장되기 전 판정이라 그룹별 비교를 보여 드릴 수 없어요.",
-  groupExhausted: (monthlyBudget) => `이번 달 예산 ${monthlyBudget}원을 다 써서 오늘 쓸 수 있는 돈이 0원이에요.`,
+  groupExhausted: (monthlyBudget) => `이번 달 예산 ${monthlyBudget}원을 다 써서 오늘 쓸 수 있는 돈이 0원이에요. 지출이 없어도 절약이 아니라서 이 그룹 보상은 없어요.`,
   groupGreen: "쓸 수 있는 돈의 85% 안에서 썼어요.",
   groupGray: "쓸 수 있는 돈의 85%를 넘었지만 한도 안이에요.",
   groupOverrun: (amount) => `쓸 수 있는 돈보다 ${amount}원 더 썼어요. ${RULE_TEXT.overrun}`,
@@ -243,7 +243,9 @@ function GroupJudgmentCard({ group, judgment }) {
   const monthlyBudget = group.detail ? Number(group.detail.monthlyBudget || 0) : 0;
   const dailyBase = group.detail ? Number(group.detail.dailyBase || 0) : 0;
   const monthSpent = group.detail ? Number(group.detail.monthSpent || 0) : 0;
-  const carry = Number(group.detail?.nextDayCarry || 0);
+  // 예전 판정의 nextDayCarry 는 뜻이 달랐고(이월액), 지난 날의 「내일」은 볼 이유도 없어 오늘 판정에만 보여 준다.
+  const isToday = judgment?.date === new Date().toLocaleDateString("en-CA");
+  const carry = isToday ? Number(group.detail?.nextDayCarry || 0) : 0;
   const summary = group.detail
     ? (
       <>
@@ -251,7 +253,7 @@ function GroupJudgmentCard({ group, judgment }) {
           <strong>{formatWon(todaySpent)}</strong>
           <span> / {formatWon(available)}</span>
         </span>
-        {carry > 0 && <small>내일 +{formatWon(carry)}</small>}
+        {carry > 0 && <small>내일 사용 가능 {formatWon(carry)}</small>}
       </>
     )
     : <span className="ja-group-total">{formatWon(group.total)}</span>;
