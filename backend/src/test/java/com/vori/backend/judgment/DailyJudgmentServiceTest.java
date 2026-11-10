@@ -343,6 +343,39 @@ class DailyJudgmentServiceTest {
         verify(inquiries).save(argThat(i -> Boolean.TRUE.equals(i.getDailyGroupInquiry()) && i.getGroupStatType() == StatType.ENERGY));
     }
 
+    @Test
+    void 판정은_20시부터_다음_날_새벽_2시_전까지_열린다() {
+        assertFalse(DailyJudgmentService.isOpenAt(19, 20, 2));
+        assertTrue(DailyJudgmentService.isOpenAt(20, 20, 2));
+        assertTrue(DailyJudgmentService.isOpenAt(23, 20, 2));
+        assertTrue(DailyJudgmentService.isOpenAt(0, 20, 2));
+        assertTrue(DailyJudgmentService.isOpenAt(1, 20, 2));
+        assertFalse(DailyJudgmentService.isOpenAt(2, 20, 2));
+        assertFalse(DailyJudgmentService.isOpenAt(12, 20, 2));
+    }
+
+    @Test
+    void 새벽_2시_전에_받는_판정은_전날_판정이다() {
+        LocalDate day = LocalDate.of(2026, 11, 11);
+        assertEquals(day, DailyJudgmentService.judgmentDay(day.atTime(23, 59), 2));
+        assertEquals(day, DailyJudgmentService.judgmentDay(day.plusDays(1).atTime(1, 59), 2));
+        assertEquals(day.plusDays(1), DailyJudgmentService.judgmentDay(day.plusDays(1).atTime(2, 0), 2));
+    }
+
+    @Test
+    void 하루_종일_여는_설정이면_새벽에도_전날을_판정할_수_없다() {
+        // open-hour=0(낮 시연)은 새벽 연장이 없다 — 어느 시각에 돌려도 판정하는 날은 오늘이다.
+        ReflectionTestUtils.setField(service, "openHour", 0);
+        ReflectionTestUtils.setField(service, "closeHour", 2);
+        User user = User.builder().id(2L).role(Role.USER).build();
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.judgeDate(user.getId(), user.getRole(), LocalDate.now().minusDays(1)));
+
+        assertEquals(403, error.getStatusCode().value());
+        assertEquals(LocalDate.now(), service.currentJudgmentDay());
+    }
+
     // ── 1차 판정 → 예외 지출 사유 → 확정 (docs/judgment-flow.md) ──
 
     /** 그날 ENERGY 봉투(3만원)를 넘긴 빨강 지출 하나. 답변 안 된 AI 질문이 달려 있다. */
