@@ -1,30 +1,12 @@
 /* 펫 이름 짓기 팝업 — AppShell(.home) 안에서 뜨므로 --home-* 토큰을 그대로 쓴다.
    필수 입력이라 닫기 버튼이 없다. */
 .pet-name-backdrop {
-  position: fixed;
-  inset: 0;
   z-index: 200; /* 사이드바(41)·마이룸 메뉴(50)보다 위 */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(45, 51, 40, 0.48);
-  animation: pet-name-fade 0.18s ease-out;
 }
 
 .pet-name-dialog {
   width: min(360px, 100%);
-  box-sizing: border-box;
-  padding: 28px 24px 24px;
-  border-radius: var(--home-radius);
-  border: 1px solid var(--home-card-border);
-  background: var(--home-card-surface);
-  box-shadow:
-    0 1px 2px rgba(45, 51, 40, 0.08),
-    0 18px 48px rgba(45, 51, 40, 0.22);
   text-align: center;
-  color: var(--home-text);
-  animation: pet-name-rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .pet-name-art {
@@ -34,8 +16,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 20px;
-  background: var(--home-green-soft);
+  border-radius: var(--r-xl);
+  background: var(--c-primary-soft);
 }
 
 .pet-name-image {
@@ -52,7 +34,7 @@
 
 .pet-name-title {
   margin: 0;
-  font-size: 19px;
+  font-size: var(--fs-h2);
   font-weight: 900;
   line-height: 1.35;
   word-break: keep-all;
@@ -61,8 +43,8 @@
 
 .pet-name-lead {
   margin: 6px 0 20px;
-  font-size: 14px;
-  color: var(--home-muted);
+  font-size: var(--fs-body);
+  color: var(--c-text-2);
 }
 
 .pet-name-form {
@@ -73,32 +55,32 @@
   box-sizing: border-box;
   width: 100%;
   min-height: 44px;
-  padding: 10px 12px;
-  border: 1px solid var(--home-card-border);
-  border-radius: 8px;
-  background: var(--home-white);
-  color: var(--home-text);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-white);
+  color: var(--c-text);
   font: inherit;
-  font-size: 16px; /* iOS 가 입력 때 화면을 확대하지 않는 최소 크기 */
+  font-size: var(--fs-input); /* iOS 가 입력 때 화면을 확대하지 않는 최소 크기 */
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .pet-name-input::placeholder {
-  color: var(--home-sidebar-link);
+  color: var(--c-text-3);
 }
 
 .pet-name-input:focus-visible {
   outline: none;
-  border-color: var(--home-green-dark);
-  box-shadow: 0 0 0 3px rgba(127, 176, 105, 0.28);
+  border-color: var(--c-primary-strong);
+  box-shadow: var(--focus-ring);
 }
 
 .pet-name-input[aria-invalid="true"] {
-  border-color: var(--home-warn);
+  border-color: var(--c-danger);
 }
 
 .pet-name-input[aria-invalid="true"]:focus-visible {
-  border-color: var(--home-warn);
+  border-color: var(--c-danger);
   box-shadow: 0 0 0 3px rgba(201, 74, 74, 0.2);
 }
 
@@ -110,14 +92,14 @@
 .pet-name-hint {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
   margin: 6px 0 4px; /* 아래 버튼(.home-btn-block)이 위 여백 16px 을 갖는다 */
-  font-size: 12px;
-  color: var(--home-muted);
+  font-size: var(--fs-caption);
+  color: var(--c-text-2);
 }
 
 .pet-name-hint.is-error {
-  color: var(--home-warn);
+  color: var(--c-danger);
 }
 
 .pet-name-count {
@@ -125,32 +107,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.pet-name-dialog .home-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .pet-name-dialog .home-btn:focus-visible {
-  outline: 2px solid var(--home-green-dark);
+  outline: 2px solid var(--c-primary-strong);
   outline-offset: 2px;
 }
 
-@keyframes pet-name-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes pet-name-rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pet-name-backdrop,
-  .pet-name-dialog {
-    animation: none;
-  }
-}

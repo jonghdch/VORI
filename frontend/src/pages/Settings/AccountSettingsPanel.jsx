@@ -65,7 +65,7 @@ function AccountSettingsPanel({ user, onLogout }) {
           </div>
           {!open && (
             <div className="settings-row-control">
-              <button type="button" className="settings-withdraw-btn" onClick={() => setOpen(true)}>
+              <button type="button" className="btn btn--danger settings-withdraw-btn" onClick={() => setOpen(true)}>
                 탈퇴 신청
               </button>
             </div>
@@ -97,10 +97,10 @@ function AccountSettingsPanel({ user, onLogout }) {
               </p>
             )}
             <div className="settings-withdraw-actions">
-              <button type="button" className="settings-withdraw-cancel" onClick={cancel} disabled={busy}>
+              <button type="button" className="btn btn--secondary settings-withdraw-cancel" onClick={cancel} disabled={busy}>
                 취소
               </button>
-              <button type="submit" className="settings-withdraw-btn settings-withdraw-btn--confirm" disabled={!ready || busy}>
+              <button type="submit" className="btn btn--danger btn--danger-solid settings-withdraw-btn settings-withdraw-btn--confirm" disabled={!ready || busy}>
                 {busy ? "처리 중…" : "탈퇴하기"}
               </button>
             </div>

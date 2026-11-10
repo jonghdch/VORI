@@ -110,7 +110,7 @@ function PetTitlePanel({ knownTitleCount, onTitlesChanged }) {
             <p className="ach-equipped-name">알을 열면 새 칭호 과제가 시작돼요</p>
           </div>
           <div className="ach-title-actions">
-            <button type="button" className="ach-btn-sm ach-btn-equip" onClick={() => navigate("/shop")}>
+            <button type="button" className="btn btn--primary btn--sm ach-btn-sm ach-btn-equip" onClick={() => navigate("/shop")}>
               상점 가기
             </button>
           </div>
@@ -144,11 +144,11 @@ function PetTitlePanel({ knownTitleCount, onTitlesChanged }) {
                 <div className="ach-title-actions">
                   <span className="ach-title-date">{formatAcquiredAt(t.acquiredAt)} 획득</span>
                   {t.equipped ? (
-                    <button type="button" className="ach-btn-sm ach-btn-ghost" disabled={busy} onClick={() => feature(null)}>
+                    <button type="button" className="btn btn--secondary btn--sm ach-btn-sm ach-btn-ghost" disabled={busy} onClick={() => feature(null)}>
                       장착 해제
                     </button>
                   ) : (
-                    <button type="button" className="ach-btn-sm ach-btn-equip" disabled={busy} onClick={() => feature(t.awardId)}>
+                    <button type="button" className="btn btn--primary btn--sm ach-btn-sm ach-btn-equip" disabled={busy} onClick={() => feature(t.awardId)}>
                       장착하기
                     </button>
                   )}

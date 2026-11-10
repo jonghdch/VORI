@@ -1292,14 +1292,14 @@ function WalletPage({ user, onLogout }) {
 
               {selectedDay && !selectedDateIsFuture && (
                 <div className={`lw-day-actions ${showJudgeButton ? "" : "is-single"}`}>
-                  <button type="button" className="hm-btn lw-btn-soft" onClick={handleAddOrEditExpense}>
+                  <button type="button" className="btn btn--secondary hm-btn lw-btn-soft" onClick={handleAddOrEditExpense}>
                     <Icon name={selectedDayExpenses.length > 0 ? "pencil" : "plus"} size={16} strokeWidth={2.2} />
                     {selectedDayExpenses.length > 0 ? "지출 수정" : "지출 추가"}
                   </button>
                   {showJudgeButton && (
                     <button
                       type="button"
-                      className="hm-btn hm-btn--dark"
+                      className="btn btn--primary hm-btn hm-btn--dark"
                       disabled={!isAiActive || (isAdmin && !demoDate)}
                       onClick={() => navigate(isAdmin ? `/wallet/analysis?date=${demoDate}` : "/wallet/analysis")}
                     >

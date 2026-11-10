@@ -1,13 +1,13 @@
 .home-date {
   margin: 0;
-  font-size: 15px;
-  color: var(--home-muted);
+  font-size: var(--fs-body);
+  color: var(--c-text-2);
   font-weight: 500;
 }
 
 .home-row {
   display: grid;
-  gap: 20px;
+  gap: var(--sp-5);
   margin-bottom: 28px;
 }
 
@@ -29,43 +29,37 @@
 }
 
 .home-card {
-  background: var(--home-card-surface);
-  border-radius: var(--home-radius);
-  padding: 24px 24px 20px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
-  border: 1px solid var(--home-card-border);
+  background: var(--c-surface);
+  border-radius: var(--r-lg);
+  padding: var(--sp-6) var(--sp-6) var(--sp-5);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--c-border);
 }
 
 /* 펫 카드 — 랜딩 페이지 톤(베이지 바탕 + 세이지·하늘·살구 빛)에 맞춘 배경.
    펫 뒤에 세이지 빛이 모이고, 모서리에 하늘·살구색이 옅게 번진다. 점 무늬는 아주 은은하게. */
 .home-card-pet {
-  background:
-    radial-gradient(circle at 50% 56%, rgba(212, 232, 194, 0.8) 0%, rgba(212, 232, 194, 0) 40%),
-    radial-gradient(circle at 92% 6%, rgba(220, 238, 244, 0.95) 0%, rgba(220, 238, 244, 0) 42%),
-    radial-gradient(circle at 4% 100%, rgba(251, 235, 205, 0.8) 0%, rgba(251, 235, 205, 0) 40%),
-    radial-gradient(rgba(124, 158, 107, 0.12) 1px, transparent 1.6px) 0 0 / 18px 18px,
-    linear-gradient(180deg, #fffdf9 0%, #f5f3ee 100%);
-  border-color: var(--home-card-border);
+  background: var(--grad-surface);
+  border-color: var(--c-border);
   display: flex;
   flex-direction: column;
 }
 
-
 .home-card-title {
   margin: 0 0 16px;
-  font-size: 17px;
+  font-size: var(--fs-h3);
   font-weight: 800;
 }
 
 .home-card-title--sm {
-  font-size: 16px;
+  font-size: var(--fs-body);
   margin-bottom: 12px;
 }
 
 .home-pet-stage {
   margin: 0 0 12px;
-  font-size: 13px;
-  color: var(--home-muted);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   font-weight: 600;
 }
 
@@ -73,7 +67,7 @@
 .home-pet-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 16px;
+  gap: var(--sp-4);
   flex: 1;            /* 카드 세로 채움 */
   margin-top: 12px;
   /* 게이지·펫 그림이 이 폭(cqi)을 기준으로 줄어든다 — 아래 .home-pet-gauge */
@@ -95,7 +89,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 /* 중앙 세로 스택: 칭호→보리→이름(Lv 라벨 포함)→경험치바 */
@@ -108,28 +102,28 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--sp-2);
   /* 펫이 있을 때의 본문 높이(게이지+이름 줄 376 + 간격 16 + 스탯 줄 47 = 439px)를 유지해 카드 크기가 안 바뀌게 */
   min-height: 439px;
   text-align: center;
 }
 
 .home-pet-empty strong {
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 900;
 }
 
 .home-pet-empty p {
   margin: 0 0 6px;
-  font-size: 13px;
-  color: var(--home-muted);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
 }
 
 .home-pet-center {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   justify-self: center;
   align-self: center;
   grid-column: 2;
@@ -143,13 +137,13 @@
 .home-pet-name-line {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .home-pet-level-label {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 800;
-  color: var(--home-green-dark);
+  color: var(--c-primary-strong);
 }
 
 /* 원형 경험치 게이지 — 보리를 감싸는 270° 아치 */
@@ -195,20 +189,20 @@
 
 .home-pet-name {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-h2);
   font-weight: 800;
-  color: var(--home-green-dark);
+  color: var(--c-primary-strong);
 }
 
 /* 칭호 캡슐 — 테두리만 있는 muted 알약, 올리면 초록 */
 .home-pet-title-badge {
-  border: 1px solid var(--home-card-border);
-  border-radius: 999px;
-  padding: 3px 12px;
-  font-size: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-full);
+  padding: 3px var(--sp-3);
+  font-size: var(--fs-caption);
   font-weight: 700;
-  color: var(--home-muted);
-  background: var(--home-card-surface);
+  color: var(--c-text-2);
+  background: var(--c-surface);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -218,11 +212,11 @@
   cursor: pointer;
 }
 .home-pet-title-badge:hover {
-  border-color: var(--home-green-dark);
-  color: var(--home-green-dark);
+  border-color: var(--c-primary-strong);
+  color: var(--c-primary-strong);
 }
 .home-pet-title-badge:focus-visible {
-  outline: 2px solid var(--home-green-dark);
+  outline: 2px solid var(--c-primary-strong);
   outline-offset: 2px;
 }
 
@@ -236,20 +230,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .home-pet-exp {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 12px;
-  border: 1px solid #c9dfbd;
-  border-radius: 999px;
-  background: var(--home-green-soft);
-  font-size: 12px;
+  gap: var(--sp-2);
+  padding: 3px var(--sp-3);
+  border: 1px solid var(--c-primary-line);
+  border-radius: var(--r-full);
+  background: var(--c-primary-soft);
+  font-size: var(--fs-caption);
   font-weight: 800;
-  color: var(--home-green-dark);
+  color: var(--c-primary-strong);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -266,33 +260,19 @@
   border: none;
   background: none;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 700;
-  color: var(--home-green-dark);
+  color: var(--c-primary-strong);
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: var(--sp-2) var(--sp-2);
+  border-radius: var(--r-sm);
 }
 .home-pet-room-link:hover {
   background: rgba(127, 176, 105, 0.12);
 }
 
-.home-pet-status {
-  margin: 8px 0 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--home-text);
-}
-
 .home-pet-art {
   flex-shrink: 0;
-}
-
-.home-pet-pixel {
-  font-size: 56px;
-  line-height: 1;
-  display: block;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
 }
 
 .home-pet-image {
@@ -308,17 +288,15 @@
    살짝 기울여 손으로 붙여 둔 느낌을 주고, 펫 카드의 베이지 배경과 톤을 맞췄다. */
 .home-pet-bubble {
   margin-top: 18px;
-  padding: 18px 20px 14px;
-  background: #fffaf1;
+  padding: var(--sp-4) var(--sp-5) var(--sp-4);
+  background: var(--c-surface);
   border: 1px solid #e3d6bd; /* 말풍선 외곽선 — 말꼬리도 같은 선 */
-  border-radius: 14px;
-  box-shadow:
-    0 1px 0 #efe5d2,
-    0 10px 20px rgba(61, 56, 48, 0.08);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
   transform: rotate(-0.6deg);
-  font-size: 14px;
+  font-size: var(--fs-body);
   line-height: 1.6;
-  color: #3d3830;
+  color: var(--c-text);
   position: relative;
 }
 
@@ -330,10 +308,10 @@
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .home-pet-bubble--link:hover {
-  border-color: var(--home-green);
+  border-color: var(--c-primary);
 }
 .home-pet-bubble--link:focus-visible {
-  outline: 2px solid var(--home-green-dark);
+  outline: 2px solid var(--c-primary-strong);
   outline-offset: 3px;
 }
 
@@ -345,13 +323,13 @@
   bottom: -9px;
   width: 18px;
   height: 18px;
-  background: #fffaf1;
+  background: var(--c-surface);
   /* 45° 돌린 사각형의 오른쪽·아래 변이 바깥쪽 두 변 — 박스 선과 이어지게 */
   border-right: 1px solid #e3d6bd;
   border-bottom: 1px solid #e3d6bd;
   transform: translateX(-50%) rotate(45deg);
-  box-shadow: 3px 3px 4px rgba(61, 56, 48, 0.06);
-  border-radius: 0 0 3px 0;
+  box-shadow: var(--shadow-md);
+  border-radius: 0 0 var(--r-sm) 0;
 }
 
 .home-stat-list {
@@ -360,7 +338,7 @@
   padding: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 /* 스탯 하나 — 이름 / 막대 / 숫자 세로 묶음 */
@@ -373,9 +351,9 @@
 }
 
 .home-stat-label {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 800;
-  color: var(--home-text);
+  color: var(--c-text);
   white-space: nowrap;
 }
 
@@ -394,24 +372,24 @@
 .home-stat-track {
   width: 100%;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--r-full);
   /* 빈 막대 — 왼쪽 불투명도 20% 에서 오른쪽 0% 로 옅어진다 */
-  background: linear-gradient(to right, rgba(45, 51, 40, 0.2), rgba(45, 51, 40, 0));
+  background: var(--c-track);
   overflow: hidden;
 }
 
 .home-stat-fill {
   height: 100%;
   min-width: 4px;
-  border-radius: 999px;
+  border-radius: var(--r-full);
   background: var(--stat-color);
   transition: width 0.4s ease;
 }
 
 .home-stat-value {
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 600;
-  color: var(--home-text);
+  color: var(--c-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -419,27 +397,27 @@
 /* 펫 카드 안 스탯 카드 — 초록 배경 위 흰 카드로 분리 */
 .home-kpi-title {
   margin: 0 0 8px;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 
 .home-kpi-value {
   margin: 0 0 8px;
-  font-size: 22px;
+  font-size: var(--fs-h2);
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
 .home-kpi-sub {
   margin: 0;
-  font-size: 13px;
-  color: var(--home-muted);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   font-weight: 600;
 }
 
 .home-kpi-sub--warn {
-  color: var(--home-warn);
+  color: var(--c-danger);
 }
 
 /* ── 홈 지출 요약 카드 (오늘·이번 달·이번 주) ─────────────────
@@ -447,20 +425,18 @@
    카드마다 --kpi-tint(모서리 빛) 색만 바꾼다. */
 .home-row-kpi .home-kpi {
   --kpi-tint: rgba(212, 232, 194, 0.7);
-  --kpi-accent: #7c9e6b;
+  --kpi-accent: var(--c-primary);
   position: relative;
   overflow: hidden;
-  padding: 20px 22px 18px;
-  background:
-    radial-gradient(circle at 100% 0%, var(--kpi-tint) 0%, rgba(255, 253, 249, 0) 55%),
-    linear-gradient(180deg, #fffdf9 0%, #f8f5ee 100%);
-  border-color: var(--home-card-border);
-  box-shadow: 0 4px 14px rgba(61, 56, 48, 0.05);
+  padding: var(--sp-5) var(--sp-6) var(--sp-4);
+  background: var(--c-surface);
+  border-color: var(--c-border);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .home-row-kpi .home-kpi:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(61, 56, 48, 0.08);
+  box-shadow: var(--shadow-md);
 }
 /* 카드 아래 포인트 선 */
 .home-row-kpi .home-kpi::after {
@@ -470,7 +446,7 @@
   right: 22px;
   bottom: 0;
   height: 3px;
-  border-radius: 3px 3px 0 0;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
   background: var(--kpi-accent);
   opacity: 0.55;
 }
@@ -481,7 +457,7 @@
 }
 .home-row-kpi .home-kpi--month {
   --kpi-tint: rgba(212, 232, 194, 0.8);
-  --kpi-accent: #7c9e6b;
+  --kpi-accent: var(--c-primary);
 }
 .home-row-kpi .home-kpi--week {
   --kpi-tint: rgba(220, 238, 244, 0.95);
@@ -492,20 +468,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-2);
   margin-bottom: 10px;
 }
 .home-row-kpi .home-kpi-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 800;
-  color: #6b6560;
+  color: var(--c-text-2);
 }
 .home-row-kpi .home-kpi-value {
   margin: 0 0 6px;
-  font-size: 26px;
+  font-size: var(--fs-h1);
   font-weight: 900;
-  color: #3d3830;
+  color: var(--c-text);
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
@@ -515,7 +491,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
   margin-bottom: 12px;
 }
 
@@ -525,9 +501,9 @@
 
 .home-list-date {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 
 .home-tx-list {
@@ -539,9 +515,9 @@
 .home-tx-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--home-border);
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--c-border);
 }
 
 .home-tx-row:last-of-type {
@@ -562,9 +538,9 @@
   height: 14px;
   border-radius: 50%;
 }
-.home-tx-dot--green { background: var(--home-bar-green); }
-.home-tx-dot--gray  { background: #c9cdc3; }
-.home-tx-dot--red   { background: var(--home-bar-red); }
+.home-tx-dot--green { background: var(--c-data-green); }
+.home-tx-dot--gray  { background: var(--c-border-strong); }
+.home-tx-dot--red   { background: var(--c-data-red); }
 
 .home-tx-mid {
   flex: 1;
@@ -576,18 +552,18 @@
 
 .home-tx-name {
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--fs-body);
 }
 
 .home-tx-cat {
-  font-size: 12px;
-  color: var(--home-muted);
+  font-size: var(--fs-caption);
+  color: var(--c-text-2);
   font-weight: 600;
 }
 
 .home-tx-amount {
   font-weight: 800;
-  font-size: 15px;
+  font-size: var(--fs-body);
 }
 
 .home-card-actions {
@@ -595,7 +571,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
   margin-top: 16px;
 }
 
@@ -603,9 +579,9 @@
   border: none;
   background: none;
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
-  color: var(--home-green-dark);
+  color: var(--c-primary-strong);
   cursor: pointer;
   padding: 0;
 }
@@ -624,10 +600,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--home-border);
-  font-size: 14px;
+  gap: var(--sp-2);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--c-border);
+  font-size: var(--fs-body);
 }
 
 .home-ach-row:last-of-type {
@@ -639,20 +615,20 @@
 }
 
 .home-badge {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 999px;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-full);
   flex-shrink: 0;
 }
 
 .home-badge--done {
-  background: #e3f0dc;
-  color: var(--home-green-dark);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
 }
 
 .home-badge--prog {
-  background: #fdecd8;
+  background: var(--c-gold-soft);
   color: #b86a1a;
 }
 
@@ -706,52 +682,29 @@
   flex-shrink: 0;
 }
 
-.home-cat-row {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) max-content;
-  align-items: center;
-  gap: 8px 12px;
-}
-
 .home-cat-label {
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 700;
-}
-
-.home-cat-amount {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--home-text);
-  text-align: right;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }
 
 .home-cat-track {
   height: 12px;
-  border-radius: 8px;
-  background: #eef1ea;
+  border-radius: var(--r-sm);
+  background: var(--c-bg);
   overflow: hidden;
-}
-
-.home-cat-fill {
-  height: 100%;
-  border-radius: 8px;
-  min-width: 4%;
-  transition: width 0.4s ease;
 }
 
 .home-footnote {
   text-align: center;
   margin: 28px 0 0;
-  font-size: 13px;
-  color: var(--home-muted);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   font-weight: 500;
 }
 
 /* 소비 리포트 플레이스홀더 */
-.report-placeholder { text-align: center; padding: 64px 24px; }
-.report-placeholder-text { margin: 12px 0 0; font-size: 15px; color: var(--home-muted); }
+
+.report-placeholder-text { margin: 12px 0 0; font-size: var(--fs-body); color: var(--c-text-2); }
 
 @media (max-width: 1024px) {
   /* 한 줄 배치에서는 화면 폭에 맞춰 줄인다 — 넓을 때는 펫이 있을 때의 본문 높이
@@ -795,12 +748,10 @@
    같이 쓰므로 전부 .home-row-bottom 안에서만 꾸민다. */
 .home-row-bottom .home-card {
   --sec-tint: rgba(212, 232, 194, 0.7);
-  --sec-icon-bg: #eaf3de;
-  background:
-    radial-gradient(circle at 100% 0%, var(--sec-tint) 0%, rgba(255, 253, 249, 0) 45%),
-    linear-gradient(180deg, #fffdf9 0%, #f8f5ee 100%);
-  border-color: var(--home-card-border);
-  box-shadow: 0 4px 14px rgba(61, 56, 48, 0.05);
+  --sec-icon-bg: var(--c-primary-soft);
+  background: var(--c-surface);
+  border-color: var(--c-border);
+  box-shadow: var(--shadow-sm);
 }
 .home-row-bottom .home-sec--list {
   --sec-tint: rgba(251, 235, 205, 0.9);
@@ -808,7 +759,7 @@
 }
 .home-row-bottom .home-sec--achieve {
   --sec-tint: rgba(212, 232, 194, 0.8);
-  --sec-icon-bg: #eaf3de;
+  --sec-icon-bg: var(--c-primary-soft);
 }
 .home-row-bottom .home-sec--calendar {
   --sec-tint: rgba(220, 238, 244, 0.95);
@@ -819,8 +770,8 @@
 .home-sec-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #3d3830;
+  gap: var(--sp-2);
+  color: var(--c-text);
 }
 .home-sec-icon {
   width: 30px;
@@ -831,21 +782,21 @@
   justify-content: center;
   border-radius: 50%;
   background: var(--sec-icon-bg);
-  box-shadow: inset 0 0 0 1px rgba(61, 56, 48, 0.05);
-  font-size: 15px;
+  box-shadow: var(--ring-line);
+  font-size: var(--fs-body);
   line-height: 1;
 }
 .home-row-bottom .home-list-date {
-  font-size: 12px;
-  color: #9c9488;
+  font-size: var(--fs-caption);
+  color: var(--c-text-3);
 }
 
 /* 최근 지출 — 행마다 둥근 칸, 시그널 점은 같은 계열 파스텔 원 안에 */
 .home-row-bottom .home-tx-row {
-  padding: 10px 8px;
+  padding: var(--sp-2) var(--sp-2);
   margin: 0 -8px;
-  border-radius: 10px;
-  border-bottom: 1px dashed #e6dfd1;
+  border-radius: var(--r-md);
+  border-bottom: 1px dashed var(--c-border);
   transition: background 0.12s ease;
 }
 .home-row-bottom .home-tx-row:last-of-type {
@@ -859,30 +810,30 @@
   height: 34px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: #f1eee7;
+  background: var(--c-surface-2);
 }
-.home-row-bottom .home-tx-icon--green { background: #eaf3de; }
-.home-row-bottom .home-tx-icon--red   { background: #fbe6e2; }
+.home-row-bottom .home-tx-icon--green { background: var(--c-primary-soft); }
+.home-row-bottom .home-tx-icon--red   { background: var(--c-danger-soft); }
 .home-row-bottom .home-tx-dot {
   width: 12px;
   height: 12px;
 }
 .home-row-bottom .home-tx-name {
-  color: #3d3830;
-  font-size: 14px;
+  color: var(--c-text);
+  font-size: var(--fs-body);
 }
 .home-row-bottom .home-tx-cat {
-  color: #9c9488;
+  color: var(--c-text-3);
 }
 .home-row-bottom .home-tx-amount {
-  color: #3d3830;
-  font-size: 14px;
+  color: var(--c-text);
+  font-size: var(--fs-body);
   font-variant-numeric: tabular-nums;
 }
 
 /* 최근 업적 — 진행 중이면 얇은 진행 막대 */
 .home-row-bottom .home-ach-row {
-  border-bottom: 1px dashed #e6dfd1;
+  border-bottom: 1px dashed var(--c-border);
 }
 .home-row-bottom .home-ach-row:last-of-type {
   border-bottom: none;
@@ -892,41 +843,41 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 .home-row-bottom .home-ach-title {
-  color: #3d3830;
+  color: var(--c-text);
   font-weight: 700;
 }
 .home-ach-progress {
   display: block;
   height: 5px;
-  border-radius: 999px;
-  background: #ebe6da;
+  border-radius: var(--r-full);
+  background: var(--c-track);
   overflow: hidden;
 }
 .home-ach-progress > span {
   display: block;
   height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #b8dbec, #7cb9c8);
+  border-radius: var(--r-full);
+  background: var(--grad-primary);
 }
 .home-row-bottom .home-badge--done {
-  background: #eaf3de;
-  color: #5e8c4e;
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
 }
 .home-row-bottom .home-badge--prog {
-  background: #e4f2f7;
+  background: var(--c-info-soft);
   color: #3f7f90;
 }
 
 /* 기록 캘린더 — 홈에서만 칸을 베이지·파스텔 톤으로 (리포트 캘린더는 그대로) */
 .home-cal .rc-weekday {
-  color: #9c9488;
+  color: var(--c-text-3);
 }
 .home-cal .rc-cell {
-  background: #f1ede4;
-  color: #9c9488;
+  background: var(--c-surface-2);
+  color: var(--c-text-3);
 }
 /* 달 시작 전 빈 칸은 비워 둔다 */
 .home-cal .rc-cell--blank {
@@ -946,19 +897,10 @@
   color: #fff;
 }
 .home-cal .rc-cell.is-today {
-  box-shadow: inset 0 0 0 2px #7cb9c8;
-}
-
-/* 하단 카드 버튼 — 세이지·따뜻한 갈색으로 톤 맞춤 */
-.home-row-bottom .home-btn-primary {
-  background: #7c9e6b;
-  box-shadow: 0 4px 10px rgba(124, 158, 107, 0.25);
-}
-.home-row-bottom .home-btn-dark {
-  background: #3d3830;
+  box-shadow: inset 0 0 0 2px var(--c-data-sky);
 }
 .home-row-bottom .home-link-btn {
-  color: #5e8c4e;
+  color: var(--c-primary-strong);
 }
 
 /* 최근 지출 내역 — 폭이 좁아져서 링크·버튼이 한 줄에 안 들어간다.
@@ -972,10 +914,10 @@
 }
 .home-row-bottom .home-sec--list > .home-card-actions {
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: var(--sp-3);
   flex-direction: column;
   align-items: stretch;
-  gap: 10px;
+  gap: var(--sp-2);
 }
 .home-row-bottom .home-sec--list .home-link-btn {
   align-self: center;

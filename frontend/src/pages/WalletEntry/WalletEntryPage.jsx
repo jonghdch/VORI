@@ -934,7 +934,7 @@ function WalletEntryPage({ user }) {
             )}
             <div className="wr-actions-row">
               {!editing && (
-                <button type="button" className="wr-btn wr-btn--ghost" onClick={() => save(true)} disabled={!canSave}>
+                <button type="button" className="btn btn--secondary wr-btn wr-btn--ghost" onClick={() => save(true)} disabled={!canSave}>
                   {/* 좁은 폰에서 「저장하고 하나 / 더」로 「더」만 넘어가지 않게 「하나 더」를 묶는다.
                       버튼이 flex 라 바깥 span 으로 한 덩어리로 감싸야 그 안에서 줄이 바뀐다 */}
                   <span>
@@ -942,7 +942,7 @@ function WalletEntryPage({ user }) {
                   </span>
                 </button>
               )}
-              <button type="button" className="wr-btn wr-btn--dark" onClick={() => save(false)} disabled={!canSave}>
+              <button type="button" className="btn btn--primary wr-btn wr-btn--dark" onClick={() => save(false)} disabled={!canSave}>
                 {saveLabel}
               </button>
             </div>
@@ -1002,17 +1002,17 @@ function Sheet({ title, onClose, children, footer }) {
   }, [onClose]);
 
   return (
-    <div className="wr-sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="wr-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} ref={panelRef}>
-        <span className="wr-sheet-grip" aria-hidden />
-        <div className="wr-sheet-head">
-          <h2 id={titleId}>{title}</h2>
-          <button type="button" className="wr-icon-btn" aria-label="닫기" onClick={onClose}>
+    <div className="modal-backdrop modal-backdrop--sheet wr-sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="sheet wr-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} ref={panelRef}>
+        <span className="sheet-grip wr-sheet-grip" aria-hidden />
+        <div className="modal-head wr-sheet-head">
+          <h2 id={titleId} className="modal-title">{title}</h2>
+          <button type="button" className="modal-close" aria-label="닫기" onClick={onClose}>
             <Icon name="close" size={20} />
           </button>
         </div>
         {children}
-        {footer && <div className="wr-sheet-foot">{footer}</div>}
+        {footer && <div className="modal-foot wr-sheet-foot">{footer}</div>}
       </div>
     </div>
   );
@@ -1028,7 +1028,7 @@ function CategorySheet({ tree, value, currentLabel, onClose, onPick }) {
       footer={
         <button
           type="button"
-          className="wr-btn wr-btn--dark wr-btn--block"
+          className="btn btn--primary btn--block wr-btn wr-btn--dark wr-btn--block"
           disabled={picked == null}
           onClick={() => onPick(picked)}
         >
@@ -1042,7 +1042,7 @@ function CategorySheet({ tree, value, currentLabel, onClose, onPick }) {
         </span>
         <span>변경할 카테고리를 터치하세요</span>
       </p>
-      <div className="wr-sheet-body">
+      <div className="modal-body wr-sheet-body">
         {tree.length === 0 && <p className="wr-day-empty">불러오는 중…</p>}
         {tree.map((group) => (
           <section key={group.id} className="wr-sheet-group" aria-label={group.name}>
@@ -1083,7 +1083,7 @@ function DayRecordsSheet({ title, rows, loading, error, expenseTotal, editingKey
         </span>
         <span>기록을 누르면 고칠 수 있어요</span>
       </p>
-      <div className="wr-sheet-body">
+      <div className="modal-body wr-sheet-body">
         {loading ? (
           <p className="wr-day-empty">불러오는 중…</p>
         ) : error ? (

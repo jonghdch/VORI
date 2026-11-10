@@ -135,17 +135,17 @@ function AccountMenu({ onLogout }) {
           </ul>
 
           <div className="account-menu-actions">
-            <button type="button" className="home-btn home-btn-primary" onClick={() => go("/settings/profile")}>
+            <button type="button" className="btn btn--primary home-btn home-btn-primary" onClick={() => go("/settings/profile")}>
               프로필 수정
             </button>
             {isAdmin && (
-              <button type="button" className="home-btn" onClick={() => go("/admin")}>
+              <button type="button" className="btn btn--secondary home-btn" onClick={() => go("/admin")}>
                 관리자 페이지
               </button>
             )}
             <button
               type="button"
-              className="home-btn"
+              className="btn btn--secondary home-btn"
               onClick={() => {
                 setOpen(false);
                 openAttendance(); // 출석 팝업을 다시 띄운다 (AttendanceGate)

@@ -154,7 +154,7 @@ function PetDetailPage({ onLogout }) {
           {!loading && !error && mine.length === 0 && (
             <div className="dexd-empty">
               <p>아직 이 친구를 키워본 적이 없어요.</p>
-              <button type="button" className="home-btn home-btn-primary" onClick={() => navigate("/shop")}>
+              <button type="button" className="btn btn--primary home-btn home-btn-primary" onClick={() => navigate("/shop")}>
                 상점 가기
               </button>
             </div>

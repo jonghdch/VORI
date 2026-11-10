@@ -809,7 +809,7 @@ function ReportPage({ user, onLogout }) {
                 <p className="ledger-cal-state">
                   <button
                     type="button"
-                    className="home-btn"
+                    className="btn btn--secondary home-btn"
                     onClick={() => setReloadKey((k) => k + 1)}
                   >
                     다시 시도

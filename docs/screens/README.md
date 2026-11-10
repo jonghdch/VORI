@@ -17,6 +17,8 @@
 > 기획 의도나 미구현 제안은 [`signup-flow.md`](../signup-flow.md) · [`tutorial-flow.md`](../tutorial-flow.md) ·
 > [`judgment-flow.md`](../judgment-flow.md) 에 있고 이 문서는 지금 구현된 화면만 다룬다.
 
+> 🎨 버튼·카드·모달·색·간격 규칙은 [디자인 시스템](../design-system.md)(2026-11-03 통일, 근거 [감사 문서](../design-audit-2026-11-03.md))을 따른다.
+
 ## 화면 바로가기
 
 화면 문서 전체를 메뉴 순서로 모았다. 경로·파일·인증까지 보려면 [3-2. 스크린 리스트](#3-2-스크린-리스트).

@@ -2,15 +2,15 @@
 .rule-grid {
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(320px, 1.2fr);
-  gap: 16px;
+  gap: var(--sp-4);
   align-items: start;
 }
 .rule-card {
-  padding: 24px 24px;
+  padding: var(--sp-6) var(--sp-6);
 }
 .rule-card-title {
   margin: 0 0 16px;
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 700;
 }
 
@@ -20,39 +20,31 @@
 }
 .rule-field-label {
   display: block;
-  font-size: 14px;
-  color: var(--admin-muted);
+  font-size: var(--fs-input);
+  color: var(--c-text-2);
   margin-bottom: 4px;
 }
 .rule-field-label code {
-  font-size: 12px;
-  color: var(--admin-faint);
+  font-size: var(--fs-input);
+  color: var(--c-text-3);
 }
 .rule-input {
   width: 140px;
-  padding: 8px 12px;
-  border: 1px solid var(--admin-border);
-  border-radius: 8px;
-  background: var(--admin-surface);
-  font-size: 16px;
-  color: var(--admin-text);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface-2);
+  font-size: var(--fs-input);
+  color: var(--c-text);
   font-variant-numeric: tabular-nums;
 }
 .rule-input:focus {
   outline: none;
-  border-color: var(--admin-green);
+  border-color: var(--c-primary);
 }
 
 .rule-save {
   margin-top: 8px;
-  border: 0;
-  background: var(--admin-green);
-  color: #fff;
-  cursor: pointer;
-  padding: 8px 24px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
 }
 .rule-save:hover:not(:disabled) {
   filter: brightness(0.95);
@@ -64,11 +56,11 @@
 
 .rule-hint {
   margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--admin-faint);
+  font-size: var(--fs-caption);
+  color: var(--c-text-3);
 }
 .rule-hint--warn {
-  color: #b4524a;
+  color: var(--c-danger);
 }
 
 .rule-explain {
@@ -77,38 +69,38 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  font-size: 16px;
-  color: var(--admin-text);
+  gap: var(--sp-3);
+  font-size: var(--fs-body);
+  color: var(--c-text);
 }
 .rule-explain li {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
 }
 .rule-note {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   line-height: 1.6;
-  color: var(--admin-muted);
-  padding-top: 16px;
-  border-top: 1px solid var(--admin-border);
+  color: var(--c-text-2);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--c-border);
 }
 
 .rule-banner {
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 16px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  font-size: var(--fs-body);
   margin-bottom: 16px;
 }
 .rule-banner--error {
   background: rgba(180, 82, 74, 0.1);
-  color: #b4524a;
+  color: var(--c-danger);
 }
 .rule-banner--ok {
   background: rgba(127, 176, 105, 0.12);
-  color: var(--admin-green);
+  color: var(--c-primary);
 }
 
 @media (max-width: 760px) {
