@@ -122,13 +122,13 @@ function TodayAllowanceCard({ summary, loading }) {
           )}
         </div>
         <div className="home-allow-actions">
-          <button type="button" className="home-btn home-allow-btn" onClick={() => navigate("/wallet/new")}>
+          <button type="button" className="btn home-btn home-allow-btn" onClick={() => navigate("/wallet/new")}>
             <Icon name="plus" size={16} />
             지출 추가하기
           </button>
           <button
             type="button"
-            className="home-btn home-allow-btn home-allow-btn--ghost"
+            className="btn home-btn home-allow-btn home-allow-btn--ghost"
             onClick={() => navigate("/wallet")}
           >
             <Icon name="ledger" size={16} />
