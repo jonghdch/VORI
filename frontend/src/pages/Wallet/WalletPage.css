@@ -876,7 +876,7 @@
 .ledger-main .home-card,
 .ledger-main .ledger-history-card {
   --sec-tint: rgba(212, 232, 194, 0.7);
-  --sec-icon-bg: var(--lg-sage-soft);
+  --sec-icon-bg: var(--c-primary-soft);
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   box-shadow: var(--shadow-sm);
@@ -899,7 +899,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--sec-icon-bg, var(--lg-sage-soft));
+  background: var(--sec-icon-bg, var(--c-primary-soft));
   box-shadow: var(--ring-line);
   font-size: var(--fs-body);
   line-height: 1;
