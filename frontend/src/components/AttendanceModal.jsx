@@ -173,7 +173,7 @@ function AttendanceModal({ onClose }) {
           </div>
           <button
             type="button"
-            className={`btn btn--primary btn--lg btn--block attendance-cta ${
+            className={`btn btn--primary btn--lg attendance-cta ${
               status?.checkedIn ? "attendance-cta--done" : "attendance-cta--ready"
             }`}
             disabled={checkingIn || loading || status?.checkedIn}

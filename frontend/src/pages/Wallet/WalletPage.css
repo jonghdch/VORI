@@ -105,6 +105,11 @@
   border-collapse: collapse;
 }
 
+/* 휴대폰 폭에서는 고정 열이 "내역" 열을 다 먹는다 — 표에 최소 폭을 주고 표만 가로로 민다 */
+@media (max-width: 600px) {
+  .ledger-history-table { min-width: 520px; }
+}
+
 /* 5열 폭 배분: 날짜 96px / 내역 auto / 카테고리 22% / AI 판정 84px / 금액 92px */
 .ledger-history-table th:nth-child(1) { width: 96px; }
 .ledger-history-table th:nth-child(2) { width: auto; }

@@ -224,6 +224,8 @@
    칸이 옆으로 길쭉하게 늘어나 달력처럼 안 보인다. 실제 달력 앱처럼
    칸이 정사각형에 가깝도록 카드 자체 폭을 제한하고 가운데 둔다. */
 .attendance-calendar-card {
+  /* 다이얼로그(.modal)가 세로 flex 라 좌우 auto margin 만 두면 내용 폭으로 줄어든다 — 폭을 채운 뒤 620px 로 막는다 */
+  width: 100%;
   max-width: 620px;
   margin: 0 auto 16px;
   padding: var(--sp-6) var(--sp-6) var(--sp-5);
@@ -464,6 +466,11 @@
 
   .attendance-head {
     flex-direction: column;
+    padding-right: 0; /* 버튼은 폭을 다 쓰고, 닫기 버튼 자리는 제목 줄만 비운다 */
+  }
+
+  .attendance-head > div:first-child {
+    padding-right: 44px;
   }
 
   .attendance-cta {
