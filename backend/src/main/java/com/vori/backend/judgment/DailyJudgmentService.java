@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 @Service @RequiredArgsConstructor
 public class DailyJudgmentService {
     @Value("${vori.ai-judge.open-hour:20}") private int openHour;
+    // 판정은 다음 날 새벽 이 시각 전까지 연다. 그 사이(0시~closeHour)는 전날 판정이다.
+    @Value("${vori.ai-judge.close-hour:2}") private int closeHour;
     private final DailyJudgmentRepository judgments; private final ExpenseRepository expenses; private final UserRepository users;
     private final PetRepository pets; private final PetGrowthLogRepository logs; private final UserFurnitureRepository furniture;
     private final SpendingPlanService plans; private final UserStatBudgetRepository budgets; private final PetStatRewardService statRewardService;
@@ -32,10 +34,18 @@ public class DailyJudgmentService {
     private final com.vori.backend.inquiry.AiInquiryRepository inquiries;
     private record Evaluation(Signal signal, int count, Map<StatType,Integer> rewards, Map<StatType, DailyJudgmentResponse.GroupJudgment> groups, int saved) {}
 
+    /** 지금 판정할 날짜 — closeHour 전 새벽이면 전날이다. */
+    public LocalDate currentJudgmentDay(){ return judgmentDay(LocalDateTime.now(),closeHour()); }
+    /** 하루 종일 여는 설정(open-hour=0, 낮 시연)이면 새벽 연장이 없어 날짜를 미루지 않는다. */
+    private int closeHour(){ return openHour>closeHour?closeHour:0; }
+    static LocalDate judgmentDay(LocalDateTime now,int closeHour){ return now.minusHours(closeHour).toLocalDate(); }
+    /** openHour 부터 다음 날 closeHour 전까지 열린다(예: 20시~새벽 2시). */
+    static boolean isOpenAt(int hour,int openHour,int closeHour){ return hour>=openHour||hour<closeHour; }
+
     @Transactional(readOnly=true) public Optional<DailyJudgmentResponse> getToday(Long id){ return getByDate(id, LocalDate.now()); }
     @Transactional(readOnly=true) public Optional<DailyJudgmentResponse> getByDate(Long id,LocalDate date){return judgments.findByUserIdAndJudgmentDate(id,date).map(j->DailyJudgmentResponse.from(j,true));}
     @Transactional(readOnly=true) public List<DailyJudgmentResponse> getByMonth(Long id,YearMonth month){return judgments.findByUserIdAndJudgmentDateBetweenOrderByJudgmentDate(id,month.atDay(1),month.atEndOfMonth()).stream().map(j->DailyJudgmentResponse.from(j,true)).toList();}
-    @Transactional public DailyJudgmentResponse judgeToday(Long id,Role role){return judgeDate(id,role,LocalDate.now());}
+    @Transactional public DailyJudgmentResponse judgeToday(Long id,Role role){return judgeDate(id,role,currentJudgmentDay());}
 
     /**
      * 1차 신호등 판정 (docs/judgment-flow.md ①). 봉투로 계산해 PENDING 으로 저장한다.
@@ -46,8 +56,8 @@ public class DailyJudgmentService {
      */
     @Transactional public DailyJudgmentResponse judgeDate(Long id,Role role,LocalDate date){
         LocalDateTime now=LocalDateTime.now();
-        if(role!=Role.ADMIN&&!date.equals(now.toLocalDate())) throw new ResponseStatusException(HttpStatus.FORBIDDEN,"다른 날짜의 판정은 관리자만 사용할 수 있어요.");
-        if(role!=Role.ADMIN&&now.getHour()<openHour) throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소비 판정은 매일 "+openHour+"시부터 자정까지 가능해요.");
+        if(role!=Role.ADMIN&&!date.equals(judgmentDay(now,closeHour()))) throw new ResponseStatusException(HttpStatus.FORBIDDEN,"다른 날짜의 판정은 관리자만 사용할 수 있어요.");
+        if(role!=Role.ADMIN&&!isOpenAt(now.getHour(),openHour,closeHour())) throw new ResponseStatusException(HttpStatus.FORBIDDEN,"소비 판정은 매일 "+openHour+"시부터 다음 날 "+closeHour()+"시까지 가능해요.");
         User user=users.findByIdForUpdate(id).orElseThrow();
         Optional<DailyJudgment> old=judgments.findByUserIdAndJudgmentDate(id,date);
         if(old.isPresent()) {
@@ -60,7 +70,7 @@ public class DailyJudgmentService {
                 else {
                     existing.refresh(evaluation.signal,evaluation.count,evaluation.saved/100,maxReward(evaluation),details(evaluation),groups,evaluation.saved,now);
                     // 자정이 이미 지난 날인데 아직 지급 전이면(정산 전·실패) 기다리지 않고 바로 준다 — finalizeRow 와 같은 규칙
-                    if(date.isBefore(now.toLocalDate())) payStored(user,existing,now);
+                    if(date.isBefore(judgmentDay(now,closeHour()))) payStored(user,existing,now);
                 }
                 return DailyJudgmentResponse.from(existing,false);
             }
@@ -88,7 +98,7 @@ public class DailyJudgmentService {
      */
     @Transactional public DailyJudgmentResponse finalizeDate(Long id,Role role,LocalDate date){
         LocalDateTime now=LocalDateTime.now();
-        if(role!=Role.ADMIN&&!date.equals(now.toLocalDate())) throw new ResponseStatusException(HttpStatus.FORBIDDEN,"판정은 그날 안에 확정할 수 있어요.");
+        if(role!=Role.ADMIN&&!date.equals(judgmentDay(now,closeHour()))) throw new ResponseStatusException(HttpStatus.FORBIDDEN,"판정은 그날 안에 확정할 수 있어요.");
         User user=users.findByIdForUpdate(id).orElseThrow();
         DailyJudgment row=judgments.findByUserIdAndJudgmentDate(id,date)
                 .orElseThrow(()->new ResponseStatusException(HttpStatus.CONFLICT,"먼저 판정을 받아 주세요."));
@@ -153,8 +163,8 @@ public class DailyJudgmentService {
     private DailyJudgmentResponse finalizeRow(User user,DailyJudgment row,LocalDateTime now){
         Evaluation evaluation=evaluate(user.getId(),row.getJudgmentDate());
         row.finalizeWith(evaluation.signal,evaluation.count,evaluation.saved/100,maxReward(evaluation),details(evaluation),DailyJudgmentResponse.groupsToJson(evaluation.groups),evaluation.saved,now);
-        // 보상은 그날 자정에 준다. 그 자정이 이미 지난 날(관리자 시연의 지난 날짜)은 기다릴 자정이 없으므로 바로 준다
-        if(row.getJudgmentDate().isBefore(now.toLocalDate())) payStored(user,row,now);
+        // 보상은 그날 정산(다음 날 closeHour)에 준다. 정산이 이미 지난 날(관리자 시연의 지난 날짜)은 기다릴 정산이 없으므로 바로 준다
+        if(row.getJudgmentDate().isBefore(judgmentDay(now,closeHour()))) payStored(user,row,now);
         return DailyJudgmentResponse.from(row,false);
     }
 

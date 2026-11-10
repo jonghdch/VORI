@@ -58,7 +58,7 @@
 
 | | |
 |---|---|
-| 들어오는 조건 | 일반 계정: **오늘, 오후 8시 이후**(서버 `vori.ai-judge.open-hour`·화면 `AI_ACTIVE_FROM_HOUR`, 기본 20). 시간 밖이면 가계부로 돌려보낸다. 관리자: 시각 제한 없고 `?date=` 로 지난 날짜도 연다 |
+| 들어오는 조건 | 일반 계정: **오후 8시부터 다음 날 새벽 2시 전까지**(서버 `vori.ai-judge.open-hour`·`close-hour`, 화면 `AI_ACTIVE_FROM_HOUR`·`AI_ACTIVE_UNTIL_HOUR`, 기본 20·2). 0시~2시에 들어오면 전날 판정이다. 하루 종일 여는 설정(`open-hour=0`, 낮 시연)이면 새벽 연장 없이 그날만이다. 시간 밖이면 가계부로 돌려보낸다. 관리자: 시각 제한 없고 `?date=` 로 지난 날짜도 연다 |
 | 알림 | 오후 8시에 그날 지출을 적었고 아직 판정하지 않은 사용자에게 「오늘 소비를 판정할 수 있어요」 |
 | 하는 일 | 화면에 들어온 순간의 날짜를 고정한다(자정을 넘겨도 다른 날짜로 요청하지 않게). 그날 판정 행이 있는지 조회한다 |
 | 다음 단계 | 행이 **없으면** 확인 창(「하루에 한 번만 판정할 수 있어요」) → 「판정하기」를 눌러야 ① / 「돌아가기」면 가계부로 |
@@ -68,7 +68,7 @@
 
 | | |
 |---|---|
-| 요청 조건 | 일반 계정은 날짜가 오늘이고 오후 8시 이후여야 한다(아니면 403). 관리자는 제한 없음 |
+| 요청 조건 | 일반 계정은 날짜가 판정하는 날(새벽 2시 전이면 전날)이고 오후 8시~다음 날 새벽 2시 사이여야 한다(아니면 403). 관리자는 제한 없음 |
 | 하는 일 | 그룹마다 봉투와 오늘 지출을 비교해 신호등을 정한다(4절). `PENDING` 으로 저장하고 같은 값을 1차 결과 칸(`initial_signal`·`initial_group_details`)에도 남긴다 |
 | 다음 단계 | 그날 **답하지 않은 AI 질문(예외 지출)이 0건**이면 같은 요청 안에서 ③까지 → 응답 `status=FINALIZED` |
 | | 1건 이상이면 `status=PENDING` → 화면은 ② |
@@ -114,7 +114,7 @@
 
 | | |
 |---|---|
-| 언제 | 매일 00:00(한국 시간). 자정에 서버가 꺼져 있었던 경우에 대비해 서버가 뜰 때도 한 번 돈다 |
+| 언제 | 매일 02:00(한국 시간, 판정이 닫히는 `close-hour`). 0시~2시는 아직 전날 판정 시간이라 그 뒤에 돈다. 그때 서버가 꺼져 있었던 경우에 대비해 서버가 뜰 때도 한 번 돈다 |
 | 1. 사유 입력을 끝내지 않은 날 | 지난 날짜의 `PENDING` → 예외 지출 판정 없이 **1차 신호등 판정 그대로** `FINALIZED`(D7). 다시 계산하지 않고 ①에서 저장한 결과·보상을 쓴다 |
 | 2. 판정하지 않은 날 | 어제 지출을 하나 이상 적었는데 판정 행이 없는 사용자 → 신호등 판정을 대신 내려 `FINALIZED`(사유 반영 없음). 지출이 없는 날은 판정하지 않는다(안 쓴 날로 계산돼 최대 보상이 나가지 않게). 어제 하루만 본다 |
 | 3. 보상 지급 | `FINALIZED` 인데 아직 지급하지 않은 지난 날짜 판정 → 저장된 보상(코인·스탯)을 지급하고 `rewarded_at` 기록 |
@@ -159,6 +159,7 @@
 | D7 | 자정이 지나도록 끝내지 않으면 예외 지출 판정 없이 1차 판정 내용으로 보상 | 「자정이 지나면 예외 지출에 대한 판정 없이 1차 판정 내용으로만 보상을 주는 식으로 가야할 것 같아」 |
 | D8 | **보상은 당일 자정에 무조건 지급**. 판정을 받은 뒤에는 수정 사항이 있어도 보상(스탯·코인)이 바뀌지 않는다 | 「보상은 당일 자정에 무조건 지급이고 이전에 판정을 받고 나면 이후 수정 사항이 있어도 보상(스탯, 코인)은 바뀌지 않아」 |
 | D9 | 판정은 원래대로 **오후 8시 이후** 「판정하기」로 시작한다 (10-08, 10시 → 8시) | 「오후 8시로 되어있었다고 하는데 8시로 바꿔줄래?」 |
+| D10 | 판정은 **오후 8시부터 다음 날 새벽 2시까지** 받는다. 0시~2시에 받는 판정은 전날 판정이고, 정산은 새벽 2시로 옮긴다 (11-11) | 「오후 8시부터 새벽 2시까지 가능하게 해」 |
 
 ### 구현하면서 정한 것 (Claude 판단, 2026-10-08 — 확인 필요)
 
@@ -182,7 +183,7 @@
 |---|---|
 | 상태·마이그레이션 | `JudgmentStatus`, `DailyJudgment`(`status`·`initial_signal`·`initial_group_details`·`finalized_at`·`rewarded_at`), `V50__daily_judgment_status.sql` — 기존 행은 `FINALIZED`·지급 완료 |
 | 판정 | `DailyJudgmentService.judgeDate`(①)·`finalizeDate`(③)·`evaluate`(4절)·`approvedExceptionIds`(인정된 예외 지출) |
-| 자정 정산 | `JudgmentRewardSettler`(00:00 KST + 서버 시작) → `finalizeExpiredAsInitial`·`judgeUnjudgedDay`·`payReward` |
+| 자정 정산 | `JudgmentRewardSettler`(02:00 KST + 서버 시작) → `finalizeExpiredAsInitial`·`judgeUnjudgedDay`·`payReward` |
 | 판정 열림 알림 | `JudgmentOpenNotifier`(20:00 KST) |
 | API | `POST /api/daily-judgments`·`/today`(①), `POST /api/daily-judgments/finalize`(③). 응답에 `status`·`initialSignal`·`initialGroupJudgments`·`rewarded` |
 | 사유 답변 | `AiInquiryService.answerInquiry`·`resolveReason`·`computeSignalFinal` |
