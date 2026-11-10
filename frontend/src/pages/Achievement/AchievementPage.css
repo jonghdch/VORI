@@ -120,7 +120,7 @@
 .ach-progress-track {
   height: 10px;
   border-radius: var(--r-sm);
-  background: var(--c-bg);
+  background: var(--c-track); /* 잠긴 칭호 카드(--c-bg) 위에서도 바탕이 보이게 */
   overflow: hidden;
 }
 

@@ -3,16 +3,15 @@ import { useNavigate } from "react-router-dom";
 import Icon from "../../components/Icon";
 import { getSpendingPlan } from "../../api/spendingPlan";
 import { getTodayJudgment } from "../../api/dailyJudgment";
-import SignalChip, { SIGNAL_META, signalForUsage } from "../../components/SignalChip";
+import { SIGNAL_META, signalForUsage } from "../../components/SignalChip";
 // 카드 모양은 리디자인 홈과 같은 HomeScreen.css(.hm-*)를 쓴다. 바깥 .hm.hm-home 이 색 변수·톤을 깐다.
 import "./HomeScreen.css";
 
 const num = (n) => Math.round(n ?? 0).toLocaleString("ko-KR");
-const won = (n) => `${num(n)}원`;
 const pad2 = (n) => String(n).padStart(2, "0");
 
 /**
- * 오늘 남은 돈 카드 — 오늘 쓸 수 있는 돈, 쓴 돈, 사용률, 판정 칩.
+ * 오늘 남은 돈 띠 — 남은 돈, 판정 칩, 지출 추가·가계부 이동 버튼.
  * summary/loading 은 홈이 이미 받아 둔 getHomeSummary 결과를 그대로 받는다.
  */
 function TodayAllowanceCard({ summary, loading }) {
@@ -74,7 +73,6 @@ function TodayAllowanceCard({ summary, loading }) {
 
   const allowance = allowanceInfo?.value ?? 0;
   const remaining = allowance - todaySpent;
-  const usagePct = allowance > 0 ? Math.round((todaySpent / allowance) * 100) : todaySpent > 0 ? 100 : 0;
   // 칩·막대 색: 오늘 판정을 받았으면 서버 판정(그날 신호 = 네 그룹 중 가장 무거운 그룹)을 그대로 쓴다.
   // 네 그룹을 합친 사용률로 다시 계산하면, 식비만 넘고 나머지가 0원인 날 판정 결과는 「초과」인데
   // 여기는 「여유」로 어긋난다. 사유를 기다리는 1차 판정이면 판정 화면처럼 「1차」를 붙인다.
@@ -84,77 +82,59 @@ function TodayAllowanceCard({ summary, loading }) {
   const todaySignal = judged ? judgment.signal : signalForUsage(todaySpent, allowance);
   const todaySignalLabel =
     judged && judgment.status === "PENDING" ? `1차 ${SIGNAL_META[todaySignal].text}` : undefined;
-  const todaySignalText = judged
-    ? todaySignalLabel ?? SIGNAL_META[todaySignal].text
-    : `${SIGNAL_META[todaySignal].text} 예상`;
+  // 띠의 칩 문구 — 판정 전이면 「예상 결과」를 앞에 붙인다
+  const todaySignalText = `${judged ? "" : "예상 결과 "}${todaySignalLabel ?? SIGNAL_META[todaySignal].text}`;
   const heroLoading = loading || plan === undefined || judgment === undefined;
-
-  const dateLabel = new Intl.DateTimeFormat("ko-KR", {
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-  }).format(today);
 
   return (
     <div className="hm hm-home home-allowance">
-      <section className="hm-card hm-hero" aria-labelledby="hm-hero-label">
-        <div className="hm-hero-top">
-          <p className="hm-hero-label" id="hm-hero-label">
-            {dateLabel} · {allowanceInfo && remaining < 0 ? "오늘 넘은 돈" : "오늘 남은 돈"}
+      <section className="home-allow-band" aria-labelledby="home-allow-label">
+        <div className="home-allow-main">
+          <p className="home-allow-label" id="home-allow-label">
+            {allowanceInfo && remaining < 0 ? "오늘 넘은 돈" : "오늘 남은 돈"}
           </p>
-          {!heroLoading && allowanceInfo && (
-            <span className="hm-hero-signal">
-              {!judged && <span className="hm-hero-est-tag">예상 결과</span>}
-              <SignalChip signal={todaySignal} label={todaySignalLabel} />
-            </span>
+          {heroLoading ? (
+            <p className="home-allow-value hm-skeleton" aria-busy="true">
+              <span className="hm-sr">불러오는 중</span>
+            </p>
+          ) : allowanceInfo ? (
+            <>
+              <p className="home-allow-value">
+                {num(Math.abs(remaining))}
+                <span className="home-allow-unit">원</span>
+              </p>
+              <span className={`home-allow-chip home-allow-chip--${SIGNAL_META[todaySignal].tone}`}>
+                {todaySignalText}
+              </span>
+            </>
+          ) : (
+            // 예산을 계산할 수입 정보가 없을 때 — 오늘 쓴 돈을 크게 보여 주고 설정으로 안내
+            <>
+              <p className="home-allow-value">
+                {num(todaySpent)}
+                <span className="home-allow-unit">원</span>
+              </p>
+              <p className="home-allow-note">오늘 쓴 돈이에요. 월수입을 입력하면 오늘 남은 돈을 알려 드려요.</p>
+              <button type="button" className="home-allow-link" onClick={() => navigate("/settings/profile")}>
+                월수입 입력하기 <Icon name="chevronRight" size={14} />
+              </button>
+            </>
           )}
         </div>
-
-        {heroLoading ? (
-          <p className="hm-hero-value hm-skeleton" aria-busy="true">
-            <span className="hm-sr">불러오는 중</span>
-          </p>
-        ) : allowanceInfo ? (
-          <>
-            <p className={`hm-hero-value ${remaining < 0 ? "is-over" : ""}`}>
-              {num(Math.abs(remaining))}
-              <span className="hm-hero-unit">원</span>
-            </p>
-            <div
-              className={`hm-meter hm-meter--${SIGNAL_META[todaySignal].tone}`}
-              role="progressbar"
-              aria-label="오늘 쓸 수 있는 돈 사용률"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.min(usagePct, 100)}
-              aria-valuetext={`${usagePct}% 사용, ${todaySignalText}`}
-            >
-              <span style={{ width: `${Math.min(usagePct, 100)}%` }} />
-            </div>
-            <p className="hm-hero-foot">
-              <span>
-                오늘 쓸 수 있는 {won(allowance)}
-                {allowanceInfo.estimated && <em className="hm-hero-est">(예상)</em>} 중{" "}
-                <strong>{won(todaySpent)}</strong> 썼어요
-              </span>
-              <span className="hm-hero-pct">{usagePct}%</span>
-            </p>
-          </>
-        ) : (
-          // 예산을 계산할 수입 정보가 없을 때 — 오늘 쓴 돈을 크게 보여 주고 설정으로 안내
-          <>
-            <p className="hm-hero-value">
-              {num(todaySpent)}
-              <span className="hm-hero-unit">원</span>
-            </p>
-            <p className="hm-hero-foot">
-              <span>오늘 쓴 돈이에요. 월수입을 입력하면 오늘 남은 돈을 알려 드려요.</span>
-            </p>
-            <button type="button" className="hm-text-link" onClick={() => navigate("/settings/profile")}>
-              월수입 입력하기 <Icon name="chevronRight" size={14} />
-            </button>
-          </>
-        )}
+        <div className="home-allow-actions">
+          <button type="button" className="btn home-btn home-allow-btn" onClick={() => navigate("/wallet/new")}>
+            <Icon name="plus" size={16} />
+            지출 추가하기
+          </button>
+          <button
+            type="button"
+            className="btn home-btn home-allow-btn home-allow-btn--ghost"
+            onClick={() => navigate("/wallet")}
+          >
+            <Icon name="ledger" size={16} />
+            가계부 이동하기
+          </button>
+        </div>
       </section>
     </div>
   );

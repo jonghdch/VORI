@@ -160,3 +160,11 @@
     padding: var(--sp-2) var(--sp-2);
   }
 }
+
+/* 휴대폰: 뒤로 버튼을 로고 옆에 둔다 */
+@media (max-width: 640px) {
+  .legal-header {
+    justify-content: flex-start;
+    gap: 12px;
+  }
+}

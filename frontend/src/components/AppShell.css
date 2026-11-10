@@ -297,6 +297,8 @@
   border-radius: var(--r-full);
   padding: 1px var(--sp-2);
   vertical-align: 1px;
+  white-space: nowrap;
+  flex: none;
 }
 
 .home-main {
@@ -610,6 +612,7 @@
 }
 .home-side-label {
   min-width: 0;
+  word-break: keep-all; /* "소비 판정 시작하기" 가 단어 중간에서 끊기지 않게 */
 }
 .home-side-soon {
   margin-left: auto;
