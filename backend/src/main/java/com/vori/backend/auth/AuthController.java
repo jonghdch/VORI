@@ -3,6 +3,7 @@ package com.vori.backend.auth;
 import com.vori.backend.auth.dto.AuthResponse;
 import com.vori.backend.auth.dto.GoogleLoginRequest;
 import com.vori.backend.auth.dto.LoginRequest;
+import com.vori.backend.auth.dto.SessionResponse;
 import com.vori.backend.auth.dto.SignupRequest;
 import com.vori.backend.guest.GuestAccountService;
 import com.vori.backend.user.AccountDeletionService;
@@ -162,5 +163,19 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다");
         }
         return userService.getMe(principal.getId());
+    }
+
+    /**
+     * 세션 조회 — /me 와 같은 정보를 주되 미로그인이어도 200 으로 답한다(authenticated=false).
+     * 앱 로드 때 부르는 용도라 콘솔에 401 이 남지 않게 한다. /me 의 401 계약은 배포 헬스 체크가 쓰므로 그대로 둔다.
+     * 세션을 만들지 않는다(getSession 을 부르지 않음).
+     */
+    @GetMapping("/session")
+    public SessionResponse session() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
+            return SessionResponse.anonymous();
+        }
+        return SessionResponse.of(userService.getMe(principal.getId()));
     }
 }

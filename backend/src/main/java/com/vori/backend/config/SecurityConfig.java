@@ -90,6 +90,7 @@ public class SecurityConfig {
                     "/api/auth/google",
                     "/api/auth/guest",
                     "/api/auth/logout",
+                    "/api/auth/session",
                     "/error"
                 ).permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

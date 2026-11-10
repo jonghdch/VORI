@@ -91,6 +91,21 @@ export async function logout() {
 }
 
 export async function me() {
+  // /auth/session 은 미로그인이어도 200 이라 콘솔에 401 이 남지 않는다. (/auth/me 는 배포 헬스 체크용 401 계약이라 그대로 둔다)
+  const res = await fetch(`${API_BASE}/auth/session`, {
+    credentials: "include",
+  });
+  if (res.ok) {
+    const body = await res.json();
+    return body?.authenticated ? body.user : null;
+  }
+  // 프런트만 먼저 새로 받은 브라우저가 옛 백엔드에 붙은 틈(404) — 기존 /auth/me 로 물어본다
+  if (res.status === 404) return meLegacy();
+  if (res.status === 401) return null;
+  throw new AuthError(`사용자 조회 실패 (${res.status})`, res.status);
+}
+
+async function meLegacy() {
   const res = await fetch(`${API_BASE}/auth/me`, {
     credentials: "include",
   });

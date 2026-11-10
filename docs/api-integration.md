@@ -59,6 +59,8 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 회원가입(`POST /api/auth/signup`)도 같은 모양으로 응답하고, **이때 시작 펫(강아지)이 함께 지급된다.**
 `role` 이 `ADMIN` 이면 어드민 화면 진입을 허용하면 된다.
 
+`GET /api/auth/session` — 앱 로드 때 로그인 여부 조회. 미로그인이어도 **200** `{ "authenticated": false, "user": null }`, 로그인이면 `{ "authenticated": true, "user": <GET /api/auth/me 와 같은 본문> }`. (`/api/auth/me` 는 미로그인 401 — 배포 헬스 체크가 쓰므로 유지)
+
 ---
 
 ## 2. 에러 처리
