@@ -9,7 +9,7 @@ import { getMonthlyLedger } from "../../api/ledger";
 import { getMonthlyJudgments } from "../../api/dailyJudgment";
 import { listInquiriesByDate } from "../../api/inquiries";
 import { getSpendingPlan } from "../../api/spendingPlan";
-import { AI_ACTIVE_FROM_HOUR, canUseAiJudge } from "../../config";
+import { AI_ACTIVE_FROM_HOUR, aiJudgeDate, canUseAiJudge } from "../../config";
 import CoinIcon from "../../components/CoinIcon";
 import { SIGNAL_STATUS } from "../../signalLabels";
 import { listInstruments } from "../../api/paymentInstruments";
@@ -98,6 +98,12 @@ function dayLabel(year, month, day) {
 
 function toIsoDate(year, month, day) {
   return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
+// 판정하는 날 — 새벽 판정 마감 전이면 전날이다
+function judgeDateIsoNow() {
+  const d = aiJudgeDate();
+  return toIsoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
 }
 
 // 백엔드 LedgerResponse → 화면이 쓰는 행 형태로 변환.
@@ -196,10 +202,12 @@ function WalletPage({ user, onLogout }) {
 
   // 보고 있는 달 (1-based month). 처음엔 실제 이번 달부터.
   const today = useMemo(() => new Date(), []);
+  // 처음 고르는 날 — 새벽 판정 마감 전이면 판정할 전날을 보여 준다
+  const defaultDate = useMemo(() => aiJudgeDate(today), [today]);
   const [demoDate, setDemoDate] = useState(() => toIsoDate(today.getFullYear(), today.getMonth() + 1, today.getDate()));
   const initialDate = useMemo(() => {
     if (!selectedDateParam || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDateParam)) {
-      return today;
+      return defaultDate;
     }
     const [y, m, d] = selectedDateParam.split("-").map(Number);
     const parsed = new Date(y, m - 1, d);
@@ -209,7 +217,7 @@ function WalletPage({ user, onLogout }) {
       parsed.getMonth() === m - 1 &&
       parsed.getDate() === d;
     return isValid && parsed <= today ? parsed : today;
-  }, [selectedDateParam, today]);
+  }, [selectedDateParam, today, defaultDate]);
   const [viewYear, setViewYear] = useState(initialDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth() + 1);
 
@@ -237,10 +245,13 @@ function WalletPage({ user, onLogout }) {
   const [selectedId, setSelectedId] = useState(null);
   // 일반 사용자는 20시부터, 관리자는 시연·검증을 위해 항상 사용할 수 있다.
   const [isAiActive, setIsAiActive] = useState(() => canUseAiJudge(user));
+  // 판정하는 날 — 페이지를 오래 열어 둬도 따라가게 같이 갱신한다
+  const [judgeDateIso, setJudgeDateIso] = useState(judgeDateIsoNow);
 
   useEffect(() => {
     const id = setInterval(() => {
       setIsAiActive(canUseAiJudge(user));
+      setJudgeDateIso(judgeDateIsoNow());
     }, 60_000);
     return () => clearInterval(id);
   }, [user]);
@@ -253,7 +264,7 @@ function WalletPage({ user, onLogout }) {
     setJudgmentLoading(true);
     setJudgmentError(null);
     const isCurrentMonth =
-      viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1;
+      viewYear === defaultDate.getFullYear() && viewMonth === defaultDate.getMonth() + 1;
     const isInitialParamMonth =
       selectedDateParam &&
       viewYear === initialDate.getFullYear() &&
@@ -262,7 +273,7 @@ function WalletPage({ user, onLogout }) {
     const pending = pendingDayRef.current;
     pendingDayRef.current = null;
     const defaultDay =
-      pending ?? (isInitialParamMonth ? initialDate.getDate() : isCurrentMonth ? today.getDate() : 1);
+      pending ?? (isInitialParamMonth ? initialDate.getDate() : isCurrentMonth ? defaultDate.getDate() : 1);
     setSelectedDay(defaultDay);
     setSelectedId(null);
     getMonthlyLedger(`${viewYear}-${pad2(viewMonth)}`)
@@ -310,7 +321,7 @@ function WalletPage({ user, onLogout }) {
     return () => {
       alive = false;
     };
-  }, [viewYear, viewMonth, navigate, today, selectedDateParam, initialDate]);
+  }, [viewYear, viewMonth, navigate, today, defaultDate, selectedDateParam, initialDate]);
 
   // 이번 달 사용 가능 예산 — 월 예산·고정비로 계산된 스탯별 예산의 합.
   // undefined = 불러오는 중, null = 실패. 실패해도 지출 숫자는 그대로 보여 준다.
@@ -769,7 +780,7 @@ function WalletPage({ user, onLogout }) {
 
   // 판정 버튼 — 판정은 오늘 소비를 본다. 관리자는 시연할 날짜를 골라 아무 날이나 볼 수 있다.
   const isAdmin = user?.role === "ADMIN";
-  const showJudgeButton = isAdmin || selectedIsToday;
+  const showJudgeButton = isAdmin || selectedDateIso === judgeDateIso;
   const judgeLabel = !isAiActive
     ? `${AI_ACTIVE_FROM_HOUR}시부터 판정`
     : isFinalJudgment(selectedJudgment)
@@ -781,7 +792,7 @@ function WalletPage({ user, onLogout }) {
     ? "아직 판정 전"
     : isFinalJudgment(selectedJudgment)
       ? selectedIsToday ? "오늘 판정 결과" : "판정 완료"
-      : selectedDateIso < todayIso
+      : selectedDateIso < judgeDateIso
         ? "1차 판정으로 확정 중"
         : "사유 답변 대기";
 
@@ -1262,7 +1273,7 @@ function WalletPage({ user, onLogout }) {
                     <p className="lw-reward-error">{judgmentError}</p>
                   ) : selectedJudgment && !isFinalJudgment(selectedJudgment) ? (
                     <p>
-                      {selectedDateIso < todayIso
+                      {selectedDateIso < judgeDateIso
                         ? "자정이 지나 1차 판정 내용으로 확정돼요. 잠시 뒤 다시 확인해 주세요."
                         : "예외 지출 사유를 답하거나 건너뛰면 최종 판정이 나요. 보상은 오늘 자정에 들어와요."}
                     </p>
@@ -1286,7 +1297,7 @@ function WalletPage({ user, onLogout }) {
                     </ul>
                   ) : (
                     <p>
-                      {selectedDateIso >= todayIso
+                      {selectedDateIso >= judgeDateIso
                         ? "판정하지 않아도 지출을 적은 날은 자정에 신호등 판정이 내려지고 보상이 들어와요."
                         : "이 날짜는 판정 기록이 없어 지급된 보상이 없어요."}
                     </p>
@@ -1296,14 +1307,14 @@ function WalletPage({ user, onLogout }) {
 
               {selectedDay && !selectedDateIsFuture && (
                 <div className={`lw-day-actions ${showJudgeButton ? "" : "is-single"}`}>
-                  <button type="button" className="hm-btn lw-btn-soft" onClick={handleAddOrEditExpense}>
+                  <button type="button" className="btn btn--secondary hm-btn lw-btn-soft" onClick={handleAddOrEditExpense}>
                     <Icon name={selectedDayExpenses.length > 0 ? "pencil" : "plus"} size={16} strokeWidth={2.2} />
                     {selectedDayExpenses.length > 0 ? "지출 수정" : "지출 추가"}
                   </button>
                   {showJudgeButton && (
                     <button
                       type="button"
-                      className="hm-btn hm-btn--dark"
+                      className="btn btn--primary hm-btn hm-btn--dark"
                       disabled={!isAiActive || (isAdmin && !demoDate)}
                       onClick={() => navigate(isAdmin ? `/wallet/analysis?date=${demoDate}` : "/wallet/analysis")}
                     >

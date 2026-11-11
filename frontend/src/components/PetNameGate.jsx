@@ -126,10 +126,10 @@ export function PetNameModal({ pet, onNamed }) {
   };
 
   return (
-    <div className="pet-name-backdrop">
+    <div className="modal-backdrop pet-name-backdrop">
       <div
         ref={dialogRef}
-        className="pet-name-dialog"
+        className="modal pet-name-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -147,15 +147,12 @@ export function PetNameModal({ pet, onNamed }) {
         <h2 id={titleId} className="pet-name-title">
           {species}의 이름을 지어 주세요
         </h2>
-        <p className="pet-name-lead">앞으로 이 이름으로 불러요.</p>
+        <p className="pet-name-lead">앞으로 같이 지낼 친구예요!</p>
         <form className="pet-name-form" onSubmit={submit} noValidate>
-          <label className="pet-name-label" htmlFor={`${titleId}-input`}>
-            펫 이름
-          </label>
           <input
-            id={`${titleId}-input`}
             className="pet-name-input"
             type="text"
+            aria-label="펫 이름"
             value={name}
             onChange={(event) => {
               setName(event.target.value);
@@ -180,7 +177,7 @@ export function PetNameModal({ pet, onNamed }) {
           </p>
           <button
             type="submit"
-            className="home-btn home-btn-primary home-btn-block"
+            className="btn btn--primary btn--block home-btn home-btn-primary home-btn-block"
             disabled={busy}
           >
             {busy ? "저장 중…" : "이름 짓기"}

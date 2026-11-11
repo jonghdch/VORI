@@ -103,7 +103,7 @@ function PetManagePage() {
                         <div className="adm-action-row">
                           <button
                             type="button"
-                            className="adm-btn adm-btn--small"
+                            className="btn btn--secondary btn--sm adm-btn adm-btn--small"
                             disabled={working !== null}
                             onClick={() => grow(user, "JUVENILE")}
                           >
@@ -111,7 +111,7 @@ function PetManagePage() {
                           </button>
                           <button
                             type="button"
-                            className="adm-btn adm-btn--small adm-btn--primary"
+                            className="btn btn--primary btn--sm adm-btn adm-btn--small adm-btn--primary"
                             disabled={working !== null}
                             onClick={() => grow(user, "ADULT")}
                           >
@@ -119,7 +119,7 @@ function PetManagePage() {
                           </button>
                           <button
                             type="button"
-                            className="adm-btn adm-btn--small adm-btn--primary"
+                            className="btn btn--primary btn--sm adm-btn adm-btn--small adm-btn--primary"
                             disabled={working !== null}
                             onClick={() => grow(user, "GRADUATE")}
                             title="30레벨까지 — 배웅 가능"

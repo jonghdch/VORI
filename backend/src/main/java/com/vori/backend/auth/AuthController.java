@@ -3,7 +3,9 @@ package com.vori.backend.auth;
 import com.vori.backend.auth.dto.AuthResponse;
 import com.vori.backend.auth.dto.GoogleLoginRequest;
 import com.vori.backend.auth.dto.LoginRequest;
+import com.vori.backend.auth.dto.SessionResponse;
 import com.vori.backend.auth.dto.SignupRequest;
+import com.vori.backend.guest.GuestAccountService;
 import com.vori.backend.user.AccountDeletionService;
 import com.vori.backend.user.User;
 import com.vori.backend.user.UserService;
@@ -41,6 +43,7 @@ public class AuthController {
     private final CustomUserDetailsService userDetailsService;
     private final AccountDeletionService accountDeletionService;
     private final LoginAttemptLimiter loginAttemptLimiter;
+    private final GuestAccountService guestAccountService;
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
@@ -104,7 +107,22 @@ public class AuthController {
         return establishSession(auth, request, response);
     }
 
-    /** 인증 성공 후 세션 수립 — 이메일 로그인·구글 로그인이 공유한다. */
+    /**
+     * 「체험하기」 — 임시 계정을 만들어 세팅하고 바로 로그인시킨다(GuestAccountService).
+     * 비밀번호가 없으므로 구글 로그인처럼 검증된 principal 로 인증 객체를 직접 만든다.
+     * 429 = 오늘 체험 계정 상한, 403 = 체험하기 꺼짐.
+     */
+    @PostMapping("/guest")
+    public MeResponse guest(HttpServletRequest request, HttpServletResponse response) {
+        User user = guestAccountService.create();
+        UserPrincipal principal = (UserPrincipal) userDetailsService.loadUserByUsername(user.getEmail());
+        principal.eraseCredentials();
+        Authentication auth = UsernamePasswordAuthenticationToken.authenticated(
+            principal, null, principal.getAuthorities());
+        return establishSession(auth, request, response);
+    }
+
+    /** 인증 성공 후 세션 수립 — 이메일 로그인·구글 로그인·체험하기가 공유한다. */
     private MeResponse establishSession(Authentication auth,
                                         HttpServletRequest request,
                                         HttpServletResponse response) {
@@ -145,5 +163,19 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다");
         }
         return userService.getMe(principal.getId());
+    }
+
+    /**
+     * 세션 조회 — /me 와 같은 정보를 주되 미로그인이어도 200 으로 답한다(authenticated=false).
+     * 앱 로드 때 부르는 용도라 콘솔에 401 이 남지 않게 한다. /me 의 401 계약은 배포 헬스 체크가 쓰므로 그대로 둔다.
+     * 세션을 만들지 않는다(getSession 을 부르지 않음).
+     */
+    @GetMapping("/session")
+    public SessionResponse session() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
+            return SessionResponse.anonymous();
+        }
+        return SessionResponse.of(userService.getMe(principal.getId()));
     }
 }

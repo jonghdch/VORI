@@ -59,6 +59,8 @@ POST /api/auth/login   { "email": "...", "password": "..." }
 회원가입(`POST /api/auth/signup`)도 같은 모양으로 응답하고, **이때 시작 펫(강아지)이 함께 지급된다.**
 `role` 이 `ADMIN` 이면 어드민 화면 진입을 허용하면 된다.
 
+`GET /api/auth/session` — 앱 로드 때 로그인 여부 조회. 미로그인이어도 **200** `{ "authenticated": false, "user": null }`, 로그인이면 `{ "authenticated": true, "user": <GET /api/auth/me 와 같은 본문> }`. (`/api/auth/me` 는 미로그인 401 — 배포 헬스 체크가 쓰므로 유지)
+
 ---
 
 ## 2. 에러 처리
@@ -447,7 +449,7 @@ AI 가 이미지를 읽는 시간이라 크게 줄이기 어렵다. **진행 표
 - 배치한 가구에 보너스(%)가 있으면 해당 스탯에 그만큼 더 붙는다.
 - 지출 기록 보상(하루 한 번 100코인)은 따로다([domain.md](domain.md) 「게임머니 정책」).
 
-일반 계정은 **그날만, `vori.ai-judge.open-hour`(기본 20시) 이후에** 판정할 수 있고, 관리자는 날짜와 시각 제한 없이 할 수 있다.
+일반 계정은 **`vori.ai-judge.open-hour`(기본 20시)부터 다음 날 `vori.ai-judge.close-hour`(기본 새벽 2시) 전까지** 판정할 수 있고(0시~2시의 판정 날짜는 전날, 정산도 `close-hour` 에 돈다. `open-hour=0` 이면 하루 종일 열리고 새벽 연장이 없다), 관리자는 날짜와 시각 제한 없이 할 수 있다.
 
 > 예전 표 「GREEN 500코인·스탯 +11 / GRAY 250·+6 / RED 100·+2」는 #92 로 바뀌었다.
 

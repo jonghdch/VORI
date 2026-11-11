@@ -1,29 +1,17 @@
-.ach-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
-}
+
 
 .ach-summary-card {
-  padding: 16px 18px;
-  border-radius: var(--home-radius-sm);
-  border: 1px solid var(--home-card-border);
-  background: var(--home-card-surface);
-}
-
-.ach-summary-label {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--home-muted);
+  padding: var(--sp-4) var(--sp-4);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
 }
 
 .ach-summary-value {
   margin: 6px 0 0;
-  font-size: 22px;
+  font-size: var(--fs-h2);
   font-weight: 900;
-  color: var(--home-green-dark);
+  color: var(--c-primary-strong);
   font-variant-numeric: tabular-nums;
 }
 
@@ -31,27 +19,27 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
   flex-wrap: wrap;
-  padding: 16px 18px;
+  padding: var(--sp-4) var(--sp-4);
   margin-bottom: 16px;
-  border-radius: var(--home-radius-sm);
-  border: 1px solid var(--home-green-soft);
-  background: var(--home-green-soft);
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-primary-soft);
+  background: var(--c-primary-soft);
 }
 
 .ach-equipped-label {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 800;
-  color: var(--home-green-dark);
+  color: var(--c-primary-strong);
 }
 
 .ach-equipped-name {
   margin: 4px 0 0;
-  font-size: 18px;
+  font-size: var(--fs-h3);
   font-weight: 900;
-  color: var(--home-text);
+  color: var(--c-text);
 }
 
 .ach-section {
@@ -60,30 +48,30 @@
 
 .ach-section-title {
   margin: 0 0 12px;
-  font-size: 15px;
+  font-size: var(--fs-body);
   font-weight: 900;
-  color: var(--home-text);
+  color: var(--c-text);
 }
 
 .ach-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 .ach-card {
-  padding: 16px 18px;
-  border-radius: var(--home-radius-sm);
-  border: 1px solid var(--home-card-border);
-  background: var(--home-card-surface);
+  padding: var(--sp-4) var(--sp-4);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-2);
 }
 
 .ach-card.is-done {
-  border-color: #c8ddb8;
-  background: linear-gradient(180deg, #fffdf9 0%, #f3f8ef 100%);
+  border-color: var(--c-primary-line);
+  background: var(--grad-surface);
 }
 
 .ach-card.is-locked {
@@ -94,22 +82,22 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sp-2);
 }
 
 .ach-card-name {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 900;
-  color: var(--home-text);
+  color: var(--c-text);
   line-height: 1.35;
 }
 
 .ach-card-desc {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 600;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   line-height: 1.45;
 }
 
@@ -117,10 +105,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
+  gap: var(--sp-2);
+  font-size: var(--fs-caption);
   font-weight: 800;
-  color: var(--home-text);
+  color: var(--c-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -131,48 +119,48 @@
 
 .ach-progress-track {
   height: 10px;
-  border-radius: 8px;
-  background: #eef1ea;
+  border-radius: var(--r-sm);
+  background: var(--c-track); /* 잠긴 칭호 카드(--c-bg) 위에서도 바탕이 보이게 */
   overflow: hidden;
 }
 
 .ach-progress-fill {
   height: 100%;
-  border-radius: 8px;
-  background: var(--home-green);
+  border-radius: var(--r-sm);
+  background: var(--c-primary);
   min-width: 2%;
   transition: width 0.35s ease;
 }
 
 .ach-progress-fill--done {
-  background: var(--home-green-dark);
+  background: var(--c-primary-strong);
 }
 
 .ach-title-row {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 .ach-title-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
   flex-wrap: wrap;
-  padding: 14px 16px;
-  border-radius: var(--home-radius-sm);
-  border: 1px solid var(--home-card-border);
-  background: var(--home-card-surface);
+  padding: var(--sp-4) var(--sp-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
 }
 
 .ach-title-item.is-active {
-  border-color: var(--home-green);
-  box-shadow: 0 0 0 1px rgba(127, 176, 105, 0.25);
+  border-color: var(--c-primary);
+  box-shadow: var(--focus-ring);
 }
 
 .ach-title-item.is-locked {
-  background: #f5f6f2;
+  background: var(--c-bg);
 }
 
 /* 이름이 160px 아래로 줄어들 상황이면 날짜·버튼을 다음 줄로 내린다 (이름이 글자 중간에서 끊기지 않게) */
@@ -183,7 +171,7 @@
 
 .ach-title-name {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 900;
 }
 
@@ -195,114 +183,83 @@
 
 .ach-title-meta {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 
 .ach-title-actions {
   display: flex;
   margin-left: auto;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-shrink: 0;
 }
 
 .ach-title-date {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   white-space: nowrap;
-}
-
-.ach-btn-sm {
-  border: none;
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.ach-btn-sm:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.ach-btn-equip {
-  background: var(--home-green);
-  color: #fff;
 }
 
 .ach-btn-equip:hover:not(:disabled) {
   filter: brightness(1.05);
 }
 
-.ach-btn-ghost {
-  background: var(--home-white);
-  border: 1px solid var(--home-border);
-  color: var(--home-text);
-}
-
 .ach-notice {
   margin-bottom: 16px;
-  padding: 12px 14px;
-  border-radius: var(--home-radius-sm);
-  font-size: 14px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  font-size: var(--fs-body);
   font-weight: 700;
 }
 
 .ach-notice--ok {
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
 }
 
 .ach-notice--err {
-  background: #fde8e8;
-  color: var(--home-warn);
+  background: var(--c-danger-soft);
+  color: var(--c-danger);
 }
 
 .ach-empty {
-  padding: 32px 16px;
+  padding: var(--sp-8) var(--sp-4);
   text-align: center;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   font-weight: 700;
-}
-
-@media (max-width: 768px) {
-  .ach-summary {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* 업적 장착하기 / 장착 해제 */
 .ach-equip-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 .ach-equip-btn {
   margin-top: 12px;
   width: 100%;
-  padding: 7px 10px;
-  border: 1px solid var(--home-card-border);
-  border-radius: 10px;
-  background: var(--home-card-surface);
-  color: var(--home-text);
+  padding: var(--sp-2) var(--sp-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  color: var(--c-text);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 800;
   cursor: pointer;
 }
 .ach-equip-btn:hover:not(:disabled) {
-  border-color: var(--home-green);
-  color: var(--home-green-dark);
+  border-color: var(--c-primary);
+  color: var(--c-primary-strong);
 }
 .ach-equip-btn.is-on {
-  border-color: var(--home-green);
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
 }
 .ach-equip-btn:disabled {
   opacity: 0.5;
@@ -310,12 +267,12 @@
 }
 /* 업적 탭 위쪽의 업적 칸 3개 — 내 정보 상자와 같은 칸, 패널 가로를 꽉 채운다 */
 .ach-equip-slots {
-  gap: 12px;
+  gap: var(--sp-3);
   margin: 10px 0 24px;
 }
 .ach-equip-slots .account-menu-slot {
   height: 76px;
 }
 .ach-equip-slots .account-menu-slot-name {
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
 }

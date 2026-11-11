@@ -108,7 +108,7 @@ function GeneralSettingsPanel() {
         <form className="settings-fixed-form" onSubmit={addFixed}>
           <input className="settings-input" value={fixedName} onChange={(e) => setFixedName(e.target.value)} placeholder="예: 휴대폰 통신비" maxLength="50" />
           <input className="settings-input" type="number" min="0" value={fixedAmount} onChange={(e) => setFixedAmount(e.target.value)} placeholder="월 금액" />
-          <button type="submit" className="settings-save-btn">추가</button>
+          <button type="submit" className="btn btn--primary settings-save-btn">추가</button>
         </form>
         {fixedError && <p className="settings-hint-error">{fixedError}</p>}
         <div className="settings-fixed-list">{fixedExpenses.length === 0 ? <p className="settings-row-desc">등록한 고정비가 없어요.</p> : fixedExpenses.map((item) => <div className="settings-fixed-item" key={item.id}><span>{item.name}</span><strong>{Number(item.amount).toLocaleString("ko-KR")}원</strong><button type="button" onClick={() => removeFixed(item.id)}>삭제</button></div>)}</div>
@@ -118,7 +118,7 @@ function GeneralSettingsPanel() {
         {savedNote && <span className="settings-saved" role="status">{savedNote}</span>}
         <button
           type="button"
-          className="settings-save-btn"
+          className="btn btn--primary settings-save-btn"
           onClick={handleSave}
           disabled={!hasChanges}
         >

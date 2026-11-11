@@ -676,7 +676,7 @@ function PetPage({ user, onLogout }) {
                     <div className="pet-room-empty">
                       <strong>아직 키우는 펫이 없어요</strong>
                       <p>상점에서 새 친구를 데려올 수 있어요.</p>
-                      <button type="button" className="mr-btn mr-btn--sage" onClick={() => navigate("/shop")}>
+                      <button type="button" className="btn btn--primary mr-btn mr-btn--sage" onClick={() => navigate("/shop")}>
                         상점 가기
                       </button>
                     </div>
@@ -825,17 +825,18 @@ function PetPage({ user, onLogout }) {
                           ))}
                         </div>
 
-                        <div className="mr-release">
-                          <button
-                            type="button"
-                            className="mr-btn mr-btn--release"
-                            disabled={!graduated || releasing}
-                            onClick={handleRelease}
-                          >
-                            {releasing ? "배웅 중…" : `배웅하기 · ${coin(pet.exp)}부터`}
-                          </button>
-                          {!graduated && <p className="mr-help">Lv.{pet.maxLevel}부터 배웅할 수 있어요</p>}
-                        </div>
+                        {graduated && (
+                          <div className="mr-release">
+                            <button
+                              type="button"
+                              className="btn mr-btn mr-btn--release"
+                              disabled={releasing}
+                              onClick={handleRelease}
+                            >
+                              {releasing ? "배웅 중…" : `배웅하기 · ${coin(pet.exp)}부터`}
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
                     {!pet && !petLoading && !petError && (
@@ -1000,7 +1001,7 @@ function PetPage({ user, onLogout }) {
                               </span>
                               <button
                                 type="button"
-                                className="mr-btn mr-btn--sage mr-btn--sm"
+                                className="btn btn--primary btn--sm mr-btn mr-btn--sage mr-btn--sm"
                                 disabled={itemBusy || !pet}
                                 onClick={() => handleUseItem(item)}
                               >

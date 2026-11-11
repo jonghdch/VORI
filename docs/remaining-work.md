@@ -12,7 +12,7 @@
 - [ ] `GEMINI_API_KEY`·`GOOGLE_CLIENT_ID` 입력 → `ssh zzemsoft 'cd /data/home2/vori.worldpick.co.kr && runuser -u vori -- ./deploy.sh'` — `VORI/.env`, 로그 `CategorizeService 카테고리 임베딩 초기화 실패` — S
 - [ ] Google 콘솔 OAuth 클라이언트 '승인된 JavaScript 원본'에 `https://vori.worldpick.co.kr` 추가, 동의 화면이 「테스트」면 「프로덕션」 — `docs/deploy-checklist.md:69-71` — S
 - [ ] DB 백업 cron — `/etc/cron.d/vori-backup` 03:25, `docker exec vori-mysql mysqldump --single-transaction vori | gzip` → `/data/backup/vori/vori_YYYY-MM-DD.sql.gz`, 14일 보존, 복원 리허설 1회(임시 컨테이너에 복원해 `SELECT COUNT(*) FROM users`) — `/home/dockers/backup.sh:26`에 vori 없음 — M
-- [ ] 시연 시각 open-hour=0 — 서버 `VORI/.env` `vori.ai-judge.open-hour=0` 변경 후 `deploy.sh`(프론트 `REACT_APP_AI_ACTIVE_FROM_HOUR` 재빌드 자동 감지). 시연 후 20으로 되돌리기 — `src/config.js:15-20` — S
+- [ ] 시연 시각 open-hour=0 — 서버 `VORI/.env` `vori.ai-judge.open-hour=0` 변경 후 `deploy.sh`(프론트 `REACT_APP_AI_ACTIVE_FROM_HOUR` 재빌드 자동 감지). 시연 후 20으로 되돌리기(`close-hour` 는 건드리지 않는다 — `open-hour=0` 이면 새벽 연장이 없다) — `src/config.js:15-20` — S
 - [ ] 판정 알림 시각을 설정값과 연동 — `JudgmentOpenNotifier.java:30` cron이 20시 고정이라 open-hour=0이어도 알림은 20시. `@Scheduled`를 설정 기반으로 바꾸거나 시연 기간엔 알림 문구를 "지금 판정 가능"으로 — M
 - [ ] 업타임 모니터링 — 외부 체크(`GET /api/auth/me` → 401 정상, `GET /` → 200), 실패 시 알림. 서버에 체계 없음 — S
 - [ ] GitHub Actions 자동 배포 — 2026-11-03 구성(secret 등록 대기). 서버: vori 계정 배포 키(forced command `deploy-ssh-entry.sh` → `deploy.sh`, 접속 시험 통과), 레포: `.github/workflows/deploy.yml`(CI 성공 `workflow_run` + 수동 `workflow_dispatch`). 남은 일: 저장소 Settings → Secrets and variables → Actions 에 `DEPLOY_SSH_KEY`·`DEPLOY_HOST`·`DEPLOY_PORT`·`DEPLOY_KNOWN_HOSTS` 등록(jonghdch 권한 필요) → Actions 에서 `Deploy` 수동 실행 1회로 확인 — `docs/deploy-checklist.md` 2-3절 — S
@@ -25,7 +25,7 @@
 - [ ] `path="*"` 라우트 — `App.js:305-405`, 안내 화면 또는 `/`로 — S
 - [ ] 로그인 화면 미동작 컨트롤 2개 제거 — `LoginPage.jsx:140-150` 「로그인 상태 유지」·「비밀번호 찾기」 — S
 - [ ] 네트워크 오류 한글화 — `api/http.js:50` `request()`/`upload()`에서 fetch TypeError를 "인터넷 연결을 확인해 주세요"로 — S
-- [ ] iOS 입력 16px — `LoginPage.css:107`, `SignupPage.css:127`, `WalletRecord.css:292` — S
+- [x] (2026-11-03 디자인 통일에서 반영) iOS 입력 16px — 모든 입력 필드를 `--fs-input`(16px)으로. 설정·프로필 입력처럼 크기를 안 정해 13px 를 물려받던 곳도 포함 — S
 - [ ] 숫자 키패드 — `PaymentSettingsPanel.jsx:166,222`, `GeneralSettingsPanel.jsx:118`, `ProfileSettingsPanel.jsx:97,107` `inputMode="numeric"` — S
 - [ ] 관리자 비밀번호가 1234가 아닌지 확인 — 운영 `VORI/.env` `ADMIN_PASSWORD`(배포 시 무작위 생성), `scripts/categorize_eval.py` 기본값 1234 제거 — S
 - [ ] 가입 IP 제한 — `AuthController.java:45-50` 가입마다 1,000코인·시작 펫, 이메일 인증 없음. `LoginAttemptLimiter` 패턴으로 IP당 시간당 N회 — M
@@ -84,8 +84,15 @@
 - [ ] `WalletConfirmPage` 고아 화면 — `App.js:325` 삭제 또는 진입 경로 — S
 - [ ] 어드민 "준비 중" 9개 메뉴 — `adminNav.js` `soon:true` 유지(명시 표기 OK) 또는 메뉴에서 제거 — S
 - [ ] 롤백 절차 — `deploy.sh`에 배포 전 `backend-<커밋>.jar` 보존과 `--rollback <커밋>` 옵션, 프론트 이전 build 1개 보존 — M
-- [ ] Suspense fallback 스피너(`App.js:136,290`), `alert`/`confirm` 9곳 모달화, `viewport-fit=cover` — S
+- [ ] Suspense fallback 스피너(`App.js:136,290`), `alert`/`confirm` 9곳 모달화(이제 공통 `.modal`·`.modal-actions` 로 — `docs/design-system.md` 4절), `viewport-fit=cover` — S
 - [ ] 문구 통일 — "졸업작품"(`LoginPage.jsx:225`, `SignupPage.jsx:317`), 약관·방침 "초안"(`LegalLayout.jsx:35,41`) — S
+
+### 디자인 통일 (2026-11-03, 브랜치 `redesign/ui-unify`)
+
+- [x] 디자인 토큰·공통 컴포넌트 도입 — `src/styles/tokens.css`·`components.css`, 규칙 `docs/design-system.md`, 근거 `docs/design-audit-2026-11-03.md`, 화면 비교 `docs/design-audit/before|after` — L
+  - 라운드 36종 → 5단계, 그림자 120종 → 토큰 7종 중심, 그라디언트 51종 → 2종(+예외), 색 리터럴 492종 → 218종, 페이지별 색 변수 11세트 → 1세트
+  - 버튼 15계열 → `.btn`, 모달·시트 8종 → `.modal`·`.sheet`(오버레이·라운드·그림자·버튼 줄·애니메이션 한 가지)
+- [ ] 남은 세부 — 랜딩 헤더 버튼(`.landing-btn`)을 `.btn` 으로 합칠지 결정 / 화면 안 확인 영역(탈퇴 확인·가구 회수)을 `.modal` 로 옮기기(위 `alert`/`confirm` 모달화와 같이) / 카드 클래스(`.hm-card`·`.sp-card`·`.mr-card`·`.wr-card`·`.home-card`)를 JSX 에서 `.card` 로 합치기(지금은 CSS 값만 같다) / PC 대시보드 폭(1080~1420px) 통일 / `confirm()` 으로 남은 펫 배웅 확인 — M
 
 ## 6. 계획 미결 (사용자 결정 필요)
 

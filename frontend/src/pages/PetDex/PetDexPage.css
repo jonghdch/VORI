@@ -15,132 +15,116 @@
 /* 요약 아래 탭 — 펫 · 업적 · 칭호 */
 .dex-tabs {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
   margin-bottom: 22px;
 }
 
 .dex-tab {
-  border: 1px solid var(--home-border);
-  background: var(--home-white);
-  color: var(--home-muted);
+  border: 1px solid var(--c-border);
+  background: var(--c-white);
+  color: var(--c-text-2);
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 800;
-  padding: 10px 20px;
-  border-radius: 999px;
+  padding: var(--sp-2) var(--sp-5);
+  border-radius: var(--r-full);
   cursor: pointer;
 }
 
 .dex-tab.is-active {
-  background: var(--home-green);
-  border-color: var(--home-green);
+  background: var(--c-primary);
+  border-color: var(--c-primary);
   color: #fff;
 }
 
 .dex-tab:focus-visible {
-  outline: 2px solid var(--home-green-dark);
+  outline: 2px solid var(--c-primary-strong);
   outline-offset: 2px;
-}
-
-.dex-head {
-  margin-bottom: 20px;
 }
 
 .dex-title {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-2);
   margin: 0;
-  font-size: 27px;
+  font-size: var(--fs-h1);
   font-weight: 900;
   letter-spacing: -0.02em;
-  color: var(--home-text);
+  color: var(--c-text);
 }
 
 /* 제목 배지 — 출석(초록 발자국)·업적(금색 메달)과 같은 자리, 도감은 파란 책으로 구분 */
-.dex-title-badge {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(160deg, #8bb3dd 0%, #6b9bd1 55%, #4f7fb3 100%);
-  font-size: 19px;
-  transform: rotate(-7deg);
-  box-shadow: 0 3px 0 rgba(79, 127, 179, 0.4), 0 5px 10px rgba(79, 127, 179, 0.2);
-}
-
 
 .dex-head p {
   margin: 8px 0 0;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   line-height: 1.5;
 }
 
 .dex-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--sp-3);
   margin-bottom: 20px;
 }
 
 .dex-summary-card {
-  padding: 16px 18px;
-  border-radius: var(--home-radius-sm);
-  border: 1px solid var(--home-card-border);
-  background: var(--home-card-surface);
+  padding: var(--sp-4) var(--sp-4);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
 }
 
 .dex-summary-label {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 800;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 
 .dex-summary-value {
   margin: 6px 0 0;
-  font-size: 22px;
+  font-size: var(--fs-h2);
   font-weight: 900;
-  color: var(--home-green-dark);
+  color: var(--c-primary-strong);
   font-variant-numeric: tabular-nums;
 }
 
 .dex-filters {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
   margin-bottom: 20px;
 }
 
 .dex-filter {
-  border: 1px solid var(--home-border);
-  background: var(--home-white);
-  color: var(--home-muted);
-  font-size: 14px;
+  border: 1px solid var(--c-border);
+  background: var(--c-white);
+  color: var(--c-text-2);
+  font-size: var(--fs-body);
   font-weight: 800;
-  padding: 10px 18px;
-  border-radius: 999px;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-full);
   cursor: pointer;
 }
 
 .dex-filter.is-active {
-  background: var(--home-green);
-  border-color: var(--home-green);
+  background: var(--c-primary);
+  border-color: var(--c-primary);
   color: #fff;
 }
 
 .dex-notice {
   margin-bottom: 16px;
-  padding: 12px 14px;
-  border-radius: var(--home-radius-sm);
-  font-size: 14px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  font-size: var(--fs-body);
   font-weight: 700;
-  background: #fde8e8;
-  color: var(--home-warn);
+  background: var(--c-danger-soft);
+  color: var(--c-danger);
 }
 
 .dex-grid {
@@ -149,7 +133,7 @@
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 14px;
+  gap: var(--sp-4);
 }
 
 .dex-card {
@@ -157,22 +141,22 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 14px 14px 16px;
-  border-radius: var(--home-radius-sm);
-  border: 1px solid var(--home-card-border);
-  background: var(--home-card-surface);
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-4) var(--sp-4);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
 }
 
 /* 지금 키우는 펫 — 초록 테두리로 가장 눈에 띄게 */
 .dex-card.is-raising {
-  border-color: var(--home-green);
-  box-shadow: 0 0 0 2px rgba(127, 176, 105, 0.3);
+  border-color: var(--c-primary);
+  box-shadow: var(--focus-ring);
 }
 
 /* 다 키운 펫 — 은은한 초록 배경 */
 .dex-card.is-done {
-  background: linear-gradient(180deg, #fffdf9 0%, #f3f8ef 100%);
+  background: var(--grad-surface);
 }
 
 /* 아직 키워본 적 없는 종족 — 흐리게, 그래도 전부 보이게 */
@@ -186,30 +170,30 @@
   min-height: 24px;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 
 .dex-badge {
-  padding: 3px 9px;
-  border-radius: 999px;
-  font-size: 11px;
+  padding: 3px var(--sp-2);
+  border-radius: var(--r-full);
+  font-size: var(--fs-caption);
   font-weight: 900;
   line-height: 1.3;
 }
 
 .dex-badge--raising {
-  background: var(--home-green);
+  background: var(--c-primary);
   color: #fff;
 }
 
 .dex-badge--done {
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
-  border: 1px solid #c8ddb8;
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
+  border: 1px solid var(--c-primary-line);
 }
 
 .dex-badge--admin {
-  background: #fbe9c9;
+  background: var(--c-gold-soft);
   color: #9a6b12;
 }
 
@@ -220,7 +204,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #f3f5ee;
+  background: var(--c-bg);
   overflow: hidden;
 }
 
@@ -239,21 +223,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
 }
 
 .dex-name {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--fs-h3);
   font-weight: 900;
-  color: var(--home-text);
+  color: var(--c-text);
 }
 
 .dex-tier {
-  padding: 2px 8px;
-  border-radius: 8px;
-  font-size: 11px;
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-caption);
   font-weight: 900;
   color: #fff;
 }
@@ -263,7 +247,7 @@
 }
 
 .dex-tier--RARE {
-  background: #6b9bd1;
+  background: var(--c-data-blue);
 }
 
 .dex-tier--EPIC {
@@ -271,7 +255,7 @@
 }
 
 .dex-tier--LEGEND {
-  background: #e8a05a;
+  background: var(--c-data-orange);
 }
 
 .dex-stages {
@@ -279,7 +263,7 @@
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 4px;
+  gap: var(--sp-1);
   width: 100%;
 }
 
@@ -291,32 +275,32 @@
 /* 단계 버튼 — 도달한 단계만 눌러서 그 모습을 볼 수 있다 */
 .dex-stage-btn {
   flex: 1;
-  padding: 5px 0;
+  padding: var(--sp-1) 0;
   border: 0;
-  border-radius: 8px;
-  background: #eef1ea;
+  border-radius: var(--r-sm);
+  background: var(--c-bg);
   color: #a3a89b;
   font: inherit;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 800;
   text-align: center;
   cursor: not-allowed;
 }
 
 .dex-stage.is-reached .dex-stage-btn {
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
   cursor: pointer;
 }
 
 .dex-stage.is-current .dex-stage-btn {
-  background: var(--home-green);
+  background: var(--c-primary);
   color: #fff;
 }
 
 /* 지금 도감 그림으로 보고 있는 단계 */
 .dex-stage.is-viewing .dex-stage-btn {
-  box-shadow: inset 0 0 0 2px var(--home-green-dark);
+  box-shadow: var(--ring-primary);
 }
 
 .dex-stage.is-reached .dex-stage-btn:hover {
@@ -324,15 +308,15 @@
 }
 
 .dex-stage-btn:focus-visible {
-  outline: 2px solid var(--home-green-dark);
+  outline: 2px solid var(--c-primary-strong);
   outline-offset: 2px;
 }
 
 .dex-status {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   text-align: center;
 }
 
@@ -374,11 +358,11 @@
   border-radius: inherit;
 }
 .dex-card:has(.dex-card-link:hover) {
-  border-color: var(--home-green);
-  box-shadow: 0 8px 20px rgba(45, 51, 40, 0.1);
+  border-color: var(--c-primary);
+  box-shadow: var(--shadow-md);
 }
 .dex-card:has(.dex-card-link:focus-visible) {
-  outline: 2px solid var(--home-green-dark);
+  outline: 2px solid var(--c-primary-strong);
   outline-offset: 2px;
 }
 .dex-card-link:focus-visible {
@@ -393,8 +377,8 @@
 .dexd-back {
   display: inline-block;
   margin-bottom: 14px;
-  color: var(--home-green-dark);
-  font-size: 14px;
+  color: var(--c-primary-strong);
+  font-size: var(--fs-body);
   font-weight: 800;
   text-decoration: none;
 }
@@ -405,7 +389,7 @@
 .dexd-hero {
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr);
-  gap: 24px;
+  gap: var(--sp-6);
   align-items: center;
 }
 
@@ -416,7 +400,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #f3f5ee;
+  background: var(--c-bg);
   overflow: hidden;
 }
 .dexd-art-img {
@@ -438,19 +422,19 @@
 .dexd-name {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-2);
   margin: 0;
-  font-size: 28px;
+  font-size: var(--fs-h1);
   font-weight: 900;
   letter-spacing: -0.02em;
-  color: var(--home-text);
+  color: var(--c-text);
 }
 
 .dexd-lead {
   margin: 8px 0 16px;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   line-height: 1.5;
 }
 
@@ -459,7 +443,7 @@
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
 }
 
@@ -469,37 +453,37 @@
   align-items: center;
   gap: 2px;
   min-width: 72px;
-  padding: 8px 14px;
-  border: 1px solid var(--home-card-border);
-  border-radius: 12px;
-  background: var(--home-white);
-  color: var(--home-muted);
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-white);
+  color: var(--c-text-2);
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 800;
   cursor: pointer;
 }
 .dexd-stage-btn small {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
 }
 .dexd-stage-btn.is-reached {
-  color: var(--home-text);
+  color: var(--c-text);
 }
 .dexd-stage-btn.is-viewing {
-  border-color: var(--home-green);
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
 }
 .dexd-stage-btn.is-current small {
-  color: var(--home-green-dark);
+  color: var(--c-primary-strong);
 }
 .dexd-stage-btn:disabled {
   opacity: 0.55;
   cursor: default;
 }
 .dexd-stage-btn:focus-visible {
-  outline: 2px solid var(--home-green-dark);
+  outline: 2px solid var(--c-primary-strong);
   outline-offset: 2px;
 }
 
@@ -510,12 +494,12 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 .dexd-records-head span {
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 600;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 .dexd-records-head .home-card-title {
   margin-bottom: 12px;
@@ -525,14 +509,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 20px 0 6px;
+  gap: var(--sp-2);
+  padding: var(--sp-5) 0 var(--sp-2);
   text-align: center;
 }
 .dexd-empty p {
   margin: 0;
-  color: var(--home-muted);
-  font-size: 14px;
+  color: var(--c-text-2);
+  font-size: var(--fs-body);
 }
 
 .dexd-record-list {
@@ -541,29 +525,29 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-2);
 }
 .dexd-record {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: var(--home-radius-sm);
-  border: 1px solid var(--home-card-border);
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border);
   background: #fff;
 }
 .dexd-record.is-raising {
-  border-color: var(--home-green);
-  background: var(--home-green-soft);
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
 }
 .dexd-record-art {
   display: grid;
   place-items: center;
   width: 52px;
   height: 52px;
-  border-radius: 14px;
-  background: #f3f5ee;
+  border-radius: var(--r-lg);
+  background: var(--c-bg);
 }
 .dexd-record-img {
   width: 44px;
@@ -572,7 +556,7 @@
   image-rendering: pixelated;
 }
 .dexd-record-emoji {
-  font-size: 28px;
+  font-size: var(--fs-h1);
   line-height: 1;
 }
 .dexd-record-info {
@@ -584,42 +568,42 @@
 .dexd-record-info strong {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 15px;
+  gap: var(--sp-2);
+  font-size: var(--fs-body);
 }
 .dexd-record-info small {
-  font-size: 12px;
-  color: var(--home-muted);
+  font-size: var(--fs-caption);
+  color: var(--c-text-2);
 }
 /* 펫이 얻은 칭호 — 기록 카드 안의 작은 알약들 */
 .dexd-record-titles {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--sp-1);
   margin: 2px 0 0;
   padding: 0;
   list-style: none;
 }
 .dexd-record-title {
-  padding: 2px 8px;
-  border: 1px solid var(--home-card-border);
-  border-radius: 999px;
-  background: var(--home-card-surface);
-  color: var(--home-muted);
-  font-size: 11px;
+  padding: 2px var(--sp-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-full);
+  background: var(--c-surface);
+  color: var(--c-text-2);
+  font-size: var(--fs-caption);
   font-weight: 800;
 }
 .dexd-record-title.is-equipped {
-  border-color: var(--home-green);
-  color: var(--home-green-dark);
+  border-color: var(--c-primary);
+  color: var(--c-primary-strong);
 }
 .dexd-record-state {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
+  gap: var(--sp-1);
+  font-size: var(--fs-body-sm);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   white-space: nowrap;
 }
 
@@ -641,5 +625,57 @@
   .dexd-record-state {
     grid-column: 2;
     white-space: normal;
+  }
+}
+
+/* 휴대폰: 요약은 3칸 유지, 등급 필터는 가로로 밀어서 본다 */
+@media (max-width: 768px) {
+  .dex-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .dex-summary-card {
+    padding: 12px;
+  }
+  .dex-summary-value {
+    margin-top: 4px;
+    font-size: 20px;
+    overflow-wrap: anywhere;
+  }
+  .dex-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .dex-filters::-webkit-scrollbar {
+    display: none;
+  }
+  .dex-filter {
+    flex: none;
+    min-height: 44px;
+  }
+}
+
+/* 휴대폰: 펫 상세는 왼쪽 정렬, 성장 단계는 2칸씩 */
+@media (max-width: 720px) {
+  .dexd-hero {
+    justify-items: stretch;
+    text-align: left;
+  }
+  .dexd-art {
+    width: 100%;
+    border-radius: 100px;
+  }
+  .dexd-name {
+    justify-content: flex-start;
+  }
+  .dexd-stages {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    justify-content: stretch;
+  }
+  .dexd-stage-btn {
+    width: 100%;
   }
 }

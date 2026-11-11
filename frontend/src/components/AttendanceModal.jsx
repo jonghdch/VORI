@@ -142,20 +142,20 @@ function AttendanceModal({ onClose }) {
 
   return (
     <div
-      className="attendance-backdrop"
+      className="modal-backdrop attendance-backdrop"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
         ref={dialogRef}
-        className="attendance-dialog"
+        className="modal attendance-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
       >
-        <button type="button" className="attendance-close" onClick={onClose} aria-label="닫기">
+        <button type="button" className="modal-close attendance-close" onClick={onClose} aria-label="닫기">
           ×
         </button>
 
@@ -173,7 +173,7 @@ function AttendanceModal({ onClose }) {
           </div>
           <button
             type="button"
-            className={`attendance-cta ${
+            className={`btn btn--primary btn--lg attendance-cta ${
               status?.checkedIn ? "attendance-cta--done" : "attendance-cta--ready"
             }`}
             disabled={checkingIn || loading || status?.checkedIn}

@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -104,7 +105,10 @@ public class PetTitleService {
     /**
      * 펫 지표가 바뀐 트랜잭션이 커밋된 뒤 키우는 펫을 판정한다.
      * 별도 트랜잭션이고 예외를 삼킨다 — 칭호 판정 실패가 지출 저장 같은 원래 동작을 되돌리면 안 된다.
+     * 요청 스레드가 아니라 titleExecutor 에서 돈다 — 같은 스레드에서 새 트랜잭션을 열면 요청 하나가 DB 연결 두 개를
+     * 쥐어, 동시에 10명이면 서버가 30초 멈췄다(AsyncConfig.titleExecutor, TitleService.onTitleCheck 와 같은 이유).
      */
+    @Async("titleExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onPetTitleCheck(PetTitleCheckEvent event) {

@@ -1,5 +1,7 @@
 /* Pretendard (한글 본문) + Nunito (영문/로고) 폰트 로드.
    CDN을 쓰기 때문에 별도 설치는 필요 없습니다. */
+@import "./styles/tokens.css";
+@import "./styles/components.css";
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css");
 @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;900&display=swap");
 
@@ -14,8 +16,8 @@ body {
     "Roboto", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f5f3ee;
-  color: #3d3830;
+  background: var(--c-bg);
+  color: var(--c-text);
   /* 한글은 낱말 단위로 줄을 바꾼다 — 기본값(normal)은 「손/님」「기다/리는」처럼 낱말 가운데서 끊는다.
      화면마다 하나씩 keep-all 을 달다 보니 빠진 곳(이야기 제목·설문 제목 등)이 생겨 전체에 건다.
      띄어쓰기 없는 긴 영문·주소는 칸을 넘칠 때만 아무 데서나 끊는다(break-word). */
@@ -39,7 +41,7 @@ body {
   html .ja-answer-wrap textarea,
   html .pet-chat-input,
   html .sp-select {
-    font-size: 16px;
+    font-size: var(--fs-input);
   }
 }
 

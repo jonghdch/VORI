@@ -6,7 +6,7 @@ import { listExpensesByDate } from "../../api/ledger";
 import { getActivePet } from "../../api/pet";
 import { finalizeDateJudgment, getDateJudgment, startDateJudgment } from "../../api/dailyJudgment";
 import JudgmentResults, { isSoftenedByReason, judgmentReason, RULE_TEXT } from "./JudgmentResults";
-import { canUseAiJudge } from "../../config";
+import { aiJudgeDate, canUseAiJudge } from "../../config";
 import { SIGNAL_STATUS } from "../../signalLabels";
 import { petDisplayName } from "../../components/petVisual";
 import Icon from "../../components/Icon";
@@ -67,8 +67,9 @@ function getResultSummary(judgment, expenses) {
 function WalletAnalysisPage({ user }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  // 오늘 날짜는 들어온 순간에 고정한다 — 자정을 넘기면 다른 날짜로 확정을 보내 그날 판정이 확정되지 못한다
-  const [enteredOn] = useState(() => toIsoDate());
+  // 판정할 날짜는 들어온 순간에 고정한다 — 새벽 판정 마감을 넘기면 다른 날짜로 확정을 보내 그날 판정이 확정되지 못한다.
+  // 새벽(마감 전)에 들어오면 전날 판정이다.
+  const [enteredOn] = useState(() => toIsoDate(aiJudgeDate()));
   const dateStr = user?.role === "ADMIN" ? params.get("date") || enteredOn : enteredOn;
   // 이벤트 활성 시간대 가드. 카드 버튼과 동일 기준(config.isAiJudgeOpen).
   // 진입 시점에 1회만 판정해 고정 — 매 렌더 재평가하면 23:59에 답변을
@@ -342,10 +343,10 @@ function WalletAnalysisPage({ user }) {
               </div>
             )}
             <div className="ja-actions ja-error-actions">
-              <button type="button" className="hm-btn hm-btn--dark ja-primary" onClick={() => setReloadKey((k) => k + 1)}>
+              <button type="button" className="btn btn--primary hm-btn hm-btn--dark ja-primary" onClick={() => setReloadKey((k) => k + 1)}>
                 다시 시도
               </button>
-              <button type="button" className="ja-btn-line" onClick={goBack}>돌아가기</button>
+              <button type="button" className="btn btn--secondary ja-btn-line" onClick={goBack}>돌아가기</button>
             </div>
           </main>
         ) : total === 0 ? (
@@ -377,7 +378,7 @@ function WalletAnalysisPage({ user }) {
               </p>
             )}
             <JudgmentResults expenses={expenses} judgment={judgment} />
-            <button type="button" className="hm-btn hm-btn--dark hm-btn--block ja-primary ja-done" onClick={goDone}>
+            <button type="button" className="btn btn--primary btn--block hm-btn hm-btn--dark hm-btn--block ja-primary ja-done" onClick={goDone}>
               가계부로 돌아가기 <Icon name="arrowRight" size={17} />
             </button>
           </main>
@@ -505,7 +506,7 @@ function WalletAnalysisPage({ user }) {
                     {submitError && <p className="ja-submit-error" role="alert">{submitError}</p>}
                     <button
                       type="button"
-                      className="hm-btn hm-btn--dark hm-btn--block ja-primary"
+                      className="btn btn--primary btn--block hm-btn hm-btn--dark hm-btn--block ja-primary"
                       onClick={isLastQuestion ? finish : goNext}
                       disabled={submitting}
                     >
@@ -563,10 +564,10 @@ function JudgeConfirmDialog({ onCancel, onConfirm }) {
   };
 
   return (
-    <div className="ja-confirm-backdrop">
+    <div className="modal-backdrop ja-confirm-backdrop">
       <div
         ref={dialogRef}
-        className="hm-card ja-confirm-dialog"
+        className="modal ja-confirm-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -575,9 +576,9 @@ function JudgeConfirmDialog({ onCancel, onConfirm }) {
       >
         <h2 id={titleId}>하루에 한 번만 판정할 수 있어요</h2>
         <p id={textId}>지금 판정할까요? 판정 뒤에 지출을 고쳐도 오늘 보상은 바뀌지 않아요.</p>
-        <div className="ja-confirm-actions">
-          <button type="button" className="ja-btn-line" onClick={onCancel}>돌아가기</button>
-          <button type="button" className="hm-btn hm-btn--dark ja-primary" onClick={onConfirm} autoFocus>
+        <div className="modal-actions ja-confirm-actions">
+          <button type="button" className="btn btn--secondary ja-btn-line" onClick={onCancel}>돌아가기</button>
+          <button type="button" className="btn btn--primary hm-btn hm-btn--dark ja-primary" onClick={onConfirm} autoFocus>
             판정하기
           </button>
         </div>
