@@ -84,7 +84,7 @@ function SiteHeader({
 }
 
 // 로그인된 사용자 영역.
-// - "VORI 시작하기" 버튼 + 공통 UserAvatarMenu (설정/로그아웃 드롭다운).
+// - "내 홈으로" 버튼 + 공통 UserAvatarMenu (설정/로그아웃 드롭다운).
 function UserMenu({ user, onLogout }) {
   const navigate = useNavigate();
   return (
@@ -94,7 +94,7 @@ function UserMenu({ user, onLogout }) {
         className="landing-btn landing-btn-primary"
         onClick={() => navigate("/home")}
       >
-        VORI 시작하기
+        내 홈으로
       </button>
       <UserAvatarMenu user={user} onLogout={onLogout} />
     </>
