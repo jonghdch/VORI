@@ -24,6 +24,44 @@ const STATUS_MESSAGE = {
 // 로그인·구글 로그인의 401(비밀번호 틀림)은 auth.js 가 따로 부르므로 여기로 오지 않는다.
 export const SESSION_EXPIRED_EVENT = "vori:session-expired";
 
+// 응답을 못 받았을 때의 문구. fetch 는 서버에 닿지 못하면 영어 오류("Failed to fetch")를 던지는데,
+// 화면 여러 곳이 err.message 를 그대로 보여 줘서 영어가 나갔다. status 는 비워 둔다 — 응답이 없었다는 뜻이고,
+// categorize.js 는 이걸 보고 한 번 더 시도한다.
+export const NETWORK_MESSAGE = "서버에 연결하지 못했어요. 인터넷 연결을 확인하고 잠시 후 다시 시도해 주세요.";
+export const TIMEOUT_MESSAGE = "서버 응답이 늦어요. 잠시 후 다시 시도해 주세요.";
+
+// 조회(GET)만 시간 제한을 둔다. 저장 요청은 화면에서 끊어도 서버는 끝까지 처리해서, 「실패」를 보고 다시 누르면
+// 두 번 저장될 수 있다. Gemini 를 기다리는 요청(펫 대화·사유 분류·카테고리 분류·영수증)은 모두 POST 라 여기 걸리지
+// 않는다 — 서버는 재시도·대체 모델까지 최악 수 분을 기다린다. 조회는 모두 DB 만 읽는다.
+export const GET_TIMEOUT_MS = 15000;
+
+/**
+ * fetch 를 보내고 read(res) 로 응답을 읽는다. 서버에 닿지 못했거나 GET 이 GET_TIMEOUT_MS 안에 끝나지 않으면
+ * 한국어 문구의 Error 를 던진다. 본문을 읽는 동안에도 시간 제한이 걸리게 read 까지 함께 감싼다.
+ * auth.js·admin.js 처럼 이 파일의 get/post 를 쓰지 않는 곳도 이걸로 보낸다.
+ */
+export async function send(url, init = {}, read = (res) => res) {
+  const isGet = (init.method || "GET").toUpperCase() === "GET";
+  const controller = isGet ? new AbortController() : null;
+  const timer = controller && setTimeout(() => controller.abort(), GET_TIMEOUT_MS);
+  try {
+    let res;
+    try {
+      res = await fetch(url, controller ? { ...init, signal: controller.signal } : init);
+    } catch {
+      throw new Error(controller?.signal.aborted ? TIMEOUT_MESSAGE : NETWORK_MESSAGE);
+    }
+    try {
+      return await read(res);
+    } catch (e) {
+      if (controller?.signal.aborted) throw new Error(TIMEOUT_MESSAGE);
+      throw e;
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // 응답 → 값, 또는 status 를 실은 Error. JSON 요청과 multipart 업로드가 함께 쓴다.
 async function handle(res) {
   if (!res.ok) {
@@ -46,13 +84,15 @@ async function handle(res) {
 
 // notify: 끝난 뒤 vori:account-updated 를 보낼지. 기본은 GET 이 아닌 요청(서버 상태를 바꿈).
 async function request(path, { method = "GET", body, notify = method !== "GET" } = {}) {
-  const result = await handle(
-    await fetch(`${API_BASE}${path}`, {
+  const result = await send(
+    `${API_BASE}${path}`,
+    {
       method,
       credentials: "include",
       headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
       body: body !== undefined ? JSON.stringify(body) : undefined,
-    }),
+    },
+    handle,
   );
   if (notify) window.dispatchEvent(new Event("vori:account-updated"));
   return result;
@@ -80,9 +120,5 @@ export const query = (path, body) => request(path, { method: "POST", body, notif
 export const upload = (path, file, field = "file") => {
   const form = new FormData();
   form.append(field, file);
-  return fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    credentials: "include",
-    body: form,
-  }).then(handle);
+  return send(`${API_BASE}${path}`, { method: "POST", credentials: "include", body: form }, handle);
 };

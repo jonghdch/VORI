@@ -129,24 +129,6 @@
   background: var(--c-primary-soft);
 }
 
-.login-row-between {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: -4px;
-}
-.login-check {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-size: var(--fs-body-sm);
-  color: var(--c-text-2);
-  cursor: pointer;
-}
-.login-check input {
-  accent-color: var(--c-primary);
-}
-
 .login-link {
   background: transparent;
   border: none;

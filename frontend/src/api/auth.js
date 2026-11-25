@@ -3,6 +3,9 @@
 // - 백엔드 CORS 가 http://localhost:3000 을 허용하도록 설정돼 있어야 함.
 
 import { API_BASE } from "./base";
+// 서버에 닿지 못했을 때(로그인 화면에 영어 "Failed to fetch" 가 나가던 것)·조회가 오래 걸릴 때의
+// 한국어 문구는 http.js 의 send 가 맡는다.
+import { send } from "./http";
 
 export class AuthError extends Error {
   constructor(message, status) {
@@ -22,7 +25,7 @@ async function parseErrorMessage(res, fallback) {
 }
 
 export async function login(email, password) {
-  const res = await fetch(`${API_BASE}/auth/login`, {
+  const res = await send(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -45,7 +48,7 @@ export async function login(email, password) {
  * 401 = 토큰 검증 실패, 403 = 이메일 미확인·제재 계정, 503 = 서버에 클라이언트 ID 미설정.
  */
 export async function loginWithGoogle(credential) {
-  const res = await fetch(`${API_BASE}/auth/google`, {
+  const res = await send(`${API_BASE}/auth/google`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -69,7 +72,7 @@ export const isGuestUser = (user) => Boolean(user?.email?.endsWith(GUEST_EMAIL_D
  * 429 = 오늘 준비한 체험 계정을 다 씀, 403 = 체험하기 꺼짐 — 서버 문구를 그대로 쓴다.
  */
 export async function startGuest() {
-  const res = await fetch(`${API_BASE}/auth/guest`, {
+  const res = await send(`${API_BASE}/auth/guest`, {
     method: "POST",
     credentials: "include",
   });
@@ -81,7 +84,7 @@ export async function startGuest() {
 }
 
 export async function logout() {
-  const res = await fetch(`${API_BASE}/auth/logout`, {
+  const res = await send(`${API_BASE}/auth/logout`, {
     method: "POST",
     credentials: "include",
   });
@@ -92,7 +95,8 @@ export async function logout() {
 
 export async function me() {
   // /auth/session 은 미로그인이어도 200 이라 콘솔에 401 이 남지 않는다. (/auth/me 는 배포 헬스 체크용 401 계약이라 그대로 둔다)
-  const res = await fetch(`${API_BASE}/auth/session`, {
+  // send 로 보내 서버에 닿지 못했을 때 영어 "Failed to fetch" 대신 한국어 문구가 나가고, 조회 15초 제한도 걸린다.
+  const res = await send(`${API_BASE}/auth/session`, {
     credentials: "include",
   });
   if (res.ok) {
@@ -106,7 +110,7 @@ export async function me() {
 }
 
 async function meLegacy() {
-  const res = await fetch(`${API_BASE}/auth/me`, {
+  const res = await send(`${API_BASE}/auth/me`, {
     credentials: "include",
   });
   if (res.status === 401) return null;
@@ -125,7 +129,7 @@ export async function signup({
   privacyAgreed,
   marketingAgreed,
 }) {
-  const res = await fetch(`${API_BASE}/auth/signup`, {
+  const res = await send(`${API_BASE}/auth/signup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
