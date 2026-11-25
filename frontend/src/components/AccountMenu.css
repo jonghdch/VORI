@@ -5,7 +5,7 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .account-menu-popover {
@@ -13,26 +13,26 @@
   top: calc(100% + 10px);
   right: 0;
   width: 280px;
-  padding: 16px;
-  border-radius: var(--home-radius);
-  border: 1px solid var(--home-card-border);
-  background: var(--home-card-surface);
-  box-shadow: 0 16px 40px rgba(45, 51, 40, 0.16);
+  padding: var(--sp-4);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-md);
   z-index: 30;
 }
 .account-menu-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 .account-menu-avatar {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  border: 2px solid var(--home-card-border);
-  background: var(--home-green-soft);
-  color: var(--home-green-dark);
-  font-size: 19px;
+  border: 2px solid var(--c-border);
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
+  font-size: var(--fs-h2);
   font-weight: 900;
   display: inline-flex;
   align-items: center;
@@ -40,7 +40,7 @@
   flex-shrink: 0;
 }
 .account-menu-avatar.is-admin {
-  border-color: #e0a83a;
+  border-color: var(--c-gold);
 }
 .account-menu-who {
   display: flex;
@@ -48,14 +48,14 @@
   min-width: 0;
 }
 .account-menu-who strong {
-  font-size: 15px;
+  font-size: var(--fs-body);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 .account-menu-who small {
-  font-size: 12px;
-  color: var(--home-muted);
+  font-size: var(--fs-caption);
+  color: var(--c-text-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -64,49 +64,49 @@
 .account-menu-slots {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  gap: var(--sp-2);
   margin-top: 12px;
 }
 .account-menu-slot {
   position: relative;
   min-width: 0;
   height: 64px;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   font-family: inherit;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 6px 4px;
+  padding: var(--sp-2) var(--sp-1);
 }
 .account-menu-slot.is-filled {
-  border: 1px solid var(--home-card-border);
-  background: var(--home-card-surface);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
 }
 .account-menu-slot.is-empty {
-  border: 1px dashed var(--home-card-border);
+  border: 1px dashed var(--c-border);
   background: none;
-  color: var(--home-muted);
-  font-size: 20px;
+  color: var(--c-text-2);
+  font-size: var(--fs-h2);
   cursor: pointer;
 }
 .account-menu-slot.is-empty.is-static {
   cursor: default;
 }
 .account-menu-slot.is-empty:not(.is-static):hover {
-  border-color: var(--home-green);
-  color: var(--home-green-dark);
+  border-color: var(--c-primary);
+  color: var(--c-primary-strong);
 }
 .account-menu-slot-icon {
-  font-size: 18px;
+  font-size: var(--fs-h3);
   line-height: 1;
 }
 .account-menu-slot-name {
   max-width: 100%;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 800;
-  color: var(--home-text);
+  color: var(--c-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -119,50 +119,50 @@
   background: none;
   padding: 0 2px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   line-height: 1;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   cursor: pointer;
 }
 .account-menu-slot-remove:hover:not(:disabled) {
-  color: var(--home-text);
+  color: var(--c-text);
 }
 .account-menu-role {
   font-style: normal;
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 800;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: #fbe9c9;
+  padding: 1px var(--sp-2);
+  border-radius: var(--r-full);
+  background: var(--c-gold-soft);
   color: #9a6b12;
 }
 .account-menu-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--sp-2);
   margin: 14px 0;
 }
 .account-menu-stats > div {
-  padding: 10px 12px;
-  border-radius: var(--home-radius-sm);
-  background: #f6f8f3;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--c-bg);
 }
 .account-menu-stats dt {
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 700;
-  color: var(--home-muted);
+  color: var(--c-text-2);
   margin-bottom: 2px;
 }
 .account-menu-stats dd {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-body);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 .account-menu-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 .account-menu-actions .home-btn {
   width: 100%;
@@ -170,7 +170,7 @@
 .account-menu-logout {
   align-self: center;
   margin-top: 4px;
-  color: var(--home-muted);
+  color: var(--c-text-2);
 }
 @media (max-width: 640px) {
   /* 이 폭에서 헤더는 flex-wrap — 계정 요약이 다음 줄로 밀려도 오른쪽에 붙인다 */
@@ -198,7 +198,7 @@
 @media (max-width: 1024px) {
   .app-has-tabbar .home-topbar-inner > .account-menu {
     margin-left: auto;
-    gap: 8px;
+    gap: var(--sp-2);
   }
   /* 닉네임은 내 정보 상자 안에 있으니 헤더에서는 코인만 */
   .app-has-tabbar .home-account-nickname {
@@ -208,8 +208,8 @@
     padding: 0;
   }
   .app-has-tabbar .home-account-coins {
-    padding: 5px 10px;
-    font-size: 12px;
+    padding: var(--sp-1) var(--sp-2);
+    font-size: var(--fs-caption);
   }
   .account-menu-avatar-btn {
     display: grid;
@@ -220,12 +220,12 @@
     flex-shrink: 0;
     border: 0;
     border-radius: 50%;
-    background: #3d3830;
-    color: #fffdf9;
+    background: var(--c-text);
+    color: var(--c-surface);
     cursor: pointer;
   }
   .account-menu-avatar-btn:focus-visible {
-    outline: 2px solid var(--home-green-dark);
+    outline: 2px solid var(--c-primary-strong);
     outline-offset: 2px;
   }
   .account-menu-popover {
@@ -234,7 +234,7 @@
   .account-menu-links {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
+    gap: var(--sp-2);
     list-style: none;
     margin: 12px 0;
     padding: 0;
@@ -244,15 +244,15 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 10px 4px;
-    border: 1px solid var(--home-card-border);
-    border-radius: 12px;
+    gap: var(--sp-1);
+    padding: var(--sp-2) var(--sp-1);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md);
     background: #fff;
     font-family: inherit;
-    font-size: 12px;
+    font-size: var(--fs-caption);
     font-weight: 700;
-    color: #3d3830;
+    color: var(--c-text);
     cursor: pointer;
     word-break: keep-all;
   }

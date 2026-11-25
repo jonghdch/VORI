@@ -51,6 +51,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByCreatedAtGreaterThanEqual(LocalDateTime since);
 
+    /** 체험 계정 하루 생성 상한(GuestAccountService) — 체험 계정은 이메일 도메인으로 구분한다. */
+    long countByEmailEndingWithAndCreatedAtGreaterThanEqual(String emailSuffix, LocalDateTime since);
+
     @Query("select coalesce(sum(u.totalSaved), 0) from User u")
     long sumTotalSaved();
 

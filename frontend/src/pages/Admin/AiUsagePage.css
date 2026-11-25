@@ -2,15 +2,15 @@
 .aiu-grid {
   display: grid;
   grid-template-columns: minmax(300px, 1fr) minmax(320px, 1.3fr);
-  gap: 16px;
+  gap: var(--sp-4);
   align-items: start;
 }
 .aiu-card {
-  padding: 24px;
+  padding: var(--sp-6);
 }
 .aiu-card-title {
   margin: 0 0 16px;
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 700;
 }
 
@@ -21,85 +21,85 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 .aiu-model {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
 }
 .aiu-model-name {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: var(--admin-text);
+  color: var(--c-text);
   font-variant-numeric: tabular-nums;
 }
 .aiu-model-role {
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 400;
-  color: var(--admin-faint);
+  color: var(--c-text-3);
 }
 
 .aiu-switch-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   cursor: pointer;
 }
 .aiu-switch-row input {
   width: 18px;
   height: 18px;
-  accent-color: var(--admin-green);
+  accent-color: var(--c-primary);
   cursor: pointer;
 }
 .aiu-switch-row input:disabled {
   cursor: default;
 }
 .aiu-switch-label {
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: var(--admin-text);
+  color: var(--c-text);
 }
 .aiu-state {
   margin-left: auto;
-  font-size: 12px;
-  color: var(--admin-faint);
+  font-size: var(--fs-caption);
+  color: var(--c-text-3);
 }
 .aiu-state--on {
-  color: var(--admin-green);
+  color: var(--c-primary);
   font-weight: 600;
 }
 .aiu-switch-desc {
   margin: 4px 0 0 26px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   line-height: 1.6;
-  color: var(--admin-muted);
+  color: var(--c-text-2);
 }
 
 .aiu-note {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   line-height: 1.6;
-  color: var(--admin-muted);
-  padding-top: 16px;
-  border-top: 1px solid var(--admin-border);
+  color: var(--c-text-2);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--c-border);
 }
 .aiu-note code {
-  font-size: 11px;
+  font-size: var(--fs-caption);
 }
 
 .aiu-banner {
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 16px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  font-size: var(--fs-body);
   margin-bottom: 16px;
 }
 .aiu-banner--error {
   background: rgba(180, 82, 74, 0.1);
-  color: #b4524a;
+  color: var(--c-danger);
 }
 
 @media (max-width: 760px) {

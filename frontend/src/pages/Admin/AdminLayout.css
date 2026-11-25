@@ -1,21 +1,12 @@
 /* 어드민 셸. 색·보더·라운드·폰트는 기존 페이지(Settings/Home) 컨벤션을 따른다.
    배경 #f5f3ee, 표면 #fffdf9/#fbfaf6, 보더 #e2dfd7/#e8e3d8, 그린 액센트 #7c8b5c. */
 .admin {
-  --admin-bg: #f5f3ee;
-  --admin-surface: #fbfaf6;
-  --admin-card: #fffdf9;
-  --admin-border: #e2dfd7;
-  --admin-card-border: #e8e3d8;
-  --admin-text: #3d3830;
-  --admin-muted: #6e6b65;
-  --admin-faint: #9c9488;
-  --admin-green: #7c8b5c;
 
   /* 전체 페이지 스크롤 없음 — 사이드바·본문이 각자 내부 스크롤 */
   height: 100vh;
   overflow: hidden;
-  background: var(--admin-bg);
-  color: var(--admin-text);
+  background: var(--c-bg);
+  color: var(--c-text);
   /* import 한 폰트가 variable 버전이라 실제 패밀리명은 "Pretendard Variable".
      "Pretendard" 만 쓰면 매칭 안 돼 시스템 폰트로 떨어지므로 둘 다 명시. */
   font-family: "Pretendard Variable", "Pretendard", -apple-system,
@@ -29,14 +20,15 @@
 .admin input,
 .admin select {
   font-family: inherit;
+  font-size: var(--fs-input); /* iOS 확대 방지 */
 }
 
 /* ───── 상단 바 ───── */
 .admin-topbar {
   width: 100%;
-  padding: 16px 32px;
-  border-bottom: 1px solid var(--admin-border);
-  background: var(--admin-surface);
+  padding: var(--sp-4) var(--sp-8);
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface-2);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -47,28 +39,28 @@
   cursor: pointer;
   display: inline-flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--sp-2);
   font-weight: 800;
-  font-size: 22px;
+  font-size: var(--fs-h2);
   letter-spacing: 0.5px;
   padding: 0;
 }
 .admin-logo-vori {
-  color: var(--admin-green);
+  color: var(--c-primary);
 }
 .admin-logo-admin {
-  color: var(--admin-text);
+  color: var(--c-text);
 }
 .admin-topbar-link {
   border: 0;
   background: transparent;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: var(--admin-faint);
+  color: var(--c-text-3);
 }
 .admin-topbar-link:hover {
-  color: var(--admin-green);
+  color: var(--c-primary);
 }
 
 /* ───── 본문 레이아웃 (사이드바 + 메인) ───── */
@@ -83,29 +75,29 @@
 .admin-sidebar {
   flex: 0 0 240px;
   width: 240px;
-  padding: 28px 16px 40px;
-  background: var(--admin-surface);
-  border-right: 1px solid var(--admin-border);
+  padding: var(--sp-7) var(--sp-4) 40px;
+  background: var(--c-surface-2);
+  border-right: 1px solid var(--c-border);
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--sp-8);
   overflow-y: auto;
 }
 .admin-nav-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 /* 첫 그룹(기본 관리): 라벨 없이 상단, 아래에 구분선 */
 .admin-nav-group--primary {
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--admin-border);
+  padding-bottom: var(--sp-6);
+  border-bottom: 1px solid var(--c-border);
 }
 .admin-nav-group-label {
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  color: var(--admin-faint);
-  padding: 0 12px;
+  color: var(--c-text-3);
+  padding: 0 var(--sp-3);
   letter-spacing: 0.2px;
 }
 .admin-nav-list {
@@ -119,11 +111,11 @@
 .admin-nav-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px 8px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  color: var(--admin-muted);
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-5);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   text-decoration: none;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
@@ -131,17 +123,17 @@
 .admin-nav-icon {
   display: inline-flex;
   flex: 0 0 auto;
-  color: var(--admin-faint);
+  color: var(--c-text-3);
 }
 .admin-nav-link--active .admin-nav-icon {
-  color: var(--admin-green);
+  color: var(--c-primary);
 }
 .admin-nav-link:hover {
   background: rgba(127, 176, 105, 0.08);
-  color: var(--admin-text);
+  color: var(--c-text);
 }
 .admin-nav-link--active {
-  color: var(--admin-green);
+  color: var(--c-primary);
   font-weight: 700;
   background: rgba(127, 176, 105, 0.12);
 }
@@ -151,16 +143,16 @@
 .admin-nav-soon {
   margin-left: auto;
   flex: 0 0 auto;
-  padding: 1px 6px;
-  border-radius: 999px;
+  padding: 1px var(--sp-2);
+  border-radius: var(--r-full);
   background: rgba(110, 107, 101, 0.1);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  color: var(--admin-muted);
+  color: var(--c-text-2);
 }
 .admin-nav-link--active .admin-nav-soon {
   background: rgba(127, 176, 105, 0.16);
-  color: var(--admin-green);
+  color: var(--c-primary);
 }
 
 /* ───── 메인 ───── */
@@ -177,22 +169,22 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 .admin-refresh-btn {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: var(--sp-2);
   border: 0;
   background: transparent;
-  color: var(--admin-muted);
+  color: var(--c-text-2);
   cursor: pointer;
   transition: color 0.15s ease;
 }
 .admin-refresh-btn:hover:not(:disabled) {
-  color: var(--admin-green);
+  color: var(--c-primary);
 }
 .admin-refresh-btn:disabled {
   opacity: 0.5;
@@ -207,45 +199,104 @@
 .admin-placeholder-title {
   display: inline-block;
   margin: 0 8px 0 0;
-  font-size: 22px;
+  font-size: var(--fs-h2);
   font-weight: 700;
 }
 .admin-placeholder-sub {
   display: inline-block;
   margin: 0 0 24px;
-  font-size: 14px;
-  color: var(--admin-muted);
+  font-size: var(--fs-body);
+  color: var(--c-text-2);
 }
 .admin-placeholder-card {
-  background: var(--admin-card);
-  border: 1px solid var(--admin-card-border);
-  border-radius: 14px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
   min-height: 360px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .admin-placeholder-empty {
-  font-size: 16px;
-  color: var(--admin-faint);
+  font-size: var(--fs-body);
+  color: var(--c-text-3);
 }
 
-/* 좁은 화면 대응 */
+.admin-topbar-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.admin-menu-btn,
+.admin-drawer-scrim {
+  display: none;
+}
+
+/* 좁은 화면 대응 — 사이드바는 왼쪽 서랍으로 접고 햄버거로 연다 */
 @media (max-width: 860px) {
+  .admin-topbar {
+    min-height: 56px;
+    padding: 6px 16px 6px 4px;
+  }
+  .admin-logo {
+    font-size: 18px;
+  }
+  .admin-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--c-text);
+    cursor: pointer;
+  }
+  .admin-menu-btn:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: -2px;
+  }
+  .admin-topbar-link {
+    font-size: 13px;
+    white-space: nowrap;
+  }
   .admin-body {
     flex-direction: column;
   }
+  .admin-drawer-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(41, 36, 31, 0.4);
+  }
   .admin-sidebar {
-    flex-basis: auto;
-    width: 100%;
-    border-right: 0;
-    border-bottom: 1px solid var(--admin-border);
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 16px;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 41;
+    width: min(264px, 85vw);
+    padding: 28px 16px 24px;
+    border-right: 1px solid var(--c-border);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0.2s;
+  }
+  .admin-sidebar--open {
+    transform: translateX(0);
+    visibility: visible;
   }
   .admin-main {
-    padding: 28px 20px 60px;
+    padding: 20px 16px 24px;
+  }
+}
+
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) {
+  .admin-sidebar {
+    transition: none;
   }
 }

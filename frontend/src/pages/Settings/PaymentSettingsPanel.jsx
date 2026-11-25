@@ -172,7 +172,7 @@ function PaymentSettingsPanel() {
                 />
               </label>
             )}
-            <button type="submit" className="settings-save-btn pay-add-btn" disabled={saving}>
+            <button type="submit" className="btn btn--primary settings-save-btn pay-add-btn" disabled={saving}>
               {saving ? "등록 중…" : "등록"}
             </button>
           </div>
@@ -228,10 +228,10 @@ function PaymentSettingsPanel() {
                       )}
                     </div>
                     <div className="pay-edit-actions">
-                      <button type="submit" className="settings-save-btn" disabled={saving}>
+                      <button type="submit" className="btn btn--primary settings-save-btn" disabled={saving}>
                         {saving ? "저장 중…" : "저장"}
                       </button>
-                      <button type="button" className="pay-item-cancel" onClick={() => setEditing(null)}>
+                      <button type="button" className="btn btn--secondary pay-item-cancel" onClick={() => setEditing(null)}>
                         취소
                       </button>
                     </div>

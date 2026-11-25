@@ -43,8 +43,8 @@ function AccountSettingsPanel({ user, onLogout }) {
       window.alert(
         `탈퇴 신청이 완료됐어요.\n${formatDate(res.deleteAt)}에 모든 기록이 삭제돼요. 그 전에 다시 로그인하면 계정이 복구돼요.`,
       );
-      // 서버가 세션을 이미 끊었다. 화면의 로그인 상태만 정리한다
-      if (typeof onLogout === "function") await onLogout();
+      // 서버가 세션을 이미 끊었다. 화면의 로그인 상태만 정리한다(체험 계정 로그아웃 확인창도 띄우지 않는다)
+      if (typeof onLogout === "function") await onLogout({ confirmed: true });
       navigate("/", { replace: true });
     } catch (err) {
       setError(err.message || "탈퇴 신청을 처리하지 못했어요.");
@@ -65,7 +65,7 @@ function AccountSettingsPanel({ user, onLogout }) {
           </div>
           {!open && (
             <div className="settings-row-control">
-              <button type="button" className="settings-withdraw-btn" onClick={() => setOpen(true)}>
+              <button type="button" className="btn btn--danger settings-withdraw-btn" onClick={() => setOpen(true)}>
                 탈퇴 신청
               </button>
             </div>
@@ -97,10 +97,10 @@ function AccountSettingsPanel({ user, onLogout }) {
               </p>
             )}
             <div className="settings-withdraw-actions">
-              <button type="button" className="settings-withdraw-cancel" onClick={cancel} disabled={busy}>
+              <button type="button" className="btn btn--secondary settings-withdraw-cancel" onClick={cancel} disabled={busy}>
                 취소
               </button>
-              <button type="submit" className="settings-withdraw-btn settings-withdraw-btn--confirm" disabled={!ready || busy}>
+              <button type="submit" className="btn btn--danger btn--danger-solid settings-withdraw-btn settings-withdraw-btn--confirm" disabled={!ready || busy}>
                 {busy ? "처리 중…" : "탈퇴하기"}
               </button>
             </div>

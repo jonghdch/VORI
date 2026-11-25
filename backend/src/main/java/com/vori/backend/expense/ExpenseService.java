@@ -206,7 +206,7 @@ public class ExpenseService {
     /** 누적 절약액을 차이만큼 옮긴다. 줄일 때는 삭제와 같이 0 아래로 내려가지 않게 자른다. */
     private void adjustTotalSaved(Long userId, int delta) {
         if (delta == 0) return;
-        User user = userRepository.findById(userId).orElseThrow();
+        User user = userRepository.findByIdForUpdate(userId).orElseThrow();
         int current = user.getTotalSaved() == null ? 0 : user.getTotalSaved();
         user.addTotalSaved(Math.max(delta, -current));
         // 누적 절약액이 늘었으면 그 값을 조건으로 하는 칭호를 다시 본다.

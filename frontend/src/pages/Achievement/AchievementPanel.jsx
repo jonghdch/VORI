@@ -50,7 +50,7 @@ function formatProgressText(item) {
     return `${current}마리 / ${threshold}마리 배웅`;
   }
   if (code === "LUCKY") {
-    return `${current}회 / ${threshold}회 S등급 획득`;
+    return `${current}회 / ${threshold}회 레전드 펫 획득`;
   }
   if (code === "TALKATIVE") {
     return `${current}회 / ${threshold}회 AI 답변`;

@@ -152,7 +152,7 @@ function SanctionsPage() {
           />
         </label>
         {formError && <p className="sanction-form-error">{formError}</p>}
-        <button type="submit" className="sanction-submit" disabled={submitting}>
+        <button type="submit" className="btn btn--primary sanction-submit" disabled={submitting}>
           {submitting ? "처리 중…" : "제재 추가"}
         </button>
       </form>

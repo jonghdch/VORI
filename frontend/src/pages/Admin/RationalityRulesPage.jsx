@@ -104,7 +104,7 @@ function RationalityRulesPage() {
 
             <button
               type="button"
-              className="rule-save"
+              className="btn btn--primary btn--sm rule-save"
               onClick={save}
               disabled={invalid || saving}
             >

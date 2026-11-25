@@ -1,0 +1,84 @@
+# VORI 운영 스택 — https://vori.worldpick.co.kr (zzemsoft:/data/home2/vori.worldpick.co.kr)
+# 다른 스택과 이름·네트워크가 겹치지 않도록 project 이름 vori, 컨테이너 접두사 vori-, 전용 네트워크 vori_private 를 쓴다.
+# 호스트 포트는 열지 않는다. nginx 컨테이너는 공유망 dockers_backend 로 vori-backend:8080 에 닿는다.
+# DB(vori-mysql)는 internal 네트워크 vori_private 에만 있다(외부·다른 컨테이너에서 접근 불가).
+#
+# 레포(./VORI)를 컨테이너 /app 에 그대로 bind 한다 → git pull 이 즉시 컨테이너 안에 보인다.
+# 앱은 작업 디렉터리(/app)의 .env 를 읽는다(application.properties 의 spring.config.import).
+# jar 는 deploy.sh 가 임시 JDK 컨테이너로 ./VORI/backend/build/libs 에 만든다.
+# 비밀값 보간(${MYSQL_ROOT_PASSWORD} 등)은 같은 디렉터리의 .env(600) 에서 읽는다.
+name: vori
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: vori-mysql
+    restart: unless-stopped
+    # vori(1027) 로 실행한다 — mysql-data 도 vori 소유. 공식 이미지는 임의 uid 를 지원한다
+    # (/var/run/mysqld 는 1777). /var/lib/mysql-files 는 mysql(999) 750 이라 secure-file-priv 를 끈다.
+    user: "1027:1027"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: vori
+      MYSQL_USER: vori
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=192M
+      - --innodb-log-buffer-size=8M
+      - --performance-schema=OFF
+      - --max-connections=60
+      - --skip-name-resolve
+      - --default-time-zone=+09:00
+      - --secure-file-priv=NULL   # LOAD DATA/SELECT INTO OUTFILE 금지(앱이 쓰지 않음)
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    networks: [private]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    logging:
+      options: { max-size: 10m, max-file: "3" }
+
+  backend:
+    image: eclipse-temurin:17-jre
+    container_name: vori-backend
+    restart: unless-stopped
+    user: "1027:1027"          # vori — 레포의 .env(600, vori 소유)를 읽는다. jar 는 컨테이너 /tmp(1777)에 복사
+    working_dir: /app
+    environment:
+      TZ: Asia/Seoul
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: >-
+        -Xms128m -Xmx512m -XX:MaxMetaspaceSize=192m -Xss512k
+        -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError
+        -Djava.net.preferIPv4Stack=true -Duser.timezone=Asia/Seoul
+    # -plain.jar 가 아닌 실행 jar 를 명시한다. 재빌드가 실행 중인 jar 를 덮어써도 JVM 이 깨지지 않도록
+    # 기동 때 컨테이너 /tmp 로 복사해서 띄운다(새 jar 는 deploy.sh 가 restart 할 때 반영).
+    command: ["sh", "-c", "cp /app/backend/build/libs/backend-0.0.1-SNAPSHOT.jar /tmp/app.jar && exec java -jar /tmp/app.jar"]
+    volumes:
+      - ./VORI:/app
+    networks: [private, dockers_backend]
+    mem_limit: 900m
+    depends_on:
+      mysql:
+        condition: service_healthy
+    logging:
+      options: { max-size: 20m, max-file: "5" }
+
+networks:
+  private:
+    name: vori_private
+    internal: true
+    # 서브넷을 172.16.0.0/12 안으로 고정한다. 호스트 방화벽 DOCKER-USER 의 zzem-db-guard 가
+    # 출발지가 172.16.0.0/12 가 아닌 3306 트래픽을 DROP 한다(자동 할당되는 192.168.x 대역이면 DB 연결이 막힘).
+    ipam:
+      config:
+        - subnet: 172.16.240.0/24
+  dockers_backend:
+    external: true

@@ -35,7 +35,7 @@ public class CategorySeeder implements CommandLineRunner {
         )),
         new Group("생활", "ENDURANCE", List.of(
             "대중교통", "택시", "주유", "주차·통행료", "장거리 교통",
-            "의료·약국", "펫용품", "학용품·문구", "기타 생활"
+            "의료·약국", "펫용품", "학용품·문구", "경조사·축의금", "기타 생활"
         )),
         new Group("고정비", "ENDURANCE", List.of(
             "통신비", "공과금", "주거·관리비", "보험", "구독료", "대출 상환"

@@ -5,8 +5,8 @@
 
 .ledger {
   min-height: 100vh;
-  background: #f5f3ee;
-  color: #2b2b2b;
+  background: var(--c-bg);
+  color: var(--c-text);
   font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
     "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
   display: flex;
@@ -16,37 +16,38 @@
 .ledger input,
 .ledger textarea {
   font-family: inherit;
+  font-size: var(--fs-input); /* iOS 확대 방지 */
 }
 
 /* ───── 상단 헤더 ───── */
 .ledger-entry-header {
   width: 100%;
-  padding: 16px 32px;
-  border-bottom: 1px solid #e2dfd7;
-  background: #fbfaf6;
+  padding: var(--sp-4) var(--sp-8);
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface-2);
 }
 .ledger-logo-btn {
   border: 0;
   background: transparent;
   font-weight: 800;
-  font-size: 22px;
+  font-size: var(--fs-h2);
   letter-spacing: 0.5px;
   cursor: pointer;
-  color: #2b2b2b;
+  color: var(--c-text);
 }
 .ledger-logo-btn:hover {
-  color: #7c8b5c;
+  color: var(--c-primary);
 }
 
 /* ───── 메인 ───── */
 .ledger-entry-main {
   width: 100%;
-  max-width: 560px;
+  max-width: var(--container-max);
   margin: 0 auto;
-  padding: 48px 24px 96px;
+  padding: 48px var(--sp-6) 96px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: var(--sp-7);
   flex: 1;
 }
 /* 빈/로딩 상태 — 본문 적을 때 세로 가운데로 띄움 */
@@ -73,7 +74,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   width: 88px;
 }
 .ledger-step-circle {
@@ -84,38 +85,38 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--fs-body);
   color: #fff;
 }
 .ledger-step-active .ledger-step-circle {
-  background: #3a3835;
+  background: var(--c-text);
 }
 .ledger-step-done .ledger-step-circle {
-  background: #7c8b5c;
+  background: var(--c-primary);
 }
 .ledger-step-pending .ledger-step-circle {
-  background: #c9c5bd;
+  background: var(--c-border-strong);
 }
 .ledger-step-label {
-  font-size: 13px;
-  color: #5a5a5a;
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
 }
 .ledger-step-active .ledger-step-label {
-  color: #2b2b2b;
+  color: var(--c-text);
   font-weight: 600;
 }
 .ledger-step-done .ledger-step-label {
-  color: #7c8b5c;
+  color: var(--c-primary);
   font-weight: 600;
 }
 .ledger-step-line {
   width: 60px;
   height: 1px;
-  background: #c9c5bd;
+  background: var(--c-border-strong);
   margin-top: 16px;
 }
 .ledger-step-line-done {
-  background: #7c8b5c;
+  background: var(--c-primary);
 }
 
 /* ───── 타이틀 블록 ───── */
@@ -123,45 +124,29 @@
   text-align: center;
 }
 .ledger-title {
-  font-size: 22px;
+  font-size: var(--fs-h2);
   font-weight: 700;
   margin: 0 0 8px;
 }
 .ledger-subtitle {
-  font-size: 13px;
-  color: #6e6b65;
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   margin: 0;
-}
-.ledger-info-icon {
-  margin-left: 8px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid #c9c5bd;
-  background: transparent;
-  color: #6e6b65;
-  font-size: 11px;
-  font-weight: 600;
-  font-style: italic;
-  cursor: pointer;
-  vertical-align: middle;
 }
 
 /* ───── 이미지 업로드 버튼 ───── */
 .ledger-upload {
   width: 100%;
-  padding: 16px 0;
+  padding: var(--sp-4) 0;
   border: 0;
-  border-radius: 10px;
-  background: #7c8b5c;
+  border-radius: var(--r-md);
+  background: var(--c-primary);
   color: #fff;
-  font-size: 15px;
+  font-size: var(--fs-body);
   font-weight: 600;
   cursor: pointer;
 }
-.ledger-upload:hover {
-  background: #6b7a4f;
-}
+
 /* 인식에 6~13초 걸린다. 눌린 뒤 다시 눌리지 않는다는 게 보여야 한다. */
 .ledger-upload:disabled {
   background: #b3bda0;
@@ -169,293 +154,191 @@
 }
 
 /* 인식 결과 안내. 색으로만 구분하지 않고 문구 자체가 무엇을 해야 하는지 말한다. */
-.ledger-receipt {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+
 .ledger-receipt-notice {
   margin: 0;
-  padding-left: 8px;
-  font-size: 13px;
+  padding-left: var(--sp-2);
+  font-size: var(--fs-body-sm);
   line-height: 1.5;
 }
-.ledger-receipt-notice--info {
-  color: #6e6b65;
-}
+
 .ledger-receipt-notice--ok {
-  color: #5c7a4a;
+  color: var(--c-primary-strong);
 }
-.ledger-receipt-notice--warn {
-  color: #9a7b3f;
-}
+
 .ledger-receipt-notice--err {
-  color: #b4544a;
+  color: var(--c-danger);
 }
 
 /* ───── 섹션 (수입 / 지출) ───── */
-.ledger-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+
 .ledger-section-title {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 500;
-  color: #2b2b2b;
-  padding-left: 8px;
+  color: var(--c-text);
+  padding-left: var(--sp-2);
 }
 
 /* ───── 입력 행 카드 ───── */
 .ledger-entry-row {
-  background: #fbfaf6;
-  border: 1px solid #e2dfd7;
-  border-radius: 14px;
-  padding: 16px 16px;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4) var(--sp-4);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 .ledger-row-readonly {
-  background: #fdfcf8;
+  background: var(--c-surface);
 }
-.ledger-row-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+
 .ledger-row-num {
   width: 36px;
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 600;
-  color: #2b2b2b;
+  color: var(--c-text);
 }
-.ledger-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 16px;
-  border-radius: 999px;
-  border: 1px solid #d8d4ca;
-  background: #efece4;
-  font-size: 12px;
-  color: #2b2b2b;
-  cursor: pointer;
-  white-space: nowrap;
-}
+
 .ledger-chip:hover {
-  background: #e5e1d8;
+  background: var(--c-border);
 }
-.ledger-chip-selected {
-  background: #e3e8d4;
-  border-color: #b8c19b;
-  color: #4a5536;
-  font-weight: 600;
-}
+
 .ledger-chip-selected:hover {
-  background: #d8e0c6;
+  background: var(--c-border-strong);
 }
-.ledger-chip-readonly {
-  cursor: default;
-}
+
 .ledger-chip-readonly:hover {
-  background: #efece4;
+  background: var(--c-track);
 }
 /* DB 저장 완료 행 표시 — 초록 톤으로 "잠김" 상태 전달 */
-.ledger-chip-saved {
-  background: #e3e8d4;
-  border-color: #b8c19b;
-  color: #4a5536;
-  font-weight: 600;
-}
+
 .ledger-chip:disabled {
   cursor: default;
   opacity: 0.85;
 }
-.ledger-chip:disabled:hover {
-  background: #efece4;
-}
+
 .ledger-chip-selected:disabled:hover {
-  background: #e3e8d4;
+  background: var(--c-border);
 }
-.ledger-chip-placeholder {
-  background: transparent;
-  border-style: dashed;
-  color: #8a8780;
-}
+
 .ledger-chip-placeholder:hover {
   background: transparent;
 }
-.ledger-chip-auto {
-  background: #e3e8d4;
-  border-color: #b8c19b;
-  color: #4a5536;
-  font-weight: 600;
-}
+
 .ledger-chip-auto:hover {
-  background: #e3e8d4;
+  background: var(--c-border);
 }
 /* 드롭다운임을 알리는 작은 화살표 */
-.ledger-chip-caret {
-  font-size: 10px;
-  line-height: 1;
-  color: #8a8780;
-}
+
 .ledger-dropdown-empty {
-  padding: 8px 16px;
-  font-size: 12px;
-  color: #8a8780;
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-caption);
+  color: var(--c-text-3);
   white-space: nowrap;
 }
 
 /* ───── Dropdown ───── */
-.ledger-dropdown {
-  position: relative;
-  display: inline-flex;
-}
+
 .ledger-dropdown-menu {
   position: absolute;
   top: calc(100% + 6px);
   z-index: 20;
   min-width: 120px;
   margin: 0;
-  padding: 8px;
+  padding: var(--sp-2);
   list-style: none;
   background: #fff;
-  border: 1px solid #e2dfd7;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
 }
-.ledger-dropdown-menu-left {
-  left: 0;
-}
+
 .ledger-dropdown-menu-right {
   right: 0;
 }
-.ledger-dropdown-menu li {
-  list-style: none;
-}
+
 .ledger-dropdown-option {
   display: block;
   width: 100%;
-  padding: 8px 12px;
+  padding: var(--sp-2) var(--sp-3);
   border: 0;
   background: transparent;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #2b2b2b;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text);
   text-align: left;
   cursor: pointer;
 }
-.ledger-dropdown-option:hover {
-  background: #f3f1ea;
-}
+
 .ledger-dropdown-option-selected {
-  background: #e3e8d4;
+  background: var(--c-border);
   color: #4a5536;
   font-weight: 600;
 }
-.ledger-dropdown-option-selected:hover {
-  background: #d8e0c6;
-}
+
 .ledger-row-spacer {
   flex: 1;
 }
-.ledger-row-del {
-  border: 0;
-  background: transparent;
-  color: #b5b1a8;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-}
+
 .ledger-row-field {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
 }
-.ledger-row-label {
-  width: 36px;
-  font-size: 13px;
-  color: #6e6b65;
-}
+
 .ledger-row-input {
   flex: 1;
-  border: 1px solid #e2dfd7;
+  border: 1px solid var(--c-border);
   background: #fff;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 14px;
+  border-radius: var(--r-md);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-input);
   outline: none;
 }
-.ledger-row-input:focus {
-  border-color: #7c8b5c;
-}
+
 .ledger-row-input:disabled {
-  background: #f3f1ea;
-  color: #6e6b65;
+  background: var(--c-surface-2);
+  color: var(--c-text-2);
 }
 /* 내역이 애매할 때 묻는 칩 줄 — 입력칸과 같은 들여쓰기(라벨 36px + 간격 8px) */
-.ledger-ask {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-left: 44px;
-}
+
 .ledger-ask-question {
-  font-size: 12px;
-  color: #6e6b65;
+  font-size: var(--fs-caption);
+  color: var(--c-text-2);
   margin-right: 2px;
 }
-.ledger-ask-hint {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: 11px;
-  color: #8a8780;
-}
+
 /* 「+ 메모」 — 접혀 있을 때. 점선 칩(.ledger-chip-placeholder)을 입력칸 들여쓰기에 맞춘다 */
 .ledger-memo-add {
   align-self: flex-start;
   margin-left: 44px;
-  padding: 2px 12px;
+  padding: 2px var(--sp-3);
 }
-.ledger-row-input-wrap {
-  flex: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
-}
+
 .ledger-row-input-wrap .ledger-row-input {
   width: 100%;
-  padding-right: 32px;
-}
-.ledger-row-unit {
-  position: absolute;
-  right: 12px;
-  font-size: 13px;
-  color: #6e6b65;
-  pointer-events: none;
+  padding-right: var(--sp-8);
 }
 
 /* ───── 항목 추가 버튼 그룹 ───── */
 .ledger-add-row {
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: var(--sp-4);
 }
 .ledger-entry-add-btn {
-  padding: 8px 16px;
-  border: 1px dashed #c9c5bd;
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px dashed var(--c-border-strong);
   background: transparent;
-  border-radius: 999px;
-  font-size: 13px;
-  color: #6e6b65;
+  border-radius: var(--r-full);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   cursor: pointer;
 }
 .ledger-entry-add-btn:hover {
-  background: #7c8b5c;
-  border-color: #7c8b5c;
+  background: var(--c-primary);
+  border-color: var(--c-primary);
   color: #fff;
 }
 
@@ -465,121 +348,89 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 .ledger-actions-row {
   display: flex;
-  gap: 12px;
+  gap: var(--sp-3);
   justify-content: center;
 }
 .ledger-next {
   width: 200px;
-  padding: 16px 0;
+  padding: var(--sp-4) 0;
   border: 0;
-  border-radius: 8px;
-  background: #3a3835;
+  border-radius: var(--r-sm);
+  background: var(--c-text);
   color: #fff;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
   cursor: pointer;
 }
 .ledger-next:hover:not(:disabled) {
-  background: #2b2b2b;
+  background: var(--c-text);
 }
 .ledger-next:disabled {
-  background: #c9c5bd;
+  background: var(--c-border-strong);
   cursor: not-allowed;
 }
 .ledger-hint {
   margin: 0 0 4px;
-  font-size: 12px;
+  font-size: var(--fs-caption);
   color: #c45a5a;
   text-align: center;
 }
 .ledger-back {
   width: 100px;
-  padding: 16px 0;
-  border: 1px solid #d8d4ca;
-  border-radius: 8px;
-  background: #fbfaf6;
-  color: #6e6b65;
-  font-size: 14px;
+  padding: var(--sp-4) 0;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-sm);
+  background: var(--c-surface-2);
+  color: var(--c-text-2);
+  font-size: var(--fs-body);
   font-weight: 600;
   cursor: pointer;
 }
 .ledger-back:hover {
-  background: #efece4;
-  color: #2b2b2b;
+  background: var(--c-track);
+  color: var(--c-text);
 }
 /* 판정 전 확인 창 */
-.ledger-confirm-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(43, 43, 43, 0.45);
-}
+
 .ledger-confirm-dialog {
   width: min(360px, 100%);
   box-sizing: border-box;
-  padding: 28px 24px 24px;
-  border: 1px solid #e2dfd7;
-  border-radius: 14px;
-  background: #fbfaf6;
-  box-shadow: 0 18px 48px rgba(43, 43, 43, 0.22);
+  padding: var(--sp-7) var(--sp-6) var(--sp-6);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  background: var(--c-surface-2);
+  box-shadow: var(--shadow-lg);
   text-align: center;
 }
-.ledger-confirm-title {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1.4;
-  word-break: keep-all;
-}
+
 .ledger-confirm-text {
   margin: 8px 0 24px;
-  color: #6e6b65;
-  font-size: 14px;
+  color: var(--c-text-2);
+  font-size: var(--fs-body);
 }
-.ledger-confirm-actions {
-  display: flex;
-  gap: 12px;
-}
+
 .ledger-confirm-actions .ledger-back {
   flex: 1;
   width: auto;
 }
-.ledger-confirm-actions .ledger-next {
-  flex: 2;
-  width: auto;
-}
+
 .ledger-confirm-actions button:focus-visible {
-  outline: 2px solid #7c8b5c;
+  outline: 2px solid var(--c-primary);
   outline-offset: 2px;
 }
-.ledger-skip-link {
-  border: 0;
-  background: transparent;
-  color: #8a8780;
-  font-size: 13px;
-  cursor: pointer;
-}
+
 .ledger-skip-link:hover {
-  color: #2b2b2b;
+  color: var(--c-text);
 }
 
 /* ──────────────────────────────────────────────
    Step 2 — 소비 분석 (info 호버 툴팁)
    ────────────────────────────────────────────── */
-.ledger-info-wrap {
-  position: relative;
-  display: inline-block;
-  margin-left: 8px;
-  vertical-align: middle;
-}
+
 .ledger-info-tooltip {
   position: absolute;
   left: calc(100% + 12px);
@@ -587,27 +438,24 @@
   transform: translateY(-50%);
   display: none;
   align-items: center;
-  gap: 8px;
-  background: #fbfaf6;
-  border: 1px solid #e2dfd7;
-  border-radius: 999px;
-  padding: 8px 16px;
+  gap: var(--sp-2);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-full);
+  padding: var(--sp-2) var(--sp-4);
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-md);
   z-index: 10;
 }
-.ledger-info-wrap:hover .ledger-info-tooltip,
-.ledger-info-icon:focus + .ledger-info-tooltip {
-  display: flex;
-}
+
 .ledger-info-card-icon {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1px solid #c9c5bd;
+  border: 1px solid var(--c-border-strong);
   background: transparent;
-  color: #6e6b65;
-  font-size: 11px;
+  color: var(--c-text-2);
+  font-size: var(--fs-caption);
   font-weight: 600;
   font-style: italic;
   display: flex;
@@ -615,77 +463,43 @@
   justify-content: center;
   flex-shrink: 0;
 }
-.ledger-info-tooltip-text {
-  display: flex;
-  flex-direction: column;
-  font-size: 11px;
-  color: #6e6b65;
-  line-height: 1.5;
-  font-weight: 400;
-}
 
 .ledger-pager {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 32px;
+  gap: var(--sp-8);
 }
-.ledger-pager-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid #d8d4ca;
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  color: #6e6b65;
-}
+
 .ledger-pager-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.ledger-pager-count {
-  font-size: 14px;
-  color: #2b2b2b;
-}
 
 .ledger-qa-card {
-  background: #fbfaf6;
-  border: 1px solid #e2dfd7;
-  border-radius: 14px;
-  padding: 16px 20px;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4) var(--sp-5);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--sp-4);
 }
-.ledger-qa-question {
-  font-size: 14px;
-  font-weight: 600;
-  color: #2b2b2b;
-  line-height: 1.6;
-}
+
 .ledger-qa-question strong {
   margin-right: 4px;
 }
 /* 답변 사유 칩 줄 — 기존 .ledger-chip 을 쓴다 */
-.ledger-qa-reasons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
+
 .ledger-qa-answer {
-  border: 1px solid #e2dfd7;
-  border-radius: 10px;
-  background: #f3f1ea;
-  padding: 12px 16px;
-  font-size: 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface-2);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-body);
   resize: vertical;
   outline: none;
   font-family: inherit;
-}
-.ledger-qa-answer:focus {
-  border-color: #7c8b5c;
-  background: #fff;
 }
 
 /* ──────────────────────────────────────────────
@@ -694,275 +508,176 @@
 .ledger-title-block-center {
   text-align: center;
 }
-.ledger-judgment-progress {
-  width: min(360px, 100%);
-  height: 10px;
-  margin: 28px auto 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #e8e5dc;
-}
+
 .ledger-judgment-progress span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #9ab27f, #6f8d55);
+  background: var(--grad-primary);
   transition: width 0.45s ease;
 }
-.ledger-judgment-progress-label {
-  display: block;
-  color: #6e6b65;
-  font-size: 12px;
-  font-weight: 700;
-}
+
 .ledger-judgment-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-3);
 }
-.ledger-judgment-card {
-  padding: 18px 20px;
-  border: 1px solid #e2dfd7;
-  border-radius: 14px;
-  background: #fbfaf6;
-}
+
 .ledger-judgment-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--sp-4);
 }
-.ledger-judgment-card-head > div {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
+
 .ledger-judgment-card-head strong {
   overflow: hidden;
-  color: #2b2b2b;
-  font-size: 15px;
+  color: var(--c-text);
+  font-size: var(--fs-body);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ledger-judgment-card-head > div > span {
-  color: #6e6b65;
-  font-size: 13px;
-  font-weight: 600;
-}
+
 .ledger-judgment-card-head .ledger-signal-result {
   flex-shrink: 0;
   margin-bottom: 0;
 }
-.ledger-judgment-reason {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid #ebe7dd;
-}
+
 /* 신호별 묶음 — 묶음 이름은 왼쪽에 붙인 캡슐로 보여 준다. */
 .ledger-judgment-group {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-3);
 }
-.ledger-judgment-group-title {
-  align-self: flex-start;
-  margin: 8px 0 0;
-  font-size: 14px;
-  line-height: 1.2;
-}
+
 .ledger-judgment-group-title .ledger-signal-result {
   margin-bottom: 0;
 }
-.ledger-judgment-group-count {
-  font-weight: 600;
-  opacity: 0.75;
-}
+
 /* 판정 이유를 접었다 펴는 카드 — 머리줄 전체가 버튼이라 여백을 버튼 쪽으로 옮긴다. */
 .ledger-judgment-card--toggle {
   padding: 0;
 }
-.ledger-judgment-toggle {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 18px 20px;
-  border: 0;
-  border-radius: 14px;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
+
 .ledger-judgment-toggle:focus-visible {
-  outline: 2px solid #7c8b5c;
+  outline: 2px solid var(--c-primary);
   outline-offset: -2px;
 }
-.ledger-judgment-toggle-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
+
 .ledger-judgment-toggle-text strong {
   overflow: hidden;
-  color: #2b2b2b;
-  font-size: 15px;
+  color: var(--c-text);
+  font-size: var(--fs-body);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ledger-judgment-toggle-text > span {
-  color: #6e6b65;
-  font-size: 13px;
-  font-weight: 600;
-}
+
 .ledger-judgment-toggle .ledger-signal-result {
   flex-shrink: 0;
   margin-bottom: 0;
 }
-.ledger-judgment-chevron {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  margin: 0 3px 4px;
-  border-right: 2px solid #8a867e;
-  border-bottom: 2px solid #8a867e;
-  transform: rotate(45deg);
-  transition: transform 0.15s ease;
-}
+
 .ledger-judgment-toggle[aria-expanded="true"] .ledger-judgment-chevron {
   margin-bottom: -4px;
   transform: rotate(-135deg);
 }
-.ledger-judgment-card--toggle .ledger-judgment-reason {
-  margin: 0 20px 18px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .ledger-judgment-chevron {
-    transition: none;
-  }
-}
-.ledger-judgment-reason > span {
-  color: #7c8b5c;
-  font-size: 12px;
-  font-weight: 700;
-}
+
 .ledger-judgment-reason p {
   margin: 6px 0 0;
   color: #4f4c46;
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   line-height: 1.6;
 }
-.ledger-judgment-expenses {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-}
+
 .ledger-judgment-expense-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-top: 1px solid #ebe7dd;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--c-track);
 }
-.ledger-judgment-expense-row > span { display: flex; flex-direction: column; gap: 3px; }
-.ledger-judgment-expense-row strong { font-size: 13px; }
-.ledger-judgment-expense-row small { color: #6e6b65; font-size: 12px; }
+
+.ledger-judgment-expense-row strong { font-size: var(--fs-body-sm); }
+
 .ledger-signal-result {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   margin-bottom: 18px;
-  padding: 9px 16px;
-  border-radius: 999px;
-  font-size: 14px;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-full);
+  font-size: var(--fs-body);
 }
 /* 판정 완료 화면 — 제목·설명을 신호 배지와 그 아래 블록(보상 카드)의 한가운데에 둔다.
    배지 아래 여백 18px 과 .ledger-center-y 의 gap 160px 을 합쳐 위아래 89px 씩 나눈다. */
-.ledger-title-block--result {
-  margin-bottom: -71px;
-}
+
 .ledger-title-block--result .ledger-signal-result {
   margin-bottom: 89px;
 }
-.ledger-signal-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: currentColor;
-}
+
 .ledger-signal-result--green {
   color: #55733d;
-  background: #e8f3df;
+  background: var(--c-primary-soft);
 }
-.ledger-signal-result--gray {
-  color: #8c7614;
-  background: #fff8d9;
-}
+
 .ledger-signal-result--red {
   color: #a8463d;
-  background: #fde8e5;
+  background: var(--c-danger-soft);
 }
-.ledger-signal-result--exhausted {
-  color: #a96518;
-  background: #fff0d8;
-}
+
 /* 스탯별 상세가 저장되기 전 판정 — 색을 추측하지 않고 중립으로 */
 .ledger-signal-result--none {
-  color: #6f6c64;
-  background: #efede7;
+  color: var(--c-text-2);
+  background: var(--c-surface-2);
 }
 .ledger-pay-group {
-  background: #fbfaf6;
-  border: 1px solid #e2dfd7;
-  border-radius: 14px;
-  padding: 16px 20px;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4) var(--sp-5);
   display: flex;
   flex-direction: column;
 }
 .ledger-pay-head {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--sp-4);
 }
 .ledger-pay-icon {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #e2dfd7;
+  background: var(--c-border);
   color: transparent;
 }
 .ledger-pay-label {
-  font-size: 15px;
+  font-size: var(--fs-body);
   font-weight: 700;
-  color: #2b2b2b;
+  color: var(--c-text);
   flex: 1;
 }
 .ledger-pay-totals {
   text-align: right;
 }
 .ledger-pay-income {
-  font-size: 13px;
-  color: #6e6b65;
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
 }
 .ledger-pay-expense {
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   color: #c45a5a;
   margin-top: 4px;
 }
 .ledger-pay-divider {
   margin-top: 16px;
-  border-top: 1px solid #ebe7dd;
+  border-top: 1px solid var(--c-track);
 }
 .ledger-pay-items {
   margin-top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--sp-4);
 }
 /* 전체 카드 — 항상 펼친 상태, 토글 없음 */
 .ledger-pay-summary .ledger-pay-label {
@@ -970,9 +685,9 @@
 }
 /* 아바타 — 유저 닉네임 첫 글자, 그린 배경 */
 .ledger-pay-avatar {
-  background: #7c8b5c;
+  background: var(--c-primary);
   color: #fff;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -984,19 +699,19 @@
   justify-content: space-between;
 }
 .ledger-pay-item-name {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: #2b2b2b;
+  color: var(--c-text);
 }
 .ledger-pay-item-cat {
-  font-size: 11px;
-  color: #8a8780;
+  font-size: var(--fs-caption);
+  color: var(--c-text-3);
   margin-top: 2px;
 }
 .ledger-pay-item-amount {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: #7c8b5c;
+  color: var(--c-primary);
 }
 .ledger-pay-toggle {
   margin-top: 12px;
@@ -1006,88 +721,56 @@
   border: 0;
   background: transparent;
   color: #b5b1a8;
-  font-size: 14px;
+  font-size: var(--fs-body);
   cursor: pointer;
 }
 .ledger-pay-toggle:hover {
-  color: #2b2b2b;
+  color: var(--c-text);
 }
 .ledger-reward-card {
-  padding: 22px;
-  border-color: #dce9d4;
-  background: linear-gradient(135deg, #fbfdf9 0%, #f2f8ed 100%);
+  padding: var(--sp-6);
+  border-color: var(--c-border);
+  background: var(--c-surface);
 }
-.ledger-reward-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
+
 .ledger-reward-heading > div > span {
   display: block;
   margin-bottom: 4px;
   color: #7f8878;
-  font-size: 13px;
+  font-size: var(--fs-body-sm);
   font-weight: 700;
 }
-.ledger-reward-heading h2 {
-  margin: 0;
-  color: #365d2d;
-  font-size: 22px;
-}
+
 .ledger-reward-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--sp-2);
 }
-.ledger-reward-item {
-  display: flex;
-  min-height: 112px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 12px 8px;
-  border: 1px solid #dbe8d4;
-  border-radius: 12px;
-  background: #fff;
-  color: #6c7665;
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
-}
+
 .ledger-reward-item--coin {
   border-color: #f0d89b;
-  background: #fffaf0;
+  background: var(--c-surface);
   color: #8d6b22;
 }
-.ledger-reward-icon {
-  display: inline-flex;
-  font-size: 22px;
-  line-height: 1;
-}
+
 .ledger-reward-item strong {
-  color: #3e6d35;
-  font-size: 21px;
+  color: var(--c-primary-ink);
+  font-size: var(--fs-h2);
   line-height: 1.1;
 }
-.ledger-reward-item--coin strong { color: #af7e17; }
+
 .ledger-reward-note {
   margin: 14px 0 0;
-  color: #727b6c;
-  font-size: 13px;
+  color: var(--c-text-2);
+  font-size: var(--fs-body-sm);
 }
-.ledger-judgment-card > p { line-height: 1.7; font-size: 14px; }
-.ledger-judgment-card h2 { font-size: 18px; }
-.ledger-reward-heading h2 { font-size: 22px; }
-@media (max-width: 900px) {
-  .ledger-reward-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
+
+.ledger-judgment-card h2 { font-size: var(--fs-h3); }
+
 @media (max-width: 540px) {
-  .ledger-reward-card { padding: 17px; }
+  
   .ledger-reward-heading { align-items: center; }
-  .ledger-reward-heading h2 { font-size: 19px; }
+  
   .ledger-reward-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ledger-reward-item { min-height: 96px; }
+  
 }

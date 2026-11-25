@@ -64,7 +64,7 @@ function AppRightSidebar() {
             <button
               type="button"
               className="home-side-link"
-              onClick={() => navigate("/wallet#budget")}
+              onClick={() => navigate("/settings/profile#monthly-budget")}
             >
               <span className="home-side-icon" aria-hidden />
               <span className="home-side-label">예산 설정</span>

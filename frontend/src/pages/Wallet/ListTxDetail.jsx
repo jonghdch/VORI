@@ -68,19 +68,19 @@ function ListTxDetail({ row, iconName, categoryLabel, instrument, onOpenDate, on
           )}
           {row.aiStatus && (
             <p className="lw-detail-ai">
-              AI 판정 <SignalChip signal={row.signal} />
+              질문 결과 <SignalChip signal={row.signal} />
             </p>
           )}
         </div>
       </div>
       <div className={`lw-tx-detail-actions ${isIncome ? "is-single" : ""}`}>
-        <button type="button" className="hm-btn lw-btn-soft" onClick={onOpenDate}>
+        <button type="button" className="btn btn--secondary hm-btn lw-btn-soft" onClick={onOpenDate}>
           <Icon name="calendar" size={16} />
           날짜에서 보기
         </button>
-        {!isIncome && (
-          <button type="button" className="hm-btn hm-btn--dark" onClick={onEdit}>
-            <Icon name="pencil" size={16} strokeWidth={2.2} />이 날 지출 수정
+        {onEdit && (
+          <button type="button" className="btn btn--primary hm-btn hm-btn--dark" onClick={onEdit}>
+            <Icon name="pencil" size={16} strokeWidth={2.2} />이 지출 수정
           </button>
         )}
       </div>

@@ -198,7 +198,7 @@ function SignupProfilePage({ onLogout }) {
           <div className="signup-actions">
             <button
               type="button"
-              className="signup-secondary"
+              className="btn btn--secondary btn--lg signup-secondary"
               onClick={() => setStepIndex((idx) => idx - 1)}
               disabled={loading || stepIndex === 0}
             >
@@ -206,7 +206,7 @@ function SignupProfilePage({ onLogout }) {
             </button>
             <button
               type="button"
-              className="signup-submit signup-action-primary"
+              className="btn btn--primary btn--lg btn--block signup-submit signup-action-primary"
               onClick={goNext}
               disabled={!canProceed || loading}
             >

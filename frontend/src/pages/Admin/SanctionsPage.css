@@ -1,24 +1,24 @@
 /* 제재 관리 — 추가 폼 + 해제 버튼. 색 토큰은 .admin 스코프 상속. */
 .sanction-form {
-  padding: 20px 24px;
+  padding: var(--sp-5) var(--sp-6);
   margin-bottom: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-4);
 }
 .sanction-form-row {
   display: flex;
-  gap: 14px;
+  gap: var(--sp-4);
   flex-wrap: wrap;
 }
 .sanction-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
   flex: 1;
   min-width: 160px;
-  font-size: 13px;
-  color: var(--admin-muted);
+  font-size: var(--fs-input);
+  color: var(--c-text-2);
 }
 .sanction-field--sm {
   flex: 0 0 120px;
@@ -26,51 +26,39 @@
 }
 .sanction-field select,
 .sanction-field input {
-  padding: 9px 12px;
-  border: 1px solid var(--admin-border);
-  border-radius: 8px;
-  background: var(--admin-surface);
-  font-size: 14px;
-  color: var(--admin-text);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface-2);
+  font-size: var(--fs-input);
+  color: var(--c-text);
 }
 .sanction-field select:focus,
 .sanction-field input:focus {
   outline: none;
-  border-color: var(--admin-green);
+  border-color: var(--c-primary);
 }
 .sanction-submit {
   align-self: flex-start;
-  border: 0;
-  background: var(--admin-green);
-  color: #fff;
-  padding: 10px 22px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
 }
 .sanction-submit:hover:not(:disabled) {
   filter: brightness(0.95);
 }
-.sanction-submit:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
 .sanction-form-error {
   margin: 0;
-  font-size: 13px;
-  color: #b4524a;
+  font-size: var(--fs-body-sm);
+  color: var(--c-danger);
 }
 .sanction-lift {
-  border: 1px solid var(--admin-border);
-  background: var(--admin-card);
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--admin-muted);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body-sm);
+  color: var(--c-text-2);
   cursor: pointer;
 }
 .sanction-lift:hover {
-  color: var(--admin-green);
-  border-color: var(--admin-green);
+  color: var(--c-primary);
+  border-color: var(--c-primary);
 }

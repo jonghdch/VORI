@@ -2,6 +2,8 @@ package com.vori.backend.common;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -11,6 +13,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.sql.SQLException;
+import java.time.format.DateTimeParseException;
+import java.util.NoSuchElementException;
 
 /**
  * 예외 → 사용자에게 보여줄 수 있는 에러 응답.
@@ -98,6 +104,67 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(
                 ErrorResponse.of(HttpStatus.BAD_REQUEST,
                         e.getMessage() == null ? "잘못된 요청입니다." : e.getMessage(),
+                        request.getRequestURI()));
+    }
+
+    /** 월·날짜 파라미터 파싱 실패(YearMonth.parse, LocalDate.parse). 지금까지는 message 없는 500 이었다. */
+    @ExceptionHandler(DateTimeParseException.class)
+    public ResponseEntity<ErrorResponse> handleDateParse(
+            DateTimeParseException e, HttpServletRequest request) {
+        return ResponseEntity.badRequest().body(
+                ErrorResponse.of(HttpStatus.BAD_REQUEST, "날짜 형식이 올바르지 않아요.", request.getRequestURI()));
+    }
+
+    /**
+     * 인자 없는 orElseThrow()·Optional.get() — 찾는 행이 없다("No value present"). 지금까지는 message 없는 500 이었다.
+     * 그 밖의 NoSuchElementException(빈 iterator.next() 등)은 코드 버그라 500 으로 두고 로그를 남긴다.
+     */
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<ErrorResponse> handleNoSuchElement(
+            NoSuchElementException e, HttpServletRequest request) {
+        if (!OPTIONAL_EMPTY.equals(e.getMessage())) {
+            return serverError(request, e);
+        }
+        StackTraceElement at = e.getStackTrace().length > 1 ? e.getStackTrace()[1] : null;
+        log.warn("찾는 행 없음 — {} {} at {}", request.getMethod(), request.getRequestURI(), at);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ErrorResponse.of(HttpStatus.NOT_FOUND, "요청한 정보를 찾을 수 없어요.", request.getRequestURI()));
+    }
+
+    /**
+     * 유니크 제약 위반 — 같은 요청이 동시에 두 번 와서 한쪽이 먼저 행을 만든 경우다. 409 로 알린다.
+     * 길이 초과·NOT NULL·FK 위반은 중복이 아니라 서버 쪽 문제라 500 으로 두고 로그를 남긴다.
+     * 제약 이름·값이 담긴 DB 문구는 어느 쪽이든 내보내지 않는다.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(
+            DataIntegrityViolationException e, HttpServletRequest request) {
+        if (!isDuplicateKey(e)) {
+            return serverError(request, e);
+        }
+        log.warn("중복 요청 — {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ErrorResponse.of(HttpStatus.CONFLICT, "이미 처리된 요청이에요. 새로고침 후 다시 확인해 주세요.",
+                        request.getRequestURI()));
+    }
+
+    private static final String OPTIONAL_EMPTY = "No value present";
+    /** MySQL ER_DUP_ENTRY. */
+    private static final int MYSQL_DUPLICATE_ENTRY = 1062;
+
+    private static boolean isDuplicateKey(DataIntegrityViolationException e) {
+        if (e instanceof DuplicateKeyException) return true;
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof SQLException sql && sql.getErrorCode() == MYSQL_DUPLICATE_ENTRY) return true;
+            if (t.getCause() == t) break;
+        }
+        return false;
+    }
+
+    private ResponseEntity<ErrorResponse> serverError(HttpServletRequest request, Exception e) {
+        log.error("서버 오류 — {} {}", request.getMethod(), request.getRequestURI(), e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.",
                         request.getRequestURI()));
     }
 }

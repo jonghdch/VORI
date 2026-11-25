@@ -34,7 +34,7 @@ public class AttendanceService {
 
     @Transactional(readOnly = true)
     public List<AttendanceHistoryResponse> month(Long userId, YearMonth month) {
-        return checkins.findByUserIdAndCheckedInDateBetweenOrderByCheckedInDate(userId, month.atDay(1), month.plusMonths(1).atDay(1)).stream().map(AttendanceHistoryResponse::from).toList();
+        return checkins.findByUserIdAndCheckedInDateBetweenOrderByCheckedInDate(userId, month.atDay(1), month.atEndOfMonth()).stream().map(AttendanceHistoryResponse::from).toList();
     }
 
     @Transactional

@@ -1,0 +1,104 @@
+/* ── VORI 디자인 토큰 ─────────────────────────────────────
+   모든 화면이 쓰는 단일 진실원. 값은 2026-11-03 감사(docs/design-audit-2026-11-03.md)에서
+   가장 많이 쓰이던 값으로 정규화했다. 새 색·새 라운드를 만들지 말고 여기 있는 것만 쓴다.
+   규칙과 쓰임새는 docs/design-system.md 참고. */
+:root {
+  /* 색 — 브랜드(세이지 그린) */
+  --c-primary: #6f9a5c;
+  --c-primary-strong: #5b8449; /* 눌림·강조 글자 */
+  --c-primary-soft: #eaf3de;   /* 선택된 칩·완료 배경 */
+  --c-primary-ink: #3f6b2e;    /* 연한 초록 위 글자 */
+  --c-primary-line: #c9ddb8;   /* 선택된 칩 테두리 */
+
+  /* 색 — 바탕·면 */
+  --c-bg: #f5f3ee;        /* 페이지 바탕 */
+  --c-surface: #fffdf9;   /* 카드·시트·모달 면 */
+  --c-surface-2: #f7f2e9; /* 들어간 면(입력 바탕·보조 버튼·표 머리) */
+  --c-track: #efe8db;     /* 세그먼트·진행 막대 바탕 */
+  --c-white: #ffffff;
+
+  /* 색 — 선·글자 */
+  --c-border: #e8e3d8;
+  --c-border-strong: #d8d4ca;
+  --c-text: #3d3830;
+  --c-text-2: #6b6560;
+  --c-text-3: #9c9488;
+  --c-on-primary: #ffffff;
+
+  /* 색 — 상태 */
+  --c-danger: #b4524a;
+  --c-danger-soft: #fbe5e2;
+  --c-gold: #e0a33e;
+  --c-gold-soft: #fcf0d3;
+  --c-gold-ink: #8a5a0c;
+  --c-info: #4f7fb5;
+  --c-info-soft: #e8eff8;
+
+  /* 색 — 데이터(차트·스탯 점). 화면 장식에는 쓰지 않는다 */
+  --c-data-green: #7fb069;
+  --c-data-red: #e07a7a;
+  --c-data-orange: #e8a05a;
+  --c-data-blue: #6b9bd1;
+  --c-data-sky: #7cb9c8;
+
+  /* 라운드 — 4단계 + 원형 */
+  --r-sm: 8px;    /* 칩 안 작은 요소·입력·배지·막대 */
+  --r-md: 12px;   /* 버튼·입력 필드 */
+  --r-lg: 16px;   /* 카드 */
+  --r-xl: 24px;   /* 모달·시트 */
+  --r-full: 999px; /* 칩·토글·필터 같은 알약 모양 */
+
+  /* 그림자 — 3단계 + 입력 안쪽 1종 + primary 버튼 글로우 1종 */
+  --shadow-sm: 0 1px 2px rgba(61, 56, 48, 0.05), 0 2px 8px rgba(61, 56, 48, 0.05); /* 카드 기본 */
+  --shadow-md: 0 8px 20px rgba(61, 56, 48, 0.1);  /* 떠 있는 요소(팝오버·고정 바·호버) */
+  --shadow-lg: 0 18px 48px rgba(45, 51, 40, 0.22); /* 모달·시트 */
+  --shadow-inset: inset 0 1px 2px rgba(61, 56, 48, 0.06); /* 입력 필드만 */
+  --shadow-primary: 0 4px 12px rgba(111, 154, 92, 0.3); /* primary 버튼만 */
+  --focus-ring: 0 0 0 3px rgba(111, 154, 92, 0.28); /* 키보드 포커스·입력 포커스 */
+  /* 선택 테두리(그림자로 그리는 테두리 — 크기가 변하지 않게) */
+  --ring-primary: inset 0 0 0 2px var(--c-primary);
+  --ring-line: inset 0 0 0 1px var(--c-border);
+
+  /* 그라디언트 — 2종만 */
+  --grad-primary: linear-gradient(160deg, #8ec277 0%, #7fb069 55%, #5e8c4e 100%);
+  --grad-surface: linear-gradient(180deg, #fffdf9 0%, #f8f5ee 100%);
+
+  /* 간격 — 4px 그리드 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 28px;
+  --sp-8: 32px;
+
+  /* 레이아웃 */
+  --container-max: 720px; /* 모바일·단일 칼럼 콘텐츠 최대 너비 */
+  --page-x: 16px;         /* 페이지 좌우 여백 */
+  --touch: 44px;          /* 최소 터치 타깃 */
+  --btn-h: 48px;          /* 기본 버튼 높이 */
+  --btn-h-sm: 36px;
+  --btn-h-lg: 54px;
+
+  /* 글자 — 제목 3 · 본문 2 · 캡션 1 (+ 입력 16px) */
+  --fs-h1: 24px;
+  --fs-h2: 20px;
+  --fs-h3: 17px;
+  --fs-body: 15px;
+  --fs-body-sm: 13px;
+  --fs-caption: 12px;
+  --fs-input: 16px; /* iOS 확대 방지 — 입력은 16px 미만 금지 */
+  --lh-tight: 1.3;
+  --lh-body: 1.5;
+
+  /* 움직임 — 1종 */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur: 220ms;
+
+  /* 모달 */
+  --overlay: rgba(45, 51, 40, 0.42);
+  --overlay-blur: 4px;
+  --modal-max: 420px;
+  --sheet-max: 560px;
+}

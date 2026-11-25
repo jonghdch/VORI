@@ -19,7 +19,7 @@ import LandingPage from "./pages/Landing/LandingPage";
 import LoginPage from "./pages/Login/LoginPage";
 import SignupPage from "./pages/Signup/SignupPage";
 import HomeDashboard from "./pages/Home/HomeDashboard";
-import { me, logout } from "./api/auth";
+import { me, logout, isGuestUser } from "./api/auth";
 import { SESSION_EXPIRED_EVENT } from "./api/http";
 import { getOnboardingStatus } from "./api/onboarding";
 import { clearShownToday } from "./components/AttendanceModal";
@@ -235,13 +235,24 @@ function App() {
     setUser(u);
   };
 
-  const handleLogout = async () => {
+  // 체험 계정은 비밀번호가 없어 로그아웃하면 다시 들어올 수 없다 — 실수로 누르지 않게 한 번 묻고,
+  // 취소하면 false 를 돌려준다(부른 쪽이 화면을 옮기지 않게). 탈퇴처럼 서버가 세션을 이미 끊은 뒤
+  // 화면 상태만 정리할 때는 { confirmed: true } 로 불러 묻지 않는다.
+  const handleLogout = async (opts) => {
+    if (
+      opts?.confirmed !== true &&
+      isGuestUser(user) &&
+      !window.confirm("체험 계정은 로그아웃하면 다시 들어올 수 없어요. 로그아웃할까요?")
+    ) {
+      return false;
+    }
     try {
       await logout();
     } finally {
       clearShownToday();
       setUser(null);
     }
+    return true;
   };
 
   return (
@@ -253,7 +264,7 @@ function App() {
         <Routes>
           <Route
             path="/"
-            element={<LandingPage user={user} onLogout={handleLogout} />}
+            element={<LandingPage user={user} onLogin={handleLogin} onLogout={handleLogout} />}
           />
           <Route
             path="/login"

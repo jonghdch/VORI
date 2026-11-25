@@ -229,6 +229,153 @@ class DailyJudgmentServiceTest {
         assertEquals(0, existing.getCoinReward());
     }
 
+    // ── 하루 예산 다시 계산 · 그룹 질문 ──
+
+    /** 2026-10-11(31일 달, 남은 날 21일)에 에너지 월 예산 310,000원 중 earlier 만큼 전날까지 쓴 상태. */
+    private DailyJudgmentResponse judgeAfterSpending(int earlier) {
+        LocalDate date = LocalDate.of(2026, 10, 11);
+        User admin = User.builder().id(1L).role(Role.ADMIN).gameMoney(0).build();
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(admin));
+        when(budgets.findByUserIdAndYearMonth(1L, "2026-10")).thenReturn(List.of(
+                UserStatBudget.builder().userId(1L).yearMonth("2026-10").statType(StatType.ENERGY).amount(310_000).build()));
+        when(expenses.findByUserIdAndSpentAtBetween(any(), any(), any())).thenReturn(List.of(
+                Expense.builder().id(1L).userId(1L).statType(StatType.ENERGY).amount(earlier)
+                        .spentAt(date.minusDays(1).atStartOfDay()).build()));
+        rememberSavedJudgment(date);
+        return service.judgeDate(1L, Role.ADMIN, date);
+    }
+
+    @Test
+    void 쓴_돈을_월_예산에서_빼고_남은_날로_다시_나눈다() {
+        var energy = judgeAfterSpending(110_000).groupJudgments().get(StatType.ENERGY);
+
+        assertEquals(200_000 / 21, energy.availableToday());
+        assertEquals(200_000 / 20, energy.nextDayCarry(), "내일 쓸 수 있는 돈");
+    }
+
+    @Test
+    void 남은_돈이_한도에_쌓여도_보상은_그날_기본_예산까지만_센다() {
+        // 전날까지 하나도 안 쓴 말일 — 한도는 월 예산 전부지만 같은 돈에 몰아서 보상하지 않는다
+        LocalDate date = LocalDate.of(2026, 10, 31);
+        User admin = User.builder().id(1L).role(Role.ADMIN).gameMoney(0).build();
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(admin));
+        when(budgets.findByUserIdAndYearMonth(1L, "2026-10")).thenReturn(List.of(
+                UserStatBudget.builder().userId(1L).yearMonth("2026-10").statType(StatType.ENERGY).amount(310_000).build()));
+        rememberSavedJudgment(date);
+
+        DailyJudgmentResponse result = service.judgeDate(1L, Role.ADMIN, date);
+
+        assertEquals(310_000, result.groupJudgments().get(StatType.ENERGY).availableToday());
+        assertEquals(10_000, result.savedAmount());
+        assertEquals(100, result.coinReward());
+    }
+
+    @Test
+    void 그룹_답변_뒤에_지출이_늘면_그_답으로_완화하지_않는다() {
+        LocalDate date = LocalDate.now();
+        User user = User.builder().id(1L).role(Role.USER).gameMoney(0).build();
+        energyBudget(date);
+        overspendWithPendingQuestion(date); // 오늘 100,000원
+        AiInquiry answered = AiInquiry.pendingDailyGroup(1L, date, StatType.ENERGY, "식비", 50_000, 30_000);
+        answered.recordAnswer("경조사", com.vori.backend.inquiry.ReasonCategory.CEREMONY, true);
+        when(inquiries.findByUserIdAndGroupDateAndDailyGroupInquiryTrue(1L, date)).thenReturn(List.of(answered));
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
+        rememberSavedJudgment(date);
+
+        service.judgeDate(1L, Role.USER, date);
+
+        assertEquals(Signal.RED, service.finalizeDate(1L, Role.USER, date).groupJudgments().get(StatType.ENERGY).signal());
+    }
+
+    @Test
+    void 월_예산을_다_쓰면_지출이_없는_날도_절약이_아니다() {
+        DailyJudgmentResponse result = judgeAfterSpending(310_000);
+        var energy = result.groupJudgments().get(StatType.ENERGY);
+
+        assertTrue(energy.budgetExhausted());
+        assertEquals(Signal.GRAY, energy.signal());
+        assertEquals(0, result.statRewards().get(StatType.ENERGY));
+    }
+
+    @Test
+    void 예산을_안_넘긴_그룹의_질문은_기다리지_않고_확정한다() {
+        LocalDate date = LocalDate.now();
+        User user = User.builder().id(1L).role(Role.USER).gameMoney(0).build();
+        energyBudget(date);
+        Expense small = Expense.builder().id(50L).userId(1L).statType(StatType.ENERGY).amount(1_000)
+                .signalInitial(Signal.RED).signalFinal(Signal.RED).spentAt(date.atStartOfDay()).build();
+        when(expenses.findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(1L, date.atStartOfDay(), date.plusDays(1).atStartOfDay()))
+                .thenReturn(List.of(small));
+        when(expenses.findByUserIdAndSpentAtBetween(any(), any(), any())).thenReturn(List.of(small));
+        when(inquiries.findPendingByDate(eq(1L), any(), any(), any()))
+                .thenReturn(List.of(AiInquiry.pending(50L, 1L, "간식", 1_000)));
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
+        rememberSavedJudgment(date);
+
+        assertEquals(JudgmentStatus.FINALIZED, service.judgeDate(1L, Role.USER, date).status());
+    }
+
+    @Test
+    void 넘긴_그룹의_빨강_지출에_개별_질문이_있으면_그룹_질문을_또_만들지_않는다() {
+        LocalDate date = LocalDate.now();
+        User user = User.builder().id(1L).role(Role.USER).gameMoney(0).build();
+        energyBudget(date);
+        overspendWithPendingQuestion(date);
+        when(inquiries.findByExpenseIdIn(List.of(50L))).thenReturn(List.of(AiInquiry.pending(50L, 1L, "회식", 100_000)));
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
+        rememberSavedJudgment(date);
+
+        assertEquals(JudgmentStatus.PENDING, service.judgeDate(1L, Role.USER, date).status());
+        verify(inquiries, never()).save(any());
+    }
+
+    @Test
+    void 넘긴_그룹에_개별_질문이_없으면_그룹_질문을_하나_만든다() {
+        LocalDate date = LocalDate.now();
+        User user = User.builder().id(1L).role(Role.USER).gameMoney(0).build();
+        energyBudget(date);
+        overspendWithPendingQuestion(date);
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
+        rememberSavedJudgment(date);
+
+        service.judgeDate(1L, Role.USER, date);
+
+        verify(inquiries).save(argThat(i -> Boolean.TRUE.equals(i.getDailyGroupInquiry()) && i.getGroupStatType() == StatType.ENERGY));
+    }
+
+    @Test
+    void 판정은_20시부터_다음_날_새벽_2시_전까지_열린다() {
+        assertFalse(DailyJudgmentService.isOpenAt(19, 20, 2));
+        assertTrue(DailyJudgmentService.isOpenAt(20, 20, 2));
+        assertTrue(DailyJudgmentService.isOpenAt(23, 20, 2));
+        assertTrue(DailyJudgmentService.isOpenAt(0, 20, 2));
+        assertTrue(DailyJudgmentService.isOpenAt(1, 20, 2));
+        assertFalse(DailyJudgmentService.isOpenAt(2, 20, 2));
+        assertFalse(DailyJudgmentService.isOpenAt(12, 20, 2));
+    }
+
+    @Test
+    void 새벽_2시_전에_받는_판정은_전날_판정이다() {
+        LocalDate day = LocalDate.of(2026, 11, 11);
+        assertEquals(day, DailyJudgmentService.judgmentDay(day.atTime(23, 59), 2));
+        assertEquals(day, DailyJudgmentService.judgmentDay(day.plusDays(1).atTime(1, 59), 2));
+        assertEquals(day.plusDays(1), DailyJudgmentService.judgmentDay(day.plusDays(1).atTime(2, 0), 2));
+    }
+
+    @Test
+    void 하루_종일_여는_설정이면_새벽에도_전날을_판정할_수_없다() {
+        // open-hour=0(낮 시연)은 새벽 연장이 없다 — 어느 시각에 돌려도 판정하는 날은 오늘이다.
+        ReflectionTestUtils.setField(service, "openHour", 0);
+        ReflectionTestUtils.setField(service, "closeHour", 2);
+        User user = User.builder().id(2L).role(Role.USER).build();
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.judgeDate(user.getId(), user.getRole(), LocalDate.now().minusDays(1)));
+
+        assertEquals(403, error.getStatusCode().value());
+        assertEquals(LocalDate.now(), service.currentJudgmentDay());
+    }
+
     // ── 1차 판정 → 예외 지출 사유 → 확정 (docs/judgment-flow.md) ──
 
     /** 그날 ENERGY 봉투(3만원)를 넘긴 빨강 지출 하나. 답변 안 된 AI 질문이 달려 있다. */
@@ -238,7 +385,7 @@ class DailyJudgmentServiceTest {
         when(expenses.findByUserIdAndSpentAtBetweenOrderBySpentAtDesc(1L, date.atStartOfDay(), date.plusDays(1).atStartOfDay()))
                 .thenReturn(List.of(big));
         when(expenses.findByUserIdAndSpentAtBetween(any(), any(), any())).thenReturn(List.of(big));
-        when(inquiries.findPendingByDate(eq(1L), any(), any()))
+        when(inquiries.findPendingByDate(eq(1L), any(), any(), any()))
                 .thenReturn(List.of(AiInquiry.pending(50L, 1L, "회식", 100_000)));
         return big;
     }
@@ -459,5 +606,13 @@ class DailyJudgmentServiceTest {
         assertTrue(unpaid.isRewarded());
         assertTrue(result.coinReward() > 0);
         assertEquals(result.coinReward(), admin.getGameMoney());
+    }
+
+    @Test
+    void monthRangeEndsOnLastDay() {
+        // Between 은 양 끝을 포함한다 — 끝값이 다음 달 1일이면 그날 판정이 이 달 목록에 섞인다
+        service.getByMonth(1L, YearMonth.of(2026, 9));
+        verify(judgments).findByUserIdAndJudgmentDateBetweenOrderByJudgmentDate(
+                1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
     }
 }

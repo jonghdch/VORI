@@ -18,9 +18,11 @@ import com.vori.backend.pet.PetSpeciesRepository;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -141,6 +143,19 @@ public class DailyReportService {
         dailyReportRepository.findById(reportId)
                 .filter(r -> r.getUserId().equals(userId))
                 .ifPresent(r -> r.markRead(LocalDateTime.now()));
+    }
+
+    /**
+     * 사용자가 부르는 즉시 생성(시연·확인용). 날짜를 바꿔 가며 부르면 호출마다 Gemini 를 써서
+     * 전체 사용자가 함께 쓰는 하루 한도가 바닥난다. 그래서 지난 30일 안의 지난 날짜만 받고,
+     * 이미 만든 리포트는 AI 를 다시 부르지 않고 그대로 돌려준다.
+     */
+    public DailyReportResponse generateOnRequest(Long userId, LocalDate date, LocalDate today) {
+        if (!date.isBefore(today) || date.isBefore(today.minusDays(30))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지난 30일 안의 날짜만 리포트를 만들 수 있어요");
+        }
+        DailyReportResponse existing = getByDate(userId, date);
+        return existing != null ? existing : generateNow(userId, date);
     }
 
     /**

@@ -103,4 +103,50 @@ class AsyncConfigTest {
             executor.shutdown();
         }
     }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void titleExecutor_도_꽉_차면_요청을_실패시키지_않고_건너뛴다(CapturedOutput output) {
+        ThreadPoolTaskExecutor executor = (ThreadPoolTaskExecutor) new AsyncConfig().titleExecutor();
+        CountDownLatch release = new CountDownLatch(1);
+        try {
+            // 스레드 4개를 붙잡고 대기열 500칸을 채운다
+            for (int i = 0; i < 4 + 500; i++) {
+                executor.execute(() -> {
+                    try {
+                        release.await();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                });
+            }
+            AtomicBoolean saved = assertDoesNotThrow(() -> saveExpenseThenHandOff(executor));
+            assertTrue(saved.get());
+            assertTrue(output.getAll().contains("칭호 검사 대기열이 꽉 차 건너뜀"));
+        } finally {
+            release.countDown();
+            executor.shutdown();
+        }
+    }
+
+    /**
+     * 업적·펫 칭호 검사는 요청 스레드가 아니라 titleExecutor 에서 돌아야 한다.
+     * 같은 스레드의 커밋 직후 단계에서 새 트랜잭션을 열면 요청 하나가 DB 연결 두 개를 쥐어, 동시에 10명이면
+     * Hikari 연결 10개가 서로를 기다리며 30초 멈췄다(10/16 부하 시험). @Async 를 빼면 이 시험이 깨진다.
+     */
+    @Test
+    void 칭호_검사_리스너는_titleExecutor_에서_돈다() throws NoSuchMethodException {
+        java.lang.reflect.Method[] listeners = {
+                com.vori.backend.title.TitleService.class.getMethod(
+                        "onTitleCheck", com.vori.backend.title.TitleCheckEvent.class),
+                com.vori.backend.pettitle.PetTitleService.class.getMethod(
+                        "onPetTitleCheck", com.vori.backend.pettitle.PetTitleCheckEvent.class),
+        };
+        for (java.lang.reflect.Method m : listeners) {
+            org.springframework.scheduling.annotation.Async async =
+                    m.getAnnotation(org.springframework.scheduling.annotation.Async.class);
+            assertTrue(async != null && "titleExecutor".equals(async.value()),
+                    m.getDeclaringClass().getSimpleName() + "." + m.getName() + " 에 @Async(\"titleExecutor\") 가 없다");
+        }
+    }
 }

@@ -20,6 +20,8 @@
 
 | 문서 | 책임 |
 |---|---|
+| [`screens/README.md`](screens/README.md) | 화면설계서 — 화면 목록·화면별 기능 명세(상태 포함)·공통 정책·흐름도·권한 (구현 기준) |
+| [`screens/IA.md`](screens/IA.md) | 정보구조도 — 기능 나열·메뉴 트리·Depth 별 구조·핵심 경로 |
 | [`signup-flow.md`](signup-flow.md) | 회원가입·소비 프로필 수집 흐름 |
 | [`tutorial-flow.md`](tutorial-flow.md) | 온보딩과 인앱 튜토리얼 설계 |
 | [`judgment-flow.md`](judgment-flow.md) | 하루 판정 흐름 재설계 — 1차 판정 → 예외 지출 사유 → 확정·보상 |
@@ -41,6 +43,7 @@
 | 문서 | 책임 |
 |---|---|
 | [`final-demo-plan.md`](final-demo-plan.md) | 최종발표(11/4)·경진대회(11/11) 시연 각본·무대 규칙·계정 세팅·Gemini 한도 운영 |
+| [`deploy-checklist.md`](deploy-checklist.md) | 운영 배포 점검표(도커, vori.worldpick.co.kr) — 구성·deploy.sh·`.env`·롤백·백업·구글 로그인. 설정 파일 사본은 `deploy/` |
 
 ## 발표·과거 기록
 

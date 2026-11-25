@@ -119,6 +119,34 @@ public class UserService {
         return saved;
     }
 
+    /**
+     * 「체험하기」 임시 계정 — 경진대회 관람객이 이메일·실명·비밀번호 없이 바로 써 본다(GuestAccountService).
+     * 구글 계정처럼 비밀번호가 없고(password_hash NULL — 이메일 로그인으로는 못 들어온다), 약관은 체험하기 버튼
+     * 아래 안내 문구로 동의한 것으로 본다. 일반 가입과 같은 초기화(스탯·시작 펫·가입 축하 코인)를 거친다.
+     */
+    @Transactional
+    public User createGuest(String email, String nickname, String name) {
+        LocalDateTime now = LocalDateTime.now();
+        User user = User.builder()
+            .email(email)
+            .nickname(nickname)
+            .name(name)
+            .role(Role.USER)
+            .termsAgreedAt(now)
+            .privacyAgreedAt(now)
+            .gameMoney(WELCOME_COINS)
+            // 체험 설문은 「식비·카페 중심」이다. #142 뒤 예산은 네 그룹 균등이라 비중을 안 주면
+            // 체험자가 한 끼만 적어도 식비가 「초과」가 된다 — 식비에 비중(+15)을 준다(SpendingPlanService)
+            .budgetFocusStats("ENERGY")
+            .createdAt(now)
+            .build();
+
+        User saved = userRepository.saveAndFlush(user);
+        initializeStatStats(saved.getId());
+        grantStarterPet(saved.getId(), now);
+        return saved;
+    }
+
     /** 구글 표시 이름이 없으면 이메일 앞부분을 닉네임으로. nickname 은 NOT NULL·30자. */
     // 가입 규칙(SignupRequest)과 같은 길이 — 닉네임 2~12자, 이름 2~30자
     private static final int NICKNAME_MIN = 2, NICKNAME_MAX = 12, NAME_MIN = 2, NAME_MAX = 30;
@@ -186,7 +214,7 @@ public class UserService {
 
     @Transactional
     public void recordLogin(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
         user.incrementLoginCount();
         eventPublisher.publishEvent(new TitleCheckEvent(userId, "LOGIN"));
@@ -198,11 +226,27 @@ public class UserService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
 
         Integer previousIncome = user.getMonthlyIncome();
+        Integer previousBudget = user.getMonthlyBudget();
+        java.util.Set<com.vori.backend.common.StatType> previousFocus = user.budgetFocusStatTypes();
+        if (req.monthlyBudget() != null && req.monthlyIncome() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "월 예산을 입력하려면 월 수입을 먼저 입력해 주세요.");
+        }
+        if (req.monthlyBudget() != null && req.monthlyIncome() != null
+                && req.monthlyBudget() > req.monthlyIncome()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "월 예산은 월 수입을 넘을 수 없어요.");
+        }
         // 공백 정리는 ProfileUpdateRequest 가 검사 전에 끝냈다.
-        user.updateProfile(req.nickname(), req.name(), req.age(), req.job(), req.monthlyIncome());
+        user.updateProfile(req.nickname(), req.name(), req.age(), req.job(), req.monthlyIncome(),
+                req.monthlyBudget(), req.budgetFocusStats());
         // 월 수입이 바뀌면 실제 지출이 없는 타입의 초기 기준선을 다시 잡는다(온보딩 씨딩과 같은 규칙).
-        baselineSeeder.reseedFromIncome(userId, req.monthlyIncome());
         if (!java.util.Objects.equals(previousIncome, req.monthlyIncome())) {
+            baselineSeeder.reseedFromIncome(userId, req.monthlyIncome());
+        }
+        // 월 예산을 안 정한 사용자의 예산은 월 수입에서 나오므로 수입이 바뀌어도 다시 만든다.
+        boolean incomeBasedBudgetChanged = req.monthlyBudget() == null
+                && !java.util.Objects.equals(previousIncome, req.monthlyIncome());
+        if (incomeBasedBudgetChanged || !java.util.Objects.equals(previousBudget, req.monthlyBudget())
+                || !previousFocus.equals(req.budgetFocusStats())) {
             spendingPlanService.rebuildCurrentPlan(userId);
         }
         return user;

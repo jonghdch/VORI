@@ -22,6 +22,8 @@
 | 나이 | `age` |  | `TINYINT UNSIGNED` | 튜토리얼 수집값 |
 | 직업 | `job` |  | `VARCHAR(50)` | 튜토리얼 수집값 |
 | 월 소득 | `monthly_income` |  | `INT UNSIGNED` | 소비 기준 참고값 |
+| 월 예산 | `monthly_budget` |  | `INT UNSIGNED NULL` | 사용자가 정한 가계부 예산 (V56) |
+| 더 배정할 분야 | `budget_focus_stats` |  | `VARCHAR(80) NULL` | ENERGY·CHARM·IQ·ENDURANCE 쉼표 구분 (V56) |
 | 활성 칭호 식별자 | `active_title_id` | FK | `BIGINT NULL` | → `user_titles(id)` |
 | 절약 누적액 | `total_saved` |  | `INT DEFAULT 0` | `saved_amount` 양수 누적. 지출 수정·삭제 때 그만큼 조정(0 미만 불가) |
 | 게임머니 잔액 | `game_money` |  | `INT DEFAULT 0` | 현재 보유 게임머니 |
@@ -260,7 +262,11 @@ EMA 갱신·z 점수 계산·표본 수 가드 등 **계산 로직은 Service �
 | 논리명 | 물리명 | 키 | 타입 | 설명 |
 |---|---|---|---|---|
 | 질문 식별자 | `id` | PK | `BIGINT AUTO_INCREMENT` | 질문 고유 번호 |
-| 지출 식별자 | `expense_id` | FK, UQ | `BIGINT NOT NULL` | → `expenses(id)`, 지출 1건당 질문 1개 |
+| 지출 식별자 | `expense_id` | FK, UQ | `BIGINT NULL` | → `expenses(id)`, 지출 1건당 질문 1개. 그룹 질문은 NULL (V60) |
+| 그룹 질문 여부 | `daily_group_inquiry` |  | `BOOLEAN NOT NULL` | 기본 FALSE (V59) |
+| 그룹 | `group_stat_type` |  | `ENUM NULL` | 그룹 질문의 스탯 그룹 (V59) |
+| 그룹 합계 | `group_amount` |  | `INT UNSIGNED NULL` | 그날 그룹 지출 합계 (V59) |
+| 그룹 날짜 | `group_date` |  | `DATE NULL` | 그룹 질문의 날짜 (V60) |
 | 사용자 식별자 | `user_id` | FK, IDX | `BIGINT NOT NULL` | → `users(id)`, 사유 사용 횟수 집계용 |
 | 질문 내용 | `question` |  | `TEXT NOT NULL` | AI 생성 질문 |
 | 답변 텍스트 | `answer_text` |  | `TEXT NULL` | 사용자 답변 |
@@ -1052,3 +1058,17 @@ V2 때 보류한 "계좌·지갑명"을 별도 테이블로 정규화했다. 사
 - 화면 라벨 "예적금" 종류는 "저축 통장"으로 바꿔 부른다 (DB 값 SAVINGS 그대로).
 
 마이그레이션: `V55__saving_payment_instrument.sql`.
+
+### 16. 월 예산·고정비 재계산·경조사·그룹 질문 (V56~V60)
+
+사용자가 월 예산을 직접 정하고 예산을 넘긴 그룹에 사유를 한 번에 물을 수 있게 했다.
+
+| 변경 | 대상 | 비고 |
+|---|---|---|
+| 추가 | `users.monthly_budget`, `users.budget_focus_stats` | V56. 월 예산을 안 정했으면 월 수입에서 15%를 뺀 금액을 쓴다 |
+| 추가 | `user_stat_budgets.calculation_version` | V57. 기존 행은 1. 조회할 때 1이면 그 달 예산을 새 규칙으로 다시 만든다 |
+| 데이터 | `categories` 생활 아래 `경조사·축의금` | V58 |
+| 추가 | `ai_inquiries.daily_group_inquiry`, `group_stat_type`, `group_amount` | V59 |
+| 변경·추가 | `ai_inquiries.expense_id` NULL 허용, `group_date` | V60 |
+
+마이그레이션: `V56__manual_monthly_budget_preferences.sql` ~ `V60__separate_daily_group_inquiries.sql`.

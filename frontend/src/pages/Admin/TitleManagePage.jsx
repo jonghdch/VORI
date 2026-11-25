@@ -246,7 +246,7 @@ function TitleManagePage() {
         </div>
         {formError && <p className="title-form-error">{formError}</p>}
         {notice && <p className="title-form-notice">{notice}</p>}
-        <button type="submit" className="title-submit" disabled={submitting}>
+        <button type="submit" className="btn btn--primary title-submit" disabled={submitting}>
           {submitting ? "저장 중…" : editingId ? "수정 저장" : "칭호 추가"}
         </button>
       </form>

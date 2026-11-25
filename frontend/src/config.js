@@ -19,9 +19,23 @@ export const AI_ACTIVE_FROM_HOUR = (() => {
   return Number.isInteger(parsed) && parsed >= 0 && parsed <= 23 ? parsed : 20;
 })();
 
+/**
+ * 판정이 닫히는 다음 날 새벽 시각(서버 vori.ai-judge.close-hour 기본값과 같게).
+ * 0시~이 시각 전에 받는 판정은 전날 판정이다. 하루 종일 여는 설정(0)이면 새벽 연장이 없다.
+ */
+export const AI_ACTIVE_UNTIL_HOUR = AI_ACTIVE_FROM_HOUR > 2 ? 2 : 0;
+
 /** 지금이 AI 판정 가능 시각인가. 버튼 활성·페이지 가드가 같은 기준을 쓰도록 한 곳에 둔다. */
 export function isAiJudgeOpen(now = new Date()) {
-  return now.getHours() >= AI_ACTIVE_FROM_HOUR;
+  const hour = now.getHours();
+  return hour >= AI_ACTIVE_FROM_HOUR || hour < AI_ACTIVE_UNTIL_HOUR;
+}
+
+/** 지금 판정할 날짜 — 새벽 AI_ACTIVE_UNTIL_HOUR 전이면 전날이다. */
+export function aiJudgeDate(now = new Date()) {
+  const date = new Date(now);
+  date.setHours(date.getHours() - AI_ACTIVE_UNTIL_HOUR);
+  return date;
 }
 
 /** 관리자는 시연·검증을 위해 시간 제한 없이 AI 소비 판정을 사용할 수 있다. */

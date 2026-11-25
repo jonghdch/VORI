@@ -12,8 +12,10 @@ import com.vori.backend.user.User;
 import com.vori.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -28,6 +30,9 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class MonthlyReportService {
+
+    /** 사용자 요청 정산이 받는 가장 오래된 달(현재 달 기준 몇 달 전까지). */
+    private static final int MAX_MONTHS_BACK = 12;
 
     private final MonthlyReportRepository monthlyReportRepository;
     private final ExpenseRepository expenseRepository;
@@ -48,6 +53,23 @@ public class MonthlyReportService {
             }
         }
         return done;
+    }
+
+    /**
+     * 사용자가 직접 부르는 정산(시연·확인용). 끝나지 않은 달을 미리 만들면 settle 이 이미 있는 리포트로 보고
+     * 말일 정산을 건너뛰어 중간 집계가 굳으므로, current 보다 앞선 달만 받는다.
+     */
+    @Transactional
+    public boolean settleClosedMonth(Long userId, YearMonth month, YearMonth current) {
+        if (!month.isBefore(current)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지난 달 리포트만 정산할 수 있습니다");
+        }
+        // 하한이 없으면 month=0001-01 같은 요청마다 빈 리포트와 알림이 생긴다. 가입일로 자르면
+        // 가입 전 날짜로 적은 지출이 있는 달을 못 만들어서, 최근 12개월로 자른다
+        if (month.isBefore(current.minusMonths(MAX_MONTHS_BACK))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "최근 " + MAX_MONTHS_BACK + "개월 리포트만 정산할 수 있습니다");
+        }
+        return settle(userId, month);
     }
 
     /** 한 사용자의 그 달 리포트를 정산한다. 이미 있으면 false. */

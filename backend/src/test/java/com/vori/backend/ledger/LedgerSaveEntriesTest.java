@@ -11,7 +11,6 @@ import com.vori.backend.expense.dto.ExpenseUpdateRequest;
 import com.vori.backend.income.IncomeRepository;
 import com.vori.backend.income.IncomeService;
 import com.vori.backend.income.IncomeSource;
-import com.vori.backend.income.dto.IncomeCreateRequest;
 import com.vori.backend.income.dto.IncomeResponse;
 import com.vori.backend.inquiry.AiInquiryRepository;
 import com.vori.backend.ledger.dto.LedgerSaveRequest;
@@ -20,9 +19,9 @@ import com.vori.backend.ledger.dto.LedgerSaveResponse;
 import com.vori.backend.paymentinstrument.InstrumentKind;
 import com.vori.backend.paymentinstrument.PaymentInstrument;
 import com.vori.backend.paymentinstrument.PaymentInstrumentService;
+import com.vori.backend.savings.SavingRepository;
 import com.vori.backend.savings.SavingService;
 import com.vori.backend.savings.SavingType;
-import com.vori.backend.savings.dto.SavingCreateRequest;
 import com.vori.backend.savings.dto.SavingResponse;
 import com.vori.backend.user.UserRepository;
 import jakarta.validation.Validation;
@@ -62,12 +61,13 @@ class LedgerSaveEntriesTest {
 
     private final ExpenseRepository expenseRepository = mock(ExpenseRepository.class);
     private final ExpenseService expenseService = mock(ExpenseService.class);
+    private final IncomeRepository incomeRepository = mock(IncomeRepository.class);
     private final IncomeService incomeService = mock(IncomeService.class);
     private final SavingService savingService = mock(SavingService.class);
     private final PaymentInstrumentService paymentInstrumentService = mock(PaymentInstrumentService.class);
     private final CountingTransactionManager transactions = new CountingTransactionManager();
     private final LedgerService service = transactional(new LedgerService(
-            expenseRepository, mock(IncomeRepository.class), mock(CategoryRepository.class),
+            expenseRepository, incomeRepository, mock(SavingRepository.class), mock(CategoryRepository.class),
             mock(UserRepository.class), mock(AiInquiryRepository.class),
             expenseService, incomeService, savingService, paymentInstrumentService));
 
@@ -156,7 +156,7 @@ class LedgerSaveEntriesTest {
         assertFalse(validator.validate(new LedgerSaveRequest(
                 List.of(newExpense(" ", 8000)), null, null)).isEmpty(), "내역이 빈 지출 행");
         assertFalse(validator.validate(new LedgerSaveRequest(null,
-                List.of(new IncomeCreateRequest(null, 1000, "용돈", LocalDate.now(), null, null)), null)).isEmpty(),
+                List.of(new LedgerSaveRequest.IncomeEntry(null, null, 1000, "용돈", LocalDate.now(), null, null, null)), null)).isEmpty(),
                 "출처 없는 수입 행");
     }
 
@@ -392,12 +392,54 @@ class LedgerSaveEntriesTest {
         return new ExpenseEntry(null, 3L, amount, item, SPENT_AT, PaymentMethod.CREDIT, null);
     }
 
-    private static IncomeCreateRequest income() {
-        return new IncomeCreateRequest(IncomeSource.PART_TIME, 50000, "알바", LocalDate.of(2026, 10, 1), null, null);
+    @Test
+    void editingIncomeKeepsItsAccountAndUpdatesFields() {
+        com.vori.backend.income.Income stored = com.vori.backend.income.Income.builder().id(5L).userId(USER_ID)
+                .receivedAt(LocalDate.of(2026, 10, 1)).amount(1000).note("용돈").source(IncomeSource.OTHER)
+                .paymentMethod(PaymentMethod.CASH).paymentInstrumentId(3L).isRecurring(true).build();
+        when(incomeRepository.findById(5L)).thenReturn(Optional.of(stored));
+
+        service.saveEntries(USER_ID, new LedgerSaveRequest(null, List.of(new LedgerSaveRequest.IncomeEntry(
+                5L, IncomeSource.PART_TIME, 2000, "알바", LocalDate.of(2026, 10, 1), null, true, 3L)), null));
+
+        assertEquals(2000, stored.getAmount());
+        assertEquals("알바", stored.getNote());
+        assertEquals(3L, stored.getPaymentInstrumentId());
+        assertEquals(PaymentMethod.CASH, stored.getPaymentMethod(), "같은 계좌면 결제수단도 그대로");
+        assertTrue(stored.getIsRecurring());
+        verifyNoInteractions(paymentInstrumentService, incomeService);
     }
 
-    private static SavingCreateRequest saving() {
-        return new SavingCreateRequest(SavingType.DEPOSIT, 30000, "적금", LocalDate.of(2026, 10, 1), null);
+    @Test
+    void editingIncomeWithoutMethodKeepsTheStoredMethod() {
+        com.vori.backend.income.Income stored = com.vori.backend.income.Income.builder().id(5L).userId(USER_ID)
+                .receivedAt(LocalDate.of(2026, 10, 1)).amount(1000).note("용돈").source(IncomeSource.OTHER)
+                .paymentMethod(PaymentMethod.TRANSFER).build();
+        when(incomeRepository.findById(5L)).thenReturn(Optional.of(stored));
+
+        service.saveEntries(USER_ID, new LedgerSaveRequest(null, List.of(new LedgerSaveRequest.IncomeEntry(
+                5L, IncomeSource.OTHER, 2000, "용돈", null, null, false, null)), null));
+
+        assertEquals(PaymentMethod.TRANSFER, stored.getPaymentMethod());
+    }
+
+    @Test
+    void cannotEditOrDeleteSomeoneElsesIncome() {
+        com.vori.backend.income.Income other = com.vori.backend.income.Income.builder().id(5L).userId(99L)
+                .receivedAt(LocalDate.of(2026, 10, 1)).amount(1000).note("용돈").source(IncomeSource.OTHER).build();
+        when(incomeRepository.findById(5L)).thenReturn(Optional.of(other));
+
+        assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.deleteIncome(USER_ID, 5L)).getStatusCode().value());
+        assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.saveEntries(USER_ID, new LedgerSaveRequest(null,
+                List.of(new LedgerSaveRequest.IncomeEntry(5L, IncomeSource.OTHER, 1, "x", null, null, null, null)), null))).getStatusCode().value());
+    }
+
+    private static LedgerSaveRequest.IncomeEntry income() {
+        return new LedgerSaveRequest.IncomeEntry(null, IncomeSource.PART_TIME, 50000, "알바", LocalDate.of(2026, 10, 1), null, null, null);
+    }
+
+    private static LedgerSaveRequest.SavingEntry saving() {
+        return new LedgerSaveRequest.SavingEntry(null, SavingType.DEPOSIT, 30000, "적금", LocalDate.of(2026, 10, 1), null, null);
     }
 
     /** 운영에서 Spring 이 붙이는 것과 같은 @Transactional 인터셉터를 씌운다. */

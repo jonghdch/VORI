@@ -17,34 +17,31 @@
 ## 구조
 
 ```
-~/Projects/vori/
+vori/
 ├── README.md
 ├── backend/    Spring Boot 3.5 + Java 17
-└── frontend/   React 19 (Create React App)
+├── frontend/   React 19 (Create React App)
+├── deploy/     운영 서버 설정 사본 (docker compose·deploy.sh·nginx)
+└── docs/       설계·운영 문서
 ```
 
 ## 첫 빌드 셋업
 
 ### 백엔드 (Spring Boot)
-1. https://start.spring.io 에서 프로젝트 생성:
-   - Project: Gradle - Groovy
-   - Language: Java 17
-   - Spring Boot: 3.x (최신 안정)
-   - Group: `com.vori`, Artifact: `backend`
-   - Dependencies: Spring Web, Spring Data JPA, MySQL Driver, Spring Security, Validation, Lombok, SpringDoc OpenAPI
-2. 압축 풀어서 `~/Projects/vori/backend/` 로 이동
-3. `./gradlew bootRun` 으로 실행 (port 8080)
+이미 만들어져 있다(Gradle Groovy · Java 17 · Spring Boot 3.5, `com.vori.backend`). 생성할 필요 없이:
+```bash
+cd backend && ./gradlew bootRun   # port 8080
+```
 
 > **`.env` 로딩**: `.env`(DB 비밀번호·Gemini 키)는 **repo 루트**에 있다. `bootRun` 은 작업 디렉터리를 repo 루트로 고정해 두었으므로(`build.gradle`) `backend/` 에서 `./gradlew bootRun` 해도 `.env` 를 읽는다. IDE 에서 `BackendApplication` 을 직접 실행할 때는 **Working directory 를 repo 루트로** 잡아야 한다 — 아니면 `.env` 를 못 읽어 DB·AI 연결이 깨진다(로그인 실패 포함).
 >
 > **Windows 로그인 안 될 때**: DB URL 은 `127.0.0.1` 로 고정돼 있다(Windows 는 `localhost` 를 IPv6 `::1` 로 먼저 해석해 MySQL 연결이 실패할 수 있음). 그래도 안 되면 `.env` 를 **CRLF→LF** 로 저장하고, 본인 MySQL `root` 비밀번호를 `.env` 의 `DB_PASSWORD` 에 명시. 프론트는 `localhost:3000` / `127.0.0.1:3000` 둘 다 허용된다. 시드 관리자 계정은 `admin@vori.com` / `.env` 의 `ADMIN_PASSWORD`(로컬 예시 `1234`).
 
 ### 프론트엔드 (React.js)
+이미 만들어져 있다(Create React App). 생성 명령은 필요 없다:
 ```bash
-cd ~/Projects/vori
-npx create-react-app frontend
 cd frontend
-npm start   # port 3000
+npm ci && npm start   # port 3000
 ```
 
 ### MySQL
@@ -85,7 +82,9 @@ repo 를 클론한 새 PC(팀원·다른 OS)에서 돌릴 때. **"환경 준비"
 - Flyway 마이그레이션 자동 실행 → 테이블 생성/검증
 - 시드 자동 생성 — 관리자 계정 `admin@vori.com`. 비밀번호는 `.env` 의 `ADMIN_PASSWORD`, 값이 없으면 관리자를 만들지 않는다(이미 있는 관리자는 그대로)
 
-> **배포 서버**: `SPRING_PROFILES_ACTIVE=prod` 로 켜면 `application-prod.properties` 가 SQL 로그를 끈다. `ADMIN_PASSWORD` 는 길고 다른 값으로.
+### 배포 (운영)
+
+`https://vori.worldpick.co.kr` 에 도커로 배포돼 있다(서버 `zzemsoft`, `/data/home2/vori.worldpick.co.kr`). 기존 공용 nginx 컨테이너가 프론트 정적 빌드(`frontend/build`)를 서빙하고 `/api/` 를 `vori-backend`(Spring Boot, prod 프로필) → `vori-mysql`(MySQL 8.4)로 넘긴다. 일상 배포는 main 머지 → CI 통과 → GitHub Actions(`.github/workflows/deploy.yml`)가 서버 `deploy.sh` 를 자동 실행(git pull → 바뀐 쪽만 빌드·재기동). 손으로는 `ssh zzemsoft 'cd /data/home2/vori.worldpick.co.kr && runuser -u vori -- ./deploy.sh'`(vori 로 실행, root 금지). 구성·절차·롤백·시연 설정은 [`docs/deploy-checklist.md`](docs/deploy-checklist.md), 서버 설정 파일 사본은 [`deploy/`](deploy/README.md). 운영 `ADMIN_PASSWORD` 는 길고 다른 값으로.
 
 > Windows 에서 로그인 안 될 때 트러블슈팅은 위 [백엔드 셋업](#백엔드-spring-boot) 주의 박스 참조.
 
@@ -101,6 +100,7 @@ cp .env.example .env   # repo 루트에서
 |----|------|------|
 | `DB_USERNAME` | ✅ | MySQL 계정 (기본 `root`) |
 | `DB_PASSWORD` | ✅ | MySQL 비밀번호 (Windows root 는 보통 비번 있음 → 반드시 명시. 없으면 빈 값) |
+| `ADMIN_PASSWORD` | — | 관리자(`admin@vori.com`) 첫 생성 비밀번호. 비우면 관리자를 만들지 않는다. 로컬 예시 `1234`, 운영은 길고 다른 값 |
 | `GEMINI_API_KEY` | ✅ | Gemini 키 — https://aistudio.google.com/app/apikey |
 | `GEMINI_MODEL` | — | 질문·코멘트·사유 분류·영수증 모델 (기본 `gemini-3.6-flash`) |
 | `GEMINI_FALLBACK_MODELS` | — | 주 모델이 과부하(5xx)·한도 초과(429)·은퇴(404)일 때 차례로 쓸 모델, 쉼표 구분 (기본 `gemini-3.5-flash`, 비우면 대체 없음) |
@@ -109,6 +109,39 @@ cp .env.example .env   # repo 루트에서
 
 > 백엔드는 `spring.config.import` 로 `.env` 를 **repo 루트 기준 상대경로**로 읽는다. 그래서 백엔드는 항상 **repo 루트를 작업 디렉터리로** 실행해야 한다(위 1회 준비 4번).
 > 편집기에서 `.env` 저장 시 **줄바꿈은 LF** 로 (CRLF 면 값 끝에 `\r` 이 붙어 DB 비번이 깨질 수 있음).
+
+## Docker 로 실행
+
+Node·Java·MySQL 을 따로 설치하지 않고 프론트·백엔드·MySQL 을 컨테이너 3개로 띄운다. 로컬 확인과 시연 연습용이고 배포 서버는 `deploy/` 구성을 쓴다.
+
+1. [Docker Desktop](https://www.docker.com/products/docker-desktop/) 을 설치하고 실행한다 (macOS 는 OrbStack 도 된다)
+2. repo 루트에 `.env` 를 만든다. 이미 있으면 건너뛴다
+   - Windows (PowerShell): `Copy-Item .env.example .env`
+   - macOS: `cp .env.example .env`
+3. repo 루트에서 실행한다
+
+```bash
+docker compose up -d --build
+```
+
+첫 빌드는 몇 분 걸린다. 끝나면 http://localhost:3000 으로 접속한다.
+
+| 컨테이너 | PC 에서 접속하는 주소 | 설명 |
+|---|---|---|
+| `frontend` | `localhost:3000` | React 빌드 + Nginx. `/api` 를 백엔드로 넘긴다 |
+| `backend` | `localhost:8080` | Spring Boot. `.env` 를 읽고 DB 접속만 `db` 컨테이너로 고정한다 |
+| `db` | `127.0.0.1:3307` (계정 `vori` / 비밀번호 `vori`) | MySQL 8.4. PC 에 깔린 MySQL 과 데이터가 분리된다 |
+
+| 명령 | 하는 일 |
+|---|---|
+| `docker compose logs -f backend` | 백엔드 로그 보기 |
+| `docker compose up -d --build` | 코드를 바꾼 뒤 다시 빌드해서 띄우기 |
+| `docker compose down` | 끄기. 데이터는 남는다 |
+| `docker compose down -v` | 끄고 **DB 데이터까지 삭제** |
+
+- **포트가 겹칠 때**: `npm start`·`bootRun` 으로 띄운 개발 서버가 3000·8080 을 쓰고 있으면 먼저 끈다. 같이 켜 두려면 `.env` 에 `FRONTEND_PORT`·`BACKEND_PORT`·`DB_PORT` 를 적는다
+- **DB 는 빈 상태로 시작한다**: Flyway 가 테이블을 만들고 관리자 계정은 `.env` 의 `ADMIN_PASSWORD` 로 생긴다. 시연 데이터가 필요하면 `python scripts/demo_seed.py` 를 실행한다
+- **프론트 설정값**: `frontend/.env.local` 은 읽지 않는다. 구글 로그인은 루트 `.env` 의 `GOOGLE_CLIENT_ID`, AI 판정 시각은 `REACT_APP_AI_ACTIVE_FROM_HOUR` 를 쓰고 값을 바꾸면 `--build` 로 다시 빌드한다
 
 ## 파일별 역할 가이드
 
@@ -151,27 +184,40 @@ gemini.api.key=${GEMINI_API_KEY}
 
 #### 도메인 패키지 (`src/main/java/com/vori/backend/`)
 
-| 패키지 | 책임 | 포함되는 파일 |
-|---|---|---|
-| `auth/` | 인증·세션 | AuthController, UserPrincipal, CustomUserDetailsService, dto/ |
-| `user/` | 사용자 도메인 | User(Entity), Role(enum), UserRepository, UserService |
-| `common/` | 도메인 공용 | StatType 등 여러 도메인이 공유하는 enum |
-| `budget/` | 월 예산 | BudgetController, BudgetService, MonthlyBudget + Repository, dto/ |
-| `category/` | 지출 카테고리 | Category + Repository |
-| `expense/` | 지출 | Expense, Signal(enum), Repository |
-| `income/` | 수입 | Income, IncomeSource(enum), Repository |
-| `ledger/` | 가계부 조회·저장 | LedgerController(월별 조회·작성 화면 일괄 저장·지출 삭제), LedgerService, dto/ |
-| `goal/` | 절약 목표 | Goal, GoalStatus(enum), Repository |
-| `stats/` | EMA 통계 | UserStatStats, UserStatStatsId(composite PK), Repository |
-| `inquiry/` | AI 사유 질문 | AiInquiry, ReasonCategory(enum), Repository |
-| `receipt/` | 영수증 OCR | ReceiptOcrJob, OcrProvider/OcrStatus(enum), Repository |
-| `report/` | 일일 리포트 | DailyReport + Repository |
-| `pet/` | 펫·알·가챠·성장 | Pet, PetSpecies, Egg, GachaPull, PetGrowthLog + 4 enum + 5 Repository |
-| `theme/` | 테마 마스터 | ThemeMaster + Repository |
-| `furniture/` | 사용자 가구 | UserFurniture, FurnitureCategory(enum), Repository |
-| `title/` | 사용자 칭호 | UserTitle + Repository |
-| `config/` | 환경 설정 | SecurityConfig (FilterChain, CORS, PasswordEncoder) |
-| `seeder/` | 초기 데이터 시더 | AdminSeeder, CategorySeeder, PetSpeciesSeeder |
+| 패키지 | 책임 |
+|---|---|
+| `admin/` | 관리자 기능(AI 사용량 등) |
+| `attendance/` | 출석 |
+| `auth/` | 인증·세션 |
+| `budget/` | 월 예산 |
+| `category/` | 지출 카테고리·자동 분류 |
+| `common/` | 여러 도메인 공용 enum·유틸 |
+| `config/` | 환경 설정(SecurityConfig 등) |
+| `expense/` | 지출 |
+| `furniture/` | 사용자 가구 |
+| `gemini/` | Gemini API 클라이언트 |
+| `goal/` | 절약 목표 |
+| `home/` | 홈 대시보드 |
+| `income/` | 수입 |
+| `inquiry/` | AI 사유 질문 |
+| `judgment/` | 판정(합리성 시그널) |
+| `ledger/` | 가계부 조회·저장 |
+| `notification/` | 알림 |
+| `onboarding/` | 온보딩·튜토리얼 |
+| `paymentinstrument/` | 결제수단 |
+| `pet/` | 펫·알·가챠·성장·대화 |
+| `pettitle/` | 펫 칭호 |
+| `receipt/` | 영수증 OCR |
+| `report/` | 일일·월 리포트 |
+| `sanction/` | 제재 |
+| `savings/` | 저축 |
+| `seeder/` | 초기 데이터 시더 |
+| `stats/` | EMA 통계 |
+| `theme/` | 테마 마스터 |
+| `title/` | 사용자 칭호 |
+| `user/` | 사용자 도메인 |
+
+각 패키지의 상세 파일 구성은 코드를 본다.
 
 #### 각 도메인 안 파일 패턴
 
@@ -199,15 +245,9 @@ gemini.api.key=${GEMINI_API_KEY}
 
 **라우팅**: React Router v7 의 `BrowserRouter` 사용. 페이지 전환마다 URL 이 바뀌며 브라우저 뒤로가기·새로고침·링크 공유 모두 동작.
 
-| 경로 | 페이지 | 인증 |
-|---|---|---|
-| `/` | LandingPage | 공개 |
-| `/login` | LoginPage | 공개 |
-| `/signup` | SignupPage | 공개 |
-| `/story` | StoryPage | 공개 |
-| `/home` | HomeDashboard | **인증 필요** (미인증 시 `/login` 으로 리다이렉트) |
+전체 화면 목록·경로·인증 여부는 [`docs/screens/README.md`](docs/screens/README.md)를 본다.
 
-`App.js` 가 `BrowserRouter` 안에 `<Routes>` 정의 + 사용자 인증 state(`user`) 보유 + 첫 진입 시 `me()` 호출로 세션 복원. `ProtectedRoute` 컴포넌트가 `/home` 가드.
+`App.js` 가 `BrowserRouter` 안에 `<Routes>` 정의 + 사용자 인증 state(`user`) 보유 + 첫 진입 시 `me()` 호출로 세션 복원. `ProtectedRoute` 컴포넌트가 인증 필요 화면을 가드.
 
 페이지 안에서 다른 페이지로 이동할 땐 `useNavigate()` 훅 사용:
 
@@ -227,7 +267,6 @@ navigate("/login");
 | `src/index.css` | 전역 스타일 | 디자인 시스템(색·폰트) 정의 |
 | `src/App.js` | 최상위 컴포넌트 | `BrowserRouter` + `<Routes>` 정의. 새 페이지 추가 시 `<Route>` 한 줄 추가 |
 | `src/App.css` | App 컴포넌트 스타일 | 갈아엎기 |
-| `src/App.test.js` | App 테스트 1개 (현재 깨짐) | 의미 있는 테스트로 교체 또는 삭제 |
 
 #### 손 안 대는 / 자동 생성
 
@@ -271,5 +310,6 @@ navigate("/login");
 | [`docs/roadmap.md`](docs/roadmap.md) | 설계 철학·향후 확장·우선순위 |
 | [`docs/market-research.md`](docs/market-research.md) | 시장·경쟁 분석과 구현 배경 |
 | [`docs/plan-vs-reality.md`](docs/plan-vs-reality.md) | 초기 기획과 실제 구현의 차이 |
+| [`docs/deploy-checklist.md`](docs/deploy-checklist.md) | 운영 배포(도커) — 구성·배포·롤백·백업·시연 설정 |
 | [`docs/final-demo-plan.md`](docs/final-demo-plan.md) | 11월 시연 계획(최종발표·경진대회) |
 | [`docs/demo-plan.md`](docs/demo-plan.md) | 중간발표 시연 계획(기록용) |

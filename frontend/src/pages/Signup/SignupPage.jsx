@@ -293,7 +293,7 @@ function SignupPage({ onLogin }) {
 
             <button
               type="submit"
-              className="signup-submit"
+              className="btn btn--primary btn--lg btn--block signup-submit"
               disabled={!canSubmit}
             >
               {loading ? "가입 처리 중…" : "회원가입"}

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="1080" viewBox="0 0 980 1080" font-family="Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker></defs>
+<rect width="980" height="1080" fill="#fff"/>
+<text x="28" y="58" font-size="34" font-weight="700" fill="#111">Flowchart_가입 → 첫 기록</text>
+<rect x="230.0" y="90.0" width="200" height="40" rx="20.0" fill="#9e9e9e"/>
+<text x="330" y="114.5" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">랜딩 · 무료로 시작하기</text>
+<path d="M212.0,164.0 H460.0 L448.0,216.0 H200.0 Z" fill="#fff" stroke="#333"/>
+<text x="330" y="186.1" font-size="12" font-weight="400" fill="#111" text-anchor="middle">회원가입 폼 입력</text>
+<text x="330" y="202.3" font-size="12" font-weight="400" fill="#111" text-anchor="middle">닉네임·이름·이메일·비밀번호·약관</text>
+<path d="M330,248.0 L440.0,290 L330,332.0 L220.0,290 Z" fill="#fff" stroke="#333"/>
+<text x="330" y="286.1" font-size="12" font-weight="400" fill="#111" text-anchor="middle">입력 규칙·필수 약관</text>
+<text x="330" y="302.3" font-size="12" font-weight="400" fill="#111" text-anchor="middle">충족?</text>
+<rect x="230.0" y="370.0" width="200" height="40" fill="#fff" stroke="#333"/>
+<text x="330" y="394.2" font-size="12" font-weight="400" fill="#111" text-anchor="middle">POST /auth/signup</text>
+<path d="M330,445.0 L415.0,480 L330,515.0 L245.0,480 Z" fill="#fff" stroke="#333"/>
+<text x="330" y="484.2" font-size="12" font-weight="400" fill="#111" text-anchor="middle">이메일 중복?</text>
+<rect x="230.0" y="546.0" width="200" height="48" fill="#fff" stroke="#333"/>
+<text x="330" y="566.1" font-size="12" font-weight="400" fill="#111" text-anchor="middle">자동 로그인</text>
+<text x="330" y="582.3" font-size="12" font-weight="400" fill="#111" text-anchor="middle">POST /auth/login</text>
+<rect x="195.0" y="626.0" width="270" height="48" fill="#fff" stroke="#333"/>
+<text x="330" y="646.1" font-size="12" font-weight="400" fill="#111" text-anchor="middle">소비 프로필 설문 6문항</text>
+<text x="330" y="662.3" font-size="12" font-weight="400" fill="#111" text-anchor="middle">POST /onboarding/spending-profile</text>
+<rect x="215.0" y="706.0" width="230" height="48" fill="#fff" stroke="#333"/>
+<text x="330" y="726.1" font-size="12" font-weight="400" fill="#111" text-anchor="middle">온보딩 요약 확인</text>
+<text x="330" y="742.3" font-size="12" font-weight="400" fill="#111" text-anchor="middle">POST /onboarding/complete</text>
+<path d="M330,790.0 L415.0,825 L330,860.0 L245.0,825 Z" fill="#fff" stroke="#333"/>
+<text x="330" y="829.2" font-size="12" font-weight="400" fill="#111" text-anchor="middle">어느 버튼?</text>
+<rect x="95.0" y="891.0" width="170" height="48" fill="#fff" stroke="#333"/>
+<text x="180" y="911.1" font-size="12" font-weight="400" fill="#111" text-anchor="middle">가계부 작성</text>
+<text x="180" y="927.3" font-size="12" font-weight="400" fill="#111" text-anchor="middle">/wallet/new</text>
+<rect x="395.0" y="891.0" width="170" height="48" fill="#fff" stroke="#333"/>
+<text x="480" y="911.1" font-size="12" font-weight="400" fill="#111" text-anchor="middle">홈 대시보드</text>
+<text x="480" y="927.3" font-size="12" font-weight="400" fill="#111" text-anchor="middle">/home</text>
+<rect x="210.0" y="985.0" width="240" height="40" rx="20.0" fill="#111"/>
+<text x="330" y="1009.5" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">펫 이름 짓기 → 출석 팝업</text>
+<rect x="570.0" y="255.0" width="220" height="70" rx="10" fill="#fff" stroke="#999"/>
+<circle cx="680" cy="273.0" r="9" fill="none" stroke="#999"/>
+<text x="680" y="276.9" font-size="11" font-weight="700" fill="#999" text-anchor="middle">!</text>
+<text x="680" y="292.6" font-size="10.5" font-weight="400" fill="#333" text-anchor="middle">[회원가입] 버튼 비활성</text>
+<text x="680" y="306.8" font-size="10.5" font-weight="400" fill="#333" text-anchor="middle">규칙별 안내 문구 표시</text>
+<rect x="570.0" y="448.0" width="220" height="64" rx="10" fill="#fff" stroke="#999"/>
+<circle cx="680" cy="466.0" r="9" fill="none" stroke="#999"/>
+<text x="680" y="469.9" font-size="11" font-weight="700" fill="#999" text-anchor="middle">!</text>
+<text x="680" y="489.7" font-size="10.5" font-weight="400" fill="#333" text-anchor="middle">이미 사용 중인 이메일입니다</text>
+<path d="M580.0,368.0 A100.0,8 0 0 1 780.0,368.0 V412.0 A100.0,8 0 0 1 580.0,412.0 Z" fill="#fff" stroke="#333"/>
+<path d="M580.0,368.0 A100.0,8 0 0 0 780.0,368.0" fill="none" stroke="#333"/>
+<text x="680" y="390.3" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">users · user_stat_stats</text>
+<text x="680" y="405.8" font-size="11.5" font-weight="400" fill="#111" text-anchor="middle">시작 펫 · 1,000코인</text>
+<rect x="570.0" y="535.0" width="220" height="70" rx="10" fill="#fff" stroke="#999"/>
+<circle cx="680" cy="553.0" r="9" fill="none" stroke="#999"/>
+<text x="680" y="556.9" font-size="11" font-weight="700" fill="#999" text-anchor="middle">!</text>
+<text x="680" y="572.6" font-size="10.5" font-weight="400" fill="#333" text-anchor="middle">가입은 완료됐어요.</text>
+<text x="680" y="586.8" font-size="10.5" font-weight="400" fill="#333" text-anchor="middle">로그인 화면으로 이동</text>
+<rect x="570.0" y="622.0" width="220" height="56" rx="10" fill="#fff" stroke="#999"/>
+<circle cx="680" cy="640.0" r="9" fill="none" stroke="#999"/>
+<text x="680" y="643.9" font-size="11" font-weight="700" fill="#999" text-anchor="middle">!</text>
+<text x="680" y="659.7" font-size="10.5" font-weight="400" fill="#333" text-anchor="middle">[수정하기] → 설문 다시</text>
+<path d="M330,130 L330,164" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M330,216 L330,248" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M330,332 L330,370" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M330,410 L330,445" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M330,515 L330,546" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M330,594 L330,626" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M330,674 L330,706" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M330,754 L330,790" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="340" y="356.2" font-size="12" font-weight="700" fill="#e0352b" text-anchor="start">Y</text>
+<text x="340" y="536.2" font-size="12" font-weight="700" fill="#e0352b" text-anchor="start">N</text>
+<path d="M245,825 L180,825 L180,891" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="180" y="819.2" font-size="12" font-weight="700" fill="#e0352b" text-anchor="middle">첫 지출 기록하기</text>
+<path d="M415,825 L480,825 L480,891" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="480" y="819.2" font-size="12" font-weight="700" fill="#e0352b" text-anchor="middle">홈으로 가기</text>
+<path d="M180,939 L180,1005 L210,1005" fill="none" stroke="#222" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#ah)"/>
+<text x="172" y="968" font-size="11" font-weight="400" fill="#666" text-anchor="end">저장 뒤 AppShell 화면에서</text>
+<path d="M480,939 L480,1005 L450,1005" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M440,290 L570,290" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="505.0" y="288.2" font-size="12" font-weight="700" fill="#e0352b" text-anchor="middle">N</text>
+<path d="M680,255 L680,220 L460,190" fill="none" stroke="#222" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#ah)"/>
+<text x="500" y="235.8" font-size="11" font-weight="400" fill="#666" text-anchor="start">다시 입력</text>
+<path d="M430,390 L580,390" fill="none" stroke="#222" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#ah)"/>
+<path d="M415,480 L570,480" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="492.5" y="478.2" font-size="12" font-weight="700" fill="#e0352b" text-anchor="middle">Y</text>
+<path d="M430,570 L570,570" fill="none" stroke="#222" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="500.0" y="568.2" font-size="12" font-weight="700" fill="#e0352b" text-anchor="middle">실패</text>
+<path d="M445,730 L680,730 L680,678" fill="none" stroke="#222" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#ah)"/>
+<path d="M565,650 L465,650" fill="none" stroke="#222" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#ah)"/>
+<text x="40" y="1048.8" font-size="11" font-weight="400" fill="#666" text-anchor="start">※ 설문을 마치기 전에는 공개 화면을 포함한 모든 경로가 설문으로 돌아온다 (ADMIN 제외).</text>
+<text x="40" y="1066.8" font-size="11" font-weight="400" fill="#666" text-anchor="start">※ 펫 이름 짓기·출석 팝업은 AppShell 이 붙는 화면에서만 뜬다. 가계부 작성(/wallet/new)은 AppShell 밖이다.</text>
+</svg>

@@ -2,7 +2,7 @@
 //   GET  /api/monthly-reports                 정산된 리포트 목록(최신 달부터)
 //   GET  /api/monthly-reports/unread          안 본 가장 최근 리포트 (없으면 null)
 //   POST /api/monthly-reports/{yearMonth}/read
-//   POST /api/monthly-reports/generate?month= 본인 리포트 즉시 정산(시연·확인용)
+//   POST /api/monthly-reports/generate?month= 본인 리포트 즉시 정산(시연·확인용, 지난 달까지만)
 import { get, post } from "./http";
 
 /**

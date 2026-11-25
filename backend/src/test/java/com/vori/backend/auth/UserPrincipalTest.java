@@ -27,7 +27,7 @@ class UserPrincipalTest {
         User entity = user("처음닉");
         UserPrincipal principal = new UserPrincipal(entity, false);
 
-        entity.updateProfile("바뀐닉", null, null, null, null);
+        entity.updateProfile("바뀐닉", null, null, null, null, null, null);
 
         assertEquals(7L, principal.getId());
         assertEquals("a@vori.com", principal.getUsername());

@@ -137,10 +137,10 @@ React Router v7 (`BrowserRouter`) 사용. SPA 이지만 URL 이 페이지마다 
         → saved_amount > 0 면 → users.total_saved 누적 + goals.current_amount 누적
         → 하나라도 실패하면 위 전부 롤백
 
-하루 판정 → POST /api/daily-judgments (일반 계정은 그날, 20시부터)
+하루 판정 → POST /api/daily-judgments (일반 계정은 20시부터 다음 날 새벽 2시 전까지, 0시~2시는 전날 판정)
         → 스탯 그룹마다 예산 봉투로 판정(85% 이하 여유 · 100% 이하 적정 · 넘으면 초과), 그날 판정은 가장 나쁜 그룹
         → 답할 예외 지출이 있으면 1차 판정(PENDING) → 사유 답변 → POST /api/daily-judgments/finalize (FINALIZED)
-        → 보상(남긴 돈으로 스탯·코인)은 그날 자정 정산에서 한 번 — docs/judgment-flow.md, docs/domain.md
+        → 보상(남긴 돈으로 스탯·코인)은 그날 정산(`close-hour`, 새벽 2시)에서 한 번 — docs/judgment-flow.md, docs/domain.md
 ```
 
 ### 영수증 OCR (구현됨)
